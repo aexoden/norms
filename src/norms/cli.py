@@ -167,6 +167,12 @@ def check_common(path: Path, report: VerificationReport) -> None:
     else:
         report.add("Pre-commit configuration", Status.FAIL, "Missing .pre-commit-config.yaml")
 
+    # Renovate
+    if (path / "renovate.json").exists():
+        report.add("Renovate configuration", Status.PASS)
+    else:
+        report.add("Renovate configuration", Status.WARN, "Missing renovate.json")
+
 
 def check_cpp(path: Path, report: VerificationReport) -> None:
     """Run checks specific to C++ projects."""
