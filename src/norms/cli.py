@@ -254,6 +254,8 @@ def verify(path: Path, *, output_json: Annotated[bool, Parameter(name=["--json"]
     else:
         report.print_report()
 
+    sys.exit(1 if report.failed > 0 else 0)
+
 
 def run() -> None:
     """Run the command-line interface."""
