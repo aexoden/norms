@@ -161,6 +161,12 @@ def check_common(path: Path, report: VerificationReport) -> None:
     else:
         report.add("Devbox configuration", Status.FAIL, "Missing devbox.json")
 
+    # Pre-commit
+    if (path / ".pre-commit-config.yaml").exists():
+        report.add("Pre-commit configuration", Status.PASS)
+    else:
+        report.add("Pre-commit configuration", Status.FAIL, "Missing .pre-commit-config.yaml")
+
 
 def check_cpp(path: Path, report: VerificationReport) -> None:
     """Run checks specific to C++ projects."""
