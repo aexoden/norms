@@ -143,6 +143,24 @@ def check_common(path: Path, report: VerificationReport) -> None:
         status, message = check_file_exists(path, filename)
         report.add(description, status, message)
 
+    # Check for Devbox configuration
+    devbox_path = path / "devbox.json"
+
+    if devbox_path.exists():
+        report.add("Devbox configuration", Status.PASS)
+
+        try:
+            devbox_config = json.loads(devbox_path.read_text())
+
+            if devbox_config.get("packages"):
+                report.add("Devbox has packages", Status.PASS)
+            else:
+                report.add("Devbox has packages", Status.WARN, "No packages defined")
+        except json.JSONDecodeError:
+            report.add("Devbox valid JSON", Status.FAIL, "Invalid JSON")
+    else:
+        report.add("Devbox configuration", Status.FAIL, "Missing devbox.json")
+
 
 def check_cpp(path: Path, report: VerificationReport) -> None:
     """Run checks specific to C++ projects."""
