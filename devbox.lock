@@ -5,7 +5,7 @@
       "last_modified": "2026-01-02T14:39:32Z",
       "resolved": "github:NixOS/nixpkgs/16c7794d0a28b5a37904d55bcca36003b9109aaa?lastModified=1767364772&narHash=sha256-fFUnEYMla8b7UKjijLnMe%2BoVFOz6HjijGGNS1l7dYaQ%3D"
     },
-    "pre-commit@latest": {
+    "pre-commit@4.5.1": {
       "last_modified": "2025-12-19T06:18:24Z",
       "resolved": "github:NixOS/nixpkgs/7d853e518814cca2a657b72eeba67ae20ebf7059#pre-commit",
       "source": "devbox-search",
