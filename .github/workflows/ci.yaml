@@ -25,3 +25,6 @@ jobs:
 
       - name: Lint
         run: devbox run -- uv run ruff check
+
+      - name: Type check
+        run: devbox run -- uv run mypy .

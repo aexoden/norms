@@ -29,6 +29,7 @@ Issues = "https://github.com/aexoden/norms/issues"
 
 [dependency-groups]
 dev = [
+    "mypy>=1.19.1",
     "ruff>=0.14.10",
 ]
 
