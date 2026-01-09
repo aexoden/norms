@@ -47,6 +47,13 @@ exclude = ["/.github"]
 packages = ["src/norms"]
 
 #
+# Mypy
+#
+
+[tool.mypy]
+strict = true
+
+#
 # Ruff
 #
 
