@@ -17,6 +17,11 @@ from cyclopts import App, Parameter
 app = App()
 
 
+#
+# Classes and Enums
+#
+
+
 class Status(Enum):
     """Enumeration of check statuses."""
 
@@ -112,6 +117,11 @@ class VerificationReport:
         print(f"{'=' * 60}")
 
 
+#
+# Check Functions
+#
+
+
 def check_file_exists(path: Path, filename: str) -> tuple[Status, str]:
     """Check if a file exists in the given path.
 
@@ -128,22 +138,8 @@ def check_file_exists(path: Path, filename: str) -> tuple[Status, str]:
     return (Status.FAIL, f"Missing {filename}")
 
 
-def check_common(path: Path, report: VerificationReport) -> None:
-    """Run checks common to all projects."""
-    # Check for required configuration files
-    required_files = [
-        (".editorconfig", "EditorConfig configuration"),
-        (".gitattributes", "Git attributes"),
-        (".gitignore", "Git ignore"),
-        ("LICENSE", "License file"),
-        ("README.md", "README"),
-    ]
-
-    for filename, description in required_files:
-        status, message = check_file_exists(path, filename)
-        report.add(description, status, message)
-
-    # Check for Devbox configuration
+def check_devbox(path: Path, report: VerificationReport) -> None:
+    """Check for Devbox configuration."""
     devbox_path = path / "devbox.json"
 
     if devbox_path.exists():
@@ -161,23 +157,80 @@ def check_common(path: Path, report: VerificationReport) -> None:
     else:
         report.add("Devbox configuration", Status.FAIL, "Missing devbox.json")
 
-    # Pre-commit
+
+def check_pre_commit(path: Path, report: VerificationReport) -> None:
+    """Check for pre-commit configuration."""
     if (path / ".pre-commit-config.yaml").exists():
         report.add("Pre-commit configuration", Status.PASS)
     else:
         report.add("Pre-commit configuration", Status.FAIL, "Missing .pre-commit-config.yaml")
 
-    # Renovate
+
+def check_renovate(path: Path, report: VerificationReport) -> None:
+    """Check for Renovate configuration."""
     if (path / "renovate.json").exists():
         report.add("Renovate configuration", Status.PASS)
     else:
         report.add("Renovate configuration", Status.WARN, "Missing renovate.json")
 
-    # GitHub Actions
+
+def check_github_actions(path: Path, report: VerificationReport) -> None:
+    """Check for GitHub Actions CI workflow."""
     if (path / ".github" / "workflows" / "ci.yaml").exists():
         report.add("GitHub Actions CI workflow", Status.PASS)
     else:
         report.add("GitHUb Actions CI workflow", Status.FAIL, "Missing .github/workflows/ci.yaml")
+
+
+def check_editorconfig(path: Path, report: VerificationReport) -> None:
+    """Check for EditorConfig settings."""
+    editorconfig_path = path / ".editorconfig"
+
+    if editorconfig_path.exists():
+        content = editorconfig_path.read_text()
+
+        if "root = true" in content:
+            report.add("EditorConfig has root=true", Status.PASS)
+        else:
+            report.add("EditorConfig has root=true", Status.WARN, "Missing root = true")
+
+        if "end_of_line = lf" in content:
+            report.add("EditorConfig line endings", Status.PASS)
+        else:
+            report.add("EditorConfig line endings", Status.WARN, "Missing end_of_line = lf")
+
+        if "charset = utf-8" in content:
+            report.add("EditorConfig charset", Status.PASS)
+        else:
+            report.add("EditorConfig charset", Status.WARN, "Missing charset = utf-8")
+
+
+#
+# Check Groups
+#
+
+
+def check_common(path: Path, report: VerificationReport) -> None:
+    """Run checks common to all projects."""
+    # Check for required configuration files
+    required_files = [
+        (".editorconfig", "EditorConfig configuration"),
+        (".gitattributes", "Git attributes"),
+        (".gitignore", "Git ignore"),
+        ("LICENSE", "License file"),
+        ("README.md", "README"),
+    ]
+
+    for filename, description in required_files:
+        status, message = check_file_exists(path, filename)
+        report.add(description, status, message)
+
+    # Run additional common checks
+    check_devbox(path, report)
+    check_pre_commit(path, report)
+    check_renovate(path, report)
+    check_github_actions(path, report)
+    check_editorconfig(path, report)
 
 
 def check_cpp(path: Path, report: VerificationReport) -> None:
