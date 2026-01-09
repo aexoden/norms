@@ -173,6 +173,12 @@ def check_common(path: Path, report: VerificationReport) -> None:
     else:
         report.add("Renovate configuration", Status.WARN, "Missing renovate.json")
 
+    # GitHub Actions
+    if (path / ".github" / "workflows" / "ci.yaml").exists():
+        report.add("GitHub Actions CI workflow", Status.PASS)
+    else:
+        report.add("GitHUb Actions CI workflow", Status.FAIL, "Missing .github/workflows/ci.yaml")
+
 
 def check_cpp(path: Path, report: VerificationReport) -> None:
     """Run checks specific to C++ projects."""
