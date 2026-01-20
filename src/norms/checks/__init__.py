@@ -7,4 +7,7 @@ from norms.checks.registry import register_common, register_language, run_all_ch
 __all__ = ["register_common", "register_language", "run_all_checks"]
 
 # Import check modules to register their checks
-from norms.checks import common  # noqa: F401 (importing triggers registration) # pyright: ignore[reportUnusedImport]
+from norms.checks import (  # noqa: F401 (importing triggers registration)
+    common,  # pyright: ignore[reportUnusedImport]
+    python,  # pyright: ignore[reportUnusedImport]
+)
