@@ -33,6 +33,7 @@ repos:
         pass_filenames: false
       - id: ruff-format
         pass_filenames: false
+        args: [ --check ]
 
   # Type checking
   # The official pre-commit hook does not use the uv-created environment.
