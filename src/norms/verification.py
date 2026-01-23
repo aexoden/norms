@@ -39,8 +39,4 @@ def verify_project(path: Path) -> VerificationReport:
     if len(languages) == 0:
         report.add("Language detection", Status.WARN, "No supported programming languages detected")
 
-    # Run language-specific checks
-    if len(languages) == 0:
-        report.add("Language detection", Status.WARN, "No supported programming languages detected")
-
     return report

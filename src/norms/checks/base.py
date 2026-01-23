@@ -12,17 +12,23 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def check_file_exists(path: Path, filename: str) -> tuple[Status, str]:
-    """Check if a file exists in the given path.
+def check_file_exists(
+    path: Path, fail_status: Status = Status.FAIL, fail_message: str | None = None
+) -> tuple[Status, str]:
+    """Check if a file exists at the given path.
 
     Args:
-        path (Path): The path to check.
-        filename (str): The name of the file to check for.
+        path (Path): The full path to the file to check.
+        fail_status (Status): The status to return if the file does not exist.
+        fail_message (str): The message to return if the file does not exist.
 
     Returns:
         tuple[Status, str]: A tuple containing the status and message of the check.
     """
-    if (path / filename).exists():
+    if path.exists():
         return (Status.PASS, "")
 
-    return (Status.FAIL, f"Missing {filename}")
+    if fail_message is None:
+        fail_message = f"Missing {path.name}"
+
+    return (fail_status, fail_message)
