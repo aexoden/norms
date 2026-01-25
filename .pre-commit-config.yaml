@@ -46,3 +46,13 @@ repos:
         entry: uv run mypy .
         language: system
         pass_filenames: false
+
+  # Run tests
+  - repo: local
+    hooks:
+      - id: test
+        name: pytest with coverage
+        description: Run pytest and generate coverage report
+        entry: uv run pytest --cov=src/norms --cov-report=term-missing
+        language: system
+        pass_filenames: false

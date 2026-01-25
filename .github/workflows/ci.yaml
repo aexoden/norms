@@ -20,6 +20,9 @@ jobs:
       - name: Install devbox
         uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 # v0.14.0
 
+      - name: Set up uv
+        run: devbox run -- uv sync --locked
+
       - name: Check formatting
         run: devbox run -- uv run ruff format --check
 
@@ -28,3 +31,6 @@ jobs:
 
       - name: Type check
         run: devbox run -- uv run mypy .
+
+      - name: Run tests
+        run: devbox run -- uv run pytest --cov=src/norms --cov-report=term-missing
