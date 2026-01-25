@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "A tool to help implement and enforce coding standards."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.14.0"
+requires-python = ">=3.14"
 authors = [{ name = "Jason Lynch", email = "jason@aexoden.com" }]
 keywords = []
 classifiers = [
