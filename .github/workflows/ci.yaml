@@ -34,3 +34,15 @@ jobs:
 
       - name: Run tests
         run: devbox run -- uv run pytest --cov=src/norms --cov-report=term-missing
+
+      - name: Format Rust code
+        run: devbox run -- cargo fmt --all -- --check
+
+      - name: Lint Rust code
+        run: devbox run -- cargo clippy --workspace -- -D warnings
+
+      - name: Run Rust tests
+        run: devbox run -- cargo test --workspace --all-features
+
+      - name: Check Rust dependencies for security vulnerabilities
+        run: devbox run -- cargo deny check
