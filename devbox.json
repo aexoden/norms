@@ -4,8 +4,8 @@
     "cargo-deny@0.19.0",
     "libiconv@latest",
     "pre-commit@4.5.1",
-    "rustup@latest",
-    "uv@0.9.30"
+    "rustup@1.28.2",
+    "uv@0.10.2"
   ],
   "shell": {
     "init_hook": [
