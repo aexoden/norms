@@ -1,14 +1,21 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices", "group:allNonMajor"],
+  "extends": [
+    "config:best-practices",
+    "group:allNonMajor"
+  ],
   "lockFileMaintenance": {
     "enabled": true
   },
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["rust-toolchain\\.toml$"],
-      "matchStrings": ["channel\\s*=\\s*\"(?<currentValue>[\\d.]+)\""],
+      "managerFilePatterns": [
+        "/rust-toolchain\\.toml$/"
+      ],
+      "matchStrings": [
+        "channel\\s*=\\s*\"(?<currentValue>[\\d.]+)\""
+      ],
       "depNameTemplate": "rust-lang/rust",
       "datasourceTemplate": "github-tags",
       "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)\\.\\d+$"
