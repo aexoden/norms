@@ -78,6 +78,7 @@ impl<T> ConfigStatus<T> {
 pub struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
+    gitattributes: OnceLock<ConfigStatus<String>>,
 }
 
 impl ProjectContext {
@@ -86,6 +87,7 @@ impl ProjectContext {
         Self {
             path,
             languages: OnceLock::new(),
+            gitattributes: OnceLock::new(),
         }
     }
 
@@ -99,6 +101,12 @@ impl ProjectContext {
         self.languages
             .get_or_init(|| crate::detection::detect_languages(&self.path))
     }
+
+    // Raw `.gitattributes` content (cached).
+    pub fn gitattributes(&self) -> &ConfigStatus<String> {
+        self.gitattributes
+            .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
+    }
 }
 
 //
@@ -106,7 +114,6 @@ impl ProjectContext {
 //
 
 /// Read a text file, returning `NotFound` if it doesn't exist.
-#[expect(dead_code)] // Placeholder for future
 fn read_text_file(path: &Path) -> ConfigStatus<String> {
     if !path.exists() {
         return ConfigStatus::NotFound;

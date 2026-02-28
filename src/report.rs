@@ -104,7 +104,6 @@ pub fn contains(haystack: &str, needle: &str) -> Outcome {
 }
 
 /// Check whether a regex pattern matches anywhere in the string.
-#[expect(dead_code)] // Placeholder for future use in content checks
 pub fn matches_regex(haystack: &str, pattern: &str) -> Outcome {
     match regex::Regex::new(pattern) {
         Ok(re) if re.is_match(haystack) => Outcome::Pass,
@@ -199,7 +198,6 @@ impl Report {
     /// - `"{label}: valid"` - recorded if the file exists
     ///
     /// Returns `Some(&T)` only when the file exists and parsed successfully.
-    #[expect(dead_code)] // Placeholder for future use in checks
     pub fn require_parsed<'a, T>(
         &mut self,
         label: &str,

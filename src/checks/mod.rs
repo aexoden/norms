@@ -25,4 +25,6 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_readme(ctx, report);
     common::check_license(ctx, report);
     common::check_changelog(ctx, report);
+    common::check_gitignore(ctx, report);
+    common::check_gitattributes(ctx, report);
 }
