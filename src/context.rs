@@ -28,6 +28,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+use crate::config::DevboxConfig;
 use crate::models::Language;
 
 /// The result of attempting to read and parse a config file.
@@ -78,6 +79,7 @@ impl<T> ConfigStatus<T> {
 pub struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
+    devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
 }
@@ -88,6 +90,7 @@ impl ProjectContext {
         Self {
             path,
             languages: OnceLock::new(),
+            devbox: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
         }
@@ -102,6 +105,12 @@ impl ProjectContext {
     pub fn languages(&self) -> &HashSet<Language> {
         self.languages
             .get_or_init(|| crate::detection::detect_languages(&self.path))
+    }
+
+    /// Parsed `devbox.json` (cached). Uses JSON5 for flexibility.
+    pub fn devbox(&self) -> &ConfigStatus<DevboxConfig> {
+        self.devbox
+            .get_or_init(|| parse_json5_file::<DevboxConfig>(&self.path.join("devbox.json")))
     }
 
     // Raw `.editorconfig` content (cached).
@@ -132,6 +141,31 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
         Err(e) => ConfigStatus::ParseError {
             raw: String::new(),
             error: format!("Could not read file: {e}"),
+        },
+    }
+}
+
+/// Parse a JSON/JSON5 file into the given type.
+fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
+    if !path.exists() {
+        return ConfigStatus::NotFound;
+    }
+
+    let raw = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            return ConfigStatus::ParseError {
+                raw: String::new(),
+                error: format!("Could not read file: {e}"),
+            };
+        }
+    };
+
+    match json5::from_str(&raw) {
+        Ok(value) => ConfigStatus::Ok(value),
+        Err(e) => ConfigStatus::ParseError {
+            raw,
+            error: format!("Invalid JSON: {e}"),
         },
     }
 }

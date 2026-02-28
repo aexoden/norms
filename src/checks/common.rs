@@ -87,3 +87,19 @@ pub fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 }
+
+//
+// Development environment
+//
+
+pub fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
+    let Some(config) = report.require_parsed("devbox.json", ctx.devbox()) else {
+        return;
+    };
+
+    report.should("devbox.json: has $schema", config.schema.is_some());
+    report.should("devbox.json: has packages", !config.packages.is_empty());
+
+    // Check for devbox.lock
+    report.should("devbox.lock", file_exists(&ctx.path().join("devbox.lock")));
+}
