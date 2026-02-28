@@ -103,3 +103,31 @@ pub fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
     // Check for devbox.lock
     report.should("devbox.lock", file_exists(&ctx.path().join("devbox.lock")));
 }
+
+//
+// Pre-commit
+//
+
+pub fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
+    report.must(
+        ".pre-commit-config.yaml",
+        file_exists(&ctx.path().join(".pre-commit-config.yaml")),
+    );
+}
+
+//
+// Dependency management
+//
+
+pub fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
+    let Some(config) = report.recommend_parsed("renovate.json", ctx.renovate()) else {
+        return;
+    };
+
+    report.should("renovate.json: has $schema", config.schema.is_some());
+    report.should("renovate.json: has extends", !config.extends.is_empty());
+    report.should(
+        "renovate.json: extends best-practices",
+        config.extends_best_practices(),
+    );
+}

@@ -223,7 +223,6 @@ impl Report {
 
     /// Like [`require_parsed`](Self::require_parsed) but issues a `WARN` instead
     /// of `FAIL` if the file is missing. Useful for optional config files.
-    #[expect(dead_code)] // Placeholder for future use in checksq
     pub fn recommend_parsed<'a, T>(
         &mut self,
         label: &str,

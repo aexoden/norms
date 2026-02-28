@@ -28,7 +28,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use crate::config::DevboxConfig;
+use crate::config::{DevboxConfig, RenovateConfig};
 use crate::models::Language;
 
 /// The result of attempting to read and parse a config file.
@@ -80,6 +80,7 @@ pub struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
+    renovate: OnceLock<ConfigStatus<RenovateConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
 }
@@ -91,6 +92,7 @@ impl ProjectContext {
             path,
             languages: OnceLock::new(),
             devbox: OnceLock::new(),
+            renovate: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
         }
@@ -111,6 +113,12 @@ impl ProjectContext {
     pub fn devbox(&self) -> &ConfigStatus<DevboxConfig> {
         self.devbox
             .get_or_init(|| parse_json5_file::<DevboxConfig>(&self.path.join("devbox.json")))
+    }
+
+    /// Parsed `renovate.json` (cached). Uses JSON5 for flexibility.
+    pub fn renovate(&self) -> &ConfigStatus<RenovateConfig> {
+        self.renovate
+            .get_or_init(|| parse_json5_file::<RenovateConfig>(&self.path.join("renovate.json")))
     }
 
     // Raw `.editorconfig` content (cached).

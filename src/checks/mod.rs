@@ -29,4 +29,6 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_gitattributes(ctx, report);
     common::check_editorconfig(ctx, report);
     common::check_devbox(ctx, report);
+    common::check_precommit(ctx, report);
+    common::check_renovate(ctx, report);
 }
