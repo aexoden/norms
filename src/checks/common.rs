@@ -56,3 +56,34 @@ pub fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
         matches_regex(content, r"(?m)^\*\.[a-zA-Z0-9]+\s+binary"),
     );
 }
+
+//
+// Editor configuration
+//
+
+pub fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
+    let status = ctx.editorconfig();
+    let Some(content) = report.require_parsed(".editorconfig", status) else {
+        return;
+    };
+
+    let settings = [
+        ("root=true", "root = true"),
+        ("charset=utf-8", "charset = utf-8"),
+        ("end_of_line=lf", "end_of_line = lf"),
+        ("indent_style=space", "indent_style = space"),
+        ("indent_size=4", "indent_size = 4"),
+        ("insert_final_newline=true", "insert_final_newline = true"),
+        (
+            "trim_trailing_whitespace=true",
+            "trim_trailing_whitespace = true",
+        ),
+    ];
+
+    for (label, needle) in settings {
+        report.should(
+            format!(".editorconfig: {label}"),
+            matches_regex(content, &regex::escape(needle)),
+        );
+    }
+}

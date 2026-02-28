@@ -78,6 +78,7 @@ impl<T> ConfigStatus<T> {
 pub struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
+    editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
 }
 
@@ -87,6 +88,7 @@ impl ProjectContext {
         Self {
             path,
             languages: OnceLock::new(),
+            editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
         }
     }
@@ -100,6 +102,12 @@ impl ProjectContext {
     pub fn languages(&self) -> &HashSet<Language> {
         self.languages
             .get_or_init(|| crate::detection::detect_languages(&self.path))
+    }
+
+    // Raw `.editorconfig` content (cached).
+    pub fn editorconfig(&self) -> &ConfigStatus<String> {
+        self.editorconfig
+            .get_or_init(|| read_text_file(&self.path.join(".editorconfig")))
     }
 
     // Raw `.gitattributes` content (cached).

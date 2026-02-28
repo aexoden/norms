@@ -27,4 +27,5 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_changelog(ctx, report);
     common::check_gitignore(ctx, report);
     common::check_gitattributes(ctx, report);
+    common::check_editorconfig(ctx, report);
 }
