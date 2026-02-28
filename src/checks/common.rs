@@ -131,3 +131,21 @@ pub fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
         config.extends_best_practices(),
     );
 }
+
+//
+// Continuous integration
+//
+
+pub fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
+    let workflows_dir = ctx.path().join(".github/workflows");
+    report.must("CI: .github/workflows/ exists", file_exists(&workflows_dir));
+
+    if !workflows_dir.exists() {
+        return;
+    }
+
+    report.must(
+        "CI: ci.yaml exists",
+        file_exists(&workflows_dir.join("ci.yaml")),
+    );
+}

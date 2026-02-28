@@ -31,4 +31,5 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_devbox(ctx, report);
     common::check_precommit(ctx, report);
     common::check_renovate(ctx, report);
+    common::check_github_actions(ctx, report);
 }
