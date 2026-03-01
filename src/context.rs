@@ -243,7 +243,7 @@ fn parse_yaml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<
         }
     };
 
-    match serde_yml::from_str(&raw) {
+    match serde_yaml_ng::from_str(&raw) {
         Ok(value) => ConfigStatus::Ok(value),
         Err(e) => ConfigStatus::ParseError {
             raw,
