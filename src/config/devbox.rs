@@ -31,7 +31,6 @@ pub struct DevboxShell {
 
 impl DevboxConfig {
     /// Check if a particular package prefix is listed
-    #[expect(dead_code)] // Placeholder for future use in package checks
     pub fn has_package(&self, prefix: &str) -> bool {
         self.packages.iter().any(|p| {
             p == prefix

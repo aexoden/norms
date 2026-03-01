@@ -28,7 +28,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use crate::config::{DevboxConfig, RenovateConfig};
+use crate::config::{DevboxConfig, PrecommitConfig, PyprojectToml, RenovateConfig};
 use crate::models::Language;
 
 /// The result of attempting to read and parse a config file.
@@ -54,7 +54,6 @@ pub enum ConfigStatus<T> {
 
 impl<T> ConfigStatus<T> {
     /// Get a reference to the parsed value, if available.
-    #[expect(dead_code)] // Placeholder for future config getters
     pub fn as_ref_ok(&self) -> Option<&T> {
         match self {
             Self::Ok(v) => Some(v),
@@ -79,10 +78,13 @@ impl<T> ConfigStatus<T> {
 pub struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
+    pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
+    precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
+    ci_workflow: OnceLock<ConfigStatus<String>>,
 }
 
 impl ProjectContext {
@@ -91,10 +93,13 @@ impl ProjectContext {
         Self {
             path,
             languages: OnceLock::new(),
+            pyproject: OnceLock::new(),
             devbox: OnceLock::new(),
             renovate: OnceLock::new(),
+            precommit: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
+            ci_workflow: OnceLock::new(),
         }
     }
 
@@ -109,6 +114,12 @@ impl ProjectContext {
             .get_or_init(|| crate::detection::detect_languages(&self.path))
     }
 
+    /// Parsed `pyproject.toml` (cached).
+    pub fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
+        self.pyproject
+            .get_or_init(|| parse_toml_file::<PyprojectToml>(&self.path.join("pyproject.toml")))
+    }
+
     /// Parsed `devbox.json` (cached). Uses JSON5 for flexibility.
     pub fn devbox(&self) -> &ConfigStatus<DevboxConfig> {
         self.devbox
@@ -121,6 +132,13 @@ impl ProjectContext {
             .get_or_init(|| parse_json5_file::<RenovateConfig>(&self.path.join("renovate.json")))
     }
 
+    /// Parsed `.pre-commit-config.yaml` (cached).
+    pub fn precommit(&self) -> &ConfigStatus<PrecommitConfig> {
+        self.precommit.get_or_init(|| {
+            parse_yaml_file::<PrecommitConfig>(&self.path.join(".pre-commit-config.yaml"))
+        })
+    }
+
     // Raw `.editorconfig` content (cached).
     pub fn editorconfig(&self) -> &ConfigStatus<String> {
         self.editorconfig
@@ -131,6 +149,12 @@ impl ProjectContext {
     pub fn gitattributes(&self) -> &ConfigStatus<String> {
         self.gitattributes
             .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
+    }
+
+    /// Raw `.github/workflows/ci.yaml` content (cached).
+    pub fn ci_workflow(&self) -> &ConfigStatus<String> {
+        self.ci_workflow
+            .get_or_init(|| read_text_file(&self.path.join(".github/workflows/ci.yaml")))
     }
 }
 
@@ -149,6 +173,31 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
         Err(e) => ConfigStatus::ParseError {
             raw: String::new(),
             error: format!("Could not read file: {e}"),
+        },
+    }
+}
+
+// Parse a TOML file into the given type.
+fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
+    if !path.exists() {
+        return ConfigStatus::NotFound;
+    }
+
+    let raw = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            return ConfigStatus::ParseError {
+                raw: String::new(),
+                error: format!("Could not read file: {e}"),
+            };
+        }
+    };
+
+    match toml::from_str::<T>(&raw) {
+        Ok(value) => ConfigStatus::Ok(value),
+        Err(e) => ConfigStatus::ParseError {
+            raw,
+            error: format!("Invalid TOML: {e}"),
         },
     }
 }
@@ -174,6 +223,31 @@ fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus
         Err(e) => ConfigStatus::ParseError {
             raw,
             error: format!("Invalid JSON: {e}"),
+        },
+    }
+}
+
+/// Parse a YAML file into the given type.
+fn parse_yaml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
+    if !path.exists() {
+        return ConfigStatus::NotFound;
+    }
+
+    let raw = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            return ConfigStatus::ParseError {
+                raw: String::new(),
+                error: format!("Could not read file: {e}"),
+            };
+        }
+    };
+
+    match serde_yml::from_str(&raw) {
+        Ok(value) => ConfigStatus::Ok(value),
+        Err(e) => ConfigStatus::ParseError {
+            raw,
+            error: format!("Invalid YAML: {e}"),
         },
     }
 }
