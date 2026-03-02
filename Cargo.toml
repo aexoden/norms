@@ -2,6 +2,7 @@
 name = "norms"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.93"
 description = "A tool to verify and enforce project coding standards across multiple languages."
 repository = "https://github.com/aexoden/norms"
 license = "Apache-2.0 OR MIT"

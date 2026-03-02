@@ -14,6 +14,7 @@
 
 pub mod common;
 pub mod python;
+pub mod rust;
 
 use crate::context::ProjectContext;
 use crate::models::Language;
@@ -37,7 +38,6 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
 
     // Language-specific checks
     for &language in ctx.languages() {
-        #[expect(clippy::single_match)] // Future languages will be added here
         match language {
             Language::Python => {
                 python::check_pyproject(ctx, report);
@@ -50,6 +50,16 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 python::check_precommit_hooks(ctx, report);
                 python::check_devbox_uv(ctx, report);
                 python::check_ci(ctx, report);
+            }
+            Language::Rust => {
+                rust::check_cargo(ctx, report);
+                rust::check_rust_toolchain(ctx, report);
+                rust::check_clippy_lints(ctx, report);
+                rust::check_cargo_deny(ctx, report);
+                rust::check_cargo_lock(ctx, report);
+                rust::check_precommit_hooks(ctx, report);
+                rust::check_devbox_rust(ctx, report);
+                rust::check_ci(ctx, report);
             }
             _ => {}
         }

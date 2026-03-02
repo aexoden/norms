@@ -28,7 +28,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use crate::config::{DevboxConfig, PrecommitConfig, PyprojectToml, RenovateConfig};
+use crate::config::{CargoToml, DevboxConfig, PrecommitConfig, PyprojectToml, RenovateConfig};
 use crate::models::Language;
 
 /// The result of attempting to read and parse a config file.
@@ -78,6 +78,7 @@ impl<T> ConfigStatus<T> {
 pub struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
+    cargo: OnceLock<ConfigStatus<CargoToml>>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
@@ -93,6 +94,7 @@ impl ProjectContext {
         Self {
             path,
             languages: OnceLock::new(),
+            cargo: OnceLock::new(),
             pyproject: OnceLock::new(),
             devbox: OnceLock::new(),
             renovate: OnceLock::new(),
@@ -112,6 +114,12 @@ impl ProjectContext {
     pub fn languages(&self) -> &HashSet<Language> {
         self.languages
             .get_or_init(|| crate::detection::detect_languages(&self.path))
+    }
+
+    /// Parsed `Cargo.toml` (cached).
+    pub fn cargo(&self) -> &ConfigStatus<CargoToml> {
+        self.cargo
+            .get_or_init(|| parse_toml_file::<CargoToml>(&self.path.join("Cargo.toml")))
     }
 
     /// Parsed `pyproject.toml` (cached).
