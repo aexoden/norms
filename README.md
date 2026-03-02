@@ -10,3 +10,12 @@ standardize the tooling on my various projects. It is also experimental, in that
 I have not yet determined the final standards for my projects.
 
 Standards intended to be verified and enforced are listed in `STANDARDS.md`.
+
+## License
+
+Licensed under either of
+
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+at your option.

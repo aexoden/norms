@@ -17,6 +17,5 @@
 *.tar   binary
 *.zip   binary
 
-# Python
-*.py    text diff=python
-*.pyi   text diff=python
+# Rust
+*.rs    text diff=rust
