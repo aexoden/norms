@@ -201,7 +201,7 @@ pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     };
 
     // Ruff hooks
-    let has_ruff = config.has_repo_containing("ruff");
+    let has_ruff = config.has_repo_containing("ruff") || config.has_repo_containing("local");
     report.should("Python pre-commit: Ruff hooks", has_ruff);
 
     if has_ruff {
