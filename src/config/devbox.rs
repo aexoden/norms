@@ -4,6 +4,7 @@
 //! Type-safe model for `devbox.json`.
 
 use serde::Deserialize;
+use serde::de::Deserializer;
 
 /// Top-level `devbox.json` structure.
 #[derive(Debug, Deserialize, Default)]
@@ -13,8 +14,8 @@ pub struct DevboxConfig {
     #[serde(rename = "$schema")]
     pub schema: Option<String>,
 
-    /// List of Nix packages
-    #[serde(default)]
+    /// List of Nix packages (normalized from either a list or a dictionary).
+    #[serde(default, deserialize_with = "deserialize_packages")]
     pub packages: Vec<String>,
 
     /// Shell configuration.
@@ -36,5 +37,27 @@ impl DevboxConfig {
             p == prefix
                 || p.starts_with(&format!("{prefix}@")) | p.starts_with(&format!("\"{prefix}"))
         })
+    }
+}
+
+/// Deserialize `packages` from either a list of strings or a dictionary.
+///
+/// In dictionary form, the keys are package names and the values are either a
+/// version string or an object with properties like `version` and `outputs`.
+/// Only the keys are extracted.
+fn deserialize_packages<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Packages {
+        List(Vec<String>),
+        Map(serde_json::Map<String, serde_json::Value>),
+    }
+
+    match Packages::deserialize(deserializer)? {
+        Packages::List(list) => Ok(list),
+        Packages::Map(map) => Ok(map.keys().cloned().collect()),
     }
 }

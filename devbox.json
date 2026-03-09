@@ -1,22 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-  "packages": [
-    "cargo-deny@0.19.0",
-    "libiconv@latest",
-    "pre-commit@4.5.1",
-    "rustup@1.28.2"
-  ],
+  "packages": {
+    "cargo": "1.93.0",
+    "cargo-deny": "0.19.0",
+    "clippy": "1.93.0",
+    "pre-commit": "4.5.1",
+    "rustc": "1.93.0",
+    "rustfmt": "1.93.0"
+  },
   "shell": {
-    "init_hook": [
-      "projectDir=$(dirname $(readlink -f \"$0\"))",
-      "rustupHomeDir=\"$projectDir\"/.rustup",
-      "mkdir -p $rustupHomeDir",
-      "export RUSTUP_HOME=$rustupHomeDir",
-      "export LIBRARY_PATH=$LIBRARY_PATH:\"$projectDir/nix/profile/default/lib\"",
-      "rustup toolchain install",
-      "cargo fetch",
-      "pre-commit install"
-    ],
+    "init_hook": ["cargo fetch", "pre-commit install"],
     "scripts": {
       "build-docs": "cargo doc",
       "start": "cargo run",

@@ -48,12 +48,6 @@ pub fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
 
     let has_msrv = package.and_then(|p| p.rust_version.as_ref()).is_some();
     report.should("Rust: MSRV defined (rust-version)", has_msrv);
-
-    // rust-toolchain.toml pins the toolchain for contributors
-    report.should(
-        "Rust: rust-toolchain.toml",
-        file_exists(&ctx.path().join("rust-toolchain.toml")),
-    );
 }
 
 //
@@ -141,11 +135,16 @@ pub fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should("Rust devbox: includes rustup", config.has_package("rustup"));
-
+    report.should("Rust devbox: includes cargo", config.has_package("cargo"));
     report.should(
         "Rust devbox: includes cargo-deny",
         config.has_package("cargo-deny"),
+    );
+    report.should("Rust devbox: includes clippy", config.has_package("clippy"));
+    report.should("Rust devbox: includes rustc", config.has_package("rustc"));
+    report.should(
+        "Rust devbox: includes rustfmt",
+        config.has_package("rustfmt"),
     );
 }
 
