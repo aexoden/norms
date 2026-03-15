@@ -3,6 +3,8 @@
 
 //! Type-safe model for `devbox.json`.
 
+use std::collections::HashMap;
+
 use serde::Deserialize;
 use serde::de::Deserializer;
 
@@ -17,6 +19,9 @@ pub struct DevboxConfig {
     /// List of Nix packages (normalized from either a list or a dictionary).
     #[serde(default, deserialize_with = "deserialize_packages")]
     pub packages: Vec<String>,
+
+    /// Map of environment variables.
+    pub env: Option<HashMap<String, String>>,
 
     /// Shell configuration.
     pub shell: Option<DevboxShell>,

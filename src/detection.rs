@@ -25,12 +25,37 @@ pub fn detect_languages(path: &Path) -> HashSet<Language> {
         (Language::TypeScript, "package.json"),
     ];
 
-    // TODO: This doesn't detect subdirectories.
     for &(language, marker) in markers {
         if path.join(marker).exists() {
             languages.insert(language);
         }
     }
 
+    // TypeScript projects may live in a frontend/ subdirectory
+    if !languages.contains(&Language::TypeScript) {
+        let frontend = path.join("frontend");
+        if frontend.is_dir() && frontend.join("package.json").exists() {
+            languages.insert(Language::TypeScript);
+        }
+    }
+
     languages
+}
+
+/// Resolve the TypeScript project root directory.
+///
+/// TypeScript projects may live at the repository root or in a `frontend/` subdirectory. This function returns the path
+/// containing `package.json`, preferring the repository root if it exists there.
+pub fn resolve_typescript_root(path: &Path) -> std::path::PathBuf {
+    if path.join("package.json").exists() {
+        return path.to_path_buf();
+    }
+
+    let frontend = path.join("frontend");
+    if frontend.is_dir() && frontend.join("package.json").exists() {
+        return frontend;
+    }
+
+    // Fall back to repository root, though without a package.json TypeScript checks will be skipped
+    path.to_path_buf()
 }

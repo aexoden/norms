@@ -15,6 +15,7 @@
 pub mod common;
 pub mod python;
 pub mod rust;
+pub mod typescript;
 
 use crate::context::ProjectContext;
 use crate::models::Language;
@@ -39,6 +40,9 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Language-specific checks
     for &language in ctx.languages() {
         match language {
+            Language::Cpp => {
+                // Placeholder
+            }
             Language::Python => {
                 python::check_pyproject(ctx, report);
                 python::check_src_layout(ctx, report);
@@ -61,7 +65,17 @@ pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 rust::check_devbox_rust(ctx, report);
                 rust::check_ci(ctx, report);
             }
-            _ => {}
+            Language::TypeScript => {
+                typescript::check_package_json(ctx, report);
+                typescript::check_pnpm(ctx, report);
+                typescript::check_tsconfig(ctx, report);
+                typescript::check_eslint(ctx, report);
+                typescript::check_prettier(ctx, report);
+                typescript::check_scripts(ctx, report);
+                typescript::check_precommit_hooks(ctx, report);
+                typescript::check_devbox_pnpm(ctx, report);
+                typescript::check_ci(ctx, report);
+            }
         }
     }
 }
