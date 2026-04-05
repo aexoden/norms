@@ -135,17 +135,11 @@ pub fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should("Rust devbox: includes cargo", config.has_package("cargo"));
     report.should(
         "Rust devbox: includes cargo-deny",
         config.has_package("cargo-deny"),
     );
-    report.should("Rust devbox: includes clippy", config.has_package("clippy"));
-    report.should("Rust devbox: includes rustc", config.has_package("rustc"));
-    report.should(
-        "Rust devbox: includes rustfmt",
-        config.has_package("rustfmt"),
-    );
+    report.should("Rust devbox: includes rustup", config.has_package("rustup"));
 }
 
 //
