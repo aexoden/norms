@@ -9,15 +9,15 @@ keywords = ["coding", "linting", "standards"]
 categories = ["development-tools"]
 
 [dependencies]
-anyhow = { version = "1.0.102", features = ["backtrace"] }
-clap = { version = "4.5.60", features = ["derive"] }
-colored = "3.1.1"
-json5 = "1.3.1"
-regex = "1.12.3"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-serde_yaml_ng = "0.10.0"
-toml = "1.0.3"
+anyhow = { version = "=1.0.102", features = ["backtrace"] }
+clap = { version = "=4.5.60", features = ["derive"] }
+colored = "=3.1.1"
+json5 = "=1.3.1"
+regex = "=1.12.3"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.149"
+serde_yaml_ng = "=0.10.0"
+toml = "=1.0.3"
 
 [lints.clippy]
 cargo = { level = "warn", priority = -1 }
