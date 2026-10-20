@@ -2,8 +2,8 @@
   "lockfile_version": "1",
   "packages": {
     "cargo-deny@0.20.2": {
-      "last_modified": "2026-10-02T22:55:44Z",
-      "resolved": "github:NixOS/nixpkgs/55ba7f49ef2962b42cbd126522b7df5f95037679#cargo-deny",
+      "last_modified": "2026-10-19T15:20:57Z",
+      "resolved": "github:NixOS/nixpkgs/682ba80136e2c8dacd6b8900f578a72329458901#cargo-deny",
       "source": "devbox-search",
       "version": "0.20.2",
       "systems": {
@@ -11,37 +11,37 @@
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/2hfpfpznmzq7a169zfgmj20f355wrs6n-cargo-deny-0.20.2",
+              "path": "/nix/store/pn0cn9yin9y9kh6dzp9y3cs4nzdjv192-cargo-deny-0.20.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/2hfpfpznmzq7a169zfgmj20f355wrs6n-cargo-deny-0.20.2"
+          "store_path": "/nix/store/pn0cn9yin9y9kh6dzp9y3cs4nzdjv192-cargo-deny-0.20.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/0rjb249ap4833mr2lr4npcq6j893q09q-cargo-deny-0.20.2",
+              "path": "/nix/store/r9rsmkhnz1lxmqb50xrvbwrims29zya3-cargo-deny-0.20.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/0rjb249ap4833mr2lr4npcq6j893q09q-cargo-deny-0.20.2"
+          "store_path": "/nix/store/r9rsmkhnz1lxmqb50xrvbwrims29zya3-cargo-deny-0.20.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/awlky4pcmv00g5wm1kcqv5fk2k670k8z-cargo-deny-0.20.2",
+              "path": "/nix/store/wv35z7gkfkjwfh40ckn8n5q4yf82v5gy-cargo-deny-0.20.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/awlky4pcmv00g5wm1kcqv5fk2k670k8z-cargo-deny-0.20.2"
+          "store_path": "/nix/store/wv35z7gkfkjwfh40ckn8n5q4yf82v5gy-cargo-deny-0.20.2"
         }
       }
     },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
-      "last_modified": "2026-10-08T19:21:32Z",
-      "resolved": "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30?lastModified=1791487292&narHash=sha256-tqM7xDEsaeK1p6VvRygeZ9LkQRpUUkbRT02BHv6hnTM%3D"
+      "last_modified": "2026-10-20T00:26:18Z",
+      "resolved": "github:NixOS/nixpkgs/70fdef7c16ffb24c9c74d91c73e438a39b46bfb5?lastModified=1792455978&narHash=sha256-nSJWFtMOPOovMKOGJZxNUYgGt5N4oEvrxRBqQkjA7jE%3D"
     },
     "pre-commit@4.5.1": {
       "last_modified": "2026-08-27T07:16:00Z",
