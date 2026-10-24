@@ -71,14 +71,36 @@ Projects should contain a `README.md` file that gives an overview of the project
 
 ## Licensing
 
-Projects should have one or more license files, defaulting to `LICENSE` in the
-root of the repository in the case of a single license. More complicated licensing
-schemes should be documented in the README and multiple licenses can be suffixed
-with `-<description>` to further identify them.
-
 By default, projects should be under an MIT-style license unless another license
 is required because of code heritage. Rust projects, if possible, should dual-license
-under both MIT and Apache 2.0.
+under both MIT and Apache 2.0, written as the SPDX expression `MIT OR Apache-2.0`.
+
+### License Files
+
+Projects follow the [REUSE](https://reuse.software/) specification, so license texts
+live in `LICENSES/`, named by SPDX identifier (for example, `LICENSES/MIT.txt` and
+`LICENSES/Apache-2.0.txt`).
+
+Projects also keep a copy at the repository root, where GitHub and most readers look
+for it. The copy is `LICENSE` for a single license. Multiple licenses are suffixed with
+`-<description>` (for example, `LICENSE-MIT` and `LICENSE-APACHE-2.0`). The root copies
+must match the texts in `LICENSES/`. More complicated licensing schemes should be
+documented in the README.
+
+### File Headers
+
+Every source file starts with SPDX headers, in the file's comment syntax, giving the
+license and the copyright holder with the year the file was created:
+
+```rust
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+```
+
+Files that cannot carry a comment header, such as JSON files, lock files, images and
+generated caches, are annotated in a `REUSE.toml` at the repository root instead.
+
+`reuse lint` checks all of this, in both the pre-commit hooks and CI.
 
 ## Version Control
 
