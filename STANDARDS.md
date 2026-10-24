@@ -290,11 +290,11 @@ Project-specific rules may be added when a project needs them.
 Every project commits its lock files, as each tool recommends. Applications also pin
 every direct dependency, including development dependencies, to an exact version:
 
-| Ecosystem | Manifest syntax                      | Lock file        |
-|-----------|--------------------------------------|------------------|
-| Cargo     | `serde = "=1.0.228"`                 | `Cargo.lock`     |
-| Python    | `"pydantic==2.12.0"`                 | `uv.lock`        |
-| pnpm      | `"react": "19.2.0"` (no `^` or `~`)  | `pnpm-lock.yaml` |
+| Ecosystem | Manifest syntax                     | Lock file        |
+|-----------|-------------------------------------|------------------|
+| Cargo     | `serde = "=1.0.228"`                | `Cargo.lock`     |
+| Python    | `"pydantic==2.12.0"`                | `uv.lock`        |
+| pnpm      | `"react": "19.2.0"` (no `^` or `~`) | `pnpm-lock.yaml` |
 
 Libraries instead declare compatible version ranges, so that downstream projects can
 resolve shared dependencies to a single version. Their lock files are still committed
@@ -334,24 +334,126 @@ Remove a configured exemption once the release has passed the normal release age
 
 ### Python
 
-Use [uv](https://github.com/astral-sh/uv) for all Python projects. The basic project
-structure should look like the following:
+#### Project Layout
+
+Use [uv](https://docs.astral.sh/uv/) for all Python projects, with a `src/` layout:
 
 ```txt
 project/
 ├── src/
 │   └── package_name/
 │       ├── __init__.py
+│       ├── __about__.py
 │       └── ...
 ├── tests/
 │   ├── __init__.py
 │   └── ...
+├── .git_archival.txt
+├── .python-version
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
 ```
 
-For linting and formatting, use [Ruff](https://docs.astral.sh/ruff/). For type
-checking, use [mypy](https://mypy.readthedocs.io/en/stable/) in strict mode.
+#### Python and uv Versions
 
-Eventually, standards for testing will likely be added.
+- `.python-version` names the exact Python version used for development and CI.
+- Applications set `requires-python` to that same exact version (for example,
+  `==3.15.0`). Libraries set the range of versions they support.
+- The `Programming Language :: Python :: 3.x` classifiers match `requires-python`.
+- `[tool.uv] required-version` sets the minimum uv version the project needs, and the
+  CI setup step pins the exact uv version.
+
+#### Dependencies
+
+Development tools go in the `dev` dependency group, not in optional dependencies:
+
+```toml
+[dependency-groups]
+dev = ["mypy==...", "pytest==...", "pytest-cov==...", "ruff==..."]
+```
+
+#### Versioning
+
+The package version comes from git tags through [hatch-vcs](https://github.com/ofek/hatch-vcs):
+
+```toml
+[project]
+dynamic = ["version"]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.uv]
+# Reinstall the project when HEAD or tags move, so the reported version stays current.
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+```
+
+`.git_archival.txt`, marked `export-subst` in `.gitattributes`, lets source archives
+without git history report their version. Code reads the version at runtime with
+`importlib.metadata.version()`, in `__about__.py`.
+
+#### Formatting and Linting
+
+Use [Ruff](https://docs.astral.sh/ruff/) for both. The baseline configuration enables
+every rule, including preview rules:
+
+```toml
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+ignore = ["missing-trailing-comma", "single-line-implicit-string-concatenation"]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "(?i)SPDX-FileCopyrightText: \\d{4}"
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["assert", "private-member-access"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+```
+
+The two ignored rules conflict with the Ruff formatter. Any further ignore needs a
+comment in `pyproject.toml` explaining why.
+
+#### Type Checking
+
+Use [mypy](https://mypy.readthedocs.io/en/stable/) in strict mode:
+
+```toml
+[tool.mypy]
+strict = true
+```
+
+#### Testing
+
+Use [pytest](https://docs.pytest.org/) with [pytest-cov](https://pytest-cov.readthedocs.io/),
+reporting missing lines: `uv run pytest --cov=src/package_name --cov-report=term-missing`.
+
+#### Hooks and CI
+
+The pre-commit hooks and CI both run:
+
+| Hook ID       | Command                                                          |
+|---------------|------------------------------------------------------------------|
+| `uv-lock`     | `uv lock --check`                                                |
+| `ruff-format` | `uv run ruff format --check`                                     |
+| `ruff-check`  | `uv run ruff check`                                              |
+| `mypy`        | `uv run mypy .`                                                  |
+| `test`        | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
+
+CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the checks.
