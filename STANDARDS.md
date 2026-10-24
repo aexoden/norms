@@ -10,6 +10,10 @@ were several guiding principles:
    rationale.
 3. Any developer should be able to build and run the project identically.
 
+When a project has good reason to depart from a standard, it records the exception,
+with its rationale, in its norms configuration file. `norms verify` then skips the
+corresponding check instead of reporting it.
+
 ## Development Environment
 
 Each language's own toolchain manager provides the development environment. Tool
@@ -65,9 +69,25 @@ indent_size = 2
 
 Additional project-specific options can be included if required.
 
-## README
+## Documentation
+
+### README
 
 Projects should contain a `README.md` file that gives an overview of the project.
+
+### Changelog
+
+Projects that publish versioned releases keep a hand-written `CHANGELOG.md` in the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format and follow
+[Semantic Versioning](https://semver.org/). Releases are tagged `vX.Y.Z`. Projects
+that are deployed directly from `main` without versioned releases do not need a
+changelog.
+
+### Agent Guidance
+
+Projects may include an `AGENTS.md` describing the project's commands and conventions
+for AI coding agents. Use `CLAUDE.md` only for instructions specific to Claude, and
+have it import `AGENTS.md` rather than repeat it.
 
 ## Licensing
 
