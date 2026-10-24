@@ -12,9 +12,37 @@ were several guiding principles:
 
 ## Development Environment
 
-Use [Devbox](https://www.jetify.com/devbox) for reproducible development environments.
-Within these environments, leverage language-specific package management tools where
-appropriate.
+Each language's own toolchain manager provides the development environment. Tool
+versions are pinned in files committed to the repository, so every developer and every
+CI run uses identical versions without any additional environment layer:
+
+| Language   | Required tool | Pinned by                                                             |
+|------------|---------------|-----------------------------------------------------------------------|
+| Rust       | rustup        | `rust-toolchain.toml` (exact channel and required components)         |
+| Python     | uv            | `.python-version`, `requires-python` and `[tool.uv] required-version` |
+| TypeScript | pnpm          | `devEngines` in `package.json` (Node.js and pnpm versions)            |
+
+The language-specific sections below describe each of these files in detail.
+
+[pre-commit](https://pre-commit.com/) must also be installed, by whatever method the
+developer prefers. See the [pre-commit installation documentation](https://pre-commit.com/#install).
+
+### Devbox
+
+Use [Devbox](https://www.jetify.com/devbox) only where it provides a clear benefit
+that the language toolchains cannot. At present, the only such use is running local
+services, such as a development PostgreSQL server via `devbox services`.
+
+When Devbox is used:
+
+- `devbox.json` includes a `$schema` reference and `devbox.lock` is committed.
+- Packages are limited to the services and the tools needed to manage them (for
+  example, `postgresql` and `sqlx-cli`). Language toolchains are not installed through
+  Devbox.
+- Service setup steps (initializing and creating databases, for example) are provided
+  as Devbox scripts and documented in the README.
+- Pre-commit hooks and CI steps invoke tools directly. Only steps that need a running
+  service may depend on Devbox.
 
 ## Editor Configuration
 
