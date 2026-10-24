@@ -457,3 +457,93 @@ The pre-commit hooks and CI both run:
 | `test`        | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
 
 CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the checks.
+
+### Rust
+
+#### Toolchain
+
+`rust-toolchain.toml` pins an exact channel and lists the components the hooks need,
+so `rustup` installs everything on first use:
+
+```toml
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]
+```
+
+Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. Applications do not need
+one, since the toolchain file already pins their compiler.
+
+`.cargo/config.toml` sets the release age (see [Release Age](#release-age)):
+
+```toml
+[registry]
+global-min-publish-age = "3 days"
+```
+
+#### Package Metadata
+
+`Cargo.toml` sets `description`, `repository`, `license`, `edition` (the latest
+edition), `keywords` and `categories`.
+
+#### Lints
+
+The baseline enables the `pedantic`, `nursery` and `cargo` Clippy groups, plus the
+restriction lints against `unwrap` and `expect`:
+
+```toml
+[lints.clippy]
+cargo = { level = "warn", priority = -1 }
+expect_used = "warn"
+multiple_crate_versions = "allow"
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+
+[lints.rust]
+future_incompatible = { level = "warn", priority = -1 }
+let_underscore = { level = "warn", priority = -1 }
+```
+
+`multiple_crate_versions` is allowed because transitive dependencies routinely pull in
+several versions of the same crate, which a project cannot fix.
+
+`clippy.toml` allows `unwrap`, `expect` and `panic` in tests:
+
+```toml
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-unwrap-in-tests = true
+```
+
+Projects may enable further restriction lints. A standard set has not been settled
+yet.
+
+The hooks and CI pass `-D warnings`, so any warning fails the check.
+
+#### Dependency Policy
+
+`deny.toml` configures [cargo-deny](https://embarkstudios.github.io/cargo-deny/):
+
+- `[licenses] allow` lists only permissive licenses that the project actually uses.
+- `[bans] multiple-versions = "allow"`, for the same reason as the Clippy lint above.
+- Every entry in `[advisories] ignore` has a `reason`.
+
+cargo-deny is installed separately by the developer. See the
+[cargo-deny installation documentation](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny).
+
+#### Hooks and CI
+
+The pre-commit hooks and CI both run:
+
+| Hook ID      | Command                                                                |
+|--------------|------------------------------------------------------------------------|
+| `rustfmt`    | `cargo fmt --all --check`                                              |
+| `clippy`     | `cargo clippy --workspace --all-targets --all-features -- -D warnings` |
+| `test`       | `cargo test --workspace --all-features`                                |
+| `cargo-deny` | `cargo deny check bans licenses sources`                               |
+
+CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which reads
+`rust-toolchain.toml`, and caches builds with `Swatinem/rust-cache`. It runs cargo-deny
+with `EmbarkStudios/cargo-deny-action`. The advisory check runs in `audit.yaml` (see
+[Continuous Integration](#continuous-integration)).
