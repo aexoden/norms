@@ -89,9 +89,10 @@ Additional guidance may be added here at a later date.
 
 ### Commit Messages
 
-Commit messages should follow a [Conventional Commits](https://www.conventionalcommits.org/)-
-like standard. Exact details and definitions are still under consideration. Some
-ideas under consideration can be found at the [Conventional Commits Cheatsheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13).
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/),
+checked by the `conventional-pre-commit` hook (see [Pre-Commit Hooks](#pre-commit-hooks)).
+The [Conventional Commits Cheatsheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13)
+is a useful reference for choosing types.
 
 The standard template for a commit message:
 
@@ -103,8 +104,7 @@ The standard template for a commit message:
 [optional footer]
 ```
 
-The following types are currently recognized, but as stated above, this list is
-not set in stone:
+The recognized types are:
 
 - `feat` - adds, changes or removes a feature
 - `fix` - fixes one or more bugs
@@ -114,31 +114,36 @@ not set in stone:
 - `test` - adds missing tests or corrects existing ones
 - `docs` - adds or updates documentation only
 - `build` - affects build-related components
-- `ops` - affects devops, CI/CD or infrastructure
+- `ci` - affects CI workflows or other automation configuration
 - `chore` - anything not otherwise mentioned
 
 Strictly speaking, dependency updates could fall under many of these, intentionally
-or not. By default, renovate (discussed later) will put these under `chore(deps)`,
-however. It may be desirable to revisit that default.
+or not. Renovate uses `fix(deps)` for runtime dependencies and `chore(deps)` for
+everything else. It may be desirable to revisit that default.
 
 Scopes are inherently project-specific. A good practice for mature projects would
 be to identify allowed scopes in developer documentation.
 
 The subject should be in the imperative mood, lowercase (except proper nouns, acronyms,
 or otherwise conventionally capitalized words), with no concluding punctuation.
-The entire first line should be no more than 50 characters (though this rule seems
-to lead to nearly useless subjects, so this may need to be revisited).
+Aim to keep the entire first line within 50 characters, and look for a shorter
+wording when it runs past that, but never exceed 72 characters.
 
 The optional body, if present, should document the motivation for the change and
 identify differences from existing behavior. Avoid documenting things that are either
-self-explanatory from the code or from comments within the code. The body should
-be wrapped at 72 characters (again, I personally find this needlessly anachronistic
-so it may be revisited).
+self-explanatory from the code or from comments within the code. Wrap the body at
+72 characters.
 
-### Branch Naming
+Commits written with an AI agent carry a `Co-Authored-By` trailer that identifies the
+agent. A `Signed-off-by` trailer is not required.
 
-Branch names should follow the pattern `<type>/<short-description>`. Use the same
-types as listed above.
+### Branches
+
+`main` is the default branch. A project may also keep a long-lived `dev` integration
+branch, in which case CI runs on pushes to both.
+
+Other branch names should follow the pattern `<type>/<short-description>`. Use the
+same types as listed above.
 
 ## Continuous Integration
 
