@@ -174,8 +174,8 @@ Project-specific rules may be added when a project needs them.
 
 ### Version Pinning
 
-Applications pin every direct dependency, including development dependencies, to an
-exact version and commit their lock files:
+Every project commits its lock files, as each tool recommends. Applications also pin
+every direct dependency, including development dependencies, to an exact version:
 
 | Ecosystem | Manifest syntax                      | Lock file        |
 |-----------|--------------------------------------|------------------|
@@ -184,7 +184,8 @@ exact version and commit their lock files:
 | pnpm      | `"react": "19.2.0"` (no `^` or `~`)  | `pnpm-lock.yaml` |
 
 Libraries instead declare compatible version ranges, so that downstream projects can
-resolve shared dependencies to a single version.
+resolve shared dependencies to a single version. Their lock files are still committed
+for reproducible development and CI.
 
 ### Release Age
 
@@ -197,10 +198,9 @@ reach a project. It is enforced at two levels:
    file maintenance and manual updates:
    - uv: `exclude-newer = "3 days"` under `[tool.uv]` in `pyproject.toml`.
    - pnpm: `minimumReleaseAge: 4320` (in minutes) in `pnpm-workspace.yaml`.
-   - Cargo: no stable equivalent exists yet. `registry.global-min-publish-age` is
-     unstable and is silently ignored by stable toolchains, so it should not be
-     configured until it stabilizes. Until then, Cargo updates rely on Renovate alone,
-     and Cargo lock file maintenance is not age-checked.
+   - Cargo: `global-min-publish-age = "3 days"` under `[registry]` in
+     `.cargo/config.toml`. This is stable as of Rust 1.100; earlier toolchains silently
+     ignore it, so it takes effect when the pinned toolchain reaches 1.100.
 
 #### Urgent Updates
 
@@ -211,8 +211,11 @@ comment naming the advisory:
 
 - uv: `exclude-newer-package = { package-name = false }` under `[tool.uv]`.
 - pnpm: `minimumReleaseAgeExclude: [package-name]` in `pnpm-workspace.yaml`.
+- Cargo: there is no per-package setting. Run
+  `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update -p package-name`, and the
+  lock file keeps the newer version.
 
-Remove the exemption once the release has passed the normal release age.
+Remove a configured exemption once the release has passed the normal release age.
 
 ## Language-Specific Standards
 
