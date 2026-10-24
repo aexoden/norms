@@ -198,9 +198,44 @@ Each workflow sets a `concurrency` group that cancels superseded runs of the sam
 
 ## Pre-Commit Hooks
 
-Pre-commit hooks should be provided by [pre-commit](https://pre-commit.com/).
+Pre-commit hooks are provided by [pre-commit](https://pre-commit.com/), configured in
+`.pre-commit-config.yaml` at the repository root. The configuration sets
+`default_install_hook_types` so that a plain `pre-commit install` also installs the
+commit message hook:
 
-Additional guidance may be added later.
+```yaml
+default_install_hook_types: [pre-commit, commit-msg]
+```
+
+Hook revisions are pinned to release tags and updated by Renovate.
+
+### Common Hooks
+
+Every project uses these hooks:
+
+- [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks):
+  `check-added-large-files`, `check-case-conflict`, `check-symlinks`, `check-toml`,
+  `check-vcs-permalinks`, `check-yaml`, `detect-private-key`, `end-of-file-fixer`
+  and `trailing-whitespace`.
+- [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see [Licensing](#licensing)).
+- [zizmor](https://github.com/zizmorcore/zizmor-pre-commit): `zizmor`.
+- [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit):
+  `conventional-pre-commit` in the `commit-msg` stage, with the recognized commit
+  types passed as arguments:
+
+  ```yaml
+  - id: conventional-pre-commit
+    stages: [commit-msg]
+    args: [feat, fix, perf, refactor, style, test, docs, build, ci, chore]
+  ```
+
+### Language Hooks
+
+Language hooks are `local` hooks with `language: system` and `pass_filenames: false`.
+They invoke the project's tools directly (for example, `cargo clippy` or
+`uv run ruff check`), never through Devbox. Each one checks without modifying files,
+so the hooks and CI produce the same results. The language sections below list the
+required hooks.
 
 ## Dependency Management
 
