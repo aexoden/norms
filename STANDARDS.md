@@ -156,7 +156,63 @@ Additional guidance may be added later.
 
 ## Dependency Management
 
-Use [Renovate](https://docs.renovatebot.com/) for automated dependency updates.
+### Automated Updates
+
+Use [Renovate](https://docs.renovatebot.com/) for automated dependency updates. The
+shared [renovate-config](https://github.com/aexoden/renovate-config) preset builds on
+`config:best-practices` and provides the automerge, grouping, pinning and release age
+policies, so `renovate.json` normally contains nothing else:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>aexoden/renovate-config"]
+}
+```
+
+Project-specific rules may be added when a project needs them.
+
+### Version Pinning
+
+Applications pin every direct dependency, including development dependencies, to an
+exact version and commit their lock files:
+
+| Ecosystem | Manifest syntax                      | Lock file        |
+|-----------|--------------------------------------|------------------|
+| Cargo     | `serde = "=1.0.228"`                 | `Cargo.lock`     |
+| Python    | `"pydantic==2.12.0"`                 | `uv.lock`        |
+| pnpm      | `"react": "19.2.0"` (no `^` or `~`)  | `pnpm-lock.yaml` |
+
+Libraries instead declare compatible version ranges, so that downstream projects can
+resolve shared dependencies to a single version.
+
+### Release Age
+
+A new release must be at least three days old before a project adopts it. The delay
+gives the community time to catch and yank compromised or broken releases before they
+reach a project. It is enforced at two levels:
+
+1. **Renovate**, through `minimumReleaseAge` in the shared preset.
+2. **The package manager**, which covers what Renovate cannot age-check, such as lock
+   file maintenance and manual updates:
+   - uv: `exclude-newer = "3 days"` under `[tool.uv]` in `pyproject.toml`.
+   - pnpm: `minimumReleaseAge: 4320` (in minutes) in `pnpm-workspace.yaml`.
+   - Cargo: no stable equivalent exists yet. `registry.global-min-publish-age` is
+     unstable and is silently ignored by stable toolchains, so it should not be
+     configured until it stabilizes. Until then, Cargo updates rely on Renovate alone,
+     and Cargo lock file maintenance is not age-checked.
+
+#### Urgent Updates
+
+Security fixes may bypass the release age requirement. Renovate's vulnerability alert
+PRs are exempt from `minimumReleaseAge` in the shared preset. To update a single package
+early through the package manager, add a temporary per-package exemption, with a
+comment naming the advisory:
+
+- uv: `exclude-newer-package = { package-name = false }` under `[tool.uv]`.
+- pnpm: `minimumReleaseAgeExclude: [package-name]` in `pnpm-workspace.yaml`.
+
+Remove the exemption once the release has passed the normal release age.
 
 ## Language-Specific Standards
 
