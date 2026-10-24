@@ -317,7 +317,8 @@ Language hooks are `local` hooks with `language: system` and `pass_filenames: fa
 They invoke the project's tools directly (for example, `cargo clippy` or
 `uv run ruff check`), never through Devbox. Each one checks without modifying files,
 so the hooks and CI produce the same results. The language sections below list the
-required hooks.
+required hooks. Hook IDs are unique across languages (for example, `pytest`,
+`cargo-test` and `vitest` rather than `test`), so that `SKIP` can target one.
 
 ## Dependency Management
 
@@ -506,7 +507,7 @@ The pre-commit hooks and CI both run:
 | `ruff-format` | `uv run ruff format --check`                                     |
 | `ruff-check`  | `uv run ruff check`                                              |
 | `mypy`        | `uv run mypy .`                                                  |
-| `test`        | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
+| `pytest`      | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
 
 CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the checks.
 
@@ -592,7 +593,7 @@ The pre-commit hooks and CI both run:
 |--------------|------------------------------------------------------------------------|
 | `rustfmt`    | `cargo fmt --all --check`                                              |
 | `clippy`     | `cargo clippy --workspace --all-targets --all-features -- -D warnings` |
-| `test`       | `cargo test --workspace --all-features`                                |
+| `cargo-test` | `cargo test --workspace --all-features`                                |
 | `cargo-deny` | `cargo deny check bans licenses sources`                               |
 
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which reads
@@ -685,4 +686,4 @@ The pre-commit hooks and CI both run the following, prefixed with
 | `prettier`               | `pnpm exec prettier --check .`        |
 | `eslint`                 | `pnpm exec eslint . --max-warnings 0` |
 | `tsc`                    | `pnpm exec tsc -b --noEmit`           |
-| `test`                   | `pnpm exec vitest run`                |
+| `vitest`                 | `pnpm exec vitest run`                |
