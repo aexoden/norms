@@ -143,7 +143,11 @@ agent. A `Signed-off-by` trailer is not required.
 branch, in which case CI runs on pushes to both.
 
 Other branch names should follow the pattern `<type>/<short-description>`. Use the
-same types as listed above.
+same types as listed above. Branches created by AI agents or bots may use whatever
+names those tools choose.
+
+Pull requests are squash-merged, so the pull request title becomes the commit subject.
+Every pull request title, whoever opens it, must follow the subject rules above.
 
 ## Continuous Integration
 
