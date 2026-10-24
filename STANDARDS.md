@@ -147,11 +147,50 @@ same types as listed above.
 
 ## Continuous Integration
 
-Continuous integration is provided by a GitHub Actions configuration, preferably
-stored at `.github/workflows/ci.yaml`.
+Continuous integration is provided by GitHub Actions. Every project has the following
+workflows:
 
-Recommended jobs include linting and formatting checks, type checking, tests with
-coverage and build verification.
+| Workflow                        | Triggers                                        | Purpose                                 |
+|---------------------------------|-------------------------------------------------|-----------------------------------------|
+| `.github/workflows/ci.yaml`     | Pushes to `main` (and `dev`), all pull requests | Every check the pre-commit hooks run    |
+| `.github/workflows/audit.yaml`  | Daily schedule, manual dispatch                 | Security advisory audit of dependencies |
+| `.github/workflows/zizmor.yaml` | Pushes to `main` (and `dev`), all pull requests | Security analysis of the workflows      |
+
+### Checks
+
+`ci.yaml` runs formatting checks, linting, type checking, tests (with coverage where
+the language supports it) and dependency policy checks, such as `cargo deny check bans
+licenses sources` and lock file freshness. CI should fail in every case where the
+pre-commit hooks would.
+
+Security advisories are checked by `audit.yaml` rather than `ci.yaml`. New advisories
+appear independently of code changes, so a daily audit catches them promptly without
+blocking unrelated pull requests. The audit tools are:
+
+- Rust: `cargo deny check advisories`.
+- Python: `uv audit` (currently experimental in uv).
+- TypeScript: `pnpm audit`.
+
+### Structure
+
+Install toolchains with each language's standard setup action (for example,
+`astral-sh/setup-uv` or `actions-rust-lang/setup-rust-toolchain`), using the versions
+pinned in the repository. Use Devbox only in jobs that need a local service.
+
+Split checks into parallel jobs where feasible. Use an operating system matrix when
+platform differences could plausibly cause problems, such as file system behavior or
+external tools.
+
+Each workflow sets a `concurrency` group that cancels superseded runs of the same ref.
+
+### Hardening
+
+- Pin every action to a full commit SHA, with the version in a trailing comment
+  (`uses: actions/checkout@<sha> # v7.0.1`). Renovate keeps these current.
+- Set `permissions: {}` at the top level of every workflow, and grant each job only
+  the permissions it needs.
+- Set `persist-credentials: false` on every `actions/checkout` step.
+- Run [zizmor](https://docs.zizmor.sh/) in both CI and the pre-commit hooks.
 
 ## Pre-Commit Hooks
 
