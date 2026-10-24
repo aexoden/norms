@@ -547,3 +547,90 @@ CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which r
 `rust-toolchain.toml`, and caches builds with `Swatinem/rust-cache`. It runs cargo-deny
 with `EmbarkStudios/cargo-deny-action`. The advisory check runs in `audit.yaml` (see
 [Continuous Integration](#continuous-integration)).
+
+### TypeScript
+
+#### Location
+
+A TypeScript project lives at the repository root when it is the primary language.
+Otherwise it lives in a named subdirectory, such as `frontend/`, which is declared in
+the norms configuration. Paths below are relative to that directory.
+
+#### Package Configuration
+
+`package.json` sets `"type": "module"` and `"private": true` (for applications), and
+pins Node.js and pnpm through `devEngines`. pnpm downloads the declared versions
+automatically:
+
+```json
+"devEngines": {
+  "runtime": { "name": "node", "version": "25.9.0", "onFail": "download" },
+  "packageManager": { "name": "pnpm", "version": "12.7.0", "onFail": "download" }
+}
+```
+
+It defines these scripts:
+
+| Script      | Command                |
+|-------------|------------------------|
+| `build`     | `tsc -b && vite build` |
+| `format`    | `prettier --check .`   |
+| `lint`      | `eslint .`             |
+| `test`      | `vitest run`           |
+| `typecheck` | `tsc -b --noEmit`      |
+
+`pnpm-workspace.yaml` sets the release age, and lists explicitly the dependencies
+allowed to run build scripts:
+
+```yaml
+allowBuilds:
+  esbuild: true
+minimumReleaseAge: 4320
+```
+
+#### Compiler Options
+
+`tsconfig.json` is solution-style, referencing a config for the application
+(`tsconfig.app.json`) and one for tooling files such as `vite.config.ts`
+(`tsconfig.node.json`). Each referenced config enables at least:
+
+```json
+"strict": true,
+"noUncheckedIndexedAccess": true,
+"noUncheckedSideEffectImports": true,
+"noFallthroughCasesInSwitch": true,
+"noUnusedLocals": true,
+"noUnusedParameters": true,
+"isolatedModules": true,
+"verbatimModuleSyntax": true,
+"moduleDetection": "force"
+```
+
+#### Formatting and Linting
+
+Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc` with
+`printWidth: 120`, along with a `.prettierignore`.
+
+Use [ESLint](https://eslint.org/) for linting, configured in `eslint.config.ts`. The
+configuration includes the `strictTypeChecked` and `stylisticTypeChecked` configs from
+[typescript-eslint](https://typescript-eslint.io/), with `projectService` enabled for
+type-aware rules, and `eslint-config-prettier` to disable rules that conflict with
+Prettier.
+
+#### Testing
+
+Use [Vitest](https://vitest.dev/).
+
+#### Hooks and CI
+
+The pre-commit hooks and CI both run the following, prefixed with
+`pnpm --dir <path>` when the project lives in a subdirectory:
+
+| Hook ID                  | Command                               |
+|--------------------------|---------------------------------------|
+| `pnpm-lock`              | `pnpm install --frozen-lockfile`      |
+| `pnpm-peer-dependencies` | `pnpm peers check`                    |
+| `prettier`               | `pnpm exec prettier --check .`        |
+| `eslint`                 | `pnpm exec eslint . --max-warnings 0` |
+| `tsc`                    | `pnpm exec tsc -b --noEmit`           |
+| `test`                   | `pnpm exec vitest run`                |
