@@ -127,7 +127,39 @@ generated caches, are annotated in a `REUSE.toml` at the repository root instead
 Use `git` as the version control system. Both `.gitattributes` and `.gitignore`
 should be present and configured as appropriate for the project.
 
-Additional guidance may be added here at a later date.
+`.gitattributes` normalizes line endings, marks binary formats, and enables git's
+built-in diff drivers for each language in the project:
+
+```txt
+# Auto-detect text files and normalize line endings to LF
+*       text=auto eol=lf
+
+# Binary files
+*.gif   binary
+*.ico   binary
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+
+# Archives
+*.bz2   binary
+*.gz    binary
+*.tar   binary
+*.zip   binary
+
+# Python
+*.py    text diff=python
+*.pyi   text diff=python
+
+# Rust
+*.rs    text diff=rust
+```
+
+Include only the language blocks that apply. Python projects also mark
+`.git_archival.txt` as `export-subst` (see [Versioning](#versioning)).
 
 ### Commit Messages
 
