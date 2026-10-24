@@ -137,6 +137,7 @@ The recognized types are:
 - `docs` - adds or updates documentation only
 - `build` - affects build-related components
 - `ci` - affects CI workflows or other automation configuration
+- `revert` - reverts an earlier commit
 - `chore` - anything not otherwise mentioned
 
 Strictly speaking, dependency updates could fall under many of these, intentionally
@@ -150,6 +151,9 @@ The subject should be in the imperative mood, lowercase (except proper nouns, ac
 or otherwise conventionally capitalized words), with no concluding punctuation.
 Aim to keep the entire first line within 50 characters, and look for a shorter
 wording when it runs past that, but never exceed 72 characters.
+
+A revert uses the `revert` type with the subject of the reverted commit, for example
+`revert: add the history panel`. The body names the reverted commit and explains why.
 
 The optional body, if present, should document the motivation for the change and
 identify differences from existing behavior. Avoid documenting things that are either
@@ -248,8 +252,12 @@ Every project uses these hooks:
   ```yaml
   - id: conventional-pre-commit
     stages: [commit-msg]
-    args: [feat, fix, perf, refactor, style, test, docs, build, ci, chore]
+    args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
   ```
+
+- A commit message length hook, also in the `commit-msg` stage, which rejects a
+  subject line over 72 characters or a body line over 72 characters (lines containing a
+  URL are exempt). CI applies the same subject rules to pull request titles.
 
 ### Language Hooks
 
