@@ -28,6 +28,12 @@ repos:
     hooks:
       - id: reuse
 
+  # Markdown
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.24.0
+    hooks:
+      - id: markdownlint-cli2
+
   # GitHub Actions security
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.31.1

@@ -54,7 +54,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [cargo-deny, cargo-test, clippy, reuse, rustfmt, zizmor]
+    needs: [cargo-deny, cargo-test, clippy, markdownlint, reuse, rustfmt, zizmor]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
@@ -81,6 +81,22 @@ jobs:
 
       - name: Lint Rust code with Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  markdownlint:
+    name: Lint Markdown with markdownlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint Markdown with markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: '**/*.md'
 
   reuse:
     name: Check REUSE compliance
