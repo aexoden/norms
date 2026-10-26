@@ -232,6 +232,42 @@ Pull requests are squash-merged, so the pull request title becomes the commit su
 The repository's merge settings allow only squash merging. Every pull request title,
 whoever opens it, must follow the subject rules above.
 
+### Branch Protection
+
+A repository ruleset named `Default` protects the default branch. It is active, has no
+bypass actors, and enables these rules:
+
+| Rule                          | Settings                                              |
+|-------------------------------|-------------------------------------------------------|
+| Restrict deletions            |                                                       |
+| Block force pushes            |                                                       |
+| Require linear history        |                                                       |
+| Require signed commits        |                                                       |
+| Require status checks to pass | `CI success` from GitHub Actions; branches up to date |
+
+The one required check is the CI gate job (see [Gate Job](#gate-job)). Selecting
+GitHub Actions as its source means a commit status of the same name from anywhere else
+cannot satisfy it. Requiring branches to be up to date means the tree CI tested is the
+tree that is merged. Checks that do not report on every commit are never required,
+since a required check that never reports blocks the merge. This excludes
+`audit.yaml`, which runs on a schedule, and Renovate's commit statuses such as
+`renovate/artifacts`, which appear only on some Renovate branches. Renovate waits for
+those itself, because the shared preset disables platform automerge.
+
+The ruleset does not require a pull request, so that `main` can be fast-forwarded to
+`dev`. The required status check still applies to a direct push: GitHub accepts it
+only if the commit being pushed has already passed, which it has if CI passed on
+`dev`. An untested commit can reach `main` by neither route.
+
+Commits pushed directly must be signed locally. Commits that GitHub creates, such as
+squash merges and Renovate's commits, are signed by GitHub.
+
+The `dev` branch is not protected. It is a working branch, and rewriting it before
+`main` catches up is harmless.
+
+Rulesets on private repositories require GitHub Pro. A private repository without it
+follows the same workflow by convention, without enforcement.
+
 ## Continuous Integration
 
 Continuous integration is provided by GitHub Actions. Every project has the following
@@ -269,6 +305,9 @@ platform differences could plausibly cause problems, such as file system behavio
 external tools.
 
 Each workflow sets a `concurrency` group that cancels superseded runs of the same ref.
+
+`ci.yaml` never filters `pull_request` by `paths` or `branches`. The ruleset waits for
+its result, and a workflow that does not run leaves the pull request blocked.
 
 ### Gate Job
 
