@@ -112,10 +112,12 @@ documented in the README.
 Every source file starts with SPDX headers, in the file's comment syntax, giving the
 license and the copyright holder with the year the file was created:
 
+<!-- REUSE-IgnoreStart -->
 ```rust
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 ```
+<!-- REUSE-IgnoreEnd -->
 
 Files that cannot carry a comment header, such as JSON files, lock files, images and
 generated caches, are annotated in a `REUSE.toml` at the repository root instead.
