@@ -56,7 +56,7 @@ pub enum ConfigStatus<T> {
 
 impl<T> ConfigStatus<T> {
     /// Get a reference to the parsed value, if available.
-    pub fn as_ref_ok(&self) -> Option<&T> {
+    pub const fn as_ref_ok(&self) -> Option<&T> {
         match self {
             Self::Ok(v) => Some(v),
             _ => None,
@@ -96,7 +96,7 @@ pub struct ProjectContext {
 
 impl ProjectContext {
     /// Create a new context for the project at the given path.
-    pub fn new(path: PathBuf) -> Self {
+    pub const fn new(path: PathBuf) -> Self {
         Self {
             path,
             languages: OnceLock::new(),

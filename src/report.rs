@@ -51,7 +51,7 @@ impl Outcome {
 
     /// Returns `true` if this outcome is a pass.
     #[expect(dead_code)] // Placeholder for future use in conditional logic
-    pub fn is_pass(&self) -> bool {
+    pub const fn is_pass(&self) -> bool {
         matches!(self, Self::Pass)
     }
 }
@@ -141,7 +141,7 @@ pub struct Report {
 
 impl Report {
     /// Create a new empty report for the given project.
-    pub fn new(project_path: PathBuf, languages: HashSet<Language>) -> Self {
+    pub const fn new(project_path: PathBuf, languages: HashSet<Language>) -> Self {
         Self {
             project_path,
             languages,

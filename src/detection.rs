@@ -32,11 +32,9 @@ pub fn detect_languages(path: &Path) -> HashSet<Language> {
     }
 
     // TypeScript projects may live in a frontend/ subdirectory
-    if !languages.contains(&Language::TypeScript) {
-        let frontend = path.join("frontend");
-        if frontend.is_dir() && frontend.join("package.json").exists() {
-            languages.insert(Language::TypeScript);
-        }
+    let frontend = path.join("frontend");
+    if frontend.is_dir() && frontend.join("package.json").exists() {
+        languages.insert(Language::TypeScript);
     }
 
     languages

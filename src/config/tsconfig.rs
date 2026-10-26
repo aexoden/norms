@@ -40,7 +40,7 @@ impl TsConfig {
     ///
     /// Solution-style configs have a non-empty `references` array and typically no `compilerOptions`, delegating all
     /// compilation to the referenced sub-projects.
-    pub fn is_solution_style(&self) -> bool {
+    pub const fn is_solution_style(&self) -> bool {
         !self.references.is_empty()
     }
 

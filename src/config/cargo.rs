@@ -60,7 +60,7 @@ impl CargoToml {
     /// Whether the project defines any binary targets (explicit `[[bin]]` or inferred from `src/main.rs`).
     ///
     /// Note: the caller must separately check for `src/main.rs` on the filesystem.
-    pub fn has_explicit_bin_targets(&self) -> bool {
+    pub const fn has_explicit_bin_targets(&self) -> bool {
         !self.bin.is_empty()
     }
 
