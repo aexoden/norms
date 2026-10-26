@@ -270,6 +270,33 @@ external tools.
 
 Each workflow sets a `concurrency` group that cancels superseded runs of the same ref.
 
+### Gate Job
+
+`ci.yaml` ends with a gate job, `ci-success`, that succeeds only if every other job in
+the workflow succeeded. Branch protection requires this single check rather than each
+job, so jobs can be added, renamed, split or given new matrix entries without changing
+repository settings:
+
+```yaml
+ci-success:
+  name: CI success
+  if: always()
+  needs: [lint, test]
+  runs-on: ubuntu-latest
+  steps:
+    - name: Fail unless every job succeeded
+      if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+      run: exit 1
+```
+
+- `needs` lists every other job in the workflow. `needs.*.result` covers only direct
+  dependencies, so a job reached only through another job goes unchecked.
+- `if: always()` is essential. Without it, the gate is skipped when a job fails, and a
+  skipped job satisfies a required check.
+- Any result other than success fails the gate, including a skipped job.
+- The name itself isn't important, but that's the field that appears in the
+  GitHub UI for the check, not the job ID.
+
 ### Hardening
 
 - Pin every action to a full commit SHA, with the version in a trailing comment
