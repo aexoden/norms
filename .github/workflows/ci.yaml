@@ -22,8 +22,8 @@ jobs:
         with:
           command: check bans licenses sources
 
-  rustfmt:
-    name: Check Rust code formatting
+  cargo-test:
+    name: Run Rust tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,14 +31,22 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
-        with:
-          components: rustfmt
 
       - name: Set up Rust cache
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
 
-      - name: Check Rust code formatting
-        uses: actions-rust-lang/rustfmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
+      - name: Run Rust tests
+        run: cargo test --workspace --all-features
+
+  ci-success:
+    name: CI success
+    if: always()
+    needs: [cargo-deny, cargo-test, clippy, rustfmt]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
 
   clippy:
     name: Lint Rust code with Clippy
@@ -58,8 +66,8 @@ jobs:
       - name: Lint Rust code with Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-  cargo-test:
-    name: Run Rust tests
+  rustfmt:
+    name: Check Rust code formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -67,9 +75,11 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt
 
       - name: Set up Rust cache
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
 
-      - name: Run Rust tests
-        run: cargo test --workspace --all-features
+      - name: Check Rust code formatting
+        uses: actions-rust-lang/rustfmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
