@@ -842,8 +842,9 @@ Use [Vitest](https://vitest.dev/).
 
 #### Hooks and CI
 
-The pre-commit hooks and CI both run the following, prefixed with
-`pnpm --dir <path>` when the project lives in a subdirectory:
+The pre-commit hooks and CI both run the following. When the project lives in a
+subdirectory, the hooks prefix each command with `pnpm --dir <path>`, and CI
+sets the job's working directory instead:
 
 | Hook ID                  | Command                               |
 |--------------------------|---------------------------------------|
@@ -853,3 +854,8 @@ The pre-commit hooks and CI both run the following, prefixed with
 | `eslint`                 | `pnpm exec eslint . --max-warnings 0` |
 | `tsc`                    | `pnpm exec tsc -b --noEmit`           |
 | `vitest`                 | `pnpm exec vitest run`                |
+
+pnpm switches to the version pinned in `devEngines` only when it runs in the
+project's own directory, and `--dir` doesn't count. In a subdirectory, the hooks
+therefore run pnpm's own commands through `exec`, as in `pnpm --dir <path> exec
+pnpm install --frozen-lockfile`, so that the pinned pnpm runs them.
