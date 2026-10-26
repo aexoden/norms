@@ -32,6 +32,7 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
+        args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
 
   # Rust
   - repo: local
