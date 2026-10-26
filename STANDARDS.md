@@ -93,6 +93,45 @@ Projects may include an `AGENTS.md` describing the project's commands and
 conventions for AI coding agents. Use `CLAUDE.md` only for instructions specific
 to Claude, and have it import `AGENTS.md` rather than repeat it.
 
+### Markdown
+
+Markdown files are checked by
+[markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2), in both
+the pre-commit hooks and CI. The standard `.markdownlint-cli2.jsonc` enables
+every default rule, requires dashes for unordered lists, wraps prose at 80
+columns and allows repeated headings under different parents:
+
+```jsonc
+{
+    "config": {
+        "default": true,
+
+        // MD004 - Unordered list style
+        "MD004": {
+            "style": "dash"
+        },
+
+        // MD013 - Line length
+        "MD013": {
+            "line_length": 80,
+            "tables": false,
+            "code_blocks": false
+        },
+
+        // MD024 - No duplicate headings
+        "MD024": {
+            "siblings_only": true
+        }
+    }
+}
+```
+
+Tables and code blocks are exempt from the line length, since wrapping them
+would break them.
+
+CI runs `DavidAnson/markdownlint-cli2-action` with `globs: '**/*.md'`, since the
+action otherwise checks only the files at the repository root.
+
 ## Licensing
 
 By default, projects should be under an MIT-style license unless another license
@@ -405,6 +444,8 @@ Every project uses these hooks:
   `end-of-file-fixer` and `trailing-whitespace`.
 - [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see
   [Licensing](#licensing)).
+- [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2):
+  `markdownlint-cli2` (see [Markdown](#markdown)).
 - [zizmor](https://github.com/zizmorcore/zizmor-pre-commit): `zizmor`.
 - [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit):
   `conventional-pre-commit` in the `commit-msg` stage, with the recognized
