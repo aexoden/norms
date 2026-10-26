@@ -1,4 +1,16 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>aexoden/renovate-config"]
+  "extends": ["github>aexoden/renovate-config"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the Copier template's versions and the tools that check it",
+      "managerFilePatterns": ["/^versions\\.yml$/", "/^\\.github/workflows/[^/]+\\.yaml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: packageName=(?<packageName>\\S+))?\\n\\w+:\\n\\s+default: \"(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>[^\"]+)\"",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: packageName=(?<packageName>\\S+))?\\n\\w+:\\n\\s+default: \"(?<currentValue>[^\"#]+)\"",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s+\\w+: \"(?<currentValue>[^\"]+)\""
+      ]
+    }
+  ]
 }
