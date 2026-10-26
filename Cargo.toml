@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "A tool to verify and enforce project coding standards across multiple languages."
 repository = "https://github.com/aexoden/norms"
-license = "Apache-2.0 OR MIT"
+license = "MIT OR Apache-2.0"
 keywords = ["coding", "linting", "standards"]
 categories = ["development-tools"]
 
