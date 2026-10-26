@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: {{ license }}
+// SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+import { greeting } from "./greeting";
+
+const app = document.querySelector<HTMLDivElement>("#app");
+
+if (app) {
+    app.textContent = greeting("world");
+}

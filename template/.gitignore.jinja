@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+{%- if 'python' in languages %}
+
+# Python
+__pycache__/
+.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+dist/
+{%- endif %}
+{%- if 'rust' in languages %}
+
+# Rust
+target/
+{%- endif %}
+{%- if 'typescript' in languages %}
+
+# TypeScript
+coverage/
+{%- if 'python' not in languages %}
+dist/
+{%- endif %}
+node_modules/
+*.tsbuildinfo
+{%- endif %}

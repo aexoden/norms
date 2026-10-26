@@ -1,0 +1,167 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+# Pre-commit configuration
+# Install: pre-commit install
+
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: {{ hook_pre_commit_hooks }}
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-vcs-permalinks
+      - id: check-yaml
+{%- if 'typescript' in languages %}
+        # pnpm-lock.yaml holds more than one document.
+        args: [--allow-multiple-documents]
+{%- endif %}
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Licensing
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: {{ hook_reuse }}
+    hooks:
+      - id: reuse
+
+  # Markdown
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: {{ hook_markdownlint_cli2 }}
+    hooks:
+      - id: markdownlint-cli2
+
+  # GitHub Actions security
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: {{ hook_zizmor }}
+    hooks:
+      - id: zizmor
+        args: ["--pedantic"]
+
+  # Conventional commits
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: {{ hook_conventional_pre_commit }}
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
+{%- if 'rust' in languages %}
+{%- set manifest = '' if rust_prefix == '' else ' --manifest-path ' ~ rust_prefix ~ 'Cargo.toml' %}
+
+  # Rust
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: rustfmt
+        description: Format Rust code using rustfmt
+        entry: cargo fmt --all --check{{ manifest }}
+        language: system
+        pass_filenames: false
+      - id: clippy
+        name: clippy
+        description: Lint Rust code using clippy
+        entry: cargo clippy{{ manifest }} --workspace --all-targets --all-features -- -D warnings
+        language: system
+        pass_filenames: false
+      - id: cargo-test
+        name: cargo test
+        description: Run Rust tests using cargo test
+        entry: cargo test{{ manifest }} --workspace --all-features
+        language: system
+        pass_filenames: false
+      - id: cargo-deny
+        name: cargo-deny
+        description: Check Rust dependency bans, licenses and sources using cargo-deny
+        entry: cargo deny{{ manifest }} check bans licenses sources
+        language: system
+        pass_filenames: false
+{%- endif %}
+{%- if 'python' in languages %}
+{%- set uv = 'uv' if python_prefix == '' else 'uv --directory ' ~ python_dir %}
+
+  # Python
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: uv lock
+        description: Check that uv.lock is up to date
+        entry: {{ uv }} lock --check
+        language: system
+        pass_filenames: false
+      - id: ruff-format
+        name: ruff format
+        description: Check Python formatting using Ruff
+        entry: {{ uv }} run ruff format --check
+        language: system
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff check
+        description: Lint Python code using Ruff
+        entry: {{ uv }} run ruff check
+        language: system
+        pass_filenames: false
+      - id: mypy
+        name: mypy
+        description: Type check Python code using mypy
+        entry: {{ uv }} run mypy .
+        language: system
+        pass_filenames: false
+      - id: pytest
+        name: pytest
+        description: Run Python tests using pytest
+        entry: {{ uv }} run pytest --cov=src/{{ python_package }} --cov-report=term-missing
+        language: system
+        pass_filenames: false
+{%- endif %}
+{%- if 'typescript' in languages %}
+{%- set pnpm = 'pnpm' if typescript_prefix == '' else 'pnpm --dir ' ~ typescript_dir %}
+{#- pnpm only switches to the devEngines version in the current directory, so
+    pnpm's own commands run through exec when the project is in a subdirectory. #}
+{%- set pnpm_self = 'pnpm' if typescript_prefix == '' else pnpm ~ ' exec pnpm' %}
+
+  # TypeScript
+  - repo: local
+    hooks:
+      - id: pnpm-lock
+        name: pnpm lock
+        description: Check that pnpm-lock.yaml is up to date
+        entry: {{ pnpm_self }} install --frozen-lockfile
+        language: system
+        pass_filenames: false
+      - id: pnpm-peer-dependencies
+        name: pnpm peer dependencies
+        description: Check for missing or invalid peer dependencies
+        entry: {{ pnpm_self }} peers check
+        language: system
+        pass_filenames: false
+      - id: prettier
+        name: prettier
+        description: Check formatting using Prettier
+        entry: {{ pnpm }} exec prettier --check .
+        language: system
+        pass_filenames: false
+      - id: eslint
+        name: eslint
+        description: Lint TypeScript code using ESLint
+        entry: {{ pnpm }} exec eslint . --max-warnings 0
+        language: system
+        pass_filenames: false
+      - id: tsc
+        name: tsc
+        description: Type check TypeScript code using tsc
+        entry: {{ pnpm }} exec tsc -b --noEmit
+        language: system
+        pass_filenames: false
+      - id: vitest
+        name: vitest
+        description: Run TypeScript tests using Vitest
+        entry: {{ pnpm }} exec vitest run
+        language: system
+        pass_filenames: false
+{%- endif %}

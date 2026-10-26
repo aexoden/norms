@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+name: Security Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight
+  workflow_dispatch:
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+{%- if 'rust' in languages %}
+  cargo-deny:
+    name: Run cargo-deny advisory check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@{{ action_checkout }}
+        with:
+          persist-credentials: false
+
+      - name: Run cargo-deny advisory check
+        uses: EmbarkStudios/cargo-deny-action@{{ action_cargo_deny }}
+        with:
+          command: check advisories
+{%- if rust_prefix %}
+          manifest-path: {{ rust_prefix }}Cargo.toml
+{%- endif %}
+{%- endif %}
+{%- if 'python' in languages %}
+
+  uv-audit:
+    name: Run uv advisory check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+{%- if python_prefix %}
+    defaults:
+      run:
+        working-directory: {{ python_dir }}
+{%- endif %}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@{{ action_checkout }}
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@{{ action_setup_uv }}
+        with:
+          version: "{{ uv_version }}"
+{%- if python_prefix %}
+          working-directory: {{ python_dir }}
+{%- endif %}
+
+      - name: Run uv advisory check
+        run: uv audit --locked
+{%- endif %}
+{%- if 'typescript' in languages %}
+
+  pnpm-audit:
+    name: Run pnpm advisory check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+{%- if typescript_prefix %}
+    defaults:
+      run:
+        working-directory: {{ typescript_dir }}
+{%- endif %}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@{{ action_checkout }}
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm and Node.js
+        uses: pnpm/setup@{{ action_setup_pnpm }}
+        with:
+          install: false
+{%- if typescript_prefix %}
+          working-directory: {{ typescript_dir }}
+{%- endif %}
+
+      - name: Run pnpm advisory check
+        run: pnpm audit
+{%- endif %}

@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+[package]
+name = "{{ project_name }}"
+version = "0.1.0"
+edition = "2024"
+{%- if project_type == 'library' %}
+rust-version = "{{ rust_msrv }}"
+{%- endif %}
+description = "{{ description }}"
+repository = "{{ repository_url }}"
+license = "{{ license }}"
+{%- if rust_prefix %}
+readme = "{% for _ in rust_dir.split('/') %}../{% endfor %}README.md"
+{%- endif %}
+keywords = {{ rust_keywords | tojson }}
+categories = {{ rust_categories | tojson }}
+
+[dependencies]
+
+[lints.clippy]
+cargo = { level = "warn", priority = -1 }
+expect_used = "warn"
+multiple_crate_versions = "allow"
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+
+[lints.rust]
+future_incompatible = { level = "warn", priority = -1 }
+let_underscore = { level = "warn", priority = -1 }

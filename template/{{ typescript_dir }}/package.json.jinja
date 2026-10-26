@@ -1,0 +1,40 @@
+{
+  "name": "{{ project_name }}",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "{{ license }}",
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "dev": "vite",
+    "format": "prettier --check .",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "{{ npm_eslint_js }}",
+    "@types/node": "{{ npm_types_node }}",
+    "eslint": "{{ npm_eslint }}",
+    "eslint-config-prettier": "{{ npm_eslint_config_prettier }}",
+    "jiti": "{{ npm_jiti }}",
+    "prettier": "{{ npm_prettier }}",
+    "typescript": "{{ npm_typescript }}",
+    "typescript-eslint": "{{ npm_typescript_eslint }}",
+    "vite": "{{ npm_vite }}",
+    "vitest": "{{ npm_vitest }}"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "{{ node_version }}",
+      "onFail": "download"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "{{ pnpm_version }}",
+      "onFail": "download"
+    }
+  }
+}

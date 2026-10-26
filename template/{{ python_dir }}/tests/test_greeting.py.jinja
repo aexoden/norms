@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+"""Tests for the greeting module."""
+
+from __future__ import annotations
+
+from {{ python_package }}.greeting import greeting
+
+
+def test_greets_by_name() -> None:
+    """The greeting includes the name."""
+    assert greeting("world") == "Hello, world!"

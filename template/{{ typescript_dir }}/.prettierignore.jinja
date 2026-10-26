@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+pnpm-lock.yaml
+{%- if not typescript_prefix %}
+
+# Files formatted by other tools
+.copier-answers.yml
+.github/
+.markdownlint-cli2.jsonc
+{%- endif %}

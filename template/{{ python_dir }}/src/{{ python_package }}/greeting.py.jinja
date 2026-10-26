@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+"""Greetings."""
+
+from __future__ import annotations
+
+
+def greeting(name: str) -> str:
+    """Build a greeting.
+
+    Args:
+        name: The name to greet.
+
+    Returns:
+        str: The greeting.
+    """
+    return f"Hello, {name}!"

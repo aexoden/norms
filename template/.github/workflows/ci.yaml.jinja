@@ -1,0 +1,191 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+{%- macro checkout() %}
+      - name: Checkout repository
+        uses: actions/checkout@{{ action_checkout }}
+        with:
+          persist-credentials: false
+{%- endmacro %}
+{%- macro job(id, name, dir) %}
+  {{ id }}:
+    name: {{ name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+{%- if dir not in ['', '.'] %}
+    defaults:
+      run:
+        working-directory: {{ dir }}
+{%- endif %}
+    steps:
+{{- checkout() }}
+{%- endmacro %}
+{%- macro setup_rust() %}
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@{{ action_setup_rust_toolchain }}
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@{{ action_rust_cache }}
+{%- if rust_prefix %}
+        with:
+          workspaces: {{ rust_dir }} -> target
+{%- endif %}
+{%- endmacro %}
+{%- macro setup_uv(sync=true) %}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@{{ action_setup_uv }}
+        with:
+          version: "{{ uv_version }}"
+{%- if python_prefix %}
+          working-directory: {{ python_dir }}
+{%- endif %}
+{%- if sync %}
+
+      - name: Install dependencies
+        run: uv sync --locked
+{%- endif %}
+{%- endmacro %}
+{%- macro setup_pnpm() %}
+
+      - name: Install pnpm, Node.js and dependencies
+        uses: pnpm/setup@{{ action_setup_pnpm }}
+{%- if typescript_prefix %}
+        with:
+          working-directory: {{ typescript_dir }}
+{%- endif %}
+{%- endmacro %}
+{%- set jobs = ['markdownlint', 'reuse', 'zizmor'] %}
+{%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
+{%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
+{%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vitest'] %}{% endif %}
+
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  ci-success:
+    name: CI success
+    if: always()
+    needs: [{{ jobs | sort | join(', ') }}]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail unless every job succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+{{ job('markdownlint', 'Lint Markdown with markdownlint', '') }}
+
+      - name: Lint Markdown with markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@{{ action_markdownlint_cli2 }}
+        with:
+          globs: '**/*.md'
+{{ job('reuse', 'Check REUSE compliance', '') }}
+
+      - name: Check REUSE compliance
+        uses: fsfe/reuse-action@{{ action_reuse }}
+{{ job('zizmor', 'GitHub Actions security analysis with zizmor', '') }}
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@{{ action_zizmor }}
+        with:
+          advanced-security: false
+          annotations: true
+          persona: pedantic
+{%- if 'rust' in languages %}
+{{ job('cargo-deny', 'Run cargo-deny check', '') }}
+
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@{{ action_cargo_deny }}
+        with:
+          command: check bans licenses sources
+{%- if rust_prefix %}
+          manifest-path: {{ rust_prefix }}Cargo.toml
+{%- endif %}
+{{ job('cargo-test', 'Run Rust tests', rust_dir) }}
+{{- setup_rust() }}
+
+      - name: Run Rust tests
+        run: cargo test --workspace --all-features
+{{ job('clippy', 'Lint Rust code with Clippy', rust_dir) }}
+{{- setup_rust() }}
+
+      - name: Lint Rust code with Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+{{ job('rustfmt', 'Check Rust code formatting', '') }}
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@{{ action_setup_rust_toolchain }}
+
+      - name: Check Rust code formatting
+        uses: actions-rust-lang/rustfmt@{{ action_rustfmt }}
+{%- if rust_prefix %}
+        with:
+          manifest-path: {{ rust_prefix }}Cargo.toml
+{%- endif %}
+{%- endif %}
+{%- if 'python' in languages %}
+{{ job('mypy', 'Type check Python code with mypy', python_dir) }}
+{{- setup_uv() }}
+
+      - name: Type check Python code with mypy
+        run: uv run mypy .
+{{ job('pytest', 'Run Python tests', python_dir) }}
+{{- setup_uv() }}
+
+      - name: Run Python tests
+        run: uv run pytest --cov=src/{{ python_package }} --cov-report=term-missing
+{{ job('ruff-check', 'Lint Python code with Ruff', python_dir) }}
+{{- setup_uv() }}
+
+      - name: Lint Python code with Ruff
+        run: uv run ruff check
+{{ job('ruff-format', 'Check Python code formatting', python_dir) }}
+{{- setup_uv() }}
+
+      - name: Check Python code formatting
+        run: uv run ruff format --check
+{{ job('uv-lock', 'Check that uv.lock is up to date', python_dir) }}
+{{- setup_uv(sync=false) }}
+
+      - name: Check that uv.lock is up to date
+        run: uv lock --check
+{%- endif %}
+{%- if 'typescript' in languages %}
+{{ job('eslint', 'Lint TypeScript code with ESLint', typescript_dir) }}
+{{- setup_pnpm() }}
+
+      - name: Lint TypeScript code with ESLint
+        run: pnpm exec eslint . --max-warnings 0
+{{ job('pnpm-peer-dependencies', 'Check pnpm peer dependencies', typescript_dir) }}
+{{- setup_pnpm() }}
+
+      - name: Check pnpm peer dependencies
+        run: pnpm peers check
+{{ job('prettier', 'Check TypeScript code formatting', typescript_dir) }}
+{{- setup_pnpm() }}
+
+      - name: Check formatting with Prettier
+        run: pnpm exec prettier --check .
+{{ job('tsc', 'Type check TypeScript code', typescript_dir) }}
+{{- setup_pnpm() }}
+
+      - name: Type check TypeScript code
+        run: pnpm exec tsc -b --noEmit
+{{ job('vitest', 'Run TypeScript tests', typescript_dir) }}
+{{- setup_pnpm() }}
+
+      - name: Run TypeScript tests
+        run: pnpm exec vitest run
+{%- endif %}

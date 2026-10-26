@@ -8,3 +8,10 @@ version = 1
 path = ["**/*.md", "Cargo.lock", "renovate.json"]
 SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
 SPDX-License-Identifier = "MIT OR Apache-2.0"
+
+# The template's own headers hold Jinja placeholders for the rendered project.
+[[annotations]]
+path = "template/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
+SPDX-License-Identifier = "MIT OR Apache-2.0"

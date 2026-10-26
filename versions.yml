@@ -1,0 +1,187 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+# Every tool, action, hook and dependency version used by the Copier template.
+# Each entry is a hidden Copier variable. Renovate keeps them current through
+# the custom manager in renovate.json, which reads the comment above each one.
+# Actions are pinned as "<sha> # <version>".
+
+# Toolchains
+
+# renovate: datasource=github-tags depName=rust packageName=rust-lang/rust
+rust_toolchain:
+  default: "1.99.1"
+  when: false
+
+# renovate: datasource=python-version depName=python
+python_version:
+  default: "3.15.1"
+  when: false
+
+# renovate: datasource=pypi depName=uv
+uv_version:
+  default: "0.13.5"
+  when: false
+
+# renovate: datasource=node-version depName=node
+node_version:
+  default: "26.12.1"
+  when: false
+
+# renovate: datasource=npm depName=pnpm
+pnpm_version:
+  default: "12.15.0"
+  when: false
+
+# pre-commit hooks
+
+# renovate: datasource=github-tags depName=pre-commit/pre-commit-hooks
+hook_pre_commit_hooks:
+  default: "v6.0.0"
+  when: false
+
+# renovate: datasource=github-tags depName=fsfe/reuse-tool
+hook_reuse:
+  default: "v6.2.0"
+  when: false
+
+# renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
+hook_markdownlint_cli2:
+  default: "v0.24.0"
+  when: false
+
+# renovate: datasource=github-tags depName=zizmorcore/zizmor-pre-commit
+hook_zizmor:
+  default: "v1.31.1"
+  when: false
+
+# renovate: datasource=github-tags depName=compilerla/conventional-pre-commit
+hook_conventional_pre_commit:
+  default: "v4.4.0"
+  when: false
+
+# GitHub Actions
+
+# renovate: datasource=github-tags depName=actions/checkout
+action_checkout:
+  default: "3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1"
+  when: false
+
+# renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2-action
+action_markdownlint_cli2:
+  default: "21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0"
+  when: false
+
+# renovate: datasource=github-tags depName=fsfe/reuse-action
+action_reuse:
+  default: "676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0"
+  when: false
+
+# renovate: datasource=github-tags depName=zizmorcore/zizmor-action
+action_zizmor:
+  default: "53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0"
+  when: false
+
+# renovate: datasource=github-tags depName=actions-rust-lang/setup-rust-toolchain
+action_setup_rust_toolchain:
+  default: "ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0"
+  when: false
+
+# renovate: datasource=github-tags depName=Swatinem/rust-cache
+action_rust_cache:
+  default: "d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3"
+  when: false
+
+# renovate: datasource=github-tags depName=actions-rust-lang/rustfmt
+action_rustfmt:
+  default: "4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2"
+  when: false
+
+# renovate: datasource=github-tags depName=EmbarkStudios/cargo-deny-action
+action_cargo_deny:
+  default: "3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1"
+  when: false
+
+# renovate: datasource=github-tags depName=astral-sh/setup-uv
+action_setup_uv:
+  default: "07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2"
+  when: false
+
+# renovate: datasource=github-tags depName=pnpm/setup
+action_setup_pnpm:
+  default: "a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1"
+  when: false
+
+# Python development dependencies
+
+# renovate: datasource=pypi depName=mypy
+py_mypy:
+  default: "2.4.0"
+  when: false
+
+# renovate: datasource=pypi depName=pytest
+py_pytest:
+  default: "9.1.1"
+  when: false
+
+# renovate: datasource=pypi depName=pytest-cov
+py_pytest_cov:
+  default: "7.1.0"
+  when: false
+
+# renovate: datasource=pypi depName=ruff
+py_ruff:
+  default: "0.17.1"
+  when: false
+
+# TypeScript development dependencies
+
+# renovate: datasource=npm depName=@eslint/js
+npm_eslint_js:
+  default: "10.0.1"
+  when: false
+
+# renovate: datasource=npm depName=@types/node
+npm_types_node:
+  default: "26.6.5"
+  when: false
+
+# renovate: datasource=npm depName=eslint
+npm_eslint:
+  default: "10.13.0"
+  when: false
+
+# renovate: datasource=npm depName=eslint-config-prettier
+npm_eslint_config_prettier:
+  default: "10.1.8"
+  when: false
+
+# renovate: datasource=npm depName=jiti
+npm_jiti:
+  default: "2.7.0"
+  when: false
+
+# renovate: datasource=npm depName=prettier
+npm_prettier:
+  default: "3.9.10"
+  when: false
+
+# renovate: datasource=npm depName=typescript
+npm_typescript:
+  default: "6.0.3"
+  when: false
+
+# renovate: datasource=npm depName=typescript-eslint
+npm_typescript_eslint:
+  default: "8.72.0"
+  when: false
+
+# renovate: datasource=npm depName=vite
+npm_vite:
+  default: "8.3.5"
+  when: false
+
+# renovate: datasource=npm depName=vitest
+npm_vitest:
+  default: "5.0.5"
+  when: false

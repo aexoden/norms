@@ -1,0 +1,43 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Development
+
+Install [pre-commit](https://pre-commit.com/#install), then the hooks:
+
+```sh
+pre-commit install
+```
+{%- if 'rust' in languages %}
+
+Rust uses [rustup](https://rustup.rs/), which installs the toolchain pinned in
+`rust-toolchain.toml`. Install
+[cargo-deny](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny) for
+the dependency policy hook.
+{%- endif %}
+{%- if 'python' in languages %}
+
+Python uses [uv](https://docs.astral.sh/uv/), which installs the Python version
+pinned in `{{ python_prefix }}.python-version`.
+{%- endif %}
+{%- if 'typescript' in languages %}
+
+TypeScript uses [pnpm](https://pnpm.io/), which installs the Node.js and pnpm
+versions pinned in `{{ typescript_prefix }}package.json`.
+{%- endif %}
+
+## License
+{% if license == 'MIT OR Apache-2.0' %}
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE-2.0](LICENSE-APACHE-2.0) or
+  <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  <https://opensource.org/licenses/MIT>)
+
+at your option.
+{%- else %}
+Licensed under the MIT license ([LICENSE](LICENSE) or
+<https://opensource.org/licenses/MIT>).
+{%- endif %}

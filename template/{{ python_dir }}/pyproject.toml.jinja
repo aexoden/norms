@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+{%- set minor = python_version.split('.')[1] | int %}
+{%- set oldest = (python_min_version.split('.')[1] | int) if project_type == 'library' else minor %}
+
+[project]
+name = "{{ project_name }}"
+description = "{{ description }}"
+{%- if not python_prefix %}
+readme = "README.md"
+{%- endif %}
+{%- if project_type == 'application' %}
+requires-python = "=={{ python_version }}"
+{%- else %}
+requires-python = ">={{ python_min_version }}"
+{%- endif %}
+license = "{{ license }}"
+{%- if not python_prefix %}
+license-files = ["LICENSES/*.txt"]
+{%- endif %}
+authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+classifiers = [
+  "Programming Language :: Python",
+{%- for v in range(oldest, minor + 1) %}
+  "Programming Language :: Python :: 3.{{ v }}",
+{%- endfor %}
+  "Programming Language :: Python :: Implementation :: CPython",
+{%- if project_type == 'library' %}
+  "Typing :: Typed",
+{%- endif %}
+]
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Source = "{{ repository_url }}"
+{%- if project_type == 'application' %}
+
+[project.scripts]
+{{ project_name }} = "{{ python_package }}.main:main"
+{%- endif %}
+
+[dependency-groups]
+dev = [
+  "mypy=={{ py_mypy }}",
+  "pytest=={{ py_pytest }}",
+  "pytest-cov=={{ py_pytest_cov }}",
+  "ruff=={{ py_ruff }}",
+]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+{%- if python_prefix %}
+raw-options = { search_parent_directories = true }
+{%- endif %}
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+ignore = ["missing-trailing-comma", "single-line-implicit-string-concatenation"]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "(?i)SPDX-FileCopyrightText: \\d{4}"
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["assert", "private-member-access"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.uv]
+# Reinstall the project when HEAD or tags move, so the reported version stays current.
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+exclude-newer = "3 days"
+required-version = ">={{ uv_version }}"

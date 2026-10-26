@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+# Files that cannot carry a comment header.
+version = 1
+
+[[annotations]]
+path = [
+  "**/*.md",
+  "renovate.json",
+{%- if 'rust' in languages %}
+  "{{ rust_prefix }}Cargo.lock",
+{%- endif %}
+{%- if 'python' in languages %}
+  "{{ python_prefix }}.git_archival.txt",
+  "{{ python_prefix }}.python-version",
+  "{{ python_prefix }}uv.lock",
+{%- if project_type == 'library' %}
+  "{{ python_prefix }}src/{{ python_package }}/py.typed",
+{%- endif %}
+{%- endif %}
+{%- if 'typescript' in languages %}
+  "{{ typescript_prefix }}.prettierrc",
+  "{{ typescript_prefix }}package.json",
+  "{{ typescript_prefix }}pnpm-lock.yaml",
+  "{{ typescript_prefix }}tsconfig*.json",
+{%- endif %}
+]
+SPDX-FileCopyrightText = "{{ copyright_year }} {{ author_name }} <{{ author_email }}>"
+SPDX-License-Identifier = "{{ license }}"

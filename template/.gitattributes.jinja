@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+# Auto-detect text files and normalize line endings to LF
+*       text=auto eol=lf
+
+# Binary files
+*.gif   binary
+*.ico   binary
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+
+# Archives
+*.bz2   binary
+*.gz    binary
+*.tar   binary
+*.zip   binary
+{%- if 'python' in languages %}
+
+# Python
+*.py    text diff=python
+*.pyi   text diff=python
+
+# Version metadata for source archives (hatch-vcs)
+.git_archival.txt  export-subst
+{%- endif %}
+{%- if 'rust' in languages %}
+
+# Rust
+*.rs    text diff=rust
+{%- endif %}

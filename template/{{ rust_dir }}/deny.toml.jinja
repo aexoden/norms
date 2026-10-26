@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+[licenses]
+# Permissive licenses, plus MPL-2.0, whose file-level copyleft leaves the project's own license alone.
+allow = [
+  "0BSD",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "CC0-1.0",
+  "ISC",
+  "MIT",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Zlib",
+]
+# The list is shared across projects, so most entries go unused in any one of them.
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "allow"

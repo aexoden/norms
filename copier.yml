@@ -1,0 +1,263 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+# Copier template for projects following STANDARDS.md.
+# New project: uvx copier copy --trust --vcs-ref main gh:aexoden/norms <path>
+# Update: uvx copier update --trust --vcs-ref main
+# --vcs-ref main is needed until a norms release that includes the template.
+
+_subdirectory: template
+_min_copier_version: "9.10"
+_answers_file: .copier-answers.yml
+
+# Each component gets its lock file when it first appears, whether on copy or on
+# an update that adds a language. Existing lock files are left alone.
+_tasks:
+  - command: test -f {{ rust_prefix }}Cargo.lock || cargo generate-lockfile --manifest-path {{ rust_prefix }}Cargo.toml
+    when: "{{ 'rust' in languages }}"
+  # hatch-vcs needs a version even where there is no Git history yet, as in the
+  # copy Copier renders during an update. uv.lock doesn't record it.
+  - command: >-
+      test -f {{ python_prefix }}uv.lock || SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 uv --directory {{ python_dir }} lock
+    when: "{{ 'python' in languages }}"
+  # pnpm switches to the devEngines version only in the project's directory.
+  - command: test -f pnpm-lock.yaml || pnpm install
+    working_directory: "{{ typescript_dir }}"
+    when: "{{ 'typescript' in languages }}"
+
+---
+!include versions.yml
+---
+
+project_name:
+  type: str
+  help: Project name, in kebab-case
+  validator: >-
+    {% if not (project_name | regex_search('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')) %}
+    Use lowercase letters, digits and single hyphens, starting with a letter
+    {% endif %}
+
+description:
+  type: str
+  help: One-line description of the project, ending in a period
+  # The description is used unescaped in TOML strings and a Python docstring.
+  validator: >-
+    {% if not (description | regex_search('^\S.*\.$')) %}
+    Write a sentence ending in a period
+    {% elif '"' in description or '\\' in description %}
+    Leave out double quotes and backslashes
+    {% endif %}
+
+author_name:
+  type: str
+  help: Copyright holder's name
+  default: Jason Lynch
+  validator: >-
+    {% if not (author_name | regex_search('^[^"\\\\<>]+$')) %}
+    Leave out double quotes, backslashes and angle brackets
+    {% endif %}
+
+author_email:
+  type: str
+  help: Copyright holder's email address
+  default: jason@aexoden.com
+  validator: >-
+    {% if not (author_email | regex_search('^[^\s"\\\\<>@]+@[^\s"\\\\<>@]+\.[^\s"\\\\<>@]+$')) %}
+    Use a plain email address
+    {% endif %}
+
+copyright_year:
+  type: str
+  help: Year for new files' copyright notices
+  default: "{{ '%Y' | strftime }}"
+  validator: "{% if not (copyright_year | regex_search('^[0-9]{4}$')) %}Use a four-digit year{% endif %}"
+
+repository_url:
+  type: str
+  help: Repository URL
+  default: https://github.com/aexoden/{{ project_name }}
+
+project_type:
+  type: str
+  help: Application or library
+  choices:
+    Application: application
+    Library: library
+  default: application
+
+primary_language:
+  type: str
+  help: Primary language, which lives at the repository root
+  choices:
+    Rust: rust
+    Python: python
+    TypeScript: typescript
+  validator: >-
+    {% if primary_language == 'typescript' and project_type == 'library' %}
+    TypeScript components are applications
+    {% endif %}
+
+secondary_languages:
+  type: str
+  help: Secondary languages, each in its own subdirectory
+  multiselect: true
+  choices:
+    Rust:
+      value: rust
+      validator: "{% if primary_language == 'rust' %}Rust is the primary language{% endif %}"
+    Python:
+      value: python
+      validator: "{% if primary_language == 'python' %}Python is the primary language{% endif %}"
+    TypeScript:
+      value: typescript
+      validator: "{% if primary_language == 'typescript' %}TypeScript is the primary language{% endif %}"
+  default: []
+
+rust_path:
+  type: str
+  help: Directory of the Rust component
+  default: rust
+  when: "{{ 'rust' in secondary_languages }}"
+  validator: >-
+    {% if not (rust_path | default('') | regex_search('^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*$')) %}
+    Use a relative path of lowercase names
+    {% elif rust_path.split('/')[0] in ['coverage', 'dist', 'node_modules', 'src', 'target', 'tests'] %}
+    Choose a directory outside the root component's sources, tests and build output
+    {% endif %}
+
+python_path:
+  type: str
+  help: Directory of the Python component
+  default: python
+  when: "{{ 'python' in secondary_languages }}"
+  validator: >-
+    {% if not (python_path | default('') | regex_search('^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*$')) %}
+    Use a relative path of lowercase names
+    {% elif python_path.split('/')[0] in ['coverage', 'dist', 'node_modules', 'src', 'target', 'tests'] %}
+    Choose a directory outside the root component's sources, tests and build output
+    {% elif 'rust' in secondary_languages and ((python_path ~ '/').startswith(rust_path ~ '/') or (rust_path ~ '/').startswith(python_path ~ '/')) %}
+    Use a directory apart from the Rust component's, neither inside nor around it
+    {% endif %}
+
+typescript_path:
+  type: str
+  help: Directory of the TypeScript component
+  default: frontend
+  when: "{{ 'typescript' in secondary_languages }}"
+  validator: >-
+    {% if not (typescript_path | default('') | regex_search('^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*$')) %}
+    Use a relative path of lowercase names
+    {% elif typescript_path.split('/')[0] in ['coverage', 'dist', 'node_modules', 'src', 'target', 'tests'] %}
+    Choose a directory outside the root component's sources, tests and build output
+    {% elif 'rust' in secondary_languages and ((typescript_path ~ '/').startswith(rust_path ~ '/') or (rust_path ~ '/').startswith(typescript_path ~ '/')) %}
+    Use a directory apart from the Rust component's, neither inside nor around it
+    {% elif 'python' in secondary_languages and ((typescript_path ~ '/').startswith(python_path ~ '/') or (python_path ~ '/').startswith(typescript_path ~ '/')) %}
+    Use a directory apart from the Python component's, neither inside nor around it
+    {% endif %}
+
+license:
+  type: str
+  help: License, as an SPDX expression
+  choices:
+    MIT: MIT
+    MIT OR Apache-2.0: MIT OR Apache-2.0
+  default: "{{ 'MIT OR Apache-2.0' if primary_language == 'rust' or 'rust' in secondary_languages else 'MIT' }}"
+
+changelog:
+  type: bool
+  help: Does the project publish versioned releases (and so keep a changelog)?
+  default: "{{ project_type == 'library' }}"
+
+rust_msrv:
+  type: str
+  help: Minimum supported Rust version
+  default: "{{ rust_toolchain.split('.')[:2] | join('.') }}"
+  when: "{{ project_type == 'library' and (primary_language == 'rust' or 'rust' in secondary_languages) }}"
+  validator: >-
+    {% if not (rust_msrv | default('') | regex_search('^1\.[0-9]+(\.[0-9]+)?$')) %}
+    Use a Rust version, such as 1.85
+    {% elif rust_msrv.split('.')[1] | int > rust_toolchain.split('.')[1] | int %}
+    Use a version no newer than the pinned toolchain, {{ rust_toolchain }}
+    {% endif %}
+
+# crates.io rejects keywords longer than 20 characters.
+rust_keywords:
+  type: yaml
+  help: Crate keywords (up to five)
+  default: "{{ ([project_name] if project_name | length <= 20 else []) | tojson }}"
+  when: "{{ primary_language == 'rust' or 'rust' in secondary_languages }}"
+  validator: >-
+    {% set ns = namespace(invalid=false) %}
+    {% for keyword in (rust_keywords if rust_keywords is sequence and rust_keywords is not string else []) %}
+    {% if not (keyword is string and keyword | regex_search('^[A-Za-z0-9][A-Za-z0-9_+-]{0,19}$')) %}
+    {% set ns.invalid = true %}
+    {% endif %}
+    {% endfor %}
+    {% if rust_keywords is not sequence or rust_keywords is string %}
+    Use a list of keywords
+    {% elif rust_keywords | length > 5 %}
+    Use at most five keywords
+    {% elif ns.invalid %}
+    Use keywords of up to 20 letters, digits, _, - or +, starting with a letter or digit
+    {% endif %}
+
+rust_categories:
+  type: yaml
+  help: Crate categories, from https://crates.io/category_slugs
+  default: "{{ '[\"command-line-utilities\"]' if project_type == 'application' else '[\"development-tools\"]' }}"
+  when: "{{ primary_language == 'rust' or 'rust' in secondary_languages }}"
+
+python_min_version:
+  type: str
+  help: Oldest supported Python minor version
+  default: "{{ python_version.split('.')[:2] | join('.') }}"
+  when: "{{ project_type == 'library' and (primary_language == 'python' or 'python' in secondary_languages) }}"
+  validator: >-
+    {% if not (python_min_version | default('') | regex_search('^3\.[0-9]+$')) %}
+    Use a Python minor version, such as 3.12
+    {% elif python_min_version.split('.')[1] | int > python_version.split('.')[1] | int %}
+    Use a version no newer than the pinned Python, {{ python_version }}
+    {% endif %}
+
+# Values derived from the answers, for use throughout the template.
+
+languages:
+  type: yaml
+  default: "{{ [primary_language] + secondary_languages }}"
+  when: false
+
+rust_dir:
+  type: str
+  default: "{{ '.' if primary_language == 'rust' else rust_path if 'rust' in secondary_languages else '' }}"
+  when: false
+
+python_dir:
+  type: str
+  default: "{{ '.' if primary_language == 'python' else python_path if 'python' in secondary_languages else '' }}"
+  when: false
+
+typescript_dir:
+  type: str
+  default: >-
+    {{ '.' if primary_language == 'typescript' else typescript_path if 'typescript' in secondary_languages else '' }}
+  when: false
+
+rust_prefix:
+  type: str
+  default: "{{ '' if rust_dir in ['', '.'] else rust_dir ~ '/' }}"
+  when: false
+
+python_prefix:
+  type: str
+  default: "{{ '' if python_dir in ['', '.'] else python_dir ~ '/' }}"
+  when: false
+
+typescript_prefix:
+  type: str
+  default: "{{ '' if typescript_dir in ['', '.'] else typescript_dir ~ '/' }}"
+  when: false
+
+python_package:
+  type: str
+  default: "{{ project_name | replace('-', '_') }}"
+  when: false

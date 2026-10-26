@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+"""Command-line entry point."""
+
+from __future__ import annotations
+
+import sys
+
+from {{ python_package }}.greeting import greeting
+
+
+def main() -> None:
+    """Print a greeting."""
+    sys.stdout.write(greeting("world") + "\n")

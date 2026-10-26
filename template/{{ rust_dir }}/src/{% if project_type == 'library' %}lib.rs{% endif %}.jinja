@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: {{ license }}
+// SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+//! {{ description }}
+
+/// Returns a greeting for `name`.
+#[must_use]
+pub fn greeting(name: &str) -> String {
+    format!("Hello, {name}!")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn greets_by_name() {
+        assert_eq!(greeting("world"), "Hello, world!");
+    }
+}

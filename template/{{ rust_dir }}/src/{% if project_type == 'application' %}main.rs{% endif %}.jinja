@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: {{ license }}
+// SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+//! {{ description }}
+
+fn greeting(name: &str) -> String {
+    format!("Hello, {name}!")
+}
+
+fn main() {
+    println!("{}", greeting("world"));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn greets_by_name() {
+        assert_eq!(greeting("world"), "Hello, world!");
+    }
+}
