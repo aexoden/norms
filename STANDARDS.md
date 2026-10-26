@@ -217,15 +217,20 @@ agent. A `Signed-off-by` trailer is not required.
 
 ### Branches
 
-`main` is the default branch. A project may also keep a long-lived `dev` integration
-branch, in which case CI runs on pushes to both.
+`main` is the default branch. A solo project may also keep a long-lived `dev` branch,
+so that commits can be tested against CI without the friction of a pull request.
+Commits are pushed directly to `dev`, and once CI passes on them, `main` is
+fast-forwarded to `dev` (for example, `git push origin dev:main`). Work may still go
+through a pull request when that is useful. A project with multiple contributors
+documents its own use of `dev`, if it keeps one. CI runs on pushes to both branches.
 
 Other branch names should follow the pattern `<type>/<short-description>`. Use the
 same types as listed above. Branches created by AI agents or bots may use whatever
 names those tools choose.
 
 Pull requests are squash-merged, so the pull request title becomes the commit subject.
-Every pull request title, whoever opens it, must follow the subject rules above.
+The repository's merge settings allow only squash merging. Every pull request title,
+whoever opens it, must follow the subject rules above.
 
 ## Continuous Integration
 
