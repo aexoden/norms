@@ -15,6 +15,33 @@ concurrency:
 permissions: {}
 
 jobs:
+  build-norms:
+    name: Build norms for the template checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      - name: Build norms
+        run: cargo build --release --locked
+
+      - name: Upload norms
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: norms
+          path: target/release/norms
+          retention-days: 1
+
   cargo-deny:
     name: Run cargo-deny check
     runs-on: ubuntu-latest
@@ -54,7 +81,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [cargo-deny, cargo-test, clippy, markdownlint, reuse, rustfmt, zizmor]
+    needs: [build-norms, cargo-deny, cargo-test, clippy, markdownlint, reuse, rustfmt, template, zizmor]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
@@ -131,6 +158,107 @@ jobs:
 
       - name: Check Rust code formatting
         uses: actions-rust-lang/rustfmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
+
+  template:
+    name: Check the template (${{ matrix.name }})
+    needs: build-norms
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Rust application
+            answers: "{primary_language: rust}"
+          - name: Rust library
+            answers: "{primary_language: rust, project_type: library}"
+          - name: Python application
+            answers: "{primary_language: python}"
+          - name: Python library
+            answers: "{primary_language: python, project_type: library}"
+          - name: TypeScript application
+            answers: "{primary_language: typescript}"
+          - name: Rust with a TypeScript frontend
+            answers: "{primary_language: rust, secondary_languages: [typescript]}"
+          - name: Python with a TypeScript frontend
+            answers: "{primary_language: python, secondary_languages: [typescript]}"
+          - name: Rust with Python and TypeScript
+            answers: "{primary_language: rust, secondary_languages: [python, typescript]}"
+          - name: TypeScript with Python and Rust
+            answers: "{primary_language: typescript, secondary_languages: [python, rust]}"
+    env:
+      # renovate: datasource=crate depName=cargo-deny
+      CARGO_DENY_VERSION: "0.20.2"
+      # renovate: datasource=pypi depName=copier
+      COPIER_VERSION: "9.19.1"
+      # renovate: datasource=pypi depName=pre-commit
+      PRE_COMMIT_VERSION: "4.7.0"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Use the same uv and pnpm versions the template pins for rendered projects.
+      - name: Read the template's tool versions
+        id: versions
+        run: |
+          echo "pnpm=$(yq '.pnpm_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+          echo "uv=$(yq '.uv_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
+        with:
+          tool: cargo-deny@${{ env.CARGO_DENY_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+
+      # The rendered project's package.json selects the pnpm and Node.js versions it uses.
+      - name: Install pnpm
+        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          version: ${{ steps.versions.outputs.pnpm }}
+          install: false
+
+      - name: Render the template
+        env:
+          ANSWERS: ${{ matrix.answers }}
+        run: |
+          printf '%s\n' "$ANSWERS" > "$RUNNER_TEMP/answers.yml"
+          git init "$RUNNER_TEMP/project"
+          uvx "copier@$COPIER_VERSION" copy --trust --defaults --vcs-ref HEAD \
+            --data-file "$RUNNER_TEMP/answers.yml" \
+            --data project_name=demo-project --data "description=A demonstration project." \
+            . "$RUNNER_TEMP/project"
+          git -C "$RUNNER_TEMP/project" add --all
+
+      - name: Run the rendered project's hooks
+        working-directory: ${{ runner.temp }}/project
+        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
+
+      - name: Download norms
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: norms
+          path: ${{ runner.temp }}/norms
+
+      # Not yet gating: norms verify still reports false findings on standard projects.
+      - name: Verify the rendered project with norms
+        continue-on-error: true
+        run: |
+          chmod +x "$RUNNER_TEMP/norms/norms"
+          "$RUNNER_TEMP/norms/norms" verify "$RUNNER_TEMP/project"
 
   zizmor:
     name: GitHub Actions security analysis with zizmor 🌈
