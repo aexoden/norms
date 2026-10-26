@@ -273,11 +273,10 @@ follows the same workflow by convention, without enforcement.
 Continuous integration is provided by GitHub Actions. Every project has the following
 workflows:
 
-| Workflow                        | Triggers                                        | Purpose                                 |
-|---------------------------------|-------------------------------------------------|-----------------------------------------|
-| `.github/workflows/ci.yaml`     | Pushes to `main` (and `dev`), all pull requests | Every check the pre-commit hooks run    |
-| `.github/workflows/audit.yaml`  | Daily schedule, manual dispatch                 | Security advisory audit of dependencies |
-| `.github/workflows/zizmor.yaml` | Pushes to `main` (and `dev`), all pull requests | Security analysis of the workflows      |
+| Workflow                       | Triggers                                        | Purpose                                 |
+|--------------------------------|-------------------------------------------------|-----------------------------------------|
+| `.github/workflows/ci.yaml`    | Pushes to `main` (and `dev`), all pull requests | Every check the pre-commit hooks run    |
+| `.github/workflows/audit.yaml` | Daily schedule, manual dispatch                 | Security advisory audit of dependencies |
 
 ### Checks
 
@@ -293,6 +292,26 @@ blocking unrelated pull requests. The audit tools are:
 - Rust: `cargo deny check advisories`.
 - Python: `uv audit` (currently experimental in uv).
 - TypeScript: `pnpm audit`.
+
+### zizmor
+
+`ci.yaml` runs [zizmor](https://docs.zizmor.sh/) as a job, using
+`zizmorcore/zizmor-action` with `advanced-security: false` and `annotations: true`. In
+that mode the action fails the job on any finding and annotates the offending lines,
+so a finding shows up on the CI run like any other failure. CI also runs zizmor's
+online audits, which the pre-commit hook skips when no GitHub token is available.
+
+The action's default GitHub Advanced Security mode is not used. It uploads findings to
+code scanning and passes the job, relying on a code scanning rule in the ruleset to
+block the merge. Findings on commits pushed straight to `dev` then appear only in the
+code scanning alert list for that branch, and every finding must be fixed before merge
+regardless of severity, so the alert triage it offers adds little. It is also specific
+to GitHub.
+
+Repositories still using a separate `zizmor.yaml` with code scanning switch to the
+`ci.yaml` job, then remove the workflow and the ruleset's **Require code scanning
+results** rule together, since that rule would otherwise wait for results that never
+arrive.
 
 ### Structure
 
