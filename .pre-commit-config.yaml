@@ -46,7 +46,7 @@ repos:
         entry: cargo clippy --workspace --all-targets --all-features -- -D warnings
         language: system
         pass_filenames: false
-      - id: test
+      - id: cargo-test
         name: cargo test
         description: Run Rust tests using cargo test
         entry: cargo test --workspace --all-features
