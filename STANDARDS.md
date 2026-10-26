@@ -14,6 +14,27 @@ When a project has good reason to depart from a standard, it records the
 exception, with its rationale, in its norms configuration file. `norms verify`
 then skips the corresponding check instead of reporting it.
 
+## Project Template
+
+New projects start from the [Copier](https://copier.readthedocs.io/) template in
+norms, which renders the files these standards describe for the chosen
+languages:
+
+```sh
+uvx copier copy --trust --vcs-ref main gh:aexoden/norms <path>
+```
+
+The template asks for the primary language, which lives at the repository root,
+any secondary languages and their subdirectories, and whether the project is an
+application or a library. Copying needs `--trust` because the template runs
+each language's tool to generate any missing lock files.
+
+Existing projects stay current with `uvx copier update --trust --vcs-ref main`,
+which merges the changes between the template version recorded in
+`.copier-answers.yml` and the latest one. Template versions are norms release
+tags (`vX.Y.Z`), but no release includes the template yet, so for now
+`--vcs-ref main` selects the latest commit instead.
+
 ## Development Environment
 
 Each language's own toolchain manager provides the development environment. Tool
