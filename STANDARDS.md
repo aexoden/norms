@@ -1,24 +1,24 @@
 # Project Standards
 
-This file documents the standards intended to be used by my projects. Some of these
-standards are enforced by the `norms` tool. These standards are highly opinionated
-and may not be appropriate for all projects. In developing these standards, there
-were several guiding principles:
+This file documents the standards intended to be used by my projects. Some of
+these standards are enforced by the `norms` tool. These standards are highly
+opinionated and may not be appropriate for all projects. In developing these
+standards, there were several guiding principles:
 
 1. Humans shouldn't manually enforce things that tools can check.
-2. Apply maximum strictness by default, only relaxing selectively with documented
-   rationale.
+2. Apply maximum strictness by default, only relaxing selectively with
+   documented rationale.
 3. Any developer should be able to build and run the project identically.
 
-When a project has good reason to depart from a standard, it records the exception,
-with its rationale, in its norms configuration file. `norms verify` then skips the
-corresponding check instead of reporting it.
+When a project has good reason to depart from a standard, it records the
+exception, with its rationale, in its norms configuration file. `norms verify`
+then skips the corresponding check instead of reporting it.
 
 ## Development Environment
 
 Each language's own toolchain manager provides the development environment. Tool
-versions are pinned in files committed to the repository, so every developer and every
-CI run uses identical versions without any additional environment layer:
+versions are pinned in files committed to the repository, so every developer and
+every CI run uses identical versions without any additional environment layer:
 
 | Language   | Required tool | Pinned by                                                             |
 |------------|---------------|-----------------------------------------------------------------------|
@@ -28,29 +28,32 @@ CI run uses identical versions without any additional environment layer:
 
 The language-specific sections below describe each of these files in detail.
 
-[pre-commit](https://pre-commit.com/) must also be installed, by whatever method the
-developer prefers. See the [pre-commit installation documentation](https://pre-commit.com/#install).
+[pre-commit](https://pre-commit.com/) must also be installed, by whatever method
+the developer prefers. See the [pre-commit installation
+documentation](https://pre-commit.com/#install).
 
 ### Devbox
 
-Use [Devbox](https://www.jetify.com/devbox) only where it provides a clear benefit
-that the language toolchains cannot. At present, the only such use is running local
-services, such as a development PostgreSQL server via `devbox services`.
+Use [Devbox](https://www.jetify.com/devbox) only where it provides a clear
+benefit that the language toolchains cannot. At present, the only such use is
+running local services, such as a development PostgreSQL server via `devbox
+services`.
 
 When Devbox is used:
 
 - `devbox.json` includes a `$schema` reference and `devbox.lock` is committed.
 - Packages are limited to the services and the tools needed to manage them (for
-  example, `postgresql` and `sqlx-cli`). Language toolchains are not installed through
-  Devbox.
-- Service setup steps (initializing and creating databases, for example) are provided
-  as Devbox scripts and documented in the README.
-- Pre-commit hooks and CI steps invoke tools directly. Only steps that need a running
-  service may depend on Devbox.
+  example, `postgresql` and `sqlx-cli`). Language toolchains are not installed
+  through Devbox.
+- Service setup steps (initializing and creating databases, for example) are
+  provided as Devbox scripts and documented in the README.
+- Pre-commit hooks and CI steps invoke tools directly. Only steps that need a
+  running service may depend on Devbox.
 
 ## Editor Configuration
 
-Include an `.editorconfig` file at the repository root. The standard configuration:
+Include an `.editorconfig` file at the repository root. The standard
+configuration:
 
 ```ini
 root = true
@@ -73,44 +76,46 @@ Additional project-specific options can be included if required.
 
 ### README
 
-Projects should contain a `README.md` file that gives an overview of the project.
+Projects should contain a `README.md` file that gives an overview of the
+project.
 
 ### Changelog
 
-Projects that publish versioned releases keep a hand-written `CHANGELOG.md` in the
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format and follow
-[Semantic Versioning](https://semver.org/). Releases are tagged `vX.Y.Z`. Projects
-that are deployed directly from `main` without versioned releases do not need a
-changelog.
+Projects that publish versioned releases keep a hand-written `CHANGELOG.md` in
+the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format and follow
+[Semantic Versioning](https://semver.org/). Releases are tagged `vX.Y.Z`.
+Projects that are deployed directly from `main` without versioned releases do
+not need a changelog.
 
 ### Agent Guidance
 
-Projects may include an `AGENTS.md` describing the project's commands and conventions
-for AI coding agents. Use `CLAUDE.md` only for instructions specific to Claude, and
-have it import `AGENTS.md` rather than repeat it.
+Projects may include an `AGENTS.md` describing the project's commands and
+conventions for AI coding agents. Use `CLAUDE.md` only for instructions specific
+to Claude, and have it import `AGENTS.md` rather than repeat it.
 
 ## Licensing
 
 By default, projects should be under an MIT-style license unless another license
-is required because of code heritage. Rust projects, if possible, should dual-license
-under both MIT and Apache 2.0, written as the SPDX expression `MIT OR Apache-2.0`.
+is required because of code heritage. Rust projects, if possible, should
+dual-license under both MIT and Apache 2.0, written as the SPDX expression `MIT
+OR Apache-2.0`.
 
 ### License Files
 
-Projects follow the [REUSE](https://reuse.software/) specification, so license texts
-live in `LICENSES/`, named by SPDX identifier (for example, `LICENSES/MIT.txt` and
-`LICENSES/Apache-2.0.txt`).
+Projects follow the [REUSE](https://reuse.software/) specification, so license
+texts live in `LICENSES/`, named by SPDX identifier (for example,
+`LICENSES/MIT.txt` and `LICENSES/Apache-2.0.txt`).
 
-Projects also keep a copy at the repository root, where GitHub and most readers look
-for it. The copy is `LICENSE` for a single license. Multiple licenses are suffixed with
-`-<description>` (for example, `LICENSE-MIT` and `LICENSE-APACHE-2.0`). The root copies
-must match the texts in `LICENSES/`. More complicated licensing schemes should be
-documented in the README.
+Projects also keep a copy at the repository root, where GitHub and most readers
+look for it. The copy is `LICENSE` for a single license. Multiple licenses are
+suffixed with `-<description>` (for example, `LICENSE-MIT` and
+`LICENSE-APACHE-2.0`). The root copies must match the texts in `LICENSES/`. More
+complicated licensing schemes should be documented in the README.
 
 ### File Headers
 
-Every source file starts with SPDX headers, in the file's comment syntax, giving the
-license and the copyright holder with the year the file was created:
+Every source file starts with SPDX headers, in the file's comment syntax, giving
+the license and the copyright holder with the year the file was created:
 
 <!-- REUSE-IgnoreStart -->
 ```rust
@@ -119,8 +124,9 @@ license and the copyright holder with the year the file was created:
 ```
 <!-- REUSE-IgnoreEnd -->
 
-Files that cannot carry a comment header, such as JSON files, lock files, images and
-generated caches, are annotated in a `REUSE.toml` at the repository root instead.
+Files that cannot carry a comment header, such as JSON files, lock files, images
+and generated caches, are annotated in a `REUSE.toml` at the repository root
+instead.
 
 `reuse lint` checks all of this, in both the pre-commit hooks and CI.
 
@@ -129,8 +135,8 @@ generated caches, are annotated in a `REUSE.toml` at the repository root instead
 Use `git` as the version control system. Both `.gitattributes` and `.gitignore`
 should be present and configured as appropriate for the project.
 
-`.gitattributes` normalizes line endings, marks binary formats, and enables git's
-built-in diff drivers for each language in the project:
+`.gitattributes` normalizes line endings, marks binary formats, and enables
+git's built-in diff drivers for each language in the project:
 
 ```txt
 # Auto-detect text files and normalize line endings to LF
@@ -165,10 +171,12 @@ Include only the language blocks that apply. Python projects also mark
 
 ### Commit Messages
 
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/),
-checked by the `conventional-pre-commit` hook (see [Pre-Commit Hooks](#pre-commit-hooks)).
-The [Conventional Commits Cheatsheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13)
-is a useful reference for choosing types.
+Commit messages follow [Conventional
+Commits](https://www.conventionalcommits.org/), checked by the
+`conventional-pre-commit` hook (see [Pre-Commit Hooks](#pre-commit-hooks)). The
+[Conventional Commits
+Cheatsheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13) is
+a useful reference for choosing types.
 
 The standard template for a commit message:
 
@@ -194,50 +202,52 @@ The recognized types are:
 - `revert` - reverts an earlier commit
 - `chore` - anything not otherwise mentioned
 
-Strictly speaking, dependency updates could fall under many of these, intentionally
-or not. Renovate uses `fix(deps)` for runtime dependencies and `chore(deps)` for
-everything else. It may be desirable to revisit that default.
+Strictly speaking, dependency updates could fall under many of these,
+intentionally or not. Renovate uses `fix(deps)` for runtime dependencies and
+`chore(deps)` for everything else. It may be desirable to revisit that default.
 
-Scopes are inherently project-specific. A good practice for mature projects would
-be to identify allowed scopes in developer documentation.
+Scopes are inherently project-specific. A good practice for mature projects
+would be to identify allowed scopes in developer documentation.
 
-The subject should be in the imperative mood, lowercase (except proper nouns, acronyms,
-or otherwise conventionally capitalized words), with no concluding punctuation.
-Aim to keep the entire first line within 50 characters, and look for a shorter
-wording when it runs past that, but never exceed 72 characters.
+The subject should be in the imperative mood, lowercase (except proper nouns,
+acronyms, or otherwise conventionally capitalized words), with no concluding
+punctuation. Aim to keep the entire first line within 50 characters, and look
+for a shorter wording when it runs past that, but never exceed 72 characters.
 
-A revert uses the `revert` type with the subject of the reverted commit, for example
-`revert: add the history panel`. The body names the reverted commit and explains why.
+A revert uses the `revert` type with the subject of the reverted commit, for
+example `revert: add the history panel`. The body names the reverted commit and
+explains why.
 
 The optional body, if present, should document the motivation for the change and
-identify differences from existing behavior. Avoid documenting things that are either
-self-explanatory from the code or from comments within the code. Wrap the body at
-72 characters.
+identify differences from existing behavior. Avoid documenting things that are
+either self-explanatory from the code or from comments within the code. Wrap the
+body at 72 characters.
 
-Commits written with an AI agent carry a `Co-Authored-By` trailer that identifies the
-agent. A `Signed-off-by` trailer is not required.
+Commits written with an AI agent carry a `Co-Authored-By` trailer that
+identifies the agent. A `Signed-off-by` trailer is not required.
 
 ### Branches
 
-`main` is the default branch. A solo project may also keep a long-lived `dev` branch,
-so that commits can be tested against CI without the friction of a pull request.
-Commits are pushed directly to `dev`, and once CI passes on them, `main` is
-fast-forwarded to `dev` (for example, `git push origin dev:main`). Work may still go
-through a pull request when that is useful. A project with multiple contributors
-documents its own use of `dev`, if it keeps one. CI runs on pushes to both branches.
+`main` is the default branch. A solo project may also keep a long-lived `dev`
+branch, so that commits can be tested against CI without the friction of a pull
+request. Commits are pushed directly to `dev`, and once CI passes on them,
+`main` is fast-forwarded to `dev` (for example, `git push origin dev:main`).
+Work may still go through a pull request when that is useful. A project with
+multiple contributors documents its own use of `dev`, if it keeps one. CI runs
+on pushes to both branches.
 
-Other branch names should follow the pattern `<type>/<short-description>`. Use the
-same types as listed above. Branches created by AI agents or bots may use whatever
-names those tools choose.
+Other branch names should follow the pattern `<type>/<short-description>`. Use
+the same types as listed above. Branches created by AI agents or bots may use
+whatever names those tools choose.
 
-Pull requests are squash-merged, so the pull request title becomes the commit subject.
-The repository's merge settings allow only squash merging. Every pull request title,
-whoever opens it, must follow the subject rules above.
+Pull requests are squash-merged, so the pull request title becomes the commit
+subject. The repository's merge settings allow only squash merging. Every pull
+request title, whoever opens it, must follow the subject rules above.
 
 ### Branch Protection
 
-A repository ruleset named `Default` protects the default branch. It is active, has no
-bypass actors, and enables these rules:
+A repository ruleset named `Default` protects the default branch. It is active,
+has no bypass actors, and enables these rules:
 
 | Rule                          | Settings                                              |
 |-------------------------------|-------------------------------------------------------|
@@ -248,32 +258,34 @@ bypass actors, and enables these rules:
 | Require status checks to pass | `CI success` from GitHub Actions; branches up to date |
 
 The one required check is the CI gate job (see [Gate Job](#gate-job)). Selecting
-GitHub Actions as its source means a commit status of the same name from anywhere else
-cannot satisfy it. Requiring branches to be up to date means the tree CI tested is the
-tree that is merged. Checks that do not report on every commit are never required,
-since a required check that never reports blocks the merge. This excludes
-`audit.yaml`, which runs on a schedule, and Renovate's commit statuses such as
-`renovate/artifacts`, which appear only on some Renovate branches. Renovate waits for
-those itself, because the shared preset disables platform automerge.
+GitHub Actions as its source means a commit status of the same name from
+anywhere else cannot satisfy it. Requiring branches to be up to date means the
+tree CI tested is the tree that is merged. Checks that do not report on every
+commit are never required, since a required check that never reports blocks the
+merge. This excludes `audit.yaml`, which runs on a schedule, and Renovate's
+commit statuses such as `renovate/artifacts`, which appear only on some Renovate
+branches. Renovate waits for those itself, because the shared preset disables
+platform automerge.
 
-The ruleset does not require a pull request, so that `main` can be fast-forwarded to
-`dev`. The required status check still applies to a direct push: GitHub accepts it
-only if the commit being pushed has already passed, which it has if CI passed on
-`dev`. An untested commit can reach `main` by neither route.
+The ruleset does not require a pull request, so that `main` can be
+fast-forwarded to `dev`. The required status check still applies to a direct
+push: GitHub accepts it only if the commit being pushed has already passed,
+which it has if CI passed on `dev`. An untested commit can reach `main` by
+neither route.
 
-Commits pushed directly must be signed locally. Commits that GitHub creates, such as
-squash merges and Renovate's commits, are signed by GitHub.
+Commits pushed directly must be signed locally. Commits that GitHub creates,
+such as squash merges and Renovate's commits, are signed by GitHub.
 
-The `dev` branch is not protected. It is a working branch, and rewriting it before
-`main` catches up is harmless.
+The `dev` branch is not protected. It is a working branch, and rewriting it
+before `main` catches up is harmless.
 
-Rulesets on private repositories require GitHub Pro. A private repository without it
-follows the same workflow by convention, without enforcement.
+Rulesets on private repositories require GitHub Pro. A private repository
+without it follows the same workflow by convention, without enforcement.
 
 ## Continuous Integration
 
-Continuous integration is provided by GitHub Actions. Every project has the following
-workflows:
+Continuous integration is provided by GitHub Actions. Every project has the
+following workflows:
 
 | Workflow                       | Triggers                                        | Purpose                                 |
 |--------------------------------|-------------------------------------------------|-----------------------------------------|
@@ -282,14 +294,14 @@ workflows:
 
 ### Checks
 
-`ci.yaml` runs formatting checks, linting, type checking, tests (with coverage where
-the language supports it) and dependency policy checks, such as `cargo deny check bans
-licenses sources` and lock file freshness. CI should fail in every case where the
-pre-commit hooks would.
+`ci.yaml` runs formatting checks, linting, type checking, tests (with coverage
+where the language supports it) and dependency policy checks, such as `cargo
+deny check bans licenses sources` and lock file freshness. CI should fail in
+every case where the pre-commit hooks would.
 
-Security advisories are checked by `audit.yaml` rather than `ci.yaml`. New advisories
-appear independently of code changes, so a daily audit catches them promptly without
-blocking unrelated pull requests. The audit tools are:
+Security advisories are checked by `audit.yaml` rather than `ci.yaml`. New
+advisories appear independently of code changes, so a daily audit catches them
+promptly without blocking unrelated pull requests. The audit tools are:
 
 - Rust: `cargo deny check advisories`.
 - Python: `uv audit` (currently experimental in uv).
@@ -298,44 +310,48 @@ blocking unrelated pull requests. The audit tools are:
 ### zizmor
 
 `ci.yaml` runs [zizmor](https://docs.zizmor.sh/) as a job, using
-`zizmorcore/zizmor-action` with `advanced-security: false` and `annotations: true`. In
-that mode the action fails the job on any finding and annotates the offending lines,
-so a finding shows up on the CI run like any other failure. CI also runs zizmor's
-online audits, which the pre-commit hook skips when no GitHub token is available.
+`zizmorcore/zizmor-action` with `advanced-security: false` and `annotations:
+true`. In that mode the action fails the job on any finding and annotates the
+offending lines, so a finding shows up on the CI run like any other failure. CI
+also runs zizmor's online audits, which the pre-commit hook skips when no GitHub
+token is available.
 
-The action's default GitHub Advanced Security mode is not used. It uploads findings to
-code scanning and passes the job, relying on a code scanning rule in the ruleset to
-block the merge. Findings on commits pushed straight to `dev` then appear only in the
-code scanning alert list for that branch, and every finding must be fixed before merge
-regardless of severity, so the alert triage it offers adds little. It is also specific
-to GitHub.
+The action's default GitHub Advanced Security mode is not used. It uploads
+findings to code scanning and passes the job, relying on a code scanning rule in
+the ruleset to block the merge. Findings on commits pushed straight to `dev`
+then appear only in the code scanning alert list for that branch, and every
+finding must be fixed before merge regardless of severity, so the alert triage
+it offers adds little. It is also specific to GitHub.
 
-Repositories still using a separate `zizmor.yaml` with code scanning switch to the
-`ci.yaml` job, then remove the workflow and the ruleset's **Require code scanning
-results** rule together, since that rule would otherwise wait for results that never
-arrive.
+Repositories still using a separate `zizmor.yaml` with code scanning switch to
+the `ci.yaml` job, then remove the workflow and the ruleset's **Require code
+scanning results** rule together, since that rule would otherwise wait for
+results that never arrive.
 
 ### Structure
 
 Install toolchains with each language's standard setup action (for example,
-`astral-sh/setup-uv` or `actions-rust-lang/setup-rust-toolchain`), using the versions
-pinned in the repository. Use Devbox only in jobs that need a local service.
+`astral-sh/setup-uv` or `actions-rust-lang/setup-rust-toolchain`), using the
+versions pinned in the repository. Use Devbox only in jobs that need a local
+service.
 
-Split checks into parallel jobs where feasible. Use an operating system matrix when
-platform differences could plausibly cause problems, such as file system behavior or
-external tools.
+Split checks into parallel jobs where feasible. Use an operating system matrix
+when platform differences could plausibly cause problems, such as file system
+behavior or external tools.
 
-Each workflow sets a `concurrency` group that cancels superseded runs of the same ref.
+Each workflow sets a `concurrency` group that cancels superseded runs of the
+same ref.
 
-`ci.yaml` never filters `pull_request` by `paths` or `branches`. The ruleset waits for
-its result, and a workflow that does not run leaves the pull request blocked.
+`ci.yaml` never filters `pull_request` by `paths` or `branches`. The ruleset
+waits for its result, and a workflow that does not run leaves the pull request
+blocked.
 
 ### Gate Job
 
-`ci.yaml` ends with a gate job, `ci-success`, that succeeds only if every other job in
-the workflow succeeded. Branch protection requires this single check rather than each
-job, so jobs can be added, renamed, split or given new matrix entries without changing
-repository settings:
+`ci.yaml` ends with a gate job, `ci-success`, that succeeds only if every other
+job in the workflow succeeded. Branch protection requires this single check
+rather than each job, so jobs can be added, renamed, split or given new matrix
+entries without changing repository settings:
 
 ```yaml
 ci-success:
@@ -349,10 +365,10 @@ ci-success:
       run: exit 1
 ```
 
-- `needs` lists every other job in the workflow. `needs.*.result` covers only direct
-  dependencies, so a job reached only through another job goes unchecked.
-- `if: always()` is essential. Without it, the gate is skipped when a job fails, and a
-  skipped job satisfies a required check.
+- `needs` lists every other job in the workflow. `needs.*.result` covers only
+  direct dependencies, so a job reached only through another job goes unchecked.
+- `if: always()` is essential. Without it, the gate is skipped when a job fails,
+  and a skipped job satisfies a required check.
 - Any result other than success fails the gate, including a skipped job.
 - The name itself isn't important, but that's the field that appears in the
   GitHub UI for the check, not the job ID.
@@ -361,17 +377,17 @@ ci-success:
 
 - Pin every action to a full commit SHA, with the version in a trailing comment
   (`uses: actions/checkout@<sha> # v7.0.1`). Renovate keeps these current.
-- Set `permissions: {}` at the top level of every workflow, and grant each job only
-  the permissions it needs.
+- Set `permissions: {}` at the top level of every workflow, and grant each job
+  only the permissions it needs.
 - Set `persist-credentials: false` on every `actions/checkout` step.
 - Run [zizmor](https://docs.zizmor.sh/) in both CI and the pre-commit hooks.
 
 ## Pre-Commit Hooks
 
-Pre-commit hooks are provided by [pre-commit](https://pre-commit.com/), configured in
-`.pre-commit-config.yaml` at the repository root. The configuration sets
-`default_install_hook_types` so that a plain `pre-commit install` also installs the
-commit message hook:
+Pre-commit hooks are provided by [pre-commit](https://pre-commit.com/),
+configured in `.pre-commit-config.yaml` at the repository root. The
+configuration sets `default_install_hook_types` so that a plain `pre-commit
+install` also installs the commit message hook:
 
 ```yaml
 default_install_hook_types: [pre-commit, commit-msg]
@@ -384,14 +400,15 @@ Hook revisions are pinned to release tags and updated by Renovate.
 Every project uses these hooks:
 
 - [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks):
-  `check-added-large-files`, `check-case-conflict`, `check-symlinks`, `check-toml`,
-  `check-vcs-permalinks`, `check-yaml`, `detect-private-key`, `end-of-file-fixer`
-  and `trailing-whitespace`.
-- [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see [Licensing](#licensing)).
+  `check-added-large-files`, `check-case-conflict`, `check-symlinks`,
+  `check-toml`, `check-vcs-permalinks`, `check-yaml`, `detect-private-key`,
+  `end-of-file-fixer` and `trailing-whitespace`.
+- [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see
+  [Licensing](#licensing)).
 - [zizmor](https://github.com/zizmorcore/zizmor-pre-commit): `zizmor`.
 - [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit):
-  `conventional-pre-commit` in the `commit-msg` stage, with the recognized commit
-  types passed as arguments:
+  `conventional-pre-commit` in the `commit-msg` stage, with the recognized
+  commit types passed as arguments:
 
   ```yaml
   - id: conventional-pre-commit
@@ -400,26 +417,28 @@ Every project uses these hooks:
   ```
 
 - A commit message length hook, also in the `commit-msg` stage, which rejects a
-  subject line over 72 characters or a body line over 72 characters (lines containing a
-  URL are exempt). CI applies the same subject rules to pull request titles.
+  subject line over 72 characters or a body line over 72 characters (lines
+  containing a URL are exempt). CI applies the same subject rules to pull
+  request titles.
 
 ### Language Hooks
 
-Language hooks are `local` hooks with `language: system` and `pass_filenames: false`.
-They invoke the project's tools directly (for example, `cargo clippy` or
-`uv run ruff check`), never through Devbox. Each one checks without modifying files,
-so the hooks and CI produce the same results. The language sections below list the
-required hooks. Hook IDs are unique across languages (for example, `pytest`,
-`cargo-test` and `vitest` rather than `test`), so that `SKIP` can target one.
+Language hooks are `local` hooks with `language: system` and `pass_filenames:
+false`. They invoke the project's tools directly (for example, `cargo clippy` or
+`uv run ruff check`), never through Devbox. Each one checks without modifying
+files, so the hooks and CI produce the same results. The language sections below
+list the required hooks. Hook IDs are unique across languages (for example,
+`pytest`, `cargo-test` and `vitest` rather than `test`), so that `SKIP` can
+target one.
 
 ## Dependency Management
 
 ### Automated Updates
 
-Use [Renovate](https://docs.renovatebot.com/) for automated dependency updates. The
-shared [renovate-config](https://github.com/aexoden/renovate-config) preset builds on
-`config:best-practices` and provides the automerge, grouping, pinning and release age
-policies, so `renovate.json` normally contains nothing else:
+Use [Renovate](https://docs.renovatebot.com/) for automated dependency updates.
+The shared [renovate-config](https://github.com/aexoden/renovate-config) preset
+builds on `config:best-practices` and provides the automerge, grouping, pinning
+and release age policies, so `renovate.json` normally contains nothing else:
 
 ```json
 {
@@ -432,8 +451,9 @@ Project-specific rules may be added when a project needs them.
 
 ### Version Pinning
 
-Every project commits its lock files, as each tool recommends. Applications also pin
-every direct dependency, including development dependencies, to an exact version:
+Every project commits its lock files, as each tool recommends. Applications also
+pin every direct dependency, including development dependencies, to an exact
+version:
 
 | Ecosystem | Manifest syntax                     | Lock file        |
 |-----------|-------------------------------------|------------------|
@@ -441,39 +461,41 @@ every direct dependency, including development dependencies, to an exact version
 | Python    | `"pydantic==2.12.0"`                | `uv.lock`        |
 | pnpm      | `"react": "19.2.0"` (no `^` or `~`) | `pnpm-lock.yaml` |
 
-Libraries instead declare compatible version ranges, so that downstream projects can
-resolve shared dependencies to a single version. Their lock files are still committed
-for reproducible development and CI.
+Libraries instead declare compatible version ranges, so that downstream projects
+can resolve shared dependencies to a single version. Their lock files are still
+committed for reproducible development and CI.
 
 ### Release Age
 
-A new release must be at least three days old before a project adopts it. The delay
-gives the community time to catch and yank compromised or broken releases before they
-reach a project. It is enforced at two levels:
+A new release must be at least three days old before a project adopts it. The
+delay gives the community time to catch and yank compromised or broken releases
+before they reach a project. It is enforced at two levels:
 
 1. **Renovate**, through `minimumReleaseAge` in the shared preset.
-2. **The package manager**, which covers what Renovate cannot age-check, such as lock
-   file maintenance and manual updates:
+2. **The package manager**, which covers what Renovate cannot age-check, such as
+   lock file maintenance and manual updates:
    - uv: `exclude-newer = "3 days"` under `[tool.uv]` in `pyproject.toml`.
    - pnpm: `minimumReleaseAge: 4320` (in minutes) in `pnpm-workspace.yaml`.
    - Cargo: `global-min-publish-age = "3 days"` under `[registry]` in
-     `.cargo/config.toml`. This is stable as of Rust 1.100; earlier toolchains silently
-     ignore it, so it takes effect when the pinned toolchain reaches 1.100.
+     `.cargo/config.toml`. This is stable as of Rust 1.100; earlier toolchains
+     silently ignore it, so it takes effect when the pinned toolchain reaches
+     1.100.
 
 #### Urgent Updates
 
-Security fixes may bypass the release age requirement. Renovate's vulnerability alert
-PRs are exempt from `minimumReleaseAge` in the shared preset. To update a single package
-early through the package manager, add a temporary per-package exemption, with a
-comment naming the advisory:
+Security fixes may bypass the release age requirement. Renovate's vulnerability
+alert PRs are exempt from `minimumReleaseAge` in the shared preset. To update a
+single package early through the package manager, add a temporary per-package
+exemption, with a comment naming the advisory:
 
 - uv: `exclude-newer-package = { package-name = false }` under `[tool.uv]`.
 - pnpm: `minimumReleaseAgeExclude: [package-name]` in `pnpm-workspace.yaml`.
 - Cargo: there is no per-package setting. Run
-  `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update -p package-name`, and the
-  lock file keeps the newer version.
+  `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update -p package-name`,
+  and the lock file keeps the newer version.
 
-Remove a configured exemption once the release has passed the normal release age.
+Remove a configured exemption once the release has passed the normal release
+age.
 
 ## Language-Specific Standards
 
@@ -481,7 +503,8 @@ Remove a configured exemption once the release has passed the normal release age
 
 #### Project Layout
 
-Use [uv](https://docs.astral.sh/uv/) for all Python projects, with a `src/` layout:
+Use [uv](https://docs.astral.sh/uv/) for all Python projects, with a `src/`
+layout:
 
 ```txt
 project/
@@ -505,13 +528,15 @@ project/
 - `.python-version` names the exact Python version used for development and CI.
 - Applications set `requires-python` to that same exact version (for example,
   `==3.15.0`). Libraries set the range of versions they support.
-- The `Programming Language :: Python :: 3.x` classifiers match `requires-python`.
-- `[tool.uv] required-version` sets the minimum uv version the project needs, and the
-  CI setup step pins the exact uv version.
+- The `Programming Language :: Python :: 3.x` classifiers match
+  `requires-python`.
+- `[tool.uv] required-version` sets the minimum uv version the project needs,
+  and the CI setup step pins the exact uv version.
 
 #### Dependencies
 
-Development tools go in the `dev` dependency group, not in optional dependencies:
+Development tools go in the `dev` dependency group, not in optional
+dependencies:
 
 ```toml
 [dependency-groups]
@@ -520,7 +545,8 @@ dev = ["mypy==...", "pytest==...", "pytest-cov==...", "ruff==..."]
 
 #### Versioning
 
-The package version comes from git tags through [hatch-vcs](https://github.com/ofek/hatch-vcs):
+The package version comes from git tags through
+[hatch-vcs](https://github.com/ofek/hatch-vcs):
 
 ```toml
 [project]
@@ -538,14 +564,14 @@ source = "vcs"
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 ```
 
-`.git_archival.txt`, marked `export-subst` in `.gitattributes`, lets source archives
-without git history report their version. Code reads the version at runtime with
-`importlib.metadata.version()`, in `__about__.py`.
+`.git_archival.txt`, marked `export-subst` in `.gitattributes`, lets source
+archives without git history report their version. Code reads the version at
+runtime with `importlib.metadata.version()`, in `__about__.py`.
 
 #### Formatting and Linting
 
-Use [Ruff](https://docs.astral.sh/ruff/) for both. The baseline configuration enables
-every rule, including preview rules:
+Use [Ruff](https://docs.astral.sh/ruff/) for both. The baseline configuration
+enables every rule, including preview rules:
 
 ```toml
 [tool.ruff]
@@ -572,8 +598,8 @@ lines-between-types = 1
 convention = "google"
 ```
 
-The two ignored rules conflict with the Ruff formatter. Any further ignore needs a
-comment in `pyproject.toml` explaining why.
+The two ignored rules conflict with the Ruff formatter. Any further ignore needs
+a comment in `pyproject.toml` explaining why.
 
 #### Type Checking
 
@@ -586,8 +612,9 @@ strict = true
 
 #### Testing
 
-Use [pytest](https://docs.pytest.org/) with [pytest-cov](https://pytest-cov.readthedocs.io/),
-reporting missing lines: `uv run pytest --cov=src/package_name --cov-report=term-missing`.
+Use [pytest](https://docs.pytest.org/) with
+[pytest-cov](https://pytest-cov.readthedocs.io/), reporting missing lines: `uv
+run pytest --cov=src/package_name --cov-report=term-missing`.
 
 #### Hooks and CI
 
@@ -601,14 +628,15 @@ The pre-commit hooks and CI both run:
 | `mypy`        | `uv run mypy .`                                                  |
 | `pytest`      | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
 
-CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the checks.
+CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the
+checks.
 
 ### Rust
 
 #### Toolchain
 
-`rust-toolchain.toml` pins an exact channel and lists the components the hooks need,
-so `rustup` installs everything on first use:
+`rust-toolchain.toml` pins an exact channel and lists the components the hooks
+need, so `rustup` installs everything on first use:
 
 ```toml
 [toolchain]
@@ -616,8 +644,8 @@ channel = "1.99.1"
 components = ["clippy", "rustfmt"]
 ```
 
-Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. Applications do not need
-one, since the toolchain file already pins their compiler.
+Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. Applications do
+not need one, since the toolchain file already pins their compiler.
 
 `.cargo/config.toml` sets the release age (see [Release Age](#release-age)):
 
@@ -633,8 +661,8 @@ edition), `keywords` and `categories`.
 
 #### Lints
 
-The baseline enables the `pedantic`, `nursery` and `cargo` Clippy groups, plus the
-restriction lints against `unwrap` and `expect`:
+The baseline enables the `pedantic`, `nursery` and `cargo` Clippy groups, plus
+the restriction lints against `unwrap` and `expect`:
 
 ```toml
 [lints.clippy]
@@ -650,8 +678,8 @@ future_incompatible = { level = "warn", priority = -1 }
 let_underscore = { level = "warn", priority = -1 }
 ```
 
-`multiple_crate_versions` is allowed because transitive dependencies routinely pull in
-several versions of the same crate, which a project cannot fix.
+`multiple_crate_versions` is allowed because transitive dependencies routinely
+pull in several versions of the same crate, which a project cannot fix.
 
 `clippy.toml` allows `unwrap`, `expect` and `panic` in tests:
 
@@ -661,21 +689,25 @@ allow-panic-in-tests = true
 allow-unwrap-in-tests = true
 ```
 
-Projects may enable further restriction lints. A standard set has not been settled
-yet.
+Projects may enable further restriction lints. A standard set has not been
+settled yet.
 
 The hooks and CI pass `-D warnings`, so any warning fails the check.
 
 #### Dependency Policy
 
-`deny.toml` configures [cargo-deny](https://embarkstudios.github.io/cargo-deny/):
+`deny.toml` configures
+[cargo-deny](https://embarkstudios.github.io/cargo-deny/):
 
-- `[licenses] allow` lists only permissive licenses that the project actually uses.
-- `[bans] multiple-versions = "allow"`, for the same reason as the Clippy lint above.
+- `[licenses] allow` lists only permissive licenses that the project actually
+  uses.
+- `[bans] multiple-versions = "allow"`, for the same reason as the Clippy lint
+  above.
 - Every entry in `[advisories] ignore` has a `reason`.
 
-cargo-deny is installed separately by the developer. See the
-[cargo-deny installation documentation](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny).
+cargo-deny is installed separately by the developer. See the [cargo-deny
+installation
+documentation](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny).
 
 #### Hooks and CI
 
@@ -688,24 +720,25 @@ The pre-commit hooks and CI both run:
 | `cargo-test` | `cargo test --workspace --all-features`                                |
 | `cargo-deny` | `cargo deny check bans licenses sources`                               |
 
-CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which reads
-`rust-toolchain.toml`, and caches builds with `Swatinem/rust-cache`. It runs cargo-deny
-with `EmbarkStudios/cargo-deny-action`. The advisory check runs in `audit.yaml` (see
-[Continuous Integration](#continuous-integration)).
+CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
+reads `rust-toolchain.toml`, and caches builds with `Swatinem/rust-cache`. It
+runs cargo-deny with `EmbarkStudios/cargo-deny-action`. The advisory check runs
+in `audit.yaml` (see [Continuous Integration](#continuous-integration)).
 
 ### TypeScript
 
 #### Location
 
-A TypeScript project lives at the repository root when it is the primary language.
-Otherwise it lives in a named subdirectory, such as `frontend/`, which is declared in
-the norms configuration. Paths below are relative to that directory.
+A TypeScript project lives at the repository root when it is the primary
+language. Otherwise it lives in a named subdirectory, such as `frontend/`, which
+is declared in the norms configuration. Paths below are relative to that
+directory.
 
 #### Package Configuration
 
-`package.json` sets `"type": "module"` and `"private": true` (for applications), and
-pins Node.js and pnpm through `devEngines`. pnpm downloads the declared versions
-automatically:
+`package.json` sets `"type": "module"` and `"private": true` (for applications),
+and pins Node.js and pnpm through `devEngines`. pnpm downloads the declared
+versions automatically:
 
 ```json
 "devEngines": {
@@ -724,8 +757,8 @@ It defines these scripts:
 | `test`      | `vitest run`           |
 | `typecheck` | `tsc -b --noEmit`      |
 
-`pnpm-workspace.yaml` sets the release age, and lists explicitly the dependencies
-allowed to run build scripts:
+`pnpm-workspace.yaml` sets the release age, and lists explicitly the
+dependencies allowed to run build scripts:
 
 ```yaml
 allowBuilds:
@@ -753,14 +786,14 @@ minimumReleaseAge: 4320
 
 #### Formatting and Linting
 
-Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc` with
-`printWidth: 120`, along with a `.prettierignore`.
+Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc`
+with `printWidth: 120`, along with a `.prettierignore`.
 
-Use [ESLint](https://eslint.org/) for linting, configured in `eslint.config.ts`. The
-configuration includes the `strictTypeChecked` and `stylisticTypeChecked` configs from
-[typescript-eslint](https://typescript-eslint.io/), with `projectService` enabled for
-type-aware rules, and `eslint-config-prettier` to disable rules that conflict with
-Prettier.
+Use [ESLint](https://eslint.org/) for linting, configured in `eslint.config.ts`.
+The configuration includes the `strictTypeChecked` and `stylisticTypeChecked`
+configs from [typescript-eslint](https://typescript-eslint.io/), with
+`projectService` enabled for type-aware rules, and `eslint-config-prettier` to
+disable rules that conflict with Prettier.
 
 #### Testing
 
