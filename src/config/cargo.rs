@@ -69,12 +69,7 @@ impl CargoToml {
         self.lints
             .as_ref()
             .and_then(|l| l.clippy.as_ref())
-            .or_else(|| {
-                self.workspace
-                    .as_ref()
-                    .and_then(|w| w.lints.as_ref())
-                    .and_then(|l| l.clippy.as_ref())
-            })
+            .or_else(|| self.workspace.as_ref()?.lints.as_ref()?.clippy.as_ref())
     }
 
     /// Check whether a specific Clippy lint group or lint is configured.
