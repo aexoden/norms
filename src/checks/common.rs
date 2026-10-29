@@ -10,17 +10,17 @@ use crate::report::{Report, file_exists, matches_regex};
 // Required files
 //
 
-pub fn check_readme(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
     report.must("README.md", file_exists(&ctx.path().join("README.md")));
 }
 
-pub fn check_license(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_license(ctx: &ProjectContext, report: &mut Report) {
     let candidates = ["LICENSE", "LICENSE-APACHE-2.0", "LICENSE-MIT"];
     let found = candidates.iter().any(|name| ctx.path().join(name).exists());
     report.must("LICENSE", found);
 }
 
-pub fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "CHANGELOG.md",
         file_exists(&ctx.path().join("CHANGELOG.md")),
@@ -31,11 +31,11 @@ pub fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
 // Git configuration
 //
 
-pub fn check_gitignore(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_gitignore(ctx: &ProjectContext, report: &mut Report) {
     report.must(".gitignore", file_exists(&ctx.path().join(".gitignore")));
 }
 
-pub fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
     let status = ctx.gitattributes();
     let Some(content) = report.require_parsed(".gitattributes", status) else {
         return;
@@ -61,7 +61,7 @@ pub fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
 // Editor configuration
 //
 
-pub fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
     let status = ctx.editorconfig();
     let Some(content) = report.require_parsed(".editorconfig", status) else {
         return;
@@ -92,7 +92,7 @@ pub fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
 // Development environment
 //
 
-pub fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("devbox.json", ctx.devbox()) else {
         return;
     };
@@ -108,7 +108,7 @@ pub fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
 // Pre-commit
 //
 
-pub fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         ".pre-commit-config.yaml",
         file_exists(&ctx.path().join(".pre-commit-config.yaml")),
@@ -119,7 +119,7 @@ pub fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
 // Dependency management
 //
 
-pub fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.recommend_parsed("renovate.json", ctx.renovate()) else {
         return;
     };
@@ -136,7 +136,7 @@ pub fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
 // Continuous integration
 //
 
-pub fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
     let workflows_dir = ctx.path().join(".github/workflows");
     report.must("CI: .github/workflows/ exists", file_exists(&workflows_dir));
 

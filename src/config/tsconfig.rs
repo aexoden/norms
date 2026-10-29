@@ -13,7 +13,7 @@ use serde::Deserialize;
 /// Top-level `tsconfig.json` structure.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
-pub struct TsConfig {
+pub(crate) struct TsConfig {
     pub compiler_options: Option<TsCompilerOptions>,
 
     /// Files to extend from.
@@ -30,7 +30,7 @@ pub struct TsConfig {
 /// A single entry in the `references` array.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct TsReference {
+pub(crate) struct TsReference {
     /// Path to the referenced tsconfig file (relative to the root tsconfig).
     pub path: String,
 }
@@ -40,12 +40,12 @@ impl TsConfig {
     ///
     /// Solution-style configs have a non-empty `references` array and typically no `compilerOptions`, delegating all
     /// compilation to the referenced sub-projects.
-    pub const fn is_solution_style(&self) -> bool {
+    pub(crate) const fn is_solution_style(&self) -> bool {
         !self.references.is_empty()
     }
 
     /// Return the reference paths as a slice of strings.
-    pub fn reference_paths(&self) -> Vec<&str> {
+    pub(crate) fn reference_paths(&self) -> Vec<&str> {
         self.references.iter().map(|r| r.path.as_str()).collect()
     }
 }
@@ -53,7 +53,7 @@ impl TsConfig {
 /// The `compilerOptions` section of `tsconfig.json`.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
-pub struct TsCompilerOptions {
+pub(crate) struct TsCompilerOptions {
     pub strict: Option<bool>,
     pub no_unchecked_indexed_access: Option<bool>,
     pub module: Option<String>,

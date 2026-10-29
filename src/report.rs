@@ -36,7 +36,7 @@ use crate::models::{Language, Status};
 /// Checks produce an `Outcome` indicating success or failure with a message.
 /// Various `From` implementations allow ergonomic conversion from common types.
 #[derive(Debug, Clone)]
-pub enum Outcome {
+pub(crate) enum Outcome {
     /// The check passed.
     Pass,
     /// The check failed with an explanation.
@@ -45,13 +45,13 @@ pub enum Outcome {
 
 impl Outcome {
     /// Create a failing outcome with the given message.
-    pub fn fail(msg: impl Into<String>) -> Self {
+    pub(crate) fn fail(msg: impl Into<String>) -> Self {
         Self::Issue(msg.into())
     }
 
     /// Returns `true` if this outcome is a pass.
     #[expect(dead_code, reason = "placeholder for future use in conditional logic")]
-    pub const fn is_pass(&self) -> bool {
+    pub(crate) const fn is_pass(&self) -> bool {
         matches!(self, Self::Pass)
     }
 }
@@ -82,7 +82,7 @@ impl From<Result<(), String>> for Outcome {
 //
 
 /// Check whether a file (or directory) exists at the given path.
-pub fn file_exists(path: &Path) -> Outcome {
+pub(crate) fn file_exists(path: &Path) -> Outcome {
     if path.exists() {
         Outcome::Pass
     } else {
@@ -95,7 +95,7 @@ pub fn file_exists(path: &Path) -> Outcome {
 
 /// Check whether a string contains a given pattern.
 #[expect(dead_code, reason = "placeholder for future use in content checks")]
-pub fn contains(haystack: &str, needle: &str) -> Outcome {
+pub(crate) fn contains(haystack: &str, needle: &str) -> Outcome {
     if haystack.contains(needle) {
         Outcome::Pass
     } else {
@@ -104,7 +104,7 @@ pub fn contains(haystack: &str, needle: &str) -> Outcome {
 }
 
 /// Check whether a regex pattern matches anywhere in the string.
-pub fn matches_regex(haystack: &str, pattern: &str) -> Outcome {
+pub(crate) fn matches_regex(haystack: &str, pattern: &str) -> Outcome {
     match regex::Regex::new(pattern) {
         Ok(re) if re.is_match(haystack) => Outcome::Pass,
         Ok(_) => Outcome::fail(format!("Pattern not found: {pattern}")),
@@ -118,7 +118,7 @@ pub fn matches_regex(haystack: &str, pattern: &str) -> Outcome {
 
 /// A single recorded check result.
 #[derive(Debug, Clone, Serialize)]
-pub struct CheckResult {
+pub(crate) struct CheckResult {
     pub name: String,
     pub status: Status,
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -133,7 +133,7 @@ pub struct CheckResult {
 ///
 /// Provides ergonomic methods for recording checks at different severity levels,
 /// as well as helpers for common patterns like requiring a parsed config file.
-pub struct Report {
+pub(crate) struct Report {
     pub project_path: PathBuf,
     pub languages: HashSet<Language>,
     pub results: Vec<CheckResult>,
@@ -141,7 +141,7 @@ pub struct Report {
 
 impl Report {
     /// Create a new empty report for the given project.
-    pub const fn new(project_path: PathBuf, languages: HashSet<Language>) -> Self {
+    pub(crate) const fn new(project_path: PathBuf, languages: HashSet<Language>) -> Self {
         Self {
             project_path,
             languages,
@@ -150,18 +150,26 @@ impl Report {
     }
 
     /// Record a required check. If the outcome is an issue, it is recorded as `FAIL`.
-    pub fn must(&mut self, name: impl Into<String>, outcome: impl Into<Outcome>) -> &mut Self {
+    pub(crate) fn must(
+        &mut self,
+        name: impl Into<String>,
+        outcome: impl Into<Outcome>,
+    ) -> &mut Self {
         self.record(name.into(), outcome.into(), Status::Fail)
     }
 
     /// Record a recommended check. If the outcome is an issue, it is recorded as `WARN`.
-    pub fn should(&mut self, name: impl Into<String>, outcome: impl Into<Outcome>) -> &mut Self {
+    pub(crate) fn should(
+        &mut self,
+        name: impl Into<String>,
+        outcome: impl Into<Outcome>,
+    ) -> &mut Self {
         self.record(name.into(), outcome.into(), Status::Warn)
     }
 
     /// Record a skipped check with a reason.
     #[expect(dead_code, reason = "placeholder for future use in conditional logic")]
-    pub fn skip(&mut self, name: impl Into<String>, reason: impl Into<String>) -> &mut Self {
+    pub(crate) fn skip(&mut self, name: impl Into<String>, reason: impl Into<String>) -> &mut Self {
         self.results.push(CheckResult {
             name: name.into(),
             status: Status::Skip,
@@ -198,7 +206,7 @@ impl Report {
     /// - `"{label}: valid"` - recorded if the file exists
     ///
     /// Returns `Some(&T)` only when the file exists and parsed successfully.
-    pub fn require_parsed<'a, T>(
+    pub(crate) fn require_parsed<'a, T>(
         &mut self,
         label: &str,
         status: &'a ConfigStatus<T>,
@@ -223,7 +231,7 @@ impl Report {
 
     /// Like [`require_parsed`](Self::require_parsed) but issues a `WARN` instead
     /// of `FAIL` if the file is missing. Useful for optional config files.
-    pub fn recommend_parsed<'a, T>(
+    pub(crate) fn recommend_parsed<'a, T>(
         &mut self,
         label: &str,
         status: &'a ConfigStatus<T>,
@@ -247,7 +255,7 @@ impl Report {
     }
 
     /// Count of checks with status `Pass`.
-    pub fn passed(&self) -> usize {
+    pub(crate) fn passed(&self) -> usize {
         self.results
             .iter()
             .filter(|r| r.status == Status::Pass)
@@ -255,7 +263,7 @@ impl Report {
     }
 
     /// Count of checks with status `Fail`.
-    pub fn failed(&self) -> usize {
+    pub(crate) fn failed(&self) -> usize {
         self.results
             .iter()
             .filter(|r| r.status == Status::Fail)
@@ -263,7 +271,7 @@ impl Report {
     }
 
     /// Count of checks with status `Warn`.
-    pub fn warnings(&self) -> usize {
+    pub(crate) fn warnings(&self) -> usize {
         self.results
             .iter()
             .filter(|r| r.status == Status::Warn)
@@ -271,7 +279,7 @@ impl Report {
     }
 
     /// Print the report to stdout with colored output.
-    pub fn print(&self) {
+    pub(crate) fn print(&self) {
         let separator = "═".repeat(68);
 
         println!("{}", separator.bold());

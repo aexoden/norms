@@ -15,7 +15,7 @@ use crate::models::Language;
 /// - `pyproject.toml` for Python
 /// - `Cargo.toml` for Rust
 /// - `package.json` for TypeScript
-pub fn detect_languages(path: &Path) -> HashSet<Language> {
+pub(crate) fn detect_languages(path: &Path) -> HashSet<Language> {
     let mut languages = HashSet::new();
 
     let markers: &[(Language, &str)] = &[
@@ -44,7 +44,7 @@ pub fn detect_languages(path: &Path) -> HashSet<Language> {
 ///
 /// TypeScript projects may live at the repository root or in a `frontend/` subdirectory. This function returns the path
 /// containing `package.json`, preferring the repository root if it exists there.
-pub fn resolve_typescript_root(path: &Path) -> std::path::PathBuf {
+pub(crate) fn resolve_typescript_root(path: &Path) -> std::path::PathBuf {
     if path.join("package.json").exists() {
         return path.to_path_buf();
     }

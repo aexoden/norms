@@ -40,7 +40,7 @@ use crate::models::Language;
 /// is preserved in the `ParseError` variant so that checks can still do
 /// text-level matching even if structured parsing failed.
 #[derive(Debug)]
-pub enum ConfigStatus<T> {
+pub(crate) enum ConfigStatus<T> {
     /// The file does not exist.
     NotFound,
     /// The file exists but could not be parsed.
@@ -56,7 +56,7 @@ pub enum ConfigStatus<T> {
 
 impl<T> ConfigStatus<T> {
     /// Get a reference to the parsed value, if available.
-    pub const fn as_ref_ok(&self) -> Option<&T> {
+    pub(crate) const fn as_ref_ok(&self) -> Option<&T> {
         match self {
             Self::Ok(v) => Some(v),
             Self::NotFound | Self::ParseError { .. } => None,
@@ -65,7 +65,7 @@ impl<T> ConfigStatus<T> {
 
     /// Get the raw file content if the file exists (regardless of parse success).
     #[expect(dead_code, reason = "placeholder for future config getters")]
-    pub fn raw_content(&self) -> Option<&str> {
+    pub(crate) fn raw_content(&self) -> Option<&str> {
         match self {
             Self::ParseError { raw, .. } => Some(raw),
             Self::NotFound | Self::Ok(_) => None,
@@ -77,7 +77,7 @@ impl<T> ConfigStatus<T> {
 ///
 /// Each config file is parsed at most once using [`OnceLock`]. The first call to
 /// a getter triggers the parse; subsequent calls return the cached result.
-pub struct ProjectContext {
+pub(crate) struct ProjectContext {
     path: PathBuf,
     languages: OnceLock<HashSet<Language>>,
     typescript_root: OnceLock<PathBuf>,
@@ -96,7 +96,7 @@ pub struct ProjectContext {
 
 impl ProjectContext {
     /// Create a new context for the project at the given path.
-    pub const fn new(path: PathBuf) -> Self {
+    pub(crate) const fn new(path: PathBuf) -> Self {
         Self {
             path,
             languages: OnceLock::new(),
@@ -116,12 +116,12 @@ impl ProjectContext {
     }
 
     /// The root path of the project.
-    pub fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         &self.path
     }
 
     /// Detected programming languages (cached).
-    pub fn languages(&self) -> &HashSet<Language> {
+    pub(crate) fn languages(&self) -> &HashSet<Language> {
         self.languages
             .get_or_init(|| crate::detection::detect_languages(&self.path))
     }
@@ -130,19 +130,19 @@ impl ProjectContext {
     ///
     /// TypeScript projects may live at the repository root or in a `frontend/` subdirectory. This returns the directory
     /// containing `package.json`.
-    pub fn typescript_root(&self) -> &Path {
+    pub(crate) fn typescript_root(&self) -> &Path {
         self.typescript_root
             .get_or_init(|| crate::detection::resolve_typescript_root(&self.path))
     }
 
     /// Parsed `Cargo.toml` (cached).
-    pub fn cargo(&self) -> &ConfigStatus<CargoToml> {
+    pub(crate) fn cargo(&self) -> &ConfigStatus<CargoToml> {
         self.cargo
             .get_or_init(|| parse_toml_file::<CargoToml>(&self.path.join("Cargo.toml")))
     }
 
     /// Parsed `pyproject.toml` (cached).
-    pub fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
+    pub(crate) fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
         self.pyproject
             .get_or_init(|| parse_toml_file::<PyprojectToml>(&self.path.join("pyproject.toml")))
     }
@@ -150,7 +150,7 @@ impl ProjectContext {
     /// Parsed `package.json` from the TypeScript root (cached).
     ///
     /// Uses the resolved TypeScript root, which may be the repository root or a `frontend/` subdirectory.
-    pub fn package_json(&self) -> &ConfigStatus<PackageJson> {
+    pub(crate) fn package_json(&self) -> &ConfigStatus<PackageJson> {
         self.package_json.get_or_init(|| {
             parse_json5_file::<PackageJson>(&self.typescript_root().join("package.json"))
         })
@@ -159,7 +159,7 @@ impl ProjectContext {
     /// Parsed `tsconfig.json` from the TypeScript root (cached).
     ///
     /// Uses the resolved TypeScript root, which may be the repository root or a `frontend/` subdirectory.
-    pub fn tsconfig(&self) -> &ConfigStatus<TsConfig> {
+    pub(crate) fn tsconfig(&self) -> &ConfigStatus<TsConfig> {
         self.tsconfig.get_or_init(|| {
             parse_json5_file::<TsConfig>(&self.typescript_root().join("tsconfig.json"))
         })
@@ -171,7 +171,7 @@ impl ProjectContext {
     /// root and parsed. Returns a vec of `(display_name, ConfigStatus<TsConfig>)` pairs.
     ///
     /// Returns an empty vec if the root tsconfig is not solution-style, could not be parsed, or has no references.
-    pub fn typescript_referenced_configs(&self) -> &[(String, ConfigStatus<TsConfig>)] {
+    pub(crate) fn typescript_referenced_configs(&self) -> &[(String, ConfigStatus<TsConfig>)] {
         self.typescript_referenced_configs.get_or_init(|| {
             let Some(root) = self.tsconfig().as_ref_ok() else {
                 return Vec::new();
@@ -212,38 +212,38 @@ impl ProjectContext {
     }
 
     /// Parsed `devbox.json` (cached). Uses JSON5 for flexibility.
-    pub fn devbox(&self) -> &ConfigStatus<DevboxConfig> {
+    pub(crate) fn devbox(&self) -> &ConfigStatus<DevboxConfig> {
         self.devbox
             .get_or_init(|| parse_json5_file::<DevboxConfig>(&self.path.join("devbox.json")))
     }
 
     /// Parsed `renovate.json` (cached). Uses JSON5 for flexibility.
-    pub fn renovate(&self) -> &ConfigStatus<RenovateConfig> {
+    pub(crate) fn renovate(&self) -> &ConfigStatus<RenovateConfig> {
         self.renovate
             .get_or_init(|| parse_json5_file::<RenovateConfig>(&self.path.join("renovate.json")))
     }
 
     /// Parsed `.pre-commit-config.yaml` (cached).
-    pub fn precommit(&self) -> &ConfigStatus<PrecommitConfig> {
+    pub(crate) fn precommit(&self) -> &ConfigStatus<PrecommitConfig> {
         self.precommit.get_or_init(|| {
             parse_yaml_file::<PrecommitConfig>(&self.path.join(".pre-commit-config.yaml"))
         })
     }
 
     // Raw `.editorconfig` content (cached).
-    pub fn editorconfig(&self) -> &ConfigStatus<String> {
+    pub(crate) fn editorconfig(&self) -> &ConfigStatus<String> {
         self.editorconfig
             .get_or_init(|| read_text_file(&self.path.join(".editorconfig")))
     }
 
     // Raw `.gitattributes` content (cached).
-    pub fn gitattributes(&self) -> &ConfigStatus<String> {
+    pub(crate) fn gitattributes(&self) -> &ConfigStatus<String> {
         self.gitattributes
             .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
     }
 
     /// Raw `.github/workflows/ci.yaml` content (cached).
-    pub fn ci_workflow(&self) -> &ConfigStatus<String> {
+    pub(crate) fn ci_workflow(&self) -> &ConfigStatus<String> {
         self.ci_workflow
             .get_or_init(|| read_text_file(&self.path.join(".github/workflows/ci.yaml")))
     }

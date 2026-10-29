@@ -10,7 +10,7 @@ use serde::Serialize;
 /// Supported programming languages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Language {
+pub(crate) enum Language {
     Cpp,
     Python,
     Rust,
@@ -31,7 +31,7 @@ impl fmt::Display for Language {
 /// The severity/outcome of a check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Status {
+pub(crate) enum Status {
     Pass,
     Fail,
     Warn,

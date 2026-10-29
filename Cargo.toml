@@ -66,6 +66,7 @@ pointer_format = "warn"
 precedence_bits = "warn"
 rc_buffer = "warn"
 rc_mutex = "warn"
+redundant_pub_crate = "allow"
 redundant_test_prefix = "warn"
 redundant_type_annotations = "warn"
 renamed_function_params = "warn"
@@ -95,5 +96,6 @@ wildcard_enum_match_arm = "warn"
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
 let_underscore = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
 unsafe_code = "forbid"
 unused_qualifications = "warn"

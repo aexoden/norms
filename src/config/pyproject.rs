@@ -13,7 +13,7 @@ use serde::Deserialize;
 /// Top-level `pyproject.toml` structure.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct PyprojectToml {
+pub(crate) struct PyprojectToml {
     pub project: Option<ProjectSection>,
     pub tool: Option<ToolSection>,
     pub dependency_groups: Option<HashMap<String, Vec<toml::Value>>>,
@@ -22,7 +22,7 @@ pub struct PyprojectToml {
 /// The `[project]` table.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct ProjectSection {
+pub(crate) struct ProjectSection {
     pub name: Option<String>,
     pub description: Option<String>,
     pub requires_python: Option<String>,
@@ -32,7 +32,7 @@ pub struct ProjectSection {
 /// The `[tool]` table (we only model the tools we inspect).
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct ToolSection {
+pub(crate) struct ToolSection {
     pub ruff: Option<RuffConfig>,
     pub mypy: Option<MypyConfig>,
 }
@@ -44,7 +44,7 @@ pub struct ToolSection {
 /// `[tool.ruff]` configuration.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct RuffConfig {
+pub(crate) struct RuffConfig {
     pub line_length: Option<u32>,
     pub format: Option<RuffFormatConfig>,
     pub lint: Option<RuffLintConfig>,
@@ -53,14 +53,14 @@ pub struct RuffConfig {
 /// `[tool.ruff.format]` configuration.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct RuffFormatConfig {
+pub(crate) struct RuffFormatConfig {
     pub line_ending: Option<String>,
 }
 
 /// `[tool.ruff.lint]` configuration.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct RuffLintConfig {
+pub(crate) struct RuffLintConfig {
     pub preview: Option<bool>,
     pub select: Option<Vec<String>>,
     pub ignore: Option<Vec<String>>,
@@ -71,19 +71,19 @@ pub struct RuffLintConfig {
 
 impl RuffLintConfig {
     /// Whether the `select` list includes `"ALL"`.
-    pub fn selects_all(&self) -> bool {
+    pub(crate) fn selects_all(&self) -> bool {
         self.select
             .as_ref()
             .is_some_and(|s| s.iter().any(|r| r == "ALL"))
     }
 
     /// Whether any rules are selected at all.
-    pub fn has_rules(&self) -> bool {
+    pub(crate) fn has_rules(&self) -> bool {
         self.select.as_ref().is_some_and(|s| !s.is_empty())
     }
 
     /// Whether an ignore list is present and non-empty.
-    pub fn has_ignores(&self) -> bool {
+    pub(crate) fn has_ignores(&self) -> bool {
         self.ignore.as_ref().is_some_and(|i| !i.is_empty())
     }
 }
@@ -91,21 +91,21 @@ impl RuffLintConfig {
 /// `[tool.ruff.lint.pydocstyle]`.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct RuffLintPydocstyleConfig {
+pub(crate) struct RuffLintPydocstyleConfig {
     pub convention: Option<String>,
 }
 
 /// `[tool.ruff.lint.isort]`.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct RuffLintIsortConfig {
+pub(crate) struct RuffLintIsortConfig {
     pub lines_between_types: Option<u32>,
 }
 
 /// `[tool.ruff.lint.flake8-copyright]`.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct RuffLintCopyrightConfig {
+pub(crate) struct RuffLintCopyrightConfig {
     pub notice_rgx: Option<String>,
 }
 
@@ -116,6 +116,6 @@ pub struct RuffLintCopyrightConfig {
 /// `[tool.mypy]` configuration.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct MypyConfig {
+pub(crate) struct MypyConfig {
     pub strict: Option<bool>,
 }

@@ -12,10 +12,10 @@
 //! Registration is explicit - no macros or global side effects. New checks
 //! are added by writing the function and listing it in [`run_all_checks`].
 
-pub mod common;
-pub mod python;
-pub mod rust;
-pub mod typescript;
+pub(crate) mod common;
+pub(crate) mod python;
+pub(crate) mod rust;
+pub(crate) mod typescript;
 
 use crate::context::ProjectContext;
 use crate::models::Language;
@@ -24,7 +24,7 @@ use crate::report::Report;
 /// Run all applicable checks for the given project context.
 ///
 /// Common checks always run. Language-specific checks run for each detected language.
-pub fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_readme(ctx, report);
     common::check_license(ctx, report);

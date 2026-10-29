@@ -9,10 +9,10 @@ mod pyproject;
 mod renovate;
 mod tsconfig;
 
-pub use cargo::CargoToml;
-pub use devbox::DevboxConfig;
-pub use packagejson::PackageJson;
-pub use precommit::PrecommitConfig;
-pub use pyproject::PyprojectToml;
-pub use renovate::RenovateConfig;
-pub use tsconfig::{TsCompilerOptions, TsConfig};
+pub(crate) use cargo::CargoToml;
+pub(crate) use devbox::DevboxConfig;
+pub(crate) use packagejson::PackageJson;
+pub(crate) use precommit::PrecommitConfig;
+pub(crate) use pyproject::PyprojectToml;
+pub(crate) use renovate::RenovateConfig;
+pub(crate) use tsconfig::{TsCompilerOptions, TsConfig};

@@ -10,7 +10,7 @@ use crate::report::{Outcome, Report, file_exists};
 // Project configuration
 //
 
-pub fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("Cargo.toml", ctx.cargo()) else {
         return;
     };
@@ -43,7 +43,7 @@ pub fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
 // MSRV / Toolchain
 //
 
-pub fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
     let package = ctx.cargo().as_ref_ok().and_then(|c| c.package.as_ref());
 
     let has_msrv = package.and_then(|p| p.rust_version.as_ref()).is_some();
@@ -54,7 +54,7 @@ pub fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
 // Clippy lints
 //
 
-pub fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
     };
@@ -80,7 +80,7 @@ pub fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
 // Dependency auditing
 //
 
-pub fn check_cargo_deny(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_cargo_deny(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "Rust: deny.toml",
         file_exists(&ctx.path().join("deny.toml")),
@@ -91,7 +91,7 @@ pub fn check_cargo_deny(ctx: &ProjectContext, report: &mut Report) {
 // Lock file
 //
 
-pub fn check_cargo_lock(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_cargo_lock(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
     };
@@ -111,7 +111,7 @@ pub fn check_cargo_lock(ctx: &ProjectContext, report: &mut Report) {
 // Pre-commit integration
 //
 
-pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.precommit().as_ref_ok() else {
         return;
     };
@@ -130,7 +130,7 @@ pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 // Devbox integration
 //
 
-pub fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.devbox().as_ref_ok() else {
         return;
     };
@@ -146,7 +146,7 @@ pub fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
 // CI integration
 //
 
-pub fn check_ci(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(content) = ctx.ci_workflow() else {
         return;
     };

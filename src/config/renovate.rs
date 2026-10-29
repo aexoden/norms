@@ -8,7 +8,7 @@ use serde::Deserialize;
 /// Top-level `renovate.json` structure.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
-pub struct RenovateConfig {
+pub(crate) struct RenovateConfig {
     /// JSON Schema reference.
     #[serde(rename = "$schema")]
     pub schema: Option<String>,
@@ -20,7 +20,7 @@ pub struct RenovateConfig {
 
 impl RenovateConfig {
     /// Whether `extends` includes any preset containing `"best-practices"`.
-    pub fn extends_best_practices(&self) -> bool {
+    pub(crate) fn extends_best_practices(&self) -> bool {
         self.extends.iter().any(|e| e.contains("best-practices"))
     }
 }

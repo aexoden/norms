@@ -10,7 +10,7 @@ use crate::report::{Outcome, Report, file_exists};
 // Project configuration
 //
 
-pub fn check_pyproject(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_pyproject(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("pyproject.toml", ctx.pyproject()) else {
         return;
     };
@@ -25,7 +25,7 @@ pub fn check_pyproject(ctx: &ProjectContext, report: &mut Report) {
 // Project layout
 //
 
-pub fn check_src_layout(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_src_layout(ctx: &ProjectContext, report: &mut Report) {
     let src_path = ctx.path().join("src");
 
     if !src_path.is_dir() {
@@ -52,11 +52,11 @@ pub fn check_src_layout(ctx: &ProjectContext, report: &mut Report) {
 // Dependency management
 //
 
-pub fn check_uv_lock(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_uv_lock(ctx: &ProjectContext, report: &mut Report) {
     report.should("Python: uv.lock", file_exists(&ctx.path().join("uv.lock")));
 }
 
-pub fn check_dependency_groups(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_dependency_groups(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -79,7 +79,7 @@ pub fn check_dependency_groups(ctx: &ProjectContext, report: &mut Report) {
 // Ruff
 //
 
-pub fn check_ruff(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ruff(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -118,7 +118,7 @@ pub fn check_ruff(ctx: &ProjectContext, report: &mut Report) {
     }
 }
 
-pub fn check_ruff_lint(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ruff_lint(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -172,7 +172,7 @@ pub fn check_ruff_lint(ctx: &ProjectContext, report: &mut Report) {
 // Type checking (Mypy)
 //
 
-pub fn check_mypy(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_mypy(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -195,7 +195,7 @@ pub fn check_mypy(ctx: &ProjectContext, report: &mut Report) {
 // Pre-commit integration
 //
 
-pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.precommit().as_ref_ok() else {
         return;
     };
@@ -223,7 +223,7 @@ pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 // Devbox integration
 //
 
-pub fn check_devbox_uv(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_devbox_uv(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.devbox().as_ref_ok() else {
         return;
     };
@@ -235,7 +235,7 @@ pub fn check_devbox_uv(ctx: &ProjectContext, report: &mut Report) {
 // CI integration
 //
 
-pub fn check_ci(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(content) = ctx.ci_workflow() else {
         return;
     };

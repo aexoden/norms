@@ -13,7 +13,7 @@ use serde::Deserialize;
 /// Top-level `package.json` structure.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
-pub struct PackageJson {
+pub(crate) struct PackageJson {
     pub name: Option<String>,
     pub description: Option<String>,
 
@@ -39,24 +39,24 @@ pub struct PackageJson {
 
 impl PackageJson {
     /// Whether `type` is set to `"module"` (ESM).
-    pub fn is_esm(&self) -> bool {
+    pub(crate) fn is_esm(&self) -> bool {
         self.module_type.as_deref() == Some("module")
     }
 
     /// Whether `packageManager` starts with `"pnpm"`.
-    pub fn uses_pnpm(&self) -> bool {
+    pub(crate) fn uses_pnpm(&self) -> bool {
         self.package_manager
             .as_ref()
             .is_some_and(|pm| pm.starts_with("pnpm"))
     }
 
     /// Get the `packageManager` value for display in messages.
-    pub fn package_manager_display(&self) -> Option<&str> {
+    pub(crate) fn package_manager_display(&self) -> Option<&str> {
         self.package_manager.as_deref()
     }
 
     /// Whether a given package name appears in any dependency list.
-    pub fn has_dep(&self, name: &str) -> bool {
+    pub(crate) fn has_dep(&self, name: &str) -> bool {
         self.dependencies
             .as_ref()
             .is_some_and(|d| d.contains_key(name))
@@ -67,19 +67,19 @@ impl PackageJson {
     }
 
     /// Whether any dependency name starts with the given prefix.
-    pub fn has_dep_starting_with(&self, prefix: &str) -> bool {
+    pub(crate) fn has_dep_starting_with(&self, prefix: &str) -> bool {
         let check = |deps: &HashMap<String, String>| deps.keys().any(|k| k.starts_with(prefix));
         self.dependencies.as_ref().is_some_and(check)
             || self.dev_dependencies.as_ref().is_some_and(check)
     }
 
     /// Whether a script with the given name exists.
-    pub fn has_script(&self, name: &str) -> bool {
+    pub(crate) fn has_script(&self, name: &str) -> bool {
         self.scripts.as_ref().is_some_and(|s| s.contains_key(name))
     }
 
     /// Whether any script name matches one of the given alternatives.
-    pub fn has_any_script(&self, names: &[&str]) -> bool {
+    pub(crate) fn has_any_script(&self, names: &[&str]) -> bool {
         names.iter().any(|n| self.has_script(n))
     }
 }

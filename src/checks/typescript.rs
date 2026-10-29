@@ -11,7 +11,7 @@ use crate::report::{Outcome, Report, file_exists};
 // Package configuration
 //
 
-pub fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("package.json", ctx.package_json()) else {
         return;
     };
@@ -47,7 +47,7 @@ pub fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
 // Package manager
 //
 
-pub fn check_pnpm(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_pnpm(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.package_json().as_ref_ok() else {
         return;
     };
@@ -92,7 +92,7 @@ pub fn check_pnpm(ctx: &ProjectContext, report: &mut Report) {
 // TypeScript configuration
 //
 
-pub fn check_tsconfig(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_tsconfig(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("tsconfig.json", ctx.tsconfig()) else {
         return;
     };
@@ -239,7 +239,7 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
 // Linting
 //
 
-pub fn check_eslint(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_eslint(ctx: &ProjectContext, report: &mut Report) {
     let ts_root = ctx.typescript_root();
     let eslint_config = ts_root.join("eslint.config.ts");
 
@@ -267,7 +267,7 @@ pub fn check_eslint(ctx: &ProjectContext, report: &mut Report) {
 // Formatting
 //
 
-pub fn check_prettier(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_prettier(ctx: &ProjectContext, report: &mut Report) {
     let ts_root = ctx.typescript_root();
     let prettierrc = ts_root.join(".prettierrc");
     report.must("Prettier: configured", file_exists(&prettierrc));
@@ -292,7 +292,7 @@ pub fn check_prettier(ctx: &ProjectContext, report: &mut Report) {
 // Scripts
 //
 
-pub fn check_scripts(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_scripts(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.package_json().as_ref_ok() else {
         return;
     };
@@ -363,7 +363,7 @@ pub fn check_scripts(ctx: &ProjectContext, report: &mut Report) {
 // Pre-commit integration
 //
 
-pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(precommit) = ctx.precommit().as_ref_ok() else {
         return;
     };
@@ -415,7 +415,7 @@ pub fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 // Devbox integration
 //
 
-pub fn check_devbox_pnpm(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_devbox_pnpm(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.devbox().as_ref_ok() else {
         return;
     };
@@ -448,7 +448,7 @@ pub fn check_devbox_pnpm(ctx: &ProjectContext, report: &mut Report) {
 // CI integration
 //
 
-pub fn check_ci(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(content) = ctx.ci_workflow() else {
         return;
     };
