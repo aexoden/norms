@@ -50,7 +50,7 @@ impl Outcome {
     }
 
     /// Returns `true` if this outcome is a pass.
-    #[expect(dead_code)] // Placeholder for future use in conditional logic
+    #[expect(dead_code, reason = "placeholder for future use in conditional logic")]
     pub const fn is_pass(&self) -> bool {
         matches!(self, Self::Pass)
     }
@@ -94,7 +94,7 @@ pub fn file_exists(path: &Path) -> Outcome {
 }
 
 /// Check whether a string contains a given pattern.
-#[expect(dead_code)] // Placeholder for future use in content checks
+#[expect(dead_code, reason = "placeholder for future use in content checks")]
 pub fn contains(haystack: &str, needle: &str) -> Outcome {
     if haystack.contains(needle) {
         Outcome::Pass
@@ -160,7 +160,7 @@ impl Report {
     }
 
     /// Record a skipped check with a reason.
-    #[expect(dead_code)] // Placeholder for future use in conditional logic
+    #[expect(dead_code, reason = "placeholder for future use in conditional logic")]
     pub fn skip(&mut self, name: impl Into<String>, reason: impl Into<String>) -> &mut Self {
         self.results.push(CheckResult {
             name: name.into(),

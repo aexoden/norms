@@ -64,7 +64,7 @@ impl<T> ConfigStatus<T> {
     }
 
     /// Get the raw file content if the file exists (regardless of parse success).
-    #[expect(dead_code)] // Placeholder for future config getters
+    #[expect(dead_code, reason = "placeholder for future config getters")]
     pub fn raw_content(&self) -> Option<&str> {
         match self {
             Self::ParseError { raw, .. } => Some(raw),
