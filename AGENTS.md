@@ -75,6 +75,9 @@ projects rendered from the template.
   pinned as `"<sha> # <version>"` with a full `vX.Y.Z` tag, and use the
   `github-actions` versioning so Renovate keeps that tag in step with the
   workflows' pins instead of picking a floating `vX` tag on the same commit.
+  `tests/versions.rs` fails if an action entry doesn't match the actions
+  manager's pattern, lacks a full tag, or isn't pinned identically in
+  `.github/workflows/`, so every template action must also be used there.
 - Template paths use Jinja names for conditional files and per-language
   directories (`{{ rust_dir }}`, `{{ python_dir }}`, `{{ typescript_dir }}`),
   since any language can be primary (at the root) or secondary (in a
