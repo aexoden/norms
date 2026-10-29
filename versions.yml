@@ -173,7 +173,7 @@ npm_typescript:
 
 # renovate: datasource=npm depName=typescript-eslint
 npm_typescript_eslint:
-  default: "8.72.0"
+  default: "8.72.1"
   when: false
 
 # renovate: datasource=npm depName=vite
