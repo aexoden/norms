@@ -4,7 +4,7 @@
 //! Command-line interface.
 
 use std::path::PathBuf;
-use std::process;
+use std::process::ExitCode;
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -99,10 +99,10 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
     serde_json::to_string_pretty(&output).context("Failed to serialize JSON output")
 }
 
-fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<()> {
+fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<ExitCode> {
     if !path.is_dir() {
         eprintln!("Error: '{}' is not a valid directory.", path.display());
-        process::exit(1);
+        return Ok(ExitCode::FAILURE);
     }
 
     let ctx = ProjectContext::new(path.clone());
@@ -118,22 +118,21 @@ fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<()> {
     }
 
     if report.results.iter().any(|r| r.status == Status::Fail) {
-        process::exit(1);
+        return Ok(ExitCode::FAILURE);
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Entry point for the CLI.
-pub fn run() {
+#[must_use]
+pub fn run() -> ExitCode {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Verify { path, output_json } => {
-            if let Err(e) = verify(path, output_json) {
-                eprintln!("Error: {e}");
-                process::exit(1);
-            }
-        }
+        Commands::Verify { path, output_json } => verify(path, output_json).unwrap_or_else(|e| {
+            eprintln!("Error: {e}");
+            ExitCode::FAILURE
+        }),
     }
 }
