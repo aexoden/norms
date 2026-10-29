@@ -90,6 +90,7 @@ unused_trait_names = "warn"
 unwrap_used = "warn"
 use_debug = "warn"
 verbose_file_reads = "warn"
+wildcard_enum_match_arm = "warn"
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }

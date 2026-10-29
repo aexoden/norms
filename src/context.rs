@@ -59,7 +59,7 @@ impl<T> ConfigStatus<T> {
     pub const fn as_ref_ok(&self) -> Option<&T> {
         match self {
             Self::Ok(v) => Some(v),
-            _ => None,
+            Self::NotFound | Self::ParseError { .. } => None,
         }
     }
 
@@ -68,7 +68,7 @@ impl<T> ConfigStatus<T> {
     pub fn raw_content(&self) -> Option<&str> {
         match self {
             Self::ParseError { raw, .. } => Some(raw),
-            _ => None,
+            Self::NotFound | Self::Ok(_) => None,
         }
     }
 }
