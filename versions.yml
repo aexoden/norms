@@ -3,7 +3,7 @@
 
 # Every tool, action, hook and dependency version used by the Copier template.
 # Each entry is a hidden Copier variable. Renovate keeps them current through
-# the custom manager in renovate.json, which reads the comment above each one.
+# the custom managers in renovate.json, which read the comment above each one.
 # Actions are pinned as "<sha> # <version>".
 
 # Toolchains

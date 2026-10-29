@@ -70,9 +70,11 @@ projects rendered from the template.
   generation); it `!include`s `versions.yml`, so it is excluded from the
   `check-yaml` hook.
 - `versions.yml` holds every version the template pins, as hidden variables.
-  Each entry's `# renovate:` comment feeds the regex manager in
+  Each entry's `# renovate:` comment feeds the regex managers in
   `renovate.json`; keep that comment format when adding entries. Actions are
-  pinned as `"<sha> # <version>"`.
+  pinned as `"<sha> # <version>"` with a full `vX.Y.Z` tag, and use the
+  `github-actions` versioning so Renovate keeps that tag in step with the
+  workflows' pins instead of picking a floating `vX` tag on the same commit.
 - Template paths use Jinja names for conditional files and per-language
   directories (`{{ rust_dir }}`, `{{ python_dir }}`, `{{ typescript_dir }}`),
   since any language can be primary (at the root) or secondary (in a
