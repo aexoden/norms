@@ -36,7 +36,7 @@ pub struct DevboxShell {
 }
 
 impl DevboxConfig {
-    /// Check if a particular package prefix is listed
+    /// Check if a particular package prefix is listed.
     pub fn has_package(&self, prefix: &str) -> bool {
         self.packages.iter().any(|p| {
             p == prefix

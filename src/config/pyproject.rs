@@ -29,7 +29,7 @@ pub struct ProjectSection {
     pub license: Option<toml::Value>,
 }
 
-/// The `[tool]` table (we only model the tools we inspect)
+/// The `[tool]` table (we only model the tools we inspect).
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct ToolSection {

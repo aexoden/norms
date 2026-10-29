@@ -21,7 +21,7 @@ pub struct PackageJson {
     #[serde(rename = "type")]
     pub module_type: Option<String>,
 
-    /// Corepack-style package manager declaration (e.g. `"pnpm@9.15.0"`)
+    /// Corepack-style package manager declaration (e.g. `"pnpm@9.15.0"`).
     pub package_manager: Option<String>,
 
     /// Engine constraints (e.g. `{ "node": ">=20" }`).

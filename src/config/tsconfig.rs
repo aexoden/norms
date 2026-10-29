@@ -16,7 +16,7 @@ use serde::Deserialize;
 pub struct TsConfig {
     pub compiler_options: Option<TsCompilerOptions>,
 
-    /// Files to extend from
+    /// Files to extend from.
     pub extends: Option<serde_json::Value>,
 
     /// Project references for solution-style tsconfig.

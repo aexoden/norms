@@ -35,7 +35,7 @@ enum Commands {
     },
 }
 
-/// JSON output structure
+/// JSON output structure.
 #[derive(Serialize)]
 struct JsonOutput {
     path: String,
