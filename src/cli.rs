@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use anyhow::Context;
+use anyhow::Context as _;
 use clap::{Parser, Subcommand};
 use serde::Serialize;
 

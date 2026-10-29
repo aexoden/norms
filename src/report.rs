@@ -21,7 +21,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use colored::Colorize;
+use colored::Colorize as _;
 use serde::Serialize;
 
 use crate::context::ConfigStatus;
