@@ -724,35 +724,126 @@ edition), `keywords` and `categories`.
 #### Lints
 
 The baseline enables the `pedantic`, `nursery` and `cargo` Clippy groups, plus
-the restriction lints against `unwrap` and `expect`:
+a selection of restriction lints. The selection is interim and will be revised
+as cases come up:
 
 ```toml
 [lints.clippy]
+absolute_paths = "warn"
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+as_pointer_underscore = "warn"
 cargo = { level = "warn", priority = -1 }
+cfg_not_test = "warn"
+clone_on_ref_ptr = "warn"
+create_dir = "warn"
+dbg_macro = "warn"
+decimal_literal_representation = "warn"
+default_union_representation = "warn"
+doc_paragraphs_missing_punctuation = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+exit = "warn"
 expect_used = "warn"
+field_scoped_visibility_modifiers = "warn"
+filetype_is_file = "warn"
+float_cmp_const = "warn"
+fn_to_numeric_cast_any = "warn"
+if_then_some_else_none = "warn"
+indexing_slicing = "warn"
+infinite_loop = "warn"
+lossy_float_literal = "warn"
+map_err_ignore = "warn"
+map_with_unused_argument_over_ranges = "warn"
+mem_forget = "warn"
+mixed_read_write_in_expression = "warn"
 multiple_crate_versions = "allow"
+multiple_inherent_impl = "warn"
+multiple_unsafe_ops_per_block = "warn"
+needless_raw_strings = "warn"
+non_zero_suggestions = "warn"
 nursery = { level = "warn", priority = -1 }
+panic = "warn"
+panic_in_result_fn = "warn"
+partial_pub_fields = "warn"
+pathbuf_init_then_push = "warn"
 pedantic = { level = "warn", priority = -1 }
+pointer_format = "warn"
+precedence_bits = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+redundant_pub_crate = "allow"
+redundant_test_prefix = "warn"
+redundant_type_annotations = "warn"
+renamed_function_params = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+return_and_then = "warn"
+same_name_method = "warn"
+self_named_module_files = "warn"
+semicolon_inside_block = "warn"
+shadow_unrelated = "warn"
+str_to_string = "warn"
+string_add = "warn"
+string_slice = "warn"
+suspicious_xor_used_as_pow = "warn"
+tests_outside_test_module = "warn"
+todo = "warn"
+try_err = "warn"
+unimplemented = "warn"
+unneeded_field_pattern = "warn"
+unseparated_literal_suffix = "warn"
+unused_result_ok = "warn"
+unused_trait_names = "warn"
 unwrap_used = "warn"
+use_debug = "warn"
+verbose_file_reads = "warn"
+wildcard_enum_match_arm = "warn"
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
 let_underscore = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+unsafe_code = "forbid"
+unused_qualifications = "warn"
 ```
+
+Groups are set to priority -1 so that individual lints, which default to 0, can
+override them.
 
 `multiple_crate_versions` is allowed because transitive dependencies routinely
 pull in several versions of the same crate, which a project cannot fix.
 
-`clippy.toml` allows `unwrap`, `expect` and `panic` in tests:
+`unreachable_pub` asks for `pub(crate)` on items that are not reachable from
+outside the crate. `redundant_pub_crate`, a nursery lint, asks for the opposite,
+so it is allowed. Fields of `pub(crate)` types stay `pub`, since
+`field_scoped_visibility_modifiers` forbids scoped visibility on fields.
+
+`self_named_module_files` requires `foo/mod.rs` over `foo.rs` next to `foo/`.
+
+Some restriction lints are left out deliberately because they work against
+idiomatic Rust or do not suit applications:
+
+- `shadow_reuse` and `shadow_same`: shadowing a binding to transform it, as in
+  `let Some(x) = x else { ... }`, is idiomatic. `shadow_unrelated` is enabled.
+- `arbitrary_source_item_ordering`: field and variant order carries meaning for
+  derived `Ord`, serde output and clap help.
+- `impl_trait_in_params`, `exhaustive_enums` and `exhaustive_structs`: these
+  only matter for library APIs.
+- `error_impl_error`: a type named `Error` implementing `Error` is the usual
+  convention.
+- `get_unwrap`: `unwrap_used` already covers it, and its suggestion trips
+  `indexing_slicing`.
+- `module_name_repetitions`: too noisy for its benefit.
+
+`clippy.toml` allows `unwrap`, `expect` and `panic` in tests, and limits
+absolute paths to three segments:
 
 ```toml
+absolute-paths-max-segments = 3
 allow-expect-in-tests = true
 allow-panic-in-tests = true
 allow-unwrap-in-tests = true
 ```
-
-Projects may enable further restriction lints. A standard set has not been
-settled yet.
 
 The hooks and CI pass `-D warnings`, so any warning fails the check.
 

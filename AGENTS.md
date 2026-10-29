@@ -22,8 +22,11 @@ cargo run -- verify <path>              # run norms against a project
 pre-commit run --all-files              # every hook, incl. reuse, markdownlint, zizmor
 ```
 
-Clippy runs `pedantic`, `nursery` and `cargo` with `-D warnings`, and warns on
-`unwrap`/`expect` outside tests, so return errors or handle `None` instead.
+Clippy runs `pedantic`, `nursery` and `cargo` with `-D warnings`, plus the
+restriction lints listed in `Cargo.toml` (see the Lints section of
+`STANDARDS.md`). Among them, `unwrap`/`expect`/`panic` and indexing are flagged
+outside tests, so return errors or handle `None` instead, and crate-internal
+items are `pub(crate)`.
 
 Rendering the template locally, as the CI `template` job does (it needs
 `--vcs-ref HEAD`, so commit first; answers are passed with `--data`):
