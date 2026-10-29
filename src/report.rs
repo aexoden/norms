@@ -282,11 +282,7 @@ impl Report {
         let lang_str = if self.languages.is_empty() {
             "None".dimmed().to_string()
         } else {
-            let mut langs: Vec<_> = self
-                .languages
-                .iter()
-                .map(std::string::ToString::to_string)
-                .collect();
+            let mut langs: Vec<_> = self.languages.iter().map(ToString::to_string).collect();
             langs.sort();
             langs.join(", ")
         };

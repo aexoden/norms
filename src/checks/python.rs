@@ -42,7 +42,7 @@ pub fn check_src_layout(ctx: &ProjectContext, report: &mut Report) {
         .read_dir()
         .into_iter()
         .flatten()
-        .filter_map(std::result::Result::ok)
+        .filter_map(Result::ok)
         .any(|entry| entry.path().is_dir() && entry.path().join("__init__.py").exists());
 
     report.should("Python: src/ contains packages", has_packages);
