@@ -30,7 +30,7 @@ node_version:
 
 # renovate: datasource=npm depName=pnpm
 pnpm_version:
-  default: "12.16.0"
+  default: "12.16.1"
   when: false
 
 # pre-commit hooks
