@@ -20,7 +20,7 @@ python_version:
 
 # renovate: datasource=pypi depName=uv
 uv_version:
-  default: "0.13.5"
+  default: "0.13.6"
   when: false
 
 # renovate: datasource=node-version depName=node
