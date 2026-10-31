@@ -25,7 +25,7 @@ uv_version:
 
 # renovate: datasource=node-version depName=node
 node_version:
-  default: "26.12.1"
+  default: "26.13.0"
   when: false
 
 # renovate: datasource=npm depName=pnpm
