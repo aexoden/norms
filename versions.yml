@@ -121,7 +121,7 @@ py_mypy:
 
 # renovate: datasource=pypi depName=pytest
 py_pytest:
-  default: "9.1.1"
+  default: "9.2.0"
   when: false
 
 # renovate: datasource=pypi depName=pytest-cov
