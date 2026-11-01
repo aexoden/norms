@@ -168,7 +168,7 @@ npm_prettier:
 
 # renovate: datasource=npm depName=typescript
 npm_typescript:
-  default: "6.0.3"
+  default: "7.0.2"
   when: false
 
 # renovate: datasource=npm depName=typescript-eslint
