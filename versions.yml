@@ -116,7 +116,7 @@ action_setup_pnpm:
 
 # renovate: datasource=pypi depName=mypy
 py_mypy:
-  default: "2.4.0"
+  default: "2.4.1"
   when: false
 
 # renovate: datasource=pypi depName=pytest
