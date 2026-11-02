@@ -57,7 +57,7 @@ hook_zizmor:
 
 # renovate: datasource=github-tags depName=compilerla/conventional-pre-commit
 hook_conventional_pre_commit:
-  default: "v4.4.0"
+  default: "v4.5.0"
   when: false
 
 # GitHub Actions
