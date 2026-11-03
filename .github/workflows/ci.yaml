@@ -57,7 +57,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
         with:
           arguments: --workspace --all-features
-          command: check bans licenses sources
+          command: check -D warnings bans licenses sources
 
   cargo-test:
     name: Run Rust tests

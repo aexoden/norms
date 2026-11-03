@@ -110,7 +110,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@{{ action_cargo_deny }}
         with:
           arguments: --workspace --all-features
-          command: check bans licenses sources
+          command: check -D warnings bans licenses sources
 {%- if rust_prefix %}
           manifest-path: {{ rust_prefix }}Cargo.toml
 {%- endif %}

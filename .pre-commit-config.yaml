@@ -75,6 +75,6 @@ repos:
       - id: cargo-deny
         name: cargo-deny
         description: Check Rust dependency bans, licenses and sources using cargo-deny
-        entry: cargo deny --workspace --all-features check bans licenses sources
+        entry: cargo deny --workspace --all-features check -D warnings bans licenses sources
         language: system
         pass_filenames: false
