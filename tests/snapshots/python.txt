@@ -1,0 +1,61 @@
+exit: 1
+languages: python
+
+pass  readme-exists  README.md
+pass  license-exists  LICENSE
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+pass  gitignore-exists  .gitignore
+pass  gitattributes-exists  .gitattributes: exists
+pass  gitattributes-valid  .gitattributes: valid
+pass  gitattributes-text-auto  .gitattributes: text=auto
+pass  gitattributes-eol-lf  .gitattributes: eol=lf
+pass  gitattributes-binary  .gitattributes: binary markers
+pass  editorconfig-exists  .editorconfig: exists
+pass  editorconfig-valid  .editorconfig: valid
+pass  editorconfig-root  .editorconfig: root=true
+pass  editorconfig-charset  .editorconfig: charset=utf-8
+pass  editorconfig-end-of-line  .editorconfig: end_of_line=lf
+pass  editorconfig-indent-style  .editorconfig: indent_style=space
+pass  editorconfig-indent-size  .editorconfig: indent_size=4
+pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
+pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
+fail  devbox-exists  devbox.json: exists
+      File not found
+pass  precommit-config-exists  .pre-commit-config.yaml
+pass  renovate-exists  renovate.json: exists
+pass  renovate-valid  renovate.json: valid
+pass  renovate-schema  renovate.json: has $schema
+pass  renovate-extends  renovate.json: has extends
+warn  renovate-extends-best-practices  renovate.json: extends best-practices
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml exists
+pass  pyproject-exists  pyproject.toml: exists
+pass  pyproject-valid  pyproject.toml: valid
+pass  pyproject-project  pyproject.toml: has [project] section
+pass  python-src-layout  Python: src/ directory
+pass  python-src-packages  Python: src/ contains packages
+pass  uv-lock-exists  Python: uv.lock
+pass  python-dependency-groups  Python: has dependency-groups
+pass  python-dev-group  Python: has dev dependency group
+pass  ruff-configured  Ruff: configured
+pass  ruff-line-length  Ruff: line-length set
+pass  ruff-format-configured  Ruff format: configured
+pass  ruff-format-lf  Ruff format: LF line endings
+pass  ruff-lint-configured  Ruff lint: configured
+pass  ruff-lint-preview  Ruff lint: preview mode
+pass  ruff-lint-rules  Ruff lint: has rules selected
+pass  ruff-lint-all  Ruff lint: uses ALL rule
+pass  ruff-lint-ignores  Ruff lint: has ignore list
+pass  ruff-lint-pydocstyle  Ruff lint: pydocstyle convention
+pass  ruff-lint-isort  Ruff lint: isort configured
+pass  ruff-lint-copyright  Ruff lint: copyright notice regex
+pass  mypy-configured  mypy: configured
+pass  mypy-strict  mypy: strict mode
+pass  python-precommit-ruff  Python pre-commit: Ruff hooks
+pass  python-precommit-ruff-check  Python pre-commit: ruff-check
+pass  python-precommit-ruff-format  Python pre-commit: ruff-format
+pass  python-precommit-mypy  Python pre-commit: Mypy hook
+pass  python-ci-ruff-format  Python CI: format check
+pass  python-ci-ruff-check  Python CI: lint check
+pass  python-ci-mypy  Python CI: type check

@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+# TypeScript
+coverage/
+dist/
+node_modules/
+*.tsbuildinfo

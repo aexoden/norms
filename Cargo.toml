@@ -10,6 +10,8 @@ repository = "https://github.com/aexoden/norms"
 license = "MIT OR Apache-2.0"
 keywords = ["coding", "linting", "standards"]
 categories = ["development-tools"]
+# The fixture tests need the repository: cargo leaves out fixtures that hold a Cargo.toml.
+exclude = ["tests/fixtures/", "tests/fixtures.rs", "tests/snapshots/"]
 
 [dependencies]
 anyhow = { version = "=1.0.104", features = ["backtrace"] }

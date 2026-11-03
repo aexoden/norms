@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+pnpm-lock.yaml
+
+# Files formatted by other tools
+.copier-answers.yml
+.github/
+.markdownlint-cli2.jsonc

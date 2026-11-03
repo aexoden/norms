@@ -5,13 +5,21 @@
 version = 1
 
 [[annotations]]
-path = ["**/*.md", "Cargo.lock", "renovate.json"]
+path = ["**/*.md", "Cargo.lock", "renovate.json", "tests/snapshots/*.txt"]
 SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
 SPDX-License-Identifier = "MIT OR Apache-2.0"
 
 # The template's own headers hold Jinja placeholders for the rendered project.
 [[annotations]]
 path = "template/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
+SPDX-License-Identifier = "MIT OR Apache-2.0"
+
+# The test fixtures are projects for norms to check, so their headers are
+# whatever each test needs.
+[[annotations]]
+path = "tests/fixtures/**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
 SPDX-License-Identifier = "MIT OR Apache-2.0"

@@ -16,11 +16,12 @@ pre-commit hooks and CI:
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
-cargo test <name>                       # a single test, by name substring
+cargo test <name>                         # a single test, by name substring
+NORMS_BLESS=1 cargo test --test fixtures  # rewrite the fixture snapshots
 # cargo-deny is installed separately
 cargo deny --workspace --all-features check -D warnings bans licenses sources
-cargo run -- verify <path>              # run norms against a project
-pre-commit run --all-files              # every hook, incl. reuse, markdownlint, zizmor
+cargo run -- verify <path>                # run norms against a project
+pre-commit run --all-files                # every hook, incl. reuse, markdownlint, zizmor
 ```
 
 Clippy runs `pedantic`, `nursery` and `cargo` with `-D warnings`, plus the
@@ -71,6 +72,25 @@ prints a `Report`, exiting 1 if any check failed.
 
 `norms verify` is not yet gating in CI: it still reports false findings on
 projects rendered from the template.
+
+## Tests
+
+Unit tests sit beside the code they test. `tests/fixtures.rs` runs
+`norms verify --json` on each project in `tests/fixtures/` and compares what it
+reports with `tests/snapshots/<name>.txt`, so any change in findings shows up as
+a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
+`git diff tests/snapshots`, and commit the snapshots with the change.
+
+- The language fixtures are renders of the template, made as in the Template
+  section below with `--skip-tasks`: `rust`, `python` and `typescript` with
+  `primary_language=<language>` and `project_name=demo-<language>`, and
+  `rust-typescript` with `project_name=demo`, `primary_language=rust`,
+  `secondary_languages=["typescript"]` and `typescript_path=frontend`. Each
+  drops `.copier-answers.yml` and has stub lock files apart from `Cargo.lock`.
+  Re-render them when the template changes in a way the checks see.
+- Fixtures are kept exactly as written: pre-commit and markdownlint skip them,
+  and `REUSE.toml` covers them, so one may be deliberately broken or lack
+  headers. A fix or new check that depends on a project's layout gets a fixture.
 
 ## Template
 

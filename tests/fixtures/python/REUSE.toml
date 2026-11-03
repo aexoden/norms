@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+# Files that cannot carry a comment header.
+version = 1
+
+[[annotations]]
+path = [
+  "**/*.md",
+  "renovate.json",
+  ".git_archival.txt",
+  ".python-version",
+  "uv.lock",
+]
+SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
+SPDX-License-Identifier = "MIT"

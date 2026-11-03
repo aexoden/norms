@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+[licenses]
+allow = ["Apache-2.0", "MIT"]
+
+[bans]
+multiple-versions = "allow"

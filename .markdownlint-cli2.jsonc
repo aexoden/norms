@@ -21,5 +21,8 @@
         "MD024": {
             "siblings_only": true
         }
-    }
+    },
+
+    // The test fixtures are projects for norms to check, kept exactly as written.
+    "ignores": ["tests/fixtures/**"]
 }

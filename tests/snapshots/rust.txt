@@ -1,0 +1,50 @@
+exit: 1
+languages: rust
+
+pass  readme-exists  README.md
+pass  license-exists  LICENSE
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+pass  gitignore-exists  .gitignore
+pass  gitattributes-exists  .gitattributes: exists
+pass  gitattributes-valid  .gitattributes: valid
+pass  gitattributes-text-auto  .gitattributes: text=auto
+pass  gitattributes-eol-lf  .gitattributes: eol=lf
+pass  gitattributes-binary  .gitattributes: binary markers
+pass  editorconfig-exists  .editorconfig: exists
+pass  editorconfig-valid  .editorconfig: valid
+pass  editorconfig-root  .editorconfig: root=true
+pass  editorconfig-charset  .editorconfig: charset=utf-8
+pass  editorconfig-end-of-line  .editorconfig: end_of_line=lf
+pass  editorconfig-indent-style  .editorconfig: indent_style=space
+pass  editorconfig-indent-size  .editorconfig: indent_size=4
+pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
+pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
+fail  devbox-exists  devbox.json: exists
+      File not found
+pass  precommit-config-exists  .pre-commit-config.yaml
+pass  renovate-exists  renovate.json: exists
+pass  renovate-valid  renovate.json: valid
+pass  renovate-schema  renovate.json: has $schema
+pass  renovate-extends  renovate.json: has extends
+warn  renovate-extends-best-practices  renovate.json: extends best-practices
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml exists
+pass  cargo-toml-exists  Cargo.toml: exists
+pass  cargo-toml-valid  Cargo.toml: valid
+pass  cargo-toml-license  Cargo.toml: has license
+pass  cargo-toml-description  Cargo.toml: has description
+pass  cargo-toml-repository  Cargo.toml: has repository
+pass  cargo-toml-edition  Cargo.toml: has edition
+warn  cargo-toml-rust-version  Rust: MSRV defined (rust-version)
+pass  clippy-lints  Clippy: lints configured
+pass  clippy-pedantic  Clippy: pedantic enabled
+pass  deny-toml-exists  Rust: deny.toml
+pass  cargo-lock-exists  Rust: Cargo.lock comitted (binary)
+pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
+pass  rust-precommit-clippy  Rust pre-commit: clippy hook
+pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+warn  rust-ci-rustfmt  Rust CI: format check
+pass  rust-ci-clippy  Rust CI: clippy check
+pass  rust-ci-test  Rust CI: test
+warn  rust-ci-cargo-deny  Rust CI: cargo deny

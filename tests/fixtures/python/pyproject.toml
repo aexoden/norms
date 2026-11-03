@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+[project]
+name = "demo-python"
+description = "A demo."
+readme = "README.md"
+requires-python = "==3.15.2"
+license = "MIT"
+license-files = ["LICENSES/*.txt"]
+authors = [{ name = "Jason Lynch", email = "jason@aexoden.com" }]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.15",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Source = "https://github.com/aexoden/demo-python"
+
+[project.scripts]
+demo-python = "demo_python.main:main"
+
+[dependency-groups]
+dev = [
+  "mypy==2.4.1",
+  "pytest==9.2.0",
+  "pytest-cov==7.1.0",
+  "ruff==0.17.3",
+]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+ignore = ["missing-trailing-comma", "single-line-implicit-string-concatenation"]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "(?i)SPDX-FileCopyrightText: \\d{4}"
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["assert", "private-member-access"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.uv]
+# Reinstall the project when HEAD or tags move, so the reported version stays current.
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+exclude-newer = "3 days"
+required-version = ">=0.13.6"

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+# Files that cannot carry a comment header.
+version = 1
+
+[[annotations]]
+path = [
+  "**/*.md",
+  "renovate.json",
+  ".prettierrc",
+  "package.json",
+  "pnpm-lock.yaml",
+  "tsconfig*.json",
+]
+SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
+SPDX-License-Identifier = "MIT"
