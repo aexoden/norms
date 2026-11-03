@@ -172,6 +172,8 @@ jobs:
         include:
           - name: Rust application
             answers: "{primary_language: rust}"
+          - name: Rust application under MIT alone
+            answers: "{primary_language: rust, license: MIT}"
           - name: Rust library
             answers: "{primary_language: rust, project_type: library}"
           - name: Python application

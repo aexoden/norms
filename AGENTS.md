@@ -97,6 +97,6 @@ projects rendered from the template.
   the subject is imperative and lowercase, aiming for 50 characters and never
   over 72.
 - Dependencies in `Cargo.toml` are pinned exactly (`=x.y.z`). New dependencies
-  must have permissive licenses allowed by `deny.toml`.
+  must have licenses allowed by `deny.toml`.
 - `CHANGELOG.md` is maintained by hand in Keep a Changelog format, with no
   `Unreleased` section.

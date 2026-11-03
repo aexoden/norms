@@ -853,8 +853,8 @@ The hooks and CI pass `-D warnings`, so any warning fails the check.
 `deny.toml` configures
 [cargo-deny](https://embarkstudios.github.io/cargo-deny/):
 
-- `[licenses] allow` lists only permissive licenses that the project actually
-  uses.
+- `[licenses] allow` specifies the licenses the project accepts, limited to
+  those cargo-deny encounters. By default that excludes dev-only dependencies.
 - `[bans] multiple-versions = "allow"`, for the same reason as the Clippy lint
   above.
 - Every entry in `[advisories] ignore` has a `reason`.
