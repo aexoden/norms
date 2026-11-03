@@ -356,14 +356,14 @@ following workflows:
 
 `ci.yaml` runs formatting checks, linting, type checking, tests (with coverage
 where the language supports it) and dependency policy checks, such as `cargo
-deny check bans licenses sources` and lock file freshness. CI should fail in
-every case where the pre-commit hooks would.
+deny --workspace --all-features check bans licenses sources` and lock file
+freshness. CI should fail in every case where the pre-commit hooks would.
 
 Security advisories are checked by `audit.yaml` rather than `ci.yaml`. New
 advisories appear independently of code changes, so a daily audit catches them
 promptly without blocking unrelated pull requests. The audit tools are:
 
-- Rust: `cargo deny check advisories`.
+- Rust: `cargo deny --workspace --all-features check advisories`.
 - Python: `uv audit` (currently experimental in uv).
 - TypeScript: `pnpm audit`.
 
@@ -871,7 +871,7 @@ The pre-commit hooks and CI both run:
 | `rustfmt`    | `cargo fmt --all --check`                                              |
 | `clippy`     | `cargo clippy --workspace --all-targets --all-features -- -D warnings` |
 | `cargo-test` | `cargo test --workspace --all-features`                                |
-| `cargo-deny` | `cargo deny check bans licenses sources`                               |
+| `cargo-deny` | `cargo deny --workspace --all-features check bans licenses sources`    |
 
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
 reads `rust-toolchain.toml`, and caches builds with `Swatinem/rust-cache`. It

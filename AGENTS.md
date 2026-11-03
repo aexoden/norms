@@ -17,7 +17,8 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo test <name>                       # a single test, by name substring
-cargo deny check bans licenses sources  # cargo-deny is installed separately
+# cargo-deny is installed separately
+cargo deny --workspace --all-features check bans licenses sources
 cargo run -- verify <path>              # run norms against a project
 pre-commit run --all-files              # every hook, incl. reuse, markdownlint, zizmor
 ```
