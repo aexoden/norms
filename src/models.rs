@@ -8,7 +8,9 @@ use std::fmt;
 use serde::Serialize;
 
 /// Supported programming languages.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+///
+/// The order of the variants is the order in which languages are checked and listed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Language {
     Cpp,

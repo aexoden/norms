@@ -69,20 +69,16 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             .unwrap_or_else(|_| report.project_path.clone())
             .display()
             .to_string(),
-        languages: {
-            let mut langs: Vec<String> = report
-                .languages
-                .iter()
-                .map(|l| match l {
-                    Language::Cpp => "cpp".into(),
-                    Language::Python => "python".into(),
-                    Language::Rust => "rust".into(),
-                    Language::TypeScript => "typescript".into(),
-                })
-                .collect();
-            langs.sort();
-            langs
-        },
+        languages: report
+            .languages
+            .iter()
+            .map(|l| match l {
+                Language::Cpp => "cpp".into(),
+                Language::Python => "python".into(),
+                Language::Rust => "rust".into(),
+                Language::TypeScript => "typescript".into(),
+            })
+            .collect(),
         summary: JsonSummary {
             passed: report.passed(),
             failed: report.failed(),
@@ -143,13 +139,13 @@ pub fn run() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::BTreeSet;
 
     use super::*;
 
     #[test]
     fn json_output_includes_check_ids() {
-        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
         report.should("readme-exists", "README.md", false);
 
         let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();

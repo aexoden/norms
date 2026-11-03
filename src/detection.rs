@@ -3,7 +3,7 @@
 
 //! Language detection utilities.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::models::Language;
@@ -15,8 +15,8 @@ use crate::models::Language;
 /// - `pyproject.toml` for Python
 /// - `Cargo.toml` for Rust
 /// - `package.json` for TypeScript
-pub(crate) fn detect_languages(path: &Path) -> HashSet<Language> {
-    let mut languages = HashSet::new();
+pub(crate) fn detect_languages(path: &Path) -> BTreeSet<Language> {
+    let mut languages = BTreeSet::new();
 
     let markers: &[(Language, &str)] = &[
         (Language::Cpp, "CMakeLists.txt"),

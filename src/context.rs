@@ -23,7 +23,7 @@
 //!
 //! NOTE: This specific Devbox functionality does not yet exist -- this is more of a planning note.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -80,7 +80,7 @@ impl<T> ConfigStatus<T> {
 /// a getter triggers the parse; subsequent calls return the cached result.
 pub(crate) struct ProjectContext {
     path: PathBuf,
-    languages: OnceLock<HashSet<Language>>,
+    languages: OnceLock<BTreeSet<Language>>,
     typescript_root: OnceLock<PathBuf>,
     cargo: OnceLock<ConfigStatus<CargoToml>>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
@@ -123,8 +123,8 @@ impl ProjectContext {
         &self.path
     }
 
-    /// Detected programming languages (cached).
-    pub(crate) fn languages(&self) -> &HashSet<Language> {
+    /// Detected programming languages (cached), in a stable order.
+    pub(crate) fn languages(&self) -> &BTreeSet<Language> {
         self.languages
             .get_or_init(|| crate::detection::detect_languages(&self.path))
     }

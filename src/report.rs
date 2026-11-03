@@ -31,7 +31,7 @@
 //! An ID labels one check, which may record several results: one for each
 //! file it inspects, such as each referenced tsconfig. All of them share the ID.
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 
 use colored::Colorize as _;
@@ -162,13 +162,13 @@ pub(crate) struct CheckResult {
 /// as well as helpers for common patterns like requiring a parsed config file.
 pub(crate) struct Report {
     pub project_path: PathBuf,
-    pub languages: HashSet<Language>,
+    pub languages: BTreeSet<Language>,
     pub results: Vec<CheckResult>,
 }
 
 impl Report {
     /// Create a new empty report for the given project.
-    pub(crate) const fn new(project_path: PathBuf, languages: HashSet<Language>) -> Self {
+    pub(crate) const fn new(project_path: PathBuf, languages: BTreeSet<Language>) -> Self {
         Self {
             project_path,
             languages,
@@ -385,8 +385,7 @@ impl Report {
         let lang_str = if self.languages.is_empty() {
             "None".dimmed().to_string()
         } else {
-            let mut langs: Vec<_> = self.languages.iter().map(ToString::to_string).collect();
-            langs.sort();
+            let langs: Vec<_> = self.languages.iter().map(ToString::to_string).collect();
             langs.join(", ")
         };
 
@@ -477,7 +476,7 @@ mod tests {
 
     #[test]
     fn require_parsed_derives_ids_from_prefix() {
-        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
         let status = ConfigStatus::<()>::ParseError {
             raw: String::new(),
             error: "bad".into(),
@@ -511,7 +510,7 @@ mod tests {
 
     #[test]
     fn waivers_skip_failures_and_warnings() {
-        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
         report.must("readme-exists", "README.md", false);
         report.should("changelog-exists", "CHANGELOG.md", false);
         report.apply_waivers(&[waiver("readme-exists"), waiver("changelog-exists")]);
@@ -533,7 +532,7 @@ mod tests {
 
     #[test]
     fn waivers_for_passing_or_absent_checks_warn() {
-        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
         report.must("readme-exists", "README.md", true);
         report.apply_waivers(&[waiver("readme-exists"), waiver("no-such-check")]);
 
@@ -557,7 +556,7 @@ mod tests {
 
     #[test]
     fn duplicate_waivers_both_count_as_needed() {
-        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
         report.must("readme-exists", "README.md", false);
         report.apply_waivers(&[waiver("readme-exists"), waiver("readme-exists")]);
 
@@ -567,7 +566,7 @@ mod tests {
 
     #[test]
     fn norms_toml_checks_cannot_be_waived() {
-        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
         report.must(
             "norms-toml-waiver-reasons",
             "norms.toml: every waiver has a reason",

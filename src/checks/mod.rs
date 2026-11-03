@@ -23,8 +23,8 @@ use crate::report::Report;
 
 /// Run all applicable checks for the given project context.
 ///
-/// Common checks always run. Language-specific checks run for each detected language. The project's waivers apply last,
-/// once every check has been recorded.
+/// Common checks always run. Language-specific checks run for each detected language, in a stable order. The project's
+/// waivers apply last, once every check has been recorded.
 pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_norms_config(ctx, report);
