@@ -42,7 +42,7 @@ hook_pre_commit_hooks:
 
 # renovate: datasource=github-tags depName=fsfe/reuse-tool
 hook_reuse:
-  default: "v6.2.0"
+  default: "v6.3.0"
   when: false
 
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
