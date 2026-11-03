@@ -3,8 +3,52 @@
 
 //! Common checks that apply to all projects reqgardless of language.
 
-use crate::context::ProjectContext;
+use crate::context::{ConfigStatus, ProjectContext};
 use crate::report::{Report, file_exists, matches_regex};
+
+//
+// norms configuration
+//
+
+/// Check `norms.toml`, which is optional: most projects have no waivers.
+pub(crate) fn check_norms_config(ctx: &ProjectContext, report: &mut Report) {
+    let status = ctx.norms();
+
+    if matches!(status, ConfigStatus::NotFound) {
+        return;
+    }
+
+    let Some(config) = report.require_parsed("norms-toml", "norms.toml", status) else {
+        return;
+    };
+
+    let unexplained = config.unexplained_waivers();
+
+    report.must(
+        "norms-toml-waiver-reasons",
+        "norms.toml: every waiver has a reason",
+        if unexplained.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("No reason given for: {}", unexplained.join(", ")))
+        },
+    );
+
+    let duplicates = config.duplicate_waivers();
+
+    report.must(
+        "norms-toml-waiver-duplicates",
+        "norms.toml: no check is waived twice",
+        if duplicates.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Waived more than once: {}",
+                duplicates.into_iter().collect::<Vec<_>>().join(", ")
+            ))
+        },
+    );
+}
 
 //
 // Required files

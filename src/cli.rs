@@ -49,6 +49,7 @@ struct JsonSummary {
     passed: usize,
     failed: usize,
     warnings: usize,
+    skipped: usize,
 }
 
 #[derive(Serialize)]
@@ -86,6 +87,7 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             passed: report.passed(),
             failed: report.failed(),
             warnings: report.warnings(),
+            skipped: report.skipped(),
         },
         results: report
             .results
@@ -155,5 +157,6 @@ mod tests {
         assert_eq!(result.get("id").unwrap(), "readme-exists");
         assert_eq!(result.get("name").unwrap(), "README.md");
         assert_eq!(result.get("status").unwrap(), "warn");
+        assert_eq!(json.pointer("/summary/skipped").unwrap(), 0);
     }
 }

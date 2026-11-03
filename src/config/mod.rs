@@ -3,6 +3,7 @@
 
 mod cargo;
 mod devbox;
+mod norms;
 mod packagejson;
 mod precommit;
 mod pyproject;
@@ -11,6 +12,7 @@ mod tsconfig;
 
 pub(crate) use cargo::CargoToml;
 pub(crate) use devbox::DevboxConfig;
+pub(crate) use norms::{NormsConfig, Waiver};
 pub(crate) use packagejson::PackageJson;
 pub(crate) use precommit::PrecommitConfig;
 pub(crate) use pyproject::PyprojectToml;

@@ -29,7 +29,8 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use crate::config::{
-    CargoToml, DevboxConfig, PackageJson, PrecommitConfig, PyprojectToml, RenovateConfig, TsConfig,
+    CargoToml, DevboxConfig, NormsConfig, PackageJson, PrecommitConfig, PyprojectToml,
+    RenovateConfig, TsConfig,
 };
 use crate::models::Language;
 
@@ -87,6 +88,7 @@ pub(crate) struct ProjectContext {
     tsconfig: OnceLock<ConfigStatus<TsConfig>>,
     typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
+    norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
     precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
@@ -107,6 +109,7 @@ impl ProjectContext {
             tsconfig: OnceLock::new(),
             typescript_referenced_configs: OnceLock::new(),
             devbox: OnceLock::new(),
+            norms: OnceLock::new(),
             renovate: OnceLock::new(),
             precommit: OnceLock::new(),
             editorconfig: OnceLock::new(),
@@ -215,6 +218,12 @@ impl ProjectContext {
     pub(crate) fn devbox(&self) -> &ConfigStatus<DevboxConfig> {
         self.devbox
             .get_or_init(|| parse_json5_file::<DevboxConfig>(&self.path.join("devbox.json")))
+    }
+
+    /// Parsed `norms.toml` (cached).
+    pub(crate) fn norms(&self) -> &ConfigStatus<NormsConfig> {
+        self.norms
+            .get_or_init(|| parse_toml_file::<NormsConfig>(&self.path.join("norms.toml")))
     }
 
     /// Parsed `renovate.json` (cached). Uses JSON5 for flexibility.

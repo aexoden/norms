@@ -20,7 +20,7 @@
 //!
 //! # Check IDs
 //!
-//! Every check has a stable ID that projects can refer to it by. IDs are
+//! Every check has a stable ID, which waivers in `norms.toml` name. IDs are
 //! kebab-case: the subject (a file, tool or language) followed by the property
 //! checked, such as `cargo-toml-license` or `rust-ci-clippy`. A file's subject
 //! is its name without the extension (`tsconfig`, `renovate`), unless the stem
@@ -37,6 +37,7 @@ use std::path::{Path, PathBuf};
 use colored::Colorize as _;
 use serde::Serialize;
 
+use crate::config::Waiver;
 use crate::context::ConfigStatus;
 use crate::models::{Language, Status};
 
@@ -287,6 +288,59 @@ impl Report {
         }
     }
 
+    /// Apply the project's waivers. Call this once every other check has been recorded.
+    ///
+    /// Each failed or warned check that a waiver names becomes `SKIP`, with the waiver's reason as its message. Each
+    /// waiver also records a check of its own, which warns if the waiver matched no check or only passing ones, so
+    /// that waivers outliving their need, or naming a renamed check, don't linger unnoticed. The checks of `norms.toml`
+    /// itself can't be waived, since waiving them would hide problems with the waivers; such a waiver fails.
+    pub(crate) fn apply_waivers(&mut self, waivers: &[Waiver]) {
+        let mut waived = HashSet::new();
+
+        for waiver in waivers {
+            let name = format!("norms.toml: waiver for {} is needed", waiver.check);
+
+            if waiver.check.starts_with("norms-toml-") {
+                self.must(
+                    "norms-toml-waiver-needed",
+                    name,
+                    Outcome::fail("norms.toml's own checks can't be waived"),
+                );
+                continue;
+            }
+
+            let mut matched = false;
+            let mut needed = false;
+
+            for result in self.results.iter_mut().filter(|r| r.id == waiver.check) {
+                matched = true;
+
+                match result.status {
+                    Status::Fail | Status::Warn => {
+                        result.status = Status::Skip;
+                        result.message = format!("Waived: {}", waiver.reason);
+                        needed = true;
+                    }
+                    // Waived by an earlier, duplicate waiver, rather than skipped by the check itself.
+                    Status::Skip => needed |= waived.contains(waiver.check.as_str()),
+                    Status::Pass => {}
+                }
+            }
+
+            waived.insert(waiver.check.as_str());
+
+            let outcome = if needed {
+                Outcome::Pass
+            } else if matched {
+                Outcome::fail("The check passes without it")
+            } else {
+                Outcome::fail("No check with this ID ran")
+            };
+
+            self.should("norms-toml-waiver-needed", name, outcome);
+        }
+    }
+
     /// Count of checks with status `Pass`.
     pub(crate) fn passed(&self) -> usize {
         self.results
@@ -308,6 +362,14 @@ impl Report {
         self.results
             .iter()
             .filter(|r| r.status == Status::Warn)
+            .count()
+    }
+
+    /// Count of checks with status `Skip`.
+    pub(crate) fn skipped(&self) -> usize {
+        self.results
+            .iter()
+            .filter(|r| r.status == Status::Skip)
             .count()
     }
 
@@ -369,10 +431,11 @@ impl Report {
         // Summary line
         println!("{}", separator.bold());
         let summary = format!(
-            "  Summary: {} passed, {} failed, {} warnings",
+            "  Summary: {} passed, {} failed, {} warnings, {} skipped",
             self.passed(),
             self.failed(),
-            self.warnings()
+            self.warnings(),
+            self.skipped()
         );
         if self.failed() > 0 {
             println!("{}", summary.red().bold());
@@ -429,5 +492,113 @@ mod tests {
         let ids: Vec<_> = report.results.iter().map(|r| r.id.as_str()).collect();
         assert_eq!(ids, ["cargo-toml-exists", "cargo-toml-valid"]);
         assert_eq!(report.failed(), 1);
+    }
+
+    fn waiver(check: &str) -> Waiver {
+        Waiver {
+            check: check.into(),
+            reason: "Because.".into(),
+        }
+    }
+
+    fn statuses(report: &Report) -> Vec<(&str, Status, &str)> {
+        report
+            .results
+            .iter()
+            .map(|r| (r.id.as_str(), r.status, r.message.as_str()))
+            .collect()
+    }
+
+    #[test]
+    fn waivers_skip_failures_and_warnings() {
+        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        report.must("readme-exists", "README.md", false);
+        report.should("changelog-exists", "CHANGELOG.md", false);
+        report.apply_waivers(&[waiver("readme-exists"), waiver("changelog-exists")]);
+
+        assert_eq!(
+            statuses(&report),
+            [
+                ("readme-exists", Status::Skip, "Waived: Because."),
+                ("changelog-exists", Status::Skip, "Waived: Because."),
+                ("norms-toml-waiver-needed", Status::Pass, ""),
+                ("norms-toml-waiver-needed", Status::Pass, ""),
+            ]
+        );
+        assert_eq!(
+            (report.failed(), report.warnings(), report.skipped()),
+            (0, 0, 2)
+        );
+    }
+
+    #[test]
+    fn waivers_for_passing_or_absent_checks_warn() {
+        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        report.must("readme-exists", "README.md", true);
+        report.apply_waivers(&[waiver("readme-exists"), waiver("no-such-check")]);
+
+        assert_eq!(
+            statuses(&report),
+            [
+                ("readme-exists", Status::Pass, ""),
+                (
+                    "norms-toml-waiver-needed",
+                    Status::Warn,
+                    "The check passes without it"
+                ),
+                (
+                    "norms-toml-waiver-needed",
+                    Status::Warn,
+                    "No check with this ID ran"
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn duplicate_waivers_both_count_as_needed() {
+        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        report.must("readme-exists", "README.md", false);
+        report.apply_waivers(&[waiver("readme-exists"), waiver("readme-exists")]);
+
+        assert_eq!(report.warnings(), 0);
+        assert_eq!(report.skipped(), 1);
+    }
+
+    #[test]
+    fn norms_toml_checks_cannot_be_waived() {
+        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        report.must(
+            "norms-toml-waiver-reasons",
+            "norms.toml: every waiver has a reason",
+            false,
+        );
+        report.apply_waivers(&[
+            waiver("no-such-check"),
+            waiver("norms-toml-waiver-reasons"),
+            waiver("norms-toml-waiver-needed"),
+        ]);
+
+        assert_eq!(
+            statuses(&report),
+            [
+                ("norms-toml-waiver-reasons", Status::Fail, ""),
+                (
+                    "norms-toml-waiver-needed",
+                    Status::Warn,
+                    "No check with this ID ran"
+                ),
+                (
+                    "norms-toml-waiver-needed",
+                    Status::Fail,
+                    "norms.toml's own checks can't be waived"
+                ),
+                (
+                    "norms-toml-waiver-needed",
+                    Status::Fail,
+                    "norms.toml's own checks can't be waived"
+                ),
+            ]
+        );
     }
 }

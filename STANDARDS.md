@@ -11,8 +11,9 @@ standards, there were several guiding principles:
 3. Any developer should be able to build and run the project identically.
 
 When a project has good reason to depart from a standard, it records the
-exception, with its rationale, in its norms configuration file. `norms verify`
-then skips the corresponding check instead of reporting it.
+exception, with its rationale, in its
+[norms configuration](#norms-configuration). `norms verify` then reports the
+corresponding check as skipped, with the rationale, instead of failing it.
 
 ## Project Template
 
@@ -34,6 +35,30 @@ which merges the changes between the template version recorded in
 `.copier-answers.yml` and the latest one. Template versions are norms release
 tags (`vX.Y.Z`), but no release includes the template yet, so for now
 `--vcs-ref main` selects the latest commit instead.
+
+## norms Configuration
+
+A project that departs from a standard records the exception in `norms.toml`, at
+the repository root. Most projects need no exceptions, and so no `norms.toml`.
+
+```toml
+[[waivers]]
+check = "gitattributes-binary"
+reason = "The repository holds no binary files."
+```
+
+- Each `[[waivers]]` entry names a check by its ID and gives the reason for the
+  exception. A waived check is reported as skipped, with the reason, instead of
+  failing or warning; a check that inspects several files is waived for all of
+  them. A waiver whose check passes or doesn't run is reported as a warning, so
+  waivers don't outlive their need. The checks of `norms.toml` itself can't be
+  waived; a waiver naming one fails.
+- Every waiver needs a reason, and a check may be waived only once.
+- Check IDs are stable, kebab-case names of the subject and then the property
+  checked, such as `cargo-toml-license`. `norms verify` prints each one before
+  the check's description, which may change between versions while the ID
+  doesn't.
+- Unknown keys are errors.
 
 ## Development Environment
 
@@ -886,9 +911,8 @@ in `audit.yaml` (see [Continuous Integration](#continuous-integration)).
 #### Location
 
 A TypeScript project lives at the repository root when it is the primary
-language. Otherwise it lives in a named subdirectory, such as `frontend/`, which
-is declared in the norms configuration. Paths below are relative to that
-directory.
+language. Otherwise it lives in a named subdirectory, such as `frontend/`.
+Paths below are relative to that directory.
 
 #### Package Configuration
 

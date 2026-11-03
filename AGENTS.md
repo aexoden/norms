@@ -61,6 +61,10 @@ prints a `Report`, exiting 1 if any check failed.
   the problem if it's missing or malformed. Every check has a stable kebab-case
   ID (subject, then property: `cargo-toml-license`; see `report.rs`), so don't
   rename an ID once projects may depend on it; the name beside it is free text.
+- `norms.toml` (`config/norms.rs`, documented in `STANDARDS.md`) is optional
+  and holds the project's waivers. Unlike the other models it denies unknown
+  fields. `run_all_checks` applies the waivers last
+  (`Report::apply_waivers`), turning waived failures and warnings into skips.
 - `detection.rs`: languages come from marker files at the root (`Cargo.toml`,
   `pyproject.toml`, `package.json`, `CMakeLists.txt`); TypeScript may also live
   in `frontend/`. C++ is detected but has no checks yet.
