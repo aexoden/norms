@@ -148,7 +148,7 @@ npm_types_node:
 
 # renovate: datasource=npm depName=eslint
 npm_eslint:
-  default: "10.13.0"
+  default: "10.14.0"
   when: false
 
 # renovate: datasource=npm depName=eslint-config-prettier
