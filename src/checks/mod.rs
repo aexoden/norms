@@ -79,3 +79,27 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::report::is_valid_check_id;
+
+    /// Runs the checks against this repository, which exercises the common and Rust checks. No check here records more
+    /// than one result, so a repeated ID means two checks share it.
+    #[test]
+    fn check_ids_are_valid_and_unique() {
+        let ctx = ProjectContext::new(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+        let mut report = Report::new(ctx.path().to_path_buf(), ctx.languages().clone());
+        run_all_checks(&ctx, &mut report);
+
+        let mut seen = HashSet::new();
+        for result in &report.results {
+            assert!(is_valid_check_id(&result.id), "invalid ID: {}", result.id);
+            assert!(seen.insert(&result.id), "duplicate ID: {}", result.id);
+        }
+    }
+}

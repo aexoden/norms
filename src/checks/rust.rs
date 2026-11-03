@@ -11,7 +11,7 @@ use crate::report::{Outcome, Report, file_exists};
 //
 
 pub(crate) fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = report.require_parsed("Cargo.toml", ctx.cargo()) else {
+    let Some(config) = report.require_parsed("cargo-toml", "Cargo.toml", ctx.cargo()) else {
         return;
     };
 
@@ -19,21 +19,25 @@ pub(crate) fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
     let package = config.package.as_ref();
 
     report.should(
+        "cargo-toml-license",
         "Cargo.toml: has license",
         package.and_then(|p| p.license.as_ref()).is_some(),
     );
 
     report.should(
+        "cargo-toml-description",
         "Cargo.toml: has description",
         package.and_then(|p| p.description.as_ref()).is_some(),
     );
 
     report.should(
+        "cargo-toml-repository",
         "Cargo.toml: has repository",
         package.and_then(|p| p.repository.as_ref()).is_some(),
     );
 
     report.should(
+        "cargo-toml-edition",
         "Cargo.toml: has edition",
         package.and_then(|p| p.edition.as_ref()).is_some(),
     );
@@ -47,7 +51,11 @@ pub(crate) fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
     let package = ctx.cargo().as_ref_ok().and_then(|c| c.package.as_ref());
 
     let has_msrv = package.and_then(|p| p.rust_version.as_ref()).is_some();
-    report.should("Rust: MSRV defined (rust-version)", has_msrv);
+    report.should(
+        "cargo-toml-rust-version",
+        "Rust: MSRV defined (rust-version)",
+        has_msrv,
+    );
 }
 
 //
@@ -63,14 +71,16 @@ pub(crate) fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
 
     if !has_clippy_lints {
         report.should(
+            "clippy-lints",
             "Clippy: lints configured",
             Outcome::fail("No [lints.clippy] or [workspace.lints.clippy] section"),
         );
         return;
     }
 
-    report.should("Clippy: lints configured", Outcome::Pass);
+    report.should("clippy-lints", "Clippy: lints configured", Outcome::Pass);
     report.should(
+        "clippy-pedantic",
         "Clippy: pedantic enabled",
         config.has_clippy_lint("pedantic"),
     );
@@ -82,6 +92,7 @@ pub(crate) fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
 
 pub(crate) fn check_cargo_deny(ctx: &ProjectContext, report: &mut Report) {
     report.should(
+        "deny-toml-exists",
         "Rust: deny.toml",
         file_exists(&ctx.path().join("deny.toml")),
     );
@@ -101,6 +112,7 @@ pub(crate) fn check_cargo_lock(ctx: &ProjectContext, report: &mut Report) {
 
     if has_binary {
         report.should(
+            "cargo-lock-exists",
             "Rust: Cargo.lock comitted (binary)",
             file_exists(&ctx.path().join("Cargo.lock")),
         );
@@ -116,11 +128,20 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should("Rust pre-commit: rustfmt hook", config.has_hook("rustfmt"));
-
-    report.should("Rust pre-commit: clippy hook", config.has_hook("clippy"));
+    report.should(
+        "rust-precommit-rustfmt",
+        "Rust pre-commit: rustfmt hook",
+        config.has_hook("rustfmt"),
+    );
 
     report.should(
+        "rust-precommit-clippy",
+        "Rust pre-commit: clippy hook",
+        config.has_hook("clippy"),
+    );
+
+    report.should(
+        "rust-precommit-cargo-deny",
         "Rust pre-commit: cargo-deny hook",
         config.has_hook("cargo-deny"),
     );
@@ -136,10 +157,15 @@ pub(crate) fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.should(
+        "rust-devbox-cargo-deny",
         "Rust devbox: includes cargo-deny",
         config.has_package("cargo-deny"),
     );
-    report.should("Rust devbox: includes rustup", config.has_package("rustup"));
+    report.should(
+        "rust-devbox-rustup",
+        "Rust devbox: includes rustup",
+        config.has_package("rustup"),
+    );
 }
 
 //
@@ -153,8 +179,24 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
 
     let lower = content.to_lowercase();
 
-    report.should("Rust CI: format check", lower.contains("cargo fmt"));
-    report.should("Rust CI: clippy check", lower.contains("cargo clippy"));
-    report.should("Rust CI: test", lower.contains("cargo test"));
-    report.should("Rust CI: cargo deny", lower.contains("cargo deny"));
+    report.should(
+        "rust-ci-rustfmt",
+        "Rust CI: format check",
+        lower.contains("cargo fmt"),
+    );
+    report.should(
+        "rust-ci-clippy",
+        "Rust CI: clippy check",
+        lower.contains("cargo clippy"),
+    );
+    report.should(
+        "rust-ci-test",
+        "Rust CI: test",
+        lower.contains("cargo test"),
+    );
+    report.should(
+        "rust-ci-cargo-deny",
+        "Rust CI: cargo deny",
+        lower.contains("cargo deny"),
+    );
 }

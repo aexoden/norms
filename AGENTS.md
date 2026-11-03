@@ -55,9 +55,12 @@ prints a `Report`, exiting 1 if any check failed.
   explicit: a new check must be added to the list in `checks/mod.rs`.
   `common.rs` runs for every project; the language modules run per detected
   language.
-- `report.rs`: `report.must(...)` records a failure, `report.should(...)` a
-  warning, `report.skip(...)` a skip; `require_parsed`/`recommend_parsed` unwrap
-  a `ConfigStatus` while recording the problem if it's missing or malformed.
+- `report.rs`: `report.must(id, name, outcome)` records a check whose issue is
+  a failure, `report.should(...)` one whose issue is a warning;
+  `require_parsed`/`recommend_parsed` unwrap a `ConfigStatus` while recording
+  the problem if it's missing or malformed. Every check has a stable kebab-case
+  ID (subject, then property: `cargo-toml-license`; see `report.rs`), so don't
+  rename an ID once projects may depend on it; the name beside it is free text.
 - `detection.rs`: languages come from marker files at the root (`Cargo.toml`,
   `pyproject.toml`, `package.json`, `CMakeLists.txt`); TypeScript may also live
   in `frontend/`. C++ is detected but has no checks yet.

@@ -53,6 +53,7 @@ struct JsonSummary {
 
 #[derive(Serialize)]
 struct JsonResult {
+    id: String,
     name: String,
     status: String,
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -90,6 +91,7 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             .results
             .iter()
             .map(|r: &CheckResult| JsonResult {
+                id: r.id.clone(),
                 name: r.name.clone(),
                 status: r.status.to_string().to_lowercase(),
                 message: r.message.clone(),
@@ -134,5 +136,24 @@ pub fn run() -> ExitCode {
             eprintln!("Error: {e}");
             ExitCode::FAILURE
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    fn json_output_includes_check_ids() {
+        let mut report = Report::new(PathBuf::new(), HashSet::new());
+        report.should("readme-exists", "README.md", false);
+
+        let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();
+        let result = json.pointer("/results/0").unwrap();
+        assert_eq!(result.get("id").unwrap(), "readme-exists");
+        assert_eq!(result.get("name").unwrap(), "README.md");
+        assert_eq!(result.get("status").unwrap(), "warn");
     }
 }
