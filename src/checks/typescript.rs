@@ -555,6 +555,8 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "typescript-ci-test",
         "TypeScript CI: tests",
-        workflow.runs_command("pnpm test"),
+        workflow.runs_command("vitest")
+            || workflow.runs_command("pnpm test")
+            || workflow.runs_command("pnpm run test"),
     );
 }

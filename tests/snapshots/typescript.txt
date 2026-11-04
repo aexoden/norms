@@ -76,4 +76,4 @@ pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
 pass  typescript-ci-lint  TypeScript CI: lint check
 pass  typescript-ci-format  TypeScript CI: format check
 pass  typescript-ci-tsc  TypeScript CI: type check
-warn  typescript-ci-test  TypeScript CI: tests
+pass  typescript-ci-test  TypeScript CI: tests
