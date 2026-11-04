@@ -16,5 +16,5 @@ pub(crate) use norms::{NormsConfig, Waiver};
 pub(crate) use packagejson::PackageJson;
 pub(crate) use precommit::PrecommitConfig;
 pub(crate) use pyproject::PyprojectToml;
-pub(crate) use renovate::RenovateConfig;
+pub(crate) use renovate::{RenovateConfig, SHARED_PRESET};
 pub(crate) use tsconfig::{TsCompilerOptions, TsConfig};

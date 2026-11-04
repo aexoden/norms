@@ -3,6 +3,7 @@
 
 //! Common checks that apply to all projects reqgardless of language.
 
+use crate::config::SHARED_PRESET;
 use crate::context::{ConfigStatus, ProjectContext};
 use crate::report::{Report, file_exists, matches_regex};
 
@@ -224,14 +225,13 @@ pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
         config.schema.is_some(),
     );
     report.should(
-        "renovate-extends",
-        "renovate.json: has extends",
-        !config.extends.is_empty(),
-    );
-    report.should(
-        "renovate-extends-best-practices",
-        "renovate.json: extends best-practices",
-        config.extends_best_practices(),
+        "renovate-extends-preset",
+        "renovate.json: extends the shared preset",
+        if config.extends_shared_preset() {
+            Ok(())
+        } else {
+            Err(format!("Doesn't extend {SHARED_PRESET}"))
+        },
     );
 }
 
