@@ -166,8 +166,15 @@ pub(crate) fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
 // Development environment
 //
 
+/// Check `devbox.json`, which is optional: only projects that run local services use Devbox.
 pub(crate) fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = report.require_parsed("devbox", "devbox.json", ctx.devbox()) else {
+    let status = ctx.devbox();
+
+    if matches!(status, ConfigStatus::NotFound) {
+        return;
+    }
+
+    let Some(config) = report.require_parsed("devbox", "devbox.json", status) else {
         return;
     };
 

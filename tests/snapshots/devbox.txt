@@ -1,0 +1,83 @@
+exit: 1
+languages: python, rust, typescript
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+pass  devbox-exists  devbox.json: exists
+pass  devbox-valid  devbox.json: valid
+pass  devbox-schema  devbox.json: has $schema
+pass  devbox-packages  devbox.json: has packages
+pass  devbox-lock-exists  devbox.lock
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  pyproject-exists  pyproject.toml: exists
+pass  pyproject-valid  pyproject.toml: valid
+pass  pyproject-project  pyproject.toml: has [project] section
+warn  python-src-layout  Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  Python: uv.lock
+      Not found: uv.lock
+warn  python-dependency-groups  Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+warn  python-devbox-uv  Python devbox: includes uv
+pass  cargo-toml-exists  Cargo.toml: exists
+pass  cargo-toml-valid  Cargo.toml: valid
+warn  cargo-toml-license  Cargo.toml: has license
+warn  cargo-toml-description  Cargo.toml: has description
+warn  cargo-toml-repository  Cargo.toml: has repository
+warn  cargo-toml-edition  Cargo.toml: has edition
+warn  cargo-toml-rust-version  Rust: MSRV defined (rust-version)
+warn  clippy-lints  Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  Rust: deny.toml
+      Not found: deny.toml
+warn  rust-devbox-cargo-deny  Rust devbox: includes cargo-deny
+warn  rust-devbox-rustup  Rust devbox: includes rustup
+pass  package-json-exists  package.json: exists
+pass  package-json-valid  package.json: valid
+pass  package-json-name  package.json: has name
+warn  package-json-esm  package.json: uses ESM (type: module)
+      Consider setting "type": "module" for ESM support
+warn  package-json-engines  package.json: has engines field
+      Consider specifying engine requirements
+warn  pnpm-package-manager  pnpm: configured as package manager
+      Missing 'packageManager' field
+warn  pnpm-lock-exists  pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+fail  tsconfig-exists  tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  ESLint: configured
+      Not found: eslint.config.ts
+warn  eslint-dependency  ESLint: in dependencies
+warn  eslint-typescript-eslint  ESLint: typescript-eslint configured
+      Consider adding typescript-eslint for TypeScript-aware linting
+fail  prettier-config-exists  Prettier: configured
+      Not found: .prettierrc
+warn  prettier-ignore-exists  Prettier: .prettierignore exists
+      Consider adding .prettierignore
+warn  prettier-dependency  Prettier: in dependencies
+warn  package-json-scripts  package.json: has scripts
+      No scripts defined in package.json
+warn  typescript-devbox-corepack  TypeScript devbox: enables corepack
+      Consider setting DEVBOX_COREPACK_ENABLED=true in Devbox configuration
+warn  typescript-devbox-nodejs  TypeScript devbox: includes nodejs
+      Consider adding nodejs to Devbox packages

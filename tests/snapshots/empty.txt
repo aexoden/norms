@@ -12,8 +12,6 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-fail  devbox-exists  devbox.json: exists
-      File not found
 fail  precommit-config-exists  .pre-commit-config.yaml
       Not found: .pre-commit-config.yaml
 warn  renovate-exists  renovate.json: exists

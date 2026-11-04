@@ -1,4 +1,4 @@
-exit: 1
+exit: 0
 languages: typescript
 
 pass  readme-exists  README.md
@@ -20,8 +20,6 @@ pass  editorconfig-indent-style  .editorconfig: indent_style=space
 pass  editorconfig-indent-size  .editorconfig: indent_size=4
 pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
 pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
-fail  devbox-exists  devbox.json: exists
-      File not found
 pass  precommit-config-exists  .pre-commit-config.yaml
 pass  renovate-exists  renovate.json: exists
 pass  renovate-valid  renovate.json: valid
