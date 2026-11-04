@@ -1,5 +1,6 @@
 exit: 0
 languages: rust
+components: rust (.)
 
 pass  readme-exists  README.md
 pass  license-exists  LICENSE
@@ -29,17 +30,17 @@ pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: audit.yaml: valid
-pass  cargo-toml-exists  Cargo.toml: exists
-pass  cargo-toml-valid  Cargo.toml: valid
-pass  cargo-toml-license  Cargo.toml: has license
-pass  cargo-toml-description  Cargo.toml: has description
-pass  cargo-toml-repository  Cargo.toml: has repository
-pass  cargo-toml-edition  Cargo.toml: has edition
-warn  cargo-toml-rust-version  Rust: MSRV defined (rust-version)
-pass  clippy-lints  Clippy: lints configured
-pass  clippy-pedantic  Clippy: pedantic enabled
-pass  deny-toml-exists  Rust: deny.toml
-pass  cargo-lock-exists  Rust: Cargo.lock comitted (binary)
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+pass  cargo-toml-license  [.] Cargo.toml: has license
+pass  cargo-toml-description  [.] Cargo.toml: has description
+pass  cargo-toml-repository  [.] Cargo.toml: has repository
+pass  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+pass  clippy-lints  [.] Clippy: lints configured
+pass  clippy-pedantic  [.] Clippy: pedantic enabled
+pass  deny-toml-exists  [.] Rust: deny.toml
+pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
 pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook

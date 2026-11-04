@@ -45,9 +45,10 @@ mod tests {
     }
 
     /// Runs norms on a fixture and renders what it reports: the exit code, the
-    /// detected languages, then a line per result with its status, ID and name,
-    /// followed by its message, if any, indented beneath. The project's path is
-    /// left out, since it varies by checkout.
+    /// detected languages and components, then a line per result with its
+    /// status, ID, component in brackets (if it has one) and name, followed by
+    /// its message, if any, indented beneath. The project's path is left out,
+    /// since it varies by checkout.
     fn verify(fixture: &str) -> String {
         let output = Command::new(env!("CARGO_BIN_EXE_norms"))
             .arg("verify")
@@ -86,13 +87,32 @@ mod tests {
             languages.join(", ")
         };
         writeln!(rendered, "languages: {languages}").unwrap();
+
+        let components: Vec<String> = json
+            .get("components")
+            .and_then(Value::as_array)
+            .unwrap()
+            .iter()
+            .map(|c| format!("{} ({})", str_at(c, "language"), str_at(c, "path")))
+            .collect();
+        let components = if components.is_empty() {
+            "(none)".to_owned()
+        } else {
+            components.join(", ")
+        };
+        writeln!(rendered, "components: {components}").unwrap();
         writeln!(rendered).unwrap();
 
         for result in json.get("results").and_then(Value::as_array).unwrap() {
             let status = str_at(result, "status");
             let id = str_at(result, "id");
             let name = str_at(result, "name");
-            writeln!(rendered, "{status:<4}  {id}  {name}").unwrap();
+            let component = result
+                .get("component")
+                .and_then(Value::as_str)
+                .map(|path| format!("[{path}] "))
+                .unwrap_or_default();
+            writeln!(rendered, "{status:<4}  {id}  {component}{name}").unwrap();
 
             let message = result.get("message").and_then(Value::as_str);
             for line in message.into_iter().flat_map(str::lines) {

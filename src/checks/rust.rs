@@ -3,14 +3,14 @@
 
 //! Rust-specific checks.
 
-use crate::context::{ConfigStatus, ProjectContext};
+use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
 //
 // Project configuration
 //
 
-pub(crate) fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = report.require_parsed("cargo-toml", "Cargo.toml", ctx.cargo()) else {
         return;
     };
@@ -47,7 +47,7 @@ pub(crate) fn check_cargo(ctx: &ProjectContext, report: &mut Report) {
 // MSRV / Toolchain
 //
 
-pub(crate) fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) {
     let package = ctx.cargo().as_ref_ok().and_then(|c| c.package.as_ref());
 
     let has_msrv = package.and_then(|p| p.rust_version.as_ref()).is_some();
@@ -62,7 +62,7 @@ pub(crate) fn check_rust_toolchain(ctx: &ProjectContext, report: &mut Report) {
 // Clippy lints
 //
 
-pub(crate) fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
     };
@@ -90,7 +90,7 @@ pub(crate) fn check_clippy_lints(ctx: &ProjectContext, report: &mut Report) {
 // Dependency auditing
 //
 
-pub(crate) fn check_cargo_deny(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
     report.should(
         "deny-toml-exists",
         "Rust: deny.toml",
@@ -102,7 +102,7 @@ pub(crate) fn check_cargo_deny(ctx: &ProjectContext, report: &mut Report) {
 // Lock file
 //
 
-pub(crate) fn check_cargo_lock(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
     };

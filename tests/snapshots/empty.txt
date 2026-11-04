@@ -1,5 +1,6 @@
 exit: 1
 languages: (none)
+components: (none)
 
 fail  readme-exists  README.md
       Not found: README.md

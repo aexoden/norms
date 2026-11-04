@@ -1,5 +1,6 @@
 exit: 0
 languages: typescript
+components: typescript (.)
 
 pass  readme-exists  README.md
 pass  license-exists  LICENSE
@@ -29,45 +30,45 @@ pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: audit.yaml: valid
-pass  package-json-exists  package.json: exists
-pass  package-json-valid  package.json: valid
-pass  package-json-name  package.json: has name
-pass  package-json-esm  package.json: uses ESM (type: module)
-pass  package-json-dev-engines-runtime  package.json: pins Node.js in devEngines
-pass  package-json-dev-engines-package-manager  package.json: pins pnpm in devEngines
-pass  pnpm-lock-exists  pnpm: pnpm-lock.yaml exists
-pass  tsconfig-exists  tsconfig.json: exists
-pass  tsconfig-valid  tsconfig.json: valid
-pass  tsconfig-project-references  tsconfig.json: uses project references
-pass  tsconfig-references-non-empty  tsconfig.json: references non-empty
-pass  tsconfig-reference-exists  tsconfig.app.json: exists
-pass  tsconfig-reference-valid  tsconfig.app.json: valid
-pass  tsconfig-strict  tsconfig.app.json: strict mode enabled
-pass  tsconfig-no-unchecked-indexed-access  tsconfig.app.json: noUncheckedIndexedAccess enabled
-pass  tsconfig-module  tsconfig.app.json: module setting configured
-pass  tsconfig-target  tsconfig.app.json: target configured
-pass  tsconfig-verbatim-module-syntax  tsconfig.app.json: verbatimModuleSyntax enabled
-pass  tsconfig-isolated-modules  tsconfig.app.json: isolatedModules enabled
-pass  tsconfig-reference-exists  tsconfig.node.json: exists
-pass  tsconfig-reference-valid  tsconfig.node.json: valid
-pass  tsconfig-strict  tsconfig.node.json: strict mode enabled
-pass  tsconfig-no-unchecked-indexed-access  tsconfig.node.json: noUncheckedIndexedAccess enabled
-pass  tsconfig-module  tsconfig.node.json: module setting configured
-pass  tsconfig-target  tsconfig.node.json: target configured
-pass  tsconfig-verbatim-module-syntax  tsconfig.node.json: verbatimModuleSyntax enabled
-pass  tsconfig-isolated-modules  tsconfig.node.json: isolatedModules enabled
-pass  eslint-config-exists  ESLint: configured
-pass  eslint-dependency  ESLint: in dependencies
-pass  eslint-typescript-eslint  ESLint: typescript-eslint configured
-pass  prettier-config-exists  Prettier: configured
-pass  prettier-ignore-exists  Prettier: .prettierignore exists
-pass  prettier-dependency  Prettier: in dependencies
-pass  package-json-scripts  package.json: has scripts
-pass  package-json-script-build  Scripts: has 'build'
-pass  package-json-script-lint  Scripts: has 'lint'
-pass  package-json-script-format  Scripts: has 'format'
-pass  package-json-script-typecheck  Scripts: has 'typecheck'
-pass  package-json-script-test  Scripts: has 'test'
+pass  package-json-exists  [.] package.json: exists
+pass  package-json-valid  [.] package.json: valid
+pass  package-json-name  [.] package.json: has name
+pass  package-json-esm  [.] package.json: uses ESM (type: module)
+pass  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
+pass  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
+pass  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
+pass  tsconfig-exists  [.] tsconfig.json: exists
+pass  tsconfig-valid  [.] tsconfig.json: valid
+pass  tsconfig-project-references  [.] tsconfig.json: uses project references
+pass  tsconfig-references-non-empty  [.] tsconfig.json: references non-empty
+pass  tsconfig-reference-exists  [.] tsconfig.app.json: exists
+pass  tsconfig-reference-valid  [.] tsconfig.app.json: valid
+pass  tsconfig-strict  [.] tsconfig.app.json: strict mode enabled
+pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.app.json: noUncheckedIndexedAccess enabled
+pass  tsconfig-module  [.] tsconfig.app.json: module setting configured
+pass  tsconfig-target  [.] tsconfig.app.json: target configured
+pass  tsconfig-verbatim-module-syntax  [.] tsconfig.app.json: verbatimModuleSyntax enabled
+pass  tsconfig-isolated-modules  [.] tsconfig.app.json: isolatedModules enabled
+pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
+pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
+pass  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
+pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.node.json: noUncheckedIndexedAccess enabled
+pass  tsconfig-module  [.] tsconfig.node.json: module setting configured
+pass  tsconfig-target  [.] tsconfig.node.json: target configured
+pass  tsconfig-verbatim-module-syntax  [.] tsconfig.node.json: verbatimModuleSyntax enabled
+pass  tsconfig-isolated-modules  [.] tsconfig.node.json: isolatedModules enabled
+pass  eslint-config-exists  [.] ESLint: configured
+pass  eslint-dependency  [.] ESLint: in dependencies
+pass  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
+pass  prettier-config-exists  [.] Prettier: configured
+pass  prettier-ignore-exists  [.] Prettier: .prettierignore exists
+pass  prettier-dependency  [.] Prettier: in dependencies
+pass  package-json-scripts  [.] package.json: has scripts
+pass  package-json-script-build  [.] Scripts: has 'build'
+pass  package-json-script-lint  [.] Scripts: has 'lint'
+pass  package-json-script-format  [.] Scripts: has 'format'
+pass  package-json-script-typecheck  [.] Scripts: has 'typecheck'
+pass  package-json-script-test  [.] Scripts: has 'test'
 pass  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
 pass  typescript-precommit-eslint  Pre-commit: has ESLint hook
 pass  typescript-precommit-prettier  Pre-commit: has Prettier hook

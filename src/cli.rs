@@ -40,8 +40,15 @@ enum Commands {
 struct JsonOutput {
     path: String,
     languages: Vec<String>,
+    components: Vec<JsonComponent>,
     summary: JsonSummary,
     results: Vec<JsonResult>,
+}
+
+#[derive(Serialize)]
+struct JsonComponent {
+    language: String,
+    path: String,
 }
 
 #[derive(Serialize)]
@@ -56,9 +63,21 @@ struct JsonSummary {
 struct JsonResult {
     id: String,
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    component: Option<String>,
     status: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     message: String,
+}
+
+/// The lowercase name of a language in JSON output.
+fn language_id(language: Language) -> String {
+    match language {
+        Language::Cpp => "cpp".into(),
+        Language::Python => "python".into(),
+        Language::Rust => "rust".into(),
+        Language::TypeScript => "typescript".into(),
+    }
 }
 
 fn json_output(report: &Report) -> anyhow::Result<String> {
@@ -69,14 +88,13 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             .unwrap_or_else(|_| report.project_path.clone())
             .display()
             .to_string(),
-        languages: report
-            .languages
+        languages: report.languages().into_iter().map(language_id).collect(),
+        components: report
+            .components
             .iter()
-            .map(|l| match l {
-                Language::Cpp => "cpp".into(),
-                Language::Python => "python".into(),
-                Language::Rust => "rust".into(),
-                Language::TypeScript => "typescript".into(),
+            .map(|component| JsonComponent {
+                language: language_id(component.language),
+                path: component.display_path(),
             })
             .collect(),
         summary: JsonSummary {
@@ -91,6 +109,7 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             .map(|r: &CheckResult| JsonResult {
                 id: r.id.clone(),
                 name: r.name.clone(),
+                component: r.component.clone(),
                 status: r.status.to_string().to_lowercase(),
                 message: r.message.clone(),
             })
@@ -106,8 +125,8 @@ fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<ExitCode> {
     }
 
     let ctx = ProjectContext::new(path.clone());
-    let languages = ctx.languages().clone();
-    let mut report = Report::new(path, languages);
+    let components = ctx.components().to_vec();
+    let mut report = Report::new(path, components);
 
     checks::run_all_checks(&ctx, &mut report);
 
@@ -139,13 +158,12 @@ pub fn run() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
-
     use super::*;
+    use crate::models::Component;
 
     #[test]
     fn json_output_includes_check_ids() {
-        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
+        let mut report = Report::new(PathBuf::new(), Vec::new());
         report.should("readme-exists", "README.md", false);
 
         let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();
@@ -154,5 +172,27 @@ mod tests {
         assert_eq!(result.get("name").unwrap(), "README.md");
         assert_eq!(result.get("status").unwrap(), "warn");
         assert_eq!(json.pointer("/summary/skipped").unwrap(), 0);
+    }
+
+    #[test]
+    fn json_output_includes_components() {
+        let frontend = Component {
+            language: Language::TypeScript,
+            path: PathBuf::from("frontend"),
+        };
+        let mut report = Report::new(PathBuf::new(), vec![frontend.clone()]);
+        report.should("readme-exists", "README.md", true);
+        report.with_component(&frontend, |report| {
+            report.should("package-json-name", "package.json: has name", true);
+        });
+
+        let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();
+        assert_eq!(
+            json.get("components").unwrap(),
+            &serde_json::json!([{ "language": "typescript", "path": "frontend" }])
+        );
+        assert_eq!(json.pointer("/languages/0").unwrap(), "typescript");
+        assert!(json.pointer("/results/0/component").is_none());
+        assert_eq!(json.pointer("/results/1/component").unwrap(), "frontend");
     }
 }

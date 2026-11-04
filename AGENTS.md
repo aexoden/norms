@@ -49,13 +49,19 @@ prints a `Report`, exiting 1 if any check failed.
 - `context.rs`: `ProjectContext` lazily parses each config file at most once
   (`OnceLock`) and returns a `ConfigStatus<T>` (`NotFound`, `ParseError` with
   the raw text, or `Ok`). Checks share parsed data through it rather than
-  reading files themselves.
+  reading files themselves. It holds the repository-wide files and the detected
+  components; each component's own files (`Cargo.toml`, `package.json`, ...)
+  are in a `ComponentContext` rooted at the component's directory.
 - `config/`: serde models of only the fields checks inspect, with
   `#[serde(default)]` so missing keys don't fail parsing.
-- `checks/`: plain functions `fn(&ProjectContext, &mut Report)`. Registration is
-  explicit: a new check must be added to the list in `checks/mod.rs`.
-  `common.rs` runs for every project; the language modules run per detected
-  language.
+- `checks/`: plain functions `fn(&ProjectContext, &mut Report)`, or
+  `fn(&ComponentContext, &mut Report)` for a check of a component's own files.
+  Registration is explicit: a new check must be added to the list in
+  `checks/mod.rs`. `common.rs` runs for every project. For each detected
+  language, the component checks run once per component of that language
+  (inside `Report::with_component`, which labels their results with the
+  component's path), then the checks of the language's place in repository-wide
+  files (pre-commit hooks, CI) run once.
 - `report.rs`: `report.must(id, name, outcome)` records a check whose issue is
   a failure, `report.should(...)` one whose issue is a warning;
   `require_parsed`/`recommend_parsed` unwrap a `ConfigStatus` while recording
@@ -66,9 +72,10 @@ prints a `Report`, exiting 1 if any check failed.
   and holds the project's waivers. Unlike the other models it denies unknown
   fields. `run_all_checks` applies the waivers last
   (`Report::apply_waivers`), turning waived failures and warnings into skips.
-- `detection.rs`: languages come from marker files at the root (`Cargo.toml`,
-  `pyproject.toml`, `package.json`, `CMakeLists.txt`); TypeScript may also live
-  in `frontend/`. C++ is detected but has no checks yet.
+- `detection.rs`: components come from marker files at the root
+  (`Cargo.toml`, `pyproject.toml`, `package.json`, `CMakeLists.txt`), each
+  making the root a component of that language; TypeScript may also live in
+  `frontend/`. C++ is detected but has no checks yet.
 
 `norms verify` is not yet gating in CI: it still reports false findings on
 projects rendered from the template.

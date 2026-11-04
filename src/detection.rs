@@ -1,59 +1,48 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Language detection utilities.
+//! Component detection utilities.
 
-use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use crate::models::Language;
+use crate::models::{Component, Language};
 
-/// Detect programming languages used in the project at the given path.
+/// The marker file of each language, whose directory is a component of that language.
+const MARKERS: &[(Language, &str)] = &[
+    (Language::Cpp, "CMakeLists.txt"),
+    (Language::Python, "pyproject.toml"),
+    (Language::Rust, "Cargo.toml"),
+    (Language::TypeScript, "package.json"),
+];
+
+/// Detect the components of the project at the given path, in a stable order.
 ///
 /// Detection is based on the presence of canonical build/config files:
 /// - `CMakeLists.txt` for C++
 /// - `pyproject.toml` for Python
 /// - `Cargo.toml` for Rust
 /// - `package.json` for TypeScript
-pub(crate) fn detect_languages(path: &Path) -> BTreeSet<Language> {
-    let mut languages = BTreeSet::new();
-
-    let markers: &[(Language, &str)] = &[
-        (Language::Cpp, "CMakeLists.txt"),
-        (Language::Python, "pyproject.toml"),
-        (Language::Rust, "Cargo.toml"),
-        (Language::TypeScript, "package.json"),
-    ];
-
-    for &(language, marker) in markers {
-        if path.join(marker).exists() {
-            languages.insert(language);
-        }
-    }
-
-    // TypeScript projects may live in a frontend/ subdirectory
-    let frontend = path.join("frontend");
-    if frontend.is_dir() && frontend.join("package.json").exists() {
-        languages.insert(Language::TypeScript);
-    }
-
-    languages
-}
-
-/// Resolve the TypeScript project root directory.
 ///
-/// TypeScript projects may live at the repository root or in a `frontend/` subdirectory. This function returns the path
-/// containing `package.json`, preferring the repository root if it exists there.
-pub(crate) fn resolve_typescript_root(path: &Path) -> std::path::PathBuf {
-    if path.join("package.json").exists() {
-        return path.to_path_buf();
+/// Each marker at the root makes the root a component. TypeScript may instead live in a `frontend/` subdirectory,
+/// which is used only if the root has no `package.json`.
+pub(crate) fn detect_components(path: &Path) -> Vec<Component> {
+    let mut components: Vec<Component> = MARKERS
+        .iter()
+        .filter(|&&(_, marker)| path.join(marker).exists())
+        .map(|&(language, _)| Component {
+            language,
+            path: PathBuf::new(),
+        })
+        .collect();
+
+    let frontend = Path::new("frontend");
+    if !path.join("package.json").exists() && path.join(frontend).join("package.json").exists() {
+        components.push(Component {
+            language: Language::TypeScript,
+            path: frontend.to_path_buf(),
+        });
     }
 
-    let frontend = path.join("frontend");
-    if frontend.is_dir() && frontend.join("package.json").exists() {
-        return frontend;
-    }
-
-    // Fall back to repository root, though without a package.json TypeScript checks will be skipped
-    path.to_path_buf()
+    components.sort();
+    components
 }

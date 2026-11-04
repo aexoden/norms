@@ -1,5 +1,6 @@
 exit: 1
 languages: python, rust, typescript
+components: python (.), rust (.), typescript (.)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -23,54 +24,54 @@ warn  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
-pass  pyproject-exists  pyproject.toml: exists
-pass  pyproject-valid  pyproject.toml: valid
-pass  pyproject-project  pyproject.toml: has [project] section
-warn  python-src-layout  Python: src/ directory
+pass  pyproject-exists  [.] pyproject.toml: exists
+pass  pyproject-valid  [.] pyproject.toml: valid
+pass  pyproject-project  [.] pyproject.toml: has [project] section
+warn  python-src-layout  [.] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  Python: uv.lock
+warn  uv-lock-exists  [.] Python: uv.lock
       Not found: uv.lock
-warn  python-dependency-groups  Python: has dependency-groups
+warn  python-dependency-groups  [.] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
-fail  ruff-configured  Ruff: configured
+fail  ruff-configured  [.] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  Ruff lint: configured
+warn  ruff-lint-configured  [.] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
-fail  mypy-configured  mypy: configured
+fail  mypy-configured  [.] mypy: configured
       Missing [tool.mypy] in pyproject.toml
-pass  cargo-toml-exists  Cargo.toml: exists
-pass  cargo-toml-valid  Cargo.toml: valid
-warn  cargo-toml-license  Cargo.toml: has license
-warn  cargo-toml-description  Cargo.toml: has description
-warn  cargo-toml-repository  Cargo.toml: has repository
-warn  cargo-toml-edition  Cargo.toml: has edition
-warn  cargo-toml-rust-version  Rust: MSRV defined (rust-version)
-warn  clippy-lints  Clippy: lints configured
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+warn  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+warn  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [.] Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section
-warn  deny-toml-exists  Rust: deny.toml
+warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
-pass  package-json-exists  package.json: exists
-pass  package-json-valid  package.json: valid
-pass  package-json-name  package.json: has name
-warn  package-json-esm  package.json: uses ESM (type: module)
+pass  package-json-exists  [.] package.json: exists
+pass  package-json-valid  [.] package.json: valid
+pass  package-json-name  [.] package.json: has name
+warn  package-json-esm  [.] package.json: uses ESM (type: module)
       Consider setting "type": "module" for ESM support
-warn  package-json-dev-engines-runtime  package.json: pins Node.js in devEngines
+warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
-warn  package-json-dev-engines-package-manager  package.json: pins pnpm in devEngines
+warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
-warn  pnpm-lock-exists  pnpm: pnpm-lock.yaml exists
+warn  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
-fail  tsconfig-exists  tsconfig.json: exists
+fail  tsconfig-exists  [.] tsconfig.json: exists
       File not found
-fail  eslint-config-exists  ESLint: configured
+fail  eslint-config-exists  [.] ESLint: configured
       Not found: eslint.config.ts
-warn  eslint-dependency  ESLint: in dependencies
-warn  eslint-typescript-eslint  ESLint: typescript-eslint configured
+warn  eslint-dependency  [.] ESLint: in dependencies
+warn  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
       Consider adding typescript-eslint for TypeScript-aware linting
-fail  prettier-config-exists  Prettier: configured
+fail  prettier-config-exists  [.] Prettier: configured
       Not found: .prettierrc
-warn  prettier-ignore-exists  Prettier: .prettierignore exists
+warn  prettier-ignore-exists  [.] Prettier: .prettierignore exists
       Consider adding .prettierignore
-warn  prettier-dependency  Prettier: in dependencies
-warn  package-json-scripts  package.json: has scripts
+warn  prettier-dependency  [.] Prettier: in dependencies
+warn  package-json-scripts  [.] package.json: has scripts
       No scripts defined in package.json

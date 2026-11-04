@@ -17,14 +17,15 @@ pub(crate) mod python;
 pub(crate) mod rust;
 pub(crate) mod typescript;
 
-use crate::context::ProjectContext;
+use crate::context::{ComponentContext, ProjectContext};
 use crate::models::Language;
 use crate::report::Report;
 
 /// Run all applicable checks for the given project context.
 ///
-/// Common checks always run. Language-specific checks run for each detected language, in a stable order. The project's
-/// waivers apply last, once every check has been recorded.
+/// Common checks always run. Language-specific checks run for each detected language, in a stable order: first the
+/// checks of each component of that language, then the checks of the language's place in the repository's own files,
+/// such as its pre-commit hooks. The project's waivers apply last, once every check has been recorded.
 pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_norms_config(ctx, report);
@@ -41,37 +42,26 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
 
     // Language-specific checks
     for &language in ctx.languages() {
+        for component in ctx.components().iter().filter(|c| c.language == language) {
+            let component_ctx = ComponentContext::new(ctx.path(), component);
+            report.with_component(component, |report| {
+                check_component(&component_ctx, language, report);
+            });
+        }
+
         match language {
             Language::Cpp => {
                 // Placeholder
             }
             Language::Python => {
-                python::check_pyproject(ctx, report);
-                python::check_src_layout(ctx, report);
-                python::check_uv_lock(ctx, report);
-                python::check_dependency_groups(ctx, report);
-                python::check_ruff(ctx, report);
-                python::check_ruff_lint(ctx, report);
-                python::check_mypy(ctx, report);
                 python::check_precommit_hooks(ctx, report);
                 python::check_ci(ctx, report);
             }
             Language::Rust => {
-                rust::check_cargo(ctx, report);
-                rust::check_rust_toolchain(ctx, report);
-                rust::check_clippy_lints(ctx, report);
-                rust::check_cargo_deny(ctx, report);
-                rust::check_cargo_lock(ctx, report);
                 rust::check_precommit_hooks(ctx, report);
                 rust::check_ci(ctx, report);
             }
             Language::TypeScript => {
-                typescript::check_package_json(ctx, report);
-                typescript::check_pnpm(ctx, report);
-                typescript::check_tsconfig(ctx, report);
-                typescript::check_eslint(ctx, report);
-                typescript::check_prettier(ctx, report);
-                typescript::check_scripts(ctx, report);
                 typescript::check_precommit_hooks(ctx, report);
                 typescript::check_ci(ctx, report);
             }
@@ -80,6 +70,39 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
 
     if let Some(config) = ctx.norms().as_ref_ok() {
         report.apply_waivers(&config.waivers);
+    }
+}
+
+/// Run the checks of one component's own files.
+fn check_component(ctx: &ComponentContext, language: Language, report: &mut Report) {
+    match language {
+        Language::Cpp => {
+            // Placeholder
+        }
+        Language::Python => {
+            python::check_pyproject(ctx, report);
+            python::check_src_layout(ctx, report);
+            python::check_uv_lock(ctx, report);
+            python::check_dependency_groups(ctx, report);
+            python::check_ruff(ctx, report);
+            python::check_ruff_lint(ctx, report);
+            python::check_mypy(ctx, report);
+        }
+        Language::Rust => {
+            rust::check_cargo(ctx, report);
+            rust::check_rust_toolchain(ctx, report);
+            rust::check_clippy_lints(ctx, report);
+            rust::check_cargo_deny(ctx, report);
+            rust::check_cargo_lock(ctx, report);
+        }
+        Language::TypeScript => {
+            typescript::check_package_json(ctx, report);
+            typescript::check_pnpm(ctx, report);
+            typescript::check_tsconfig(ctx, report);
+            typescript::check_eslint(ctx, report);
+            typescript::check_prettier(ctx, report);
+            typescript::check_scripts(ctx, report);
+        }
     }
 }
 
@@ -114,7 +137,7 @@ mod tests {
 
         fn verify(&self) -> Vec<CheckResult> {
             let ctx = ProjectContext::new(self.0.clone());
-            let mut report = Report::new(self.0.clone(), ctx.languages().clone());
+            let mut report = Report::new(self.0.clone(), ctx.components().to_vec());
             run_all_checks(&ctx, &mut report);
             report.results
         }
@@ -180,18 +203,20 @@ mod tests {
     }
 
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
-    /// per waiver, no check here records more than one result, so a repeated ID means two checks share it.
+    /// per waiver, no check here records more than one result for each component, so an ID repeated within a
+    /// component means two checks share it.
     #[test]
     fn check_ids_are_valid_and_unique() {
         let ctx = ProjectContext::new(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
-        let mut report = Report::new(ctx.path().to_path_buf(), ctx.languages().clone());
+        let mut report = Report::new(ctx.path().to_path_buf(), ctx.components().to_vec());
         run_all_checks(&ctx, &mut report);
 
         let mut seen = HashSet::new();
         for result in &report.results {
             assert!(is_valid_check_id(&result.id), "invalid ID: {}", result.id);
             assert!(
-                result.id == "norms-toml-waiver-needed" || seen.insert(&result.id),
+                result.id == "norms-toml-waiver-needed"
+                    || seen.insert((&result.component, &result.id)),
                 "duplicate ID: {}",
                 result.id
             );

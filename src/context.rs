@@ -32,7 +32,7 @@ use crate::config::{
     CargoToml, DevboxConfig, NormsConfig, PackageJson, PrecommitConfig, PyprojectToml,
     RenovateConfig, TsConfig, Workflow,
 };
-use crate::models::Language;
+use crate::models::{Component, Language};
 
 /// The file name of the CI workflow in `.github/workflows/`.
 pub(crate) const CI_WORKFLOW: &str = "ci.yaml";
@@ -81,15 +81,13 @@ impl<T> ConfigStatus<T> {
 ///
 /// Each config file is parsed at most once using [`OnceLock`]. The first call to
 /// a getter triggers the parse; subsequent calls return the cached result.
+///
+/// This holds the files that belong to the repository as a whole. Each component's own files, such as its
+/// `Cargo.toml`, are in its [`ComponentContext`].
 pub(crate) struct ProjectContext {
     path: PathBuf,
+    components: OnceLock<Vec<Component>>,
     languages: OnceLock<BTreeSet<Language>>,
-    typescript_root: OnceLock<PathBuf>,
-    cargo: OnceLock<ConfigStatus<CargoToml>>,
-    pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
-    package_json: OnceLock<ConfigStatus<PackageJson>>,
-    tsconfig: OnceLock<ConfigStatus<TsConfig>>,
-    typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
@@ -104,13 +102,8 @@ impl ProjectContext {
     pub(crate) const fn new(path: PathBuf) -> Self {
         Self {
             path,
+            components: OnceLock::new(),
             languages: OnceLock::new(),
-            typescript_root: OnceLock::new(),
-            cargo: OnceLock::new(),
-            pyproject: OnceLock::new(),
-            package_json: OnceLock::new(),
-            tsconfig: OnceLock::new(),
-            typescript_referenced_configs: OnceLock::new(),
             devbox: OnceLock::new(),
             norms: OnceLock::new(),
             renovate: OnceLock::new(),
@@ -126,93 +119,18 @@ impl ProjectContext {
         &self.path
     }
 
-    /// Detected programming languages (cached), in a stable order.
+    /// Detected components (cached), in a stable order.
+    pub(crate) fn components(&self) -> &[Component] {
+        self.components
+            .get_or_init(|| crate::detection::detect_components(&self.path))
+    }
+
+    /// The languages of the detected components (cached), in a stable order.
     pub(crate) fn languages(&self) -> &BTreeSet<Language> {
-        self.languages
-            .get_or_init(|| crate::detection::detect_languages(&self.path))
-    }
-
-    /// Resolved TypeScript project root (cached).
-    ///
-    /// TypeScript projects may live at the repository root or in a `frontend/` subdirectory. This returns the directory
-    /// containing `package.json`.
-    pub(crate) fn typescript_root(&self) -> &Path {
-        self.typescript_root
-            .get_or_init(|| crate::detection::resolve_typescript_root(&self.path))
-    }
-
-    /// Parsed `Cargo.toml` (cached).
-    pub(crate) fn cargo(&self) -> &ConfigStatus<CargoToml> {
-        self.cargo
-            .get_or_init(|| parse_toml_file::<CargoToml>(&self.path.join("Cargo.toml")))
-    }
-
-    /// Parsed `pyproject.toml` (cached).
-    pub(crate) fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
-        self.pyproject
-            .get_or_init(|| parse_toml_file::<PyprojectToml>(&self.path.join("pyproject.toml")))
-    }
-
-    /// Parsed `package.json` from the TypeScript root (cached).
-    ///
-    /// Uses the resolved TypeScript root, which may be the repository root or a `frontend/` subdirectory.
-    pub(crate) fn package_json(&self) -> &ConfigStatus<PackageJson> {
-        self.package_json.get_or_init(|| {
-            parse_json5_file::<PackageJson>(&self.typescript_root().join("package.json"))
-        })
-    }
-
-    /// Parsed `tsconfig.json` from the TypeScript root (cached).
-    ///
-    /// Uses the resolved TypeScript root, which may be the repository root or a `frontend/` subdirectory.
-    pub(crate) fn tsconfig(&self) -> &ConfigStatus<TsConfig> {
-        self.tsconfig.get_or_init(|| {
-            parse_json5_file::<TsConfig>(&self.typescript_root().join("tsconfig.json"))
-        })
-    }
-
-    /// Parsed referenced tsconfig files for solution-style configurations (cached).
-    ///
-    /// If `tsconfig.json` contains a `references` array, each referenced path is resolved relative to the TypeScript
-    /// root and parsed. Returns a vec of `(display_name, ConfigStatus<TsConfig>)` pairs.
-    ///
-    /// Returns an empty vec if the root tsconfig is not solution-style, could not be parsed, or has no references.
-    pub(crate) fn typescript_referenced_configs(&self) -> &[(String, ConfigStatus<TsConfig>)] {
-        self.typescript_referenced_configs.get_or_init(|| {
-            let Some(root) = self.tsconfig().as_ref_ok() else {
-                return Vec::new();
-            };
-
-            if !root.is_solution_style() {
-                return Vec::new();
-            }
-
-            let typescript_root = self.typescript_root();
-
-            root.reference_paths()
-                .into_iter()
-                .map(|ref_path| {
-                    // Resolve the reference path relative to the TS root.
-                    // References can poitn to either a directory (containing tsconfig.json) or a file directly.
-                    let resolved = typescript_root.join(ref_path);
-                    let config_path = if resolved.is_dir() {
-                        resolved.join("tsconfig.json")
-                    } else if resolved.extension().is_some() {
-                        resolved
-                    } else {
-                        // Bare name without extension - TypeScript treats as directory
-                        resolved.join("tsconfig.json")
-                    };
-
-                    let display = config_path
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .into_owned();
-
-                    let status = parse_json5_file::<TsConfig>(&config_path);
-                    (display, status)
-                })
+        self.languages.get_or_init(|| {
+            self.components()
+                .iter()
+                .map(|component| component.language)
                 .collect()
         })
     }
@@ -286,6 +204,107 @@ impl ProjectContext {
         static NOT_FOUND: ConfigStatus<Workflow> = ConfigStatus::NotFound;
 
         self.workflows().get(CI_WORKFLOW).unwrap_or(&NOT_FOUND)
+    }
+}
+
+/// Lazy-loading context for one component of a project.
+///
+/// Like [`ProjectContext`], each config file is parsed at most once. Paths are relative to the component's directory,
+/// which may be the project root or a subdirectory. A component has a single language, so only that language's
+/// getters are ever called.
+pub(crate) struct ComponentContext {
+    path: PathBuf,
+    cargo: OnceLock<ConfigStatus<CargoToml>>,
+    pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
+    package_json: OnceLock<ConfigStatus<PackageJson>>,
+    tsconfig: OnceLock<ConfigStatus<TsConfig>>,
+    typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
+}
+
+impl ComponentContext {
+    /// Create a new context for the given component of the project at `root`.
+    pub(crate) fn new(root: &Path, component: &Component) -> Self {
+        Self {
+            path: root.join(&component.path),
+            cargo: OnceLock::new(),
+            pyproject: OnceLock::new(),
+            package_json: OnceLock::new(),
+            tsconfig: OnceLock::new(),
+            typescript_referenced_configs: OnceLock::new(),
+        }
+    }
+
+    /// The component's directory.
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Parsed `Cargo.toml` (cached).
+    pub(crate) fn cargo(&self) -> &ConfigStatus<CargoToml> {
+        self.cargo
+            .get_or_init(|| parse_toml_file::<CargoToml>(&self.path.join("Cargo.toml")))
+    }
+
+    /// Parsed `pyproject.toml` (cached).
+    pub(crate) fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
+        self.pyproject
+            .get_or_init(|| parse_toml_file::<PyprojectToml>(&self.path.join("pyproject.toml")))
+    }
+
+    /// Parsed `package.json` (cached).
+    pub(crate) fn package_json(&self) -> &ConfigStatus<PackageJson> {
+        self.package_json
+            .get_or_init(|| parse_json5_file::<PackageJson>(&self.path.join("package.json")))
+    }
+
+    /// Parsed `tsconfig.json` (cached).
+    pub(crate) fn tsconfig(&self) -> &ConfigStatus<TsConfig> {
+        self.tsconfig
+            .get_or_init(|| parse_json5_file::<TsConfig>(&self.path.join("tsconfig.json")))
+    }
+
+    /// Parsed referenced tsconfig files for solution-style configurations (cached).
+    ///
+    /// If `tsconfig.json` contains a `references` array, each referenced path is resolved relative to the component
+    /// and parsed. Returns a vec of `(display_name, ConfigStatus<TsConfig>)` pairs.
+    ///
+    /// Returns an empty vec if the root tsconfig is not solution-style, could not be parsed, or has no references.
+    pub(crate) fn typescript_referenced_configs(&self) -> &[(String, ConfigStatus<TsConfig>)] {
+        self.typescript_referenced_configs.get_or_init(|| {
+            let Some(root) = self.tsconfig().as_ref_ok() else {
+                return Vec::new();
+            };
+
+            if !root.is_solution_style() {
+                return Vec::new();
+            }
+
+            root.reference_paths()
+                .into_iter()
+                .map(|ref_path| {
+                    // Resolve the reference path relative to the component.
+                    // References can point to either a directory (containing tsconfig.json) or a file directly.
+                    let resolved = self.path.join(ref_path);
+                    let config_path = if resolved.is_dir() {
+                        resolved.join("tsconfig.json")
+                    } else if resolved.extension().is_some() {
+                        resolved
+                    } else {
+                        // Bare name without extension - TypeScript treats as directory
+                        resolved.join("tsconfig.json")
+                    };
+
+                    let display = config_path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned();
+
+                    let status = parse_json5_file::<TsConfig>(&config_path);
+                    (display, status)
+                })
+                .collect()
+        })
     }
 }
 

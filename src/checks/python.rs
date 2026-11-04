@@ -3,14 +3,14 @@
 
 //! Python-specific checks.
 
-use crate::context::{ConfigStatus, ProjectContext};
+use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
 //
 // Project configuration
 //
 
-pub(crate) fn check_pyproject(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = report.require_parsed("pyproject", "pyproject.toml", ctx.pyproject()) else {
         return;
     };
@@ -26,7 +26,7 @@ pub(crate) fn check_pyproject(ctx: &ProjectContext, report: &mut Report) {
 // Project layout
 //
 
-pub(crate) fn check_src_layout(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
     let src_path = ctx.path().join("src");
 
     if !src_path.is_dir() {
@@ -58,7 +58,7 @@ pub(crate) fn check_src_layout(ctx: &ProjectContext, report: &mut Report) {
 // Dependency management
 //
 
-pub(crate) fn check_uv_lock(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_uv_lock(ctx: &ComponentContext, report: &mut Report) {
     report.should(
         "uv-lock-exists",
         "Python: uv.lock",
@@ -66,7 +66,7 @@ pub(crate) fn check_uv_lock(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
-pub(crate) fn check_dependency_groups(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_dependency_groups(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -95,7 +95,7 @@ pub(crate) fn check_dependency_groups(ctx: &ProjectContext, report: &mut Report)
 // Ruff
 //
 
-pub(crate) fn check_ruff(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -146,7 +146,7 @@ pub(crate) fn check_ruff(ctx: &ProjectContext, report: &mut Report) {
     }
 }
 
-pub(crate) fn check_ruff_lint(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -227,7 +227,7 @@ pub(crate) fn check_ruff_lint(ctx: &ProjectContext, report: &mut Report) {
 // Type checking (Mypy)
 //
 
-pub(crate) fn check_mypy(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };

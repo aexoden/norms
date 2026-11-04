@@ -30,6 +30,13 @@
 //!
 //! An ID labels one check, which may record several results: one for each
 //! file it inspects, such as each referenced tsconfig. All of them share the ID.
+//!
+//! # Components
+//!
+//! A language's checks of its own files run once for each component of that
+//! language, inside [`Report::with_component`], so each result they record
+//! names its component. Checks of files that belong to the whole repository,
+//! such as `.pre-commit-config.yaml`, record no component.
 
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -39,7 +46,7 @@ use serde::Serialize;
 
 use crate::config::Waiver;
 use crate::context::ConfigStatus;
-use crate::models::{Language, Status};
+use crate::models::{Component, Language, Status};
 
 //
 // Outcome: the result of evaluating a single check
@@ -147,6 +154,9 @@ pub(crate) fn is_valid_check_id(id: &str) -> bool {
 pub(crate) struct CheckResult {
     pub id: String,
     pub name: String,
+    /// The display path of the component the check inspected, if it inspected one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub component: Option<String>,
     pub status: Status,
     #[serde(skip_serializing_if = "String::is_empty")]
     pub message: String,
@@ -162,17 +172,36 @@ pub(crate) struct CheckResult {
 /// as well as helpers for common patterns like requiring a parsed config file.
 pub(crate) struct Report {
     pub project_path: PathBuf,
-    pub languages: BTreeSet<Language>,
+    pub components: Vec<Component>,
     pub results: Vec<CheckResult>,
 }
 
 impl Report {
-    /// Create a new empty report for the given project.
-    pub(crate) const fn new(project_path: PathBuf, languages: BTreeSet<Language>) -> Self {
+    /// Create a new empty report for the given project and its components.
+    pub(crate) const fn new(project_path: PathBuf, components: Vec<Component>) -> Self {
         Self {
             project_path,
-            languages,
+            components,
             results: Vec::new(),
+        }
+    }
+
+    /// The languages of the project's components, in a stable order.
+    pub(crate) fn languages(&self) -> BTreeSet<Language> {
+        self.components
+            .iter()
+            .map(|component| component.language)
+            .collect()
+    }
+
+    /// Run `checks`, recording each of their results as belonging to `component`.
+    pub(crate) fn with_component(&mut self, component: &Component, checks: impl FnOnce(&mut Self)) {
+        let start = self.results.len();
+        checks(self);
+
+        let path = component.display_path();
+        for result in self.results.iter_mut().skip(start) {
+            result.component.get_or_insert_with(|| path.clone());
         }
     }
 
@@ -214,6 +243,7 @@ impl Report {
         self.results.push(CheckResult {
             id,
             name,
+            component: None,
             status,
             message,
         });
@@ -380,16 +410,20 @@ impl Report {
         println!("{}", separator.bold());
         println!("{}", "  Project Standards Verification Report".bold());
         println!("{}", separator.bold());
-        println!("  Path:      {}", self.project_path.display());
+        println!("  Path:       {}", self.project_path.display());
 
-        let lang_str = if self.languages.is_empty() {
+        let components = if self.components.is_empty() {
             "None".dimmed().to_string()
         } else {
-            let langs: Vec<_> = self.languages.iter().map(ToString::to_string).collect();
-            langs.join(", ")
+            let components: Vec<_> = self
+                .components
+                .iter()
+                .map(|component| format!("{} ({})", component.language, component.display_path()))
+                .collect();
+            components.join(", ")
         };
 
-        println!("  Languages: {lang_str}");
+        println!("  Components: {components}");
         println!("{}", separator.bold());
         println!();
 
@@ -421,7 +455,11 @@ impl Report {
                 } else {
                     format!(" - {}", item.message.dimmed())
                 };
-                println!("    [{badge}] {}: {}{msg}", item.id, item.name);
+                let component = match &item.component {
+                    Some(path) if path != "." => format!("[{path}] "),
+                    Some(_) | None => String::new(),
+                };
+                println!("    [{badge}] {}: {component}{}{msg}", item.id, item.name);
             }
 
             println!();
@@ -476,7 +514,7 @@ mod tests {
 
     #[test]
     fn require_parsed_derives_ids_from_prefix() {
-        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
+        let mut report = Report::new(PathBuf::new(), Vec::new());
         let status = ConfigStatus::<()>::ParseError {
             raw: String::new(),
             error: "bad".into(),
@@ -491,6 +529,28 @@ mod tests {
         let ids: Vec<_> = report.results.iter().map(|r| r.id.as_str()).collect();
         assert_eq!(ids, ["cargo-toml-exists", "cargo-toml-valid"]);
         assert_eq!(report.failed(), 1);
+    }
+
+    #[test]
+    fn with_component_labels_only_its_results() {
+        let mut report = Report::new(PathBuf::new(), Vec::new());
+        let frontend = Component {
+            language: Language::TypeScript,
+            path: PathBuf::from("frontend"),
+        };
+
+        report.should("readme-exists", "README.md", true);
+        report.with_component(&frontend, |report| {
+            report.should("package-json-name", "package.json: has name", true);
+        });
+        report.should("changelog-exists", "CHANGELOG.md", true);
+
+        let components: Vec<_> = report
+            .results
+            .iter()
+            .map(|r| r.component.as_deref())
+            .collect();
+        assert_eq!(components, [None, Some("frontend"), None]);
     }
 
     fn waiver(check: &str) -> Waiver {
@@ -510,7 +570,7 @@ mod tests {
 
     #[test]
     fn waivers_skip_failures_and_warnings() {
-        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
+        let mut report = Report::new(PathBuf::new(), Vec::new());
         report.must("readme-exists", "README.md", false);
         report.should("changelog-exists", "CHANGELOG.md", false);
         report.apply_waivers(&[waiver("readme-exists"), waiver("changelog-exists")]);
@@ -532,7 +592,7 @@ mod tests {
 
     #[test]
     fn waivers_for_passing_or_absent_checks_warn() {
-        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
+        let mut report = Report::new(PathBuf::new(), Vec::new());
         report.must("readme-exists", "README.md", true);
         report.apply_waivers(&[waiver("readme-exists"), waiver("no-such-check")]);
 
@@ -556,7 +616,7 @@ mod tests {
 
     #[test]
     fn duplicate_waivers_both_count_as_needed() {
-        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
+        let mut report = Report::new(PathBuf::new(), Vec::new());
         report.must("readme-exists", "README.md", false);
         report.apply_waivers(&[waiver("readme-exists"), waiver("readme-exists")]);
 
@@ -566,7 +626,7 @@ mod tests {
 
     #[test]
     fn norms_toml_checks_cannot_be_waived() {
-        let mut report = Report::new(PathBuf::new(), BTreeSet::new());
+        let mut report = Report::new(PathBuf::new(), Vec::new());
         report.must(
             "norms-toml-waiver-reasons",
             "norms.toml: every waiver has a reason",

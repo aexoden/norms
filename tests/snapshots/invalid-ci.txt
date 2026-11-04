@@ -1,5 +1,6 @@
 exit: 1
 languages: rust
+components: rust (.)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -37,14 +38,14 @@ fail  workflow-valid  CI: audit.yml: valid
       3 | jobs: {}
         |     ^ illegal placement of ':' indicator
 pass  workflow-valid  CI: release.yaml: valid
-pass  cargo-toml-exists  Cargo.toml: exists
-pass  cargo-toml-valid  Cargo.toml: valid
-warn  cargo-toml-license  Cargo.toml: has license
-warn  cargo-toml-description  Cargo.toml: has description
-warn  cargo-toml-repository  Cargo.toml: has repository
-warn  cargo-toml-edition  Cargo.toml: has edition
-warn  cargo-toml-rust-version  Rust: MSRV defined (rust-version)
-warn  clippy-lints  Clippy: lints configured
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+warn  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+warn  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [.] Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section
-warn  deny-toml-exists  Rust: deny.toml
+warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml

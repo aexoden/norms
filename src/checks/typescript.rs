@@ -4,14 +4,14 @@
 //! TypeScript-specific checks.
 
 use crate::config::{TsCompilerOptions, TsConfig, check_dev_engine};
-use crate::context::{ConfigStatus, ProjectContext};
+use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
 //
 // Package configuration
 //
 
-pub(crate) fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = report.require_parsed("package-json", "package.json", ctx.package_json())
     else {
         return;
@@ -56,12 +56,12 @@ pub(crate) fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
 // Package manager
 //
 
-pub(crate) fn check_pnpm(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_pnpm(ctx: &ComponentContext, report: &mut Report) {
     if ctx.package_json().as_ref_ok().is_none() {
         return;
     }
 
-    let typescript_root = ctx.typescript_root();
+    let typescript_root = ctx.path();
 
     // Lock file
     report.should(
@@ -91,7 +91,7 @@ pub(crate) fn check_pnpm(ctx: &ProjectContext, report: &mut Report) {
 // TypeScript configuration
 //
 
-pub(crate) fn check_tsconfig(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_tsconfig(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = report.require_parsed("tsconfig", "tsconfig.json", ctx.tsconfig()) else {
         return;
     };
@@ -123,7 +123,7 @@ fn check_tsconfig_single(config: &TsConfig, report: &mut Report) {
 }
 
 /// Check a solution-style tsconfig that delegates to referenced sub-projects.
-fn check_tsconfig_solution_style(ctx: &ProjectContext, config: &TsConfig, report: &mut Report) {
+fn check_tsconfig_solution_style(ctx: &ComponentContext, config: &TsConfig, report: &mut Report) {
     report.should(
         "tsconfig-project-references",
         "tsconfig.json: uses project references",
@@ -281,8 +281,8 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
 // Linting
 //
 
-pub(crate) fn check_eslint(ctx: &ProjectContext, report: &mut Report) {
-    let ts_root = ctx.typescript_root();
+pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
+    let ts_root = ctx.path();
     let eslint_config = ts_root.join("eslint.config.ts");
 
     report.must(
@@ -318,8 +318,8 @@ pub(crate) fn check_eslint(ctx: &ProjectContext, report: &mut Report) {
 // Formatting
 //
 
-pub(crate) fn check_prettier(ctx: &ProjectContext, report: &mut Report) {
-    let ts_root = ctx.typescript_root();
+pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
+    let ts_root = ctx.path();
     let prettierrc = ts_root.join(".prettierrc");
     report.must(
         "prettier-config-exists",
@@ -352,7 +352,7 @@ pub(crate) fn check_prettier(ctx: &ProjectContext, report: &mut Report) {
 // Scripts
 //
 
-pub(crate) fn check_scripts(ctx: &ProjectContext, report: &mut Report) {
+pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.package_json().as_ref_ok() else {
         return;
     };
