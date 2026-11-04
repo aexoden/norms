@@ -23,7 +23,7 @@
 //!
 //! NOTE: This specific Devbox functionality does not yet exist -- this is more of a planning note.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -33,6 +33,9 @@ use crate::config::{
     RenovateConfig, TsConfig, Workflow,
 };
 use crate::models::Language;
+
+/// The file name of the CI workflow in `.github/workflows/`.
+pub(crate) const CI_WORKFLOW: &str = "ci.yaml";
 
 /// The result of attempting to read and parse a config file.
 ///
@@ -93,7 +96,7 @@ pub(crate) struct ProjectContext {
     precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
-    ci_workflow: OnceLock<ConfigStatus<Workflow>>,
+    workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
 }
 
 impl ProjectContext {
@@ -114,7 +117,7 @@ impl ProjectContext {
             precommit: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
-            ci_workflow: OnceLock::new(),
+            workflows: OnceLock::new(),
         }
     }
 
@@ -251,11 +254,38 @@ impl ProjectContext {
             .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
     }
 
-    /// Parsed `.github/workflows/ci.yaml` (cached).
-    pub(crate) fn ci_workflow(&self) -> &ConfigStatus<Workflow> {
-        self.ci_workflow.get_or_init(|| {
-            parse_yaml_file::<Workflow>(&self.path.join(".github/workflows/ci.yaml"))
+    /// Parsed workflow files in `.github/workflows/` (cached), keyed by file name.
+    ///
+    /// GitHub runs each `.yml` or `.yaml` file directly in that directory, so subdirectories and other files are
+    /// skipped. Symlinks are followed. The map is empty if the directory doesn't exist or can't be read.
+    pub(crate) fn workflows(&self) -> &BTreeMap<String, ConfigStatus<Workflow>> {
+        self.workflows.get_or_init(|| {
+            let Ok(entries) = fs::read_dir(self.path.join(".github/workflows")) else {
+                return BTreeMap::new();
+            };
+
+            entries
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    let path = entry.path();
+                    path.is_file()
+                        && path
+                            .extension()
+                            .is_some_and(|extension| extension == "yml" || extension == "yaml")
+                })
+                .map(|entry| {
+                    let name = entry.file_name().to_string_lossy().into_owned();
+                    (name, parse_yaml_file::<Workflow>(&entry.path()))
+                })
+                .collect()
         })
+    }
+
+    /// Parsed `.github/workflows/ci.yaml`, from [`workflows`](Self::workflows).
+    pub(crate) fn ci_workflow(&self) -> &ConfigStatus<Workflow> {
+        static NOT_FOUND: ConfigStatus<Workflow> = ConfigStatus::NotFound;
+
+        self.workflows().get(CI_WORKFLOW).unwrap_or(&NOT_FOUND)
     }
 }
 

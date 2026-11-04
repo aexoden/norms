@@ -4,8 +4,8 @@
 //! Common checks that apply to all projects reqgardless of language.
 
 use crate::config::SHARED_PRESET;
-use crate::context::{ConfigStatus, ProjectContext};
-use crate::report::{Report, file_exists, matches_regex};
+use crate::context::{CI_WORKFLOW, ConfigStatus, ProjectContext};
+use crate::report::{Outcome, Report, file_exists, matches_regex};
 
 //
 // norms configuration
@@ -252,4 +252,21 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
     }
 
     report.require_parsed("ci-yaml", "CI: ci.yaml", ctx.ci_workflow());
+
+    // Every other workflow must parse too. The checks above already cover ci.yaml.
+    for (name, status) in ctx
+        .workflows()
+        .iter()
+        .filter(|(name, _)| *name != CI_WORKFLOW)
+    {
+        report.must(
+            "workflow-valid",
+            format!("CI: {name}: valid"),
+            match status {
+                ConfigStatus::NotFound => Outcome::fail("File not found"),
+                ConfigStatus::ParseError { error, .. } => Outcome::fail(error.clone()),
+                ConfigStatus::Ok(_) => Outcome::Pass,
+            },
+        );
+    }
 }

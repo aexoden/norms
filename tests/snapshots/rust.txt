@@ -28,6 +28,7 @@ pass  renovate-extends-preset  renovate.json: extends the shared preset
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
+pass  workflow-valid  CI: audit.yaml: valid
 pass  cargo-toml-exists  Cargo.toml: exists
 pass  cargo-toml-valid  Cargo.toml: valid
 pass  cargo-toml-license  Cargo.toml: has license

@@ -28,6 +28,15 @@ fail  ci-yaml-valid  CI: ci.yaml: valid
         |   ^ duplicate mapping key: test, set DuplicateKeyPolicy in Options if acceptable
       7 |     steps: []
         |
+fail  workflow-valid  CI: audit.yml: valid
+      Invalid YAML: error: line 3 column 5: illegal placement of ':' indicator
+       --> <input>:3:5
+        |
+      1 | name: Audit
+      2 | on: [push
+      3 | jobs: {}
+        |     ^ illegal placement of ':' indicator
+pass  workflow-valid  CI: release.yaml: valid
 pass  cargo-toml-exists  Cargo.toml: exists
 pass  cargo-toml-valid  Cargo.toml: valid
 warn  cargo-toml-license  Cargo.toml: has license
