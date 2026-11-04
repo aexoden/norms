@@ -290,22 +290,6 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 }
 
 //
-// Devbox integration
-//
-
-pub(crate) fn check_devbox_uv(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = ctx.devbox().as_ref_ok() else {
-        return;
-    };
-
-    report.should(
-        "python-devbox-uv",
-        "Python devbox: includes uv",
-        config.has_package("uv"),
-    );
-}
-
-//
 // CI integration
 //
 

@@ -522,41 +522,6 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 }
 
 //
-// Devbox integration
-//
-
-pub(crate) fn check_devbox_pnpm(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = ctx.devbox().as_ref_ok() else {
-        return;
-    };
-
-    let corepack_enabled = config.env.as_ref().is_some_and(|env| {
-        env.get("DEVBOX_COREPACK_ENABLED")
-            .is_some_and(|v| v == "true")
-    });
-    report.should(
-        "typescript-devbox-corepack",
-        "TypeScript devbox: enables corepack",
-        if corepack_enabled {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider setting DEVBOX_COREPACK_ENABLED=true in Devbox configuration")
-        },
-    );
-
-    let has_node = config.has_package("nodejs");
-    report.should(
-        "typescript-devbox-nodejs",
-        "TypeScript devbox: includes nodejs",
-        if has_node {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider adding nodejs to Devbox packages")
-        },
-    );
-}
-
-//
 // CI integration
 //
 

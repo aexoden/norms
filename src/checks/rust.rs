@@ -148,27 +148,6 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 }
 
 //
-// Devbox integration
-//
-
-pub(crate) fn check_devbox_rust(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = ctx.devbox().as_ref_ok() else {
-        return;
-    };
-
-    report.should(
-        "rust-devbox-cargo-deny",
-        "Rust devbox: includes cargo-deny",
-        config.has_package("cargo-deny"),
-    );
-    report.should(
-        "rust-devbox-rustup",
-        "Rust devbox: includes rustup",
-        config.has_package("rustup"),
-    );
-}
-
-//
 // CI integration
 //
 

@@ -54,7 +54,6 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 python::check_ruff_lint(ctx, report);
                 python::check_mypy(ctx, report);
                 python::check_precommit_hooks(ctx, report);
-                python::check_devbox_uv(ctx, report);
                 python::check_ci(ctx, report);
             }
             Language::Rust => {
@@ -64,7 +63,6 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 rust::check_cargo_deny(ctx, report);
                 rust::check_cargo_lock(ctx, report);
                 rust::check_precommit_hooks(ctx, report);
-                rust::check_devbox_rust(ctx, report);
                 rust::check_ci(ctx, report);
             }
             Language::TypeScript => {
@@ -75,7 +73,6 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 typescript::check_prettier(ctx, report);
                 typescript::check_scripts(ctx, report);
                 typescript::check_precommit_hooks(ctx, report);
-                typescript::check_devbox_pnpm(ctx, report);
                 typescript::check_ci(ctx, report);
             }
         }

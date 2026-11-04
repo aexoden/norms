@@ -3,8 +3,6 @@
 
 //! Type-safe model for `devbox.json`.
 
-use std::collections::HashMap;
-
 use serde::Deserialize;
 use serde::de::Deserializer;
 
@@ -20,9 +18,6 @@ pub(crate) struct DevboxConfig {
     #[serde(default, deserialize_with = "deserialize_packages")]
     pub packages: Vec<String>,
 
-    /// Map of environment variables.
-    pub env: Option<HashMap<String, String>>,
-
     /// Shell configuration.
     pub shell: Option<DevboxShell>,
 }
@@ -33,16 +28,6 @@ pub(crate) struct DevboxConfig {
 pub(crate) struct DevboxShell {
     pub init_hook: Option<Vec<String>>,
     pub scripts: Option<serde_json::Value>,
-}
-
-impl DevboxConfig {
-    /// Check if a particular package prefix is listed.
-    pub(crate) fn has_package(&self, prefix: &str) -> bool {
-        self.packages.iter().any(|p| {
-            p == prefix
-                || p.starts_with(&format!("{prefix}@")) | p.starts_with(&format!("\"{prefix}"))
-        })
-    }
 }
 
 /// Deserialize `packages` from either a list of strings or a dictionary.

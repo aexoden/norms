@@ -38,7 +38,6 @@ warn  ruff-lint-configured  Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  mypy: configured
       Missing [tool.mypy] in pyproject.toml
-warn  python-devbox-uv  Python devbox: includes uv
 pass  cargo-toml-exists  Cargo.toml: exists
 pass  cargo-toml-valid  Cargo.toml: valid
 warn  cargo-toml-license  Cargo.toml: has license
@@ -50,8 +49,6 @@ warn  clippy-lints  Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section
 warn  deny-toml-exists  Rust: deny.toml
       Not found: deny.toml
-warn  rust-devbox-cargo-deny  Rust devbox: includes cargo-deny
-warn  rust-devbox-rustup  Rust devbox: includes rustup
 pass  package-json-exists  package.json: exists
 pass  package-json-valid  package.json: valid
 pass  package-json-name  package.json: has name
@@ -77,7 +74,3 @@ warn  prettier-ignore-exists  Prettier: .prettierignore exists
 warn  prettier-dependency  Prettier: in dependencies
 warn  package-json-scripts  package.json: has scripts
       No scripts defined in package.json
-warn  typescript-devbox-corepack  TypeScript devbox: enables corepack
-      Consider setting DEVBOX_COREPACK_ENABLED=true in Devbox configuration
-warn  typescript-devbox-nodejs  TypeScript devbox: includes nodejs
-      Consider adding nodejs to Devbox packages
