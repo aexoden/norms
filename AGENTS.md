@@ -88,9 +88,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `secondary_languages=["typescript"]` and `typescript_path=frontend`. Each
   drops `.copier-answers.yml` and has stub lock files apart from `Cargo.lock`.
   Re-render them when the template changes in a way the checks see.
-- The other fixtures are written by hand: `empty` has no files, and `devbox`
+- The other fixtures are written by hand: `empty` has no files, `devbox`
   has a services-only `devbox.json` beside a stub marker file for each
-  language.
+  language, and `invalid-ci` has a malformed `ci.yaml` beside a stub
+  `Cargo.toml`.
 - Fixtures are kept exactly as written: pre-commit and markdownlint skip them,
   and `REUSE.toml` covers them, so one may be deliberately broken or lack
   headers. A fix or new check that depends on a project's layout gets a fixture.

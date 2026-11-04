@@ -251,9 +251,5 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         return;
     }
 
-    report.must(
-        "ci-yaml-exists",
-        "CI: ci.yaml exists",
-        file_exists(&workflows_dir.join("ci.yaml")),
-    );
+    report.require_parsed("ci-yaml", "CI: ci.yaml", ctx.ci_workflow());
 }

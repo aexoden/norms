@@ -526,19 +526,18 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 //
 
 pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
-    let ConfigStatus::Ok(content) = ctx.ci_workflow() else {
+    let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
         return;
     };
 
-    let lower = content.to_lowercase();
-
     // Lint step
-    let has_lint =
-        lower.contains("eslint") || lower.contains("pnpm lint") || lower.contains("pnpm run lint");
+    let has_lint = workflow.runs_command("eslint")
+        || workflow.runs_command("pnpm lint")
+        || workflow.runs_command("pnpm run lint");
     report.should("typescript-ci-lint", "TypeScript CI: lint check", has_lint);
 
     // Format check
-    let has_format = lower.contains("prettier");
+    let has_format = workflow.runs_command("prettier");
     report.should(
         "typescript-ci-format",
         "TypeScript CI: format check",
@@ -549,13 +548,13 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "typescript-ci-tsc",
         "TypeScript CI: type check",
-        lower.contains("tsc"),
+        workflow.runs_command("tsc"),
     );
 
     // Tests
     report.should(
         "typescript-ci-test",
         "TypeScript CI: tests",
-        lower.contains("pnpm test"),
+        workflow.runs_command("pnpm test"),
     );
 }

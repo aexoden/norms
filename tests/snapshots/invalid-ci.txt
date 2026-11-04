@@ -1,0 +1,41 @@
+exit: 1
+languages: rust
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+fail  ci-yaml-valid  CI: ci.yaml: valid
+      Invalid YAML: error: line 6 column 3: duplicate mapping key: test, set DuplicateKeyPolicy in Options if acceptable
+       --> <input>:6:3
+        |
+      4 |     steps:
+      5 |       - run: cargo test
+      6 |   test:
+        |   ^ duplicate mapping key: test, set DuplicateKeyPolicy in Options if acceptable
+      7 |     steps: []
+        |
+pass  cargo-toml-exists  Cargo.toml: exists
+pass  cargo-toml-valid  Cargo.toml: valid
+warn  cargo-toml-license  Cargo.toml: has license
+warn  cargo-toml-description  Cargo.toml: has description
+warn  cargo-toml-repository  Cargo.toml: has repository
+warn  cargo-toml-edition  Cargo.toml: has edition
+warn  cargo-toml-rust-version  Rust: MSRV defined (rust-version)
+warn  clippy-lints  Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  Rust: deny.toml
+      Not found: deny.toml

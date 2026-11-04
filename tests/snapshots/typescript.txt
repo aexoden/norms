@@ -26,7 +26,8 @@ pass  renovate-valid  renovate.json: valid
 pass  renovate-schema  renovate.json: has $schema
 pass  renovate-extends-preset  renovate.json: extends the shared preset
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
-pass  ci-yaml-exists  CI: ci.yaml exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  package-json-exists  package.json: exists
 pass  package-json-valid  package.json: valid
 pass  package-json-name  package.json: has name

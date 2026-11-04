@@ -30,7 +30,7 @@ use std::sync::OnceLock;
 
 use crate::config::{
     CargoToml, DevboxConfig, NormsConfig, PackageJson, PrecommitConfig, PyprojectToml,
-    RenovateConfig, TsConfig,
+    RenovateConfig, TsConfig, Workflow,
 };
 use crate::models::Language;
 
@@ -93,7 +93,7 @@ pub(crate) struct ProjectContext {
     precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
-    ci_workflow: OnceLock<ConfigStatus<String>>,
+    ci_workflow: OnceLock<ConfigStatus<Workflow>>,
 }
 
 impl ProjectContext {
@@ -251,10 +251,11 @@ impl ProjectContext {
             .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
     }
 
-    /// Raw `.github/workflows/ci.yaml` content (cached).
-    pub(crate) fn ci_workflow(&self) -> &ConfigStatus<String> {
-        self.ci_workflow
-            .get_or_init(|| read_text_file(&self.path.join(".github/workflows/ci.yaml")))
+    /// Parsed `.github/workflows/ci.yaml` (cached).
+    pub(crate) fn ci_workflow(&self) -> &ConfigStatus<Workflow> {
+        self.ci_workflow.get_or_init(|| {
+            parse_yaml_file::<Workflow>(&self.path.join(".github/workflows/ci.yaml"))
+        })
     }
 }
 

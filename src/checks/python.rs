@@ -294,24 +294,23 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 //
 
 pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
-    let ConfigStatus::Ok(content) = ctx.ci_workflow() else {
+    let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
         return;
     };
 
-    let lower = content.to_lowercase();
     report.should(
         "python-ci-ruff-format",
         "Python CI: format check",
-        lower.contains("ruff format"),
+        workflow.runs_command("ruff format"),
     );
     report.should(
         "python-ci-ruff-check",
         "Python CI: lint check",
-        lower.contains("ruff check"),
+        workflow.runs_command("ruff check"),
     );
     report.should(
         "python-ci-mypy",
         "Python CI: type check",
-        lower.contains("mypy"),
+        workflow.runs_command("mypy"),
     );
 }

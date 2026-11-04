@@ -152,30 +152,29 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 //
 
 pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
-    let ConfigStatus::Ok(content) = ctx.ci_workflow() else {
+    let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
         return;
     };
-
-    let lower = content.to_lowercase();
 
     report.should(
         "rust-ci-rustfmt",
         "Rust CI: format check",
-        lower.contains("cargo fmt"),
+        workflow.runs_command("cargo fmt") || workflow.uses_action("actions-rust-lang/rustfmt"),
     );
     report.should(
         "rust-ci-clippy",
         "Rust CI: clippy check",
-        lower.contains("cargo clippy"),
+        workflow.runs_command("cargo clippy"),
     );
     report.should(
         "rust-ci-test",
         "Rust CI: test",
-        lower.contains("cargo test"),
+        workflow.runs_command("cargo test"),
     );
     report.should(
         "rust-ci-cargo-deny",
         "Rust CI: cargo deny",
-        lower.contains("cargo deny"),
+        workflow.runs_command("cargo deny")
+            || workflow.uses_action("EmbarkStudios/cargo-deny-action"),
     );
 }
