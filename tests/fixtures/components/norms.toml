@@ -1,0 +1,2 @@
+[components]
+exclude = ["vendor", "missing"]

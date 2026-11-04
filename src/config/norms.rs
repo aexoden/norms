@@ -7,6 +7,7 @@
 //! should fail validation rather than be silently ignored.
 
 use std::collections::{BTreeSet, HashSet};
+use std::path::{Component as PathComponent, Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -14,11 +15,34 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, deny_unknown_fields)]
 pub(crate) struct NormsConfig {
+    /// How norms finds the project's components.
+    pub components: ComponentsConfig,
     /// Checks the project departs from, each with its rationale.
     pub waivers: Vec<Waiver>,
 }
 
 impl NormsConfig {
+    /// The excluded directories, as paths relative to the project root, leaving out any that aren't plain relative
+    /// paths (see [`invalid_excludes`](Self::invalid_excludes)).
+    pub(crate) fn excluded_paths(&self) -> Vec<PathBuf> {
+        self.components
+            .exclude
+            .iter()
+            .filter(|exclude| is_plain_relative_path(exclude))
+            .map(PathBuf::from)
+            .collect()
+    }
+
+    /// The excluded directories that aren't plain relative paths: empty, absolute, or holding a `.` or `..`.
+    pub(crate) fn invalid_excludes(&self) -> Vec<&str> {
+        self.components
+            .exclude
+            .iter()
+            .filter(|exclude| !is_plain_relative_path(exclude))
+            .map(String::as_str)
+            .collect()
+    }
+
     /// The checks named by waivers that give no reason.
     pub(crate) fn unexplained_waivers(&self) -> Vec<&str> {
         self.waivers
@@ -38,6 +62,28 @@ impl NormsConfig {
             .filter(|&check| !seen.insert(check))
             .collect()
     }
+}
+
+/// The `[components]` table.
+#[derive(Debug, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct ComponentsConfig {
+    /// Directories, relative to the project root, that norms doesn't search for components.
+    pub exclude: Vec<String>,
+}
+
+/// Whether `path` is a non-empty relative path of names only, separated by single `/`s and with no `.`, `..` or
+/// root. A trailing `/` is allowed.
+fn is_plain_relative_path(path: &str) -> bool {
+    let names = path.strip_suffix('/').unwrap_or(path);
+
+    !names.is_empty()
+        && names
+            .split('/')
+            .all(|name| !name.is_empty() && name != "." && name != "..")
+        && Path::new(names)
+            .components()
+            .all(|component| matches!(component, PathComponent::Normal(_)))
 }
 
 /// A `[[waivers]]` entry.
@@ -106,6 +152,28 @@ mod tests {
         assert_eq!(
             config.duplicate_waivers().into_iter().collect::<Vec<_>>(),
             ["a", "b"]
+        );
+    }
+
+    #[test]
+    fn parses_excludes() {
+        let config: NormsConfig = toml::from_str(
+            r#"
+            [components]
+            exclude = ["tests/fixtures", "vendor/", "", "/abs", "../up", "./here", "a/../b", "a/./b", "a//b", "/"]
+            "#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.excluded_paths(),
+            [PathBuf::from("tests/fixtures"), PathBuf::from("vendor")]
+        );
+        assert_eq!(
+            config.invalid_excludes(),
+            [
+                "", "/abs", "../up", "./here", "a/../b", "a/./b", "a//b", "/"
+            ]
         );
     }
 

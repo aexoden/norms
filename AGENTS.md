@@ -69,13 +69,19 @@ prints a `Report`, exiting 1 if any check failed.
   ID (subject, then property: `cargo-toml-license`; see `report.rs`), so don't
   rename an ID once projects may depend on it; the name beside it is free text.
 - `norms.toml` (`config/norms.rs`, documented in `STANDARDS.md`) is optional
-  and holds the project's waivers. Unlike the other models it denies unknown
-  fields. `run_all_checks` applies the waivers last
+  and holds the project's waivers and the directories excluded from component
+  detection; norms' own excludes `tests/fixtures`. Unlike the other models it
+  denies unknown fields. `run_all_checks` applies the waivers last
   (`Report::apply_waivers`), turning waived failures and warnings into skips.
-- `detection.rs`: components come from marker files at the root
-  (`Cargo.toml`, `pyproject.toml`, `package.json`, `CMakeLists.txt`), each
-  making the root a component of that language; TypeScript may also live in
-  `frontend/`. C++ is detected but has no checks yet.
+- `detection.rs`: components come from marker files (`Cargo.toml`,
+  `pyproject.toml`, `package.json`, `CMakeLists.txt`) anywhere in the project,
+  found with the `ignore` crate's walker: it honors the project's own
+  `.gitignore` files, skips hidden directories, build output and installed
+  dependencies (`node_modules`, `target`, `.venv`) and the directories
+  `norms.toml` excludes, never descends into symlinked
+  directories, and counts a symlinked marker only if it resolves inside the
+  root. A marker nested in a component of the same language is folded into it.
+  C++ is detected but has no checks yet.
 
 `norms verify` is not yet gating in CI: it still reports false findings on
 projects rendered from the template.
@@ -99,7 +105,14 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   has a services-only `devbox.json` beside a stub marker file for each
   language, and `invalid-ci` has a malformed `ci.yaml` beside a stub
   `Cargo.toml`, with a malformed and a valid workflow beside it and files
-  that aren't workflows, which norms skips.
+  that aren't workflows, which norms skips. `components` has stub markers
+  laid out to exercise detection: a Cargo workspace member and a nested
+  pnpm package to fold, two TypeScript components, a Python one, and markers
+  under `node_modules/`, a hidden directory and an excluded `vendor/` to
+  skip; its `norms.toml` also excludes a missing directory. Symlinks and
+  `.gitignore` handling are covered by the unit tests in `detection.rs`
+  instead: a fixture's `.gitignore` would also apply to this repository, so
+  the files it ignores couldn't be committed.
 - Fixtures are kept exactly as written: pre-commit and markdownlint skip them,
   and `REUSE.toml` covers them, so one may be deliberately broken or lack
   headers. A fix or new check that depends on a project's layout gets a fixture.

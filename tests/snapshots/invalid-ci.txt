@@ -38,6 +38,7 @@ fail  workflow-valid  CI: audit.yml: valid
       3 | jobs: {}
         |     ^ illegal placement of ':' indicator
 pass  workflow-valid  CI: release.yaml: valid
+pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
 warn  cargo-toml-license  [.] Cargo.toml: has license

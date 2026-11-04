@@ -19,3 +19,4 @@ warn  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
+pass  components-search  Components: every directory searched

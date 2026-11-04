@@ -1,0 +1,106 @@
+exit: 1
+languages: python, rust, typescript
+components: python (tools), rust (.), typescript (apps/admin), typescript (apps/web)
+
+pass  norms-toml-exists  norms.toml: exists
+pass  norms-toml-valid  norms.toml: valid
+pass  norms-toml-waiver-reasons  norms.toml: every waiver has a reason
+pass  norms-toml-waiver-duplicates  norms.toml: no check is waived twice
+pass  norms-toml-exclude-paths  norms.toml: every excluded directory is a plain relative path
+pass  norms-toml-exclude-exists  norms.toml: excluded directory vendor exists
+warn  norms-toml-exclude-exists  norms.toml: excluded directory missing exists
+      No such directory
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [tools] pyproject.toml: exists
+pass  pyproject-valid  [tools] pyproject.toml: valid
+pass  pyproject-project  [tools] pyproject.toml: has [project] section
+warn  python-src-layout  [tools] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [tools] Python: uv.lock
+      Not found: uv.lock
+warn  python-dependency-groups  [tools] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [tools] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [tools] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [tools] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+warn  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+warn  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [.] Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  [.] Rust: deny.toml
+      Not found: deny.toml
+pass  package-json-exists  [apps/admin] package.json: exists
+pass  package-json-valid  [apps/admin] package.json: valid
+pass  package-json-name  [apps/admin] package.json: has name
+warn  package-json-esm  [apps/admin] package.json: uses ESM (type: module)
+      Consider setting "type": "module" for ESM support
+warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js in devEngines
+      Missing devEngines.runtime
+warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
+      Missing devEngines.packageManager
+warn  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+fail  tsconfig-exists  [apps/admin] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [apps/admin] ESLint: configured
+      Not found: eslint.config.ts
+warn  eslint-dependency  [apps/admin] ESLint: in dependencies
+warn  eslint-typescript-eslint  [apps/admin] ESLint: typescript-eslint configured
+      Consider adding typescript-eslint for TypeScript-aware linting
+fail  prettier-config-exists  [apps/admin] Prettier: configured
+      Not found: .prettierrc
+warn  prettier-ignore-exists  [apps/admin] Prettier: .prettierignore exists
+      Consider adding .prettierignore
+warn  prettier-dependency  [apps/admin] Prettier: in dependencies
+warn  package-json-scripts  [apps/admin] package.json: has scripts
+      No scripts defined in package.json
+pass  package-json-exists  [apps/web] package.json: exists
+pass  package-json-valid  [apps/web] package.json: valid
+pass  package-json-name  [apps/web] package.json: has name
+warn  package-json-esm  [apps/web] package.json: uses ESM (type: module)
+      Consider setting "type": "module" for ESM support
+warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in devEngines
+      Missing devEngines.runtime
+warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines
+      Missing devEngines.packageManager
+warn  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+fail  tsconfig-exists  [apps/web] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [apps/web] ESLint: configured
+      Not found: eslint.config.ts
+warn  eslint-dependency  [apps/web] ESLint: in dependencies
+warn  eslint-typescript-eslint  [apps/web] ESLint: typescript-eslint configured
+      Consider adding typescript-eslint for TypeScript-aware linting
+fail  prettier-config-exists  [apps/web] Prettier: configured
+      Not found: .prettierrc
+warn  prettier-ignore-exists  [apps/web] Prettier: .prettierignore exists
+      Consider adding .prettierignore
+warn  prettier-dependency  [apps/web] Prettier: in dependencies
+warn  package-json-scripts  [apps/web] package.json: has scripts
+      No scripts defined in package.json

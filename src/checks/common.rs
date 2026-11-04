@@ -11,7 +11,7 @@ use crate::report::{Outcome, Report, file_exists, matches_regex};
 // norms configuration
 //
 
-/// Check `norms.toml`, which is optional: most projects have no waivers.
+/// Check `norms.toml`, which is optional: most projects have no waivers or exclusions.
 pub(crate) fn check_norms_config(ctx: &ProjectContext, report: &mut Report) {
     let status = ctx.norms();
 
@@ -47,6 +47,56 @@ pub(crate) fn check_norms_config(ctx: &ProjectContext, report: &mut Report) {
                 "Waived more than once: {}",
                 duplicates.into_iter().collect::<Vec<_>>().join(", ")
             ))
+        },
+    );
+
+    let invalid = config.invalid_excludes();
+
+    report.must(
+        "norms-toml-exclude-paths",
+        "norms.toml: every excluded directory is a plain relative path",
+        if invalid.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a plain relative path: {}",
+                invalid
+                    .iter()
+                    .map(|path| format!("{path:?}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ))
+        },
+    );
+
+    for path in config.excluded_paths() {
+        report.should(
+            "norms-toml-exclude-exists",
+            format!("norms.toml: excluded directory {} exists", path.display()),
+            if ctx.path().join(&path).is_dir() {
+                Outcome::Pass
+            } else {
+                Outcome::fail("No such directory")
+            },
+        );
+    }
+}
+
+//
+// Components
+//
+
+/// Check that the search for components covered the whole project.
+pub(crate) fn check_components(ctx: &ProjectContext, report: &mut Report) {
+    let errors = &ctx.detection().errors;
+
+    report.should(
+        "components-search",
+        "Components: every directory searched",
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("\n"))
         },
     );
 }

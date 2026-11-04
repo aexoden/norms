@@ -30,6 +30,7 @@ pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: audit.yaml: valid
+pass  components-search  Components: every directory searched
 pass  pyproject-exists  [.] pyproject.toml: exists
 pass  pyproject-valid  [.] pyproject.toml: valid
 pass  pyproject-project  [.] pyproject.toml: has [project] section

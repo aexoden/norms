@@ -32,6 +32,7 @@ use crate::config::{
     CargoToml, DevboxConfig, NormsConfig, PackageJson, PrecommitConfig, PyprojectToml,
     RenovateConfig, TsConfig, Workflow,
 };
+use crate::detection::Detection;
 use crate::models::{Component, Language};
 
 /// The file name of the CI workflow in `.github/workflows/`.
@@ -86,7 +87,7 @@ impl<T> ConfigStatus<T> {
 /// `Cargo.toml`, are in its [`ComponentContext`].
 pub(crate) struct ProjectContext {
     path: PathBuf,
-    components: OnceLock<Vec<Component>>,
+    detection: OnceLock<Detection>,
     languages: OnceLock<BTreeSet<Language>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     norms: OnceLock<ConfigStatus<NormsConfig>>,
@@ -102,7 +103,7 @@ impl ProjectContext {
     pub(crate) const fn new(path: PathBuf) -> Self {
         Self {
             path,
-            components: OnceLock::new(),
+            detection: OnceLock::new(),
             languages: OnceLock::new(),
             devbox: OnceLock::new(),
             norms: OnceLock::new(),
@@ -119,10 +120,24 @@ impl ProjectContext {
         &self.path
     }
 
+    /// The search for the project's components (cached).
+    ///
+    /// The directories `norms.toml` excludes aren't searched; if `norms.toml` is malformed, none are excluded.
+    pub(crate) fn detection(&self) -> &Detection {
+        self.detection.get_or_init(|| {
+            let excluded = self
+                .norms()
+                .as_ref_ok()
+                .map(NormsConfig::excluded_paths)
+                .unwrap_or_default();
+
+            crate::detection::detect_components(&self.path, &excluded)
+        })
+    }
+
     /// Detected components (cached), in a stable order.
     pub(crate) fn components(&self) -> &[Component] {
-        self.components
-            .get_or_init(|| crate::detection::detect_components(&self.path))
+        &self.detection().components
     }
 
     /// The languages of the detected components (cached), in a stable order.

@@ -39,6 +39,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_precommit(ctx, report);
     common::check_renovate(ctx, report);
     common::check_github_actions(ctx, report);
+    common::check_components(ctx, report);
 
     // Language-specific checks
     for &language in ctx.languages() {
@@ -202,9 +203,51 @@ mod tests {
         }
     }
 
+    #[test]
+    fn excluded_directories_hold_no_components() {
+        let project = TempProject::new(
+            "excluded",
+            Some("[components]\nexclude = [\"tests/fixtures\", \"missing\", \"../up\"]\n"),
+        );
+        fs::create_dir_all(project.0.join("tests/fixtures/web")).unwrap();
+        fs::write(project.0.join("tests/fixtures/web/package.json"), "{}").unwrap();
+        fs::write(project.0.join("Cargo.toml"), "").unwrap();
+        let results = project.verify();
+
+        assert!(
+            results
+                .iter()
+                .all(|r| r.component.as_deref().is_none_or(|c| c == "."))
+        );
+        assert!(!results.iter().any(|r| r.id.starts_with("package-json-")));
+
+        let paths = find(&results, "norms-toml-exclude-paths");
+        assert!(matches!(
+            paths.as_slice(),
+            [r] if r.status == Status::Fail && r.message == "Not a plain relative path: \"../up\""
+        ));
+        let exists: Vec<_> = find(&results, "norms-toml-exclude-exists")
+            .iter()
+            .map(|r| (r.name.as_str(), r.status))
+            .collect();
+        assert_eq!(
+            exists,
+            [
+                (
+                    "norms.toml: excluded directory tests/fixtures exists",
+                    Status::Pass
+                ),
+                (
+                    "norms.toml: excluded directory missing exists",
+                    Status::Warn
+                ),
+            ]
+        );
+    }
+
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
-    /// per waiver, no check here records more than one result for each component, so an ID repeated within a
-    /// component means two checks share it.
+    /// per waiver or excluded directory, no check here records more than one result for each component, so an ID
+    /// repeated within a component means two checks share it.
     #[test]
     fn check_ids_are_valid_and_unique() {
         let ctx = ProjectContext::new(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
@@ -215,7 +258,8 @@ mod tests {
         for result in &report.results {
             assert!(is_valid_check_id(&result.id), "invalid ID: {}", result.id);
             assert!(
-                result.id == "norms-toml-waiver-needed"
+                ["norms-toml-waiver-needed", "norms-toml-exclude-exists"]
+                    .contains(&result.id.as_str())
                     || seen.insert((&result.component, &result.id)),
                 "duplicate ID: {}",
                 result.id

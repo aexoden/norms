@@ -42,17 +42,34 @@ A project that departs from a standard records the exception in `norms.toml`, at
 the repository root. Most projects need no exceptions, and so no `norms.toml`.
 
 ```toml
+[components]
+exclude = ["tests/fixtures"]
+
 [[waivers]]
 check = "gitattributes-binary"
 reason = "The repository holds no binary files."
 ```
 
+- `norms verify` finds the project's components by their marker files:
+  `Cargo.toml`, `pyproject.toml`, `package.json` and `CMakeLists.txt`, at the
+  root or in any subdirectory. It checks each component's own files in its
+  directory, and the repository-wide files, such as the workflows, once. A
+  marker inside a component of the same language, such as a Cargo workspace
+  member, belongs to that component; components of different languages may
+  nest. The search skips hidden directories, whatever the project's
+  `.gitignore` files exclude, `node_modules`, `target` and `.venv`, and doesn't
+  follow symlinked directories or symlinked markers that lead outside the
+  project. A directory it can't read is reported as a warning.
+- `[components] exclude` lists directories, relative to the root, that hold
+  marker files but no components, such as test fixtures. norms doesn't search
+  them. An entry must be a plain relative path, without `.` or `..`; one that
+  names no directory is reported as a warning.
 - Each `[[waivers]]` entry names a check by its ID and gives the reason for the
   exception. A waived check is reported as skipped, with the reason, instead of
-  failing or warning; a check that inspects several files is waived for all of
-  them. A waiver whose check passes or doesn't run is reported as a warning, so
-  waivers don't outlive their need. The checks of `norms.toml` itself can't be
-  waived; a waiver naming one fails.
+  failing or warning; a check that inspects several files or components is
+  waived for all of them. A waiver whose check passes or doesn't run is
+  reported as a warning, so waivers don't outlive their need. The checks of
+  `norms.toml` itself can't be waived; a waiver naming one fails.
 - Every waiver needs a reason, and a check may be waived only once.
 - Check IDs are stable, kebab-case names of the subject and then the property
   checked, such as `cargo-toml-license`. `norms verify` prints each one before
