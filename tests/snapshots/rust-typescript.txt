@@ -50,10 +50,8 @@ pass  package-json-exists  package.json: exists
 pass  package-json-valid  package.json: valid
 pass  package-json-name  package.json: has name
 pass  package-json-esm  package.json: uses ESM (type: module)
-warn  package-json-engines  package.json: has engines field
-      Consider specifying engine requirements
-warn  pnpm-package-manager  pnpm: configured as package manager
-      Missing 'packageManager' field
+pass  package-json-dev-engines-runtime  package.json: pins Node.js in devEngines
+pass  package-json-dev-engines-package-manager  package.json: pins pnpm in devEngines
 pass  pnpm-lock-exists  pnpm: pnpm-lock.yaml exists
 pass  tsconfig-exists  tsconfig.json: exists
 pass  tsconfig-valid  tsconfig.json: valid

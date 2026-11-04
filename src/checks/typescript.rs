@@ -3,7 +3,7 @@
 
 //! TypeScript-specific checks.
 
-use crate::config::{TsCompilerOptions, TsConfig};
+use crate::config::{TsCompilerOptions, TsConfig, check_dev_engine};
 use crate::context::{ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
@@ -39,15 +39,16 @@ pub(crate) fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 
-    // Engine constraints
+    // Toolchain pins
     report.should(
-        "package-json-engines",
-        "package.json: has engines field",
-        if config.engines.is_some() {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider specifying engine requirements")
-        },
+        "package-json-dev-engines-runtime",
+        "package.json: pins Node.js in devEngines",
+        check_dev_engine(config, "runtime", "node"),
+    );
+    report.should(
+        "package-json-dev-engines-package-manager",
+        "package.json: pins pnpm in devEngines",
+        check_dev_engine(config, "packageManager", "pnpm"),
     );
 }
 
@@ -56,32 +57,11 @@ pub(crate) fn check_package_json(ctx: &ProjectContext, report: &mut Report) {
 //
 
 pub(crate) fn check_pnpm(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = ctx.package_json().as_ref_ok() else {
+    if ctx.package_json().as_ref_ok().is_none() {
         return;
-    };
+    }
 
     let typescript_root = ctx.typescript_root();
-
-    // packageManager field
-    if config.uses_pnpm() {
-        report.should(
-            "pnpm-package-manager",
-            "pnpm: configured as package manager",
-            Outcome::Pass,
-        );
-    } else if let Some(pm) = config.package_manager_display() {
-        report.should(
-            "pnpm-package-manager",
-            "pnpm: configured as package manager",
-            Outcome::fail(format!("Package manager is '{pm}', expected pnpm")),
-        );
-    } else {
-        report.should(
-            "pnpm-package-manager",
-            "pnpm: configured as package manager",
-            Outcome::fail("Missing 'packageManager' field"),
-        );
-    }
 
     // Lock file
     report.should(
