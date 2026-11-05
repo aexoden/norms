@@ -57,7 +57,7 @@ jobs:
         uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
 
   zizmor:
-    name: GitHub Actions security analysis with zizmor
+    name: GitHub Actions security analysis with zizmor 🌈
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -67,7 +67,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run zizmor
+      - name: Run zizmor 🌈
         uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           advanced-security: false
