@@ -566,6 +566,9 @@ default_stages: [pre-commit]
 
 Without `default_stages`, a hook that doesn't list its own stages runs in every
 installed stage, so the language hooks would run again on the commit message.
+A project with hooks of another type, such as `pre-push`, adds that type to
+`default_install_hook_types`; `default_stages` stays `[pre-commit]`, and those
+hooks list their own stages.
 
 Hook revisions are pinned to release tags and updated by Renovate.
 

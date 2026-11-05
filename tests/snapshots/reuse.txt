@@ -23,6 +23,8 @@ fail  gitattributes-exists  .gitattributes: exists
 fail  editorconfig-exists  .editorconfig: exists
       File not found
 pass  precommit-config-exists  .pre-commit-config.yaml
+warn  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
+      No default_install_hook_types, so pre-commit install installs only the pre-commit hook
 warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
 warn  precommit-reuse  Pre-commit: reuse hook

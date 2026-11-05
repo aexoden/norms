@@ -6,10 +6,27 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+/// The hook types pre-commit can install, from its `clientlib.HOOK_TYPES`.
+const HOOK_TYPES: [&str; 10] = [
+    "commit-msg",
+    "post-checkout",
+    "post-commit",
+    "post-merge",
+    "post-rewrite",
+    "pre-commit",
+    "pre-merge-commit",
+    "pre-push",
+    "pre-rebase",
+    "prepare-commit-msg",
+];
+
 /// Top-level `.pre-commit-config.yaml` structure.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct PrecommitConfig {
+    /// The hook types a plain `pre-commit install` installs, kept as YAML wrote it, so that a malformed value fails
+    /// only the check reading it.
+    pub default_install_hook_types: Option<Value>,
     /// The stages a hook runs in when it doesn't list its own, kept as YAML wrote it, so that a malformed value fails
     /// only the check reading it.
     pub default_stages: Option<Value>,
@@ -63,6 +80,39 @@ impl PrecommitConfig {
         }
     }
 
+    /// Whether `default_install_hook_types` lists both `pre-commit` and `commit-msg`, so that a plain `pre-commit
+    /// install` also installs the commit message hook. Any other hook types pre-commit knows may be listed too.
+    pub(crate) fn check_default_install_hook_types(&self) -> Result<(), String> {
+        const REQUIRED: [&str; 2] = ["pre-commit", "commit-msg"];
+        match &self.default_install_hook_types {
+            None | Some(Value::Null) => Err(
+                "No default_install_hook_types, so pre-commit install installs only the pre-commit hook".to_owned(),
+            ),
+            Some(Value::Array(types)) => {
+                let missing: Vec<_> = REQUIRED
+                    .into_iter()
+                    .filter(|required| !types.iter().any(|hook_type| hook_type == required))
+                    .collect();
+                let unknown: Vec<_> = types
+                    .iter()
+                    .filter(|hook_type| !hook_type.as_str().is_some_and(|name| HOOK_TYPES.contains(&name)))
+                    .map(|hook_type| hook_type.as_str().map_or_else(|| hook_type.to_string(), str::to_owned))
+                    .collect();
+                if !unknown.is_empty() {
+                    Err(format!(
+                        "default_install_hook_types lists {}, which pre-commit doesn't know",
+                        unknown.join(", ")
+                    ))
+                } else if missing.is_empty() {
+                    Ok(())
+                } else {
+                    Err(format!("default_install_hook_types lacks {}", missing.join(" and ")))
+                }
+            }
+            Some(_) => Err("default_install_hook_types isn't a list".to_owned()),
+        }
+    }
+
     /// Check if any hook with the given ID exists across all repos.
     pub(crate) fn has_hook(&self, hook_id: &str) -> bool {
         self.hooks(hook_id).next().is_some()
@@ -90,6 +140,59 @@ mod tests {
         serde_saphyr::from_str::<PrecommitConfig>(yaml)
             .unwrap()
             .check_default_stages()
+    }
+
+    fn default_install_hook_types(yaml: &str) -> Result<(), String> {
+        serde_saphyr::from_str::<PrecommitConfig>(yaml)
+            .unwrap()
+            .check_default_install_hook_types()
+    }
+
+    #[test]
+    fn default_install_hook_types_must_include_commit_msg() {
+        for yaml in [
+            "default_install_hook_types: [pre-commit, commit-msg]\n",
+            "default_install_hook_types: [commit-msg, pre-commit]\n",
+            "default_install_hook_types: [pre-commit, commit-msg, pre-push]\n",
+        ] {
+            assert_eq!(default_install_hook_types(yaml), Ok(()), "{yaml}");
+        }
+        for (yaml, error) in [
+            (
+                "repos: []\n",
+                "No default_install_hook_types, so pre-commit install installs only the pre-commit hook",
+            ),
+            (
+                "default_install_hook_types:\n",
+                "No default_install_hook_types, so pre-commit install installs only the pre-commit hook",
+            ),
+            (
+                "default_install_hook_types: [pre-commit]\n",
+                "default_install_hook_types lacks commit-msg",
+            ),
+            (
+                "default_install_hook_types: [commit-msg, pre-push]\n",
+                "default_install_hook_types lacks pre-commit",
+            ),
+            (
+                "default_install_hook_types: []\n",
+                "default_install_hook_types lacks pre-commit and commit-msg",
+            ),
+            (
+                "default_install_hook_types: pre-commit\n",
+                "default_install_hook_types isn't a list",
+            ),
+            (
+                "default_install_hook_types: [pre-commit, commit-msg, pre_push, 3]\n",
+                "default_install_hook_types lists pre_push, 3, which pre-commit doesn't know",
+            ),
+        ] {
+            assert_eq!(
+                default_install_hook_types(yaml),
+                Err(error.to_owned()),
+                "{yaml}"
+            );
+        }
     }
 
     #[test]

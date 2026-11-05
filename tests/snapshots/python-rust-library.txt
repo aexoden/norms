@@ -26,6 +26,7 @@ pass  editorconfig-indent-size  .editorconfig: indent_size=4
 pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
 pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
 pass  precommit-config-exists  .pre-commit-config.yaml
+pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 pass  precommit-reuse  Pre-commit: reuse hook
 pass  precommit-tombi  Pre-commit: tombi-format hook

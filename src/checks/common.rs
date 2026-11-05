@@ -308,6 +308,11 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.should(
+        "precommit-install-hook-types",
+        "Pre-commit: default_install_hook_types includes pre-commit and commit-msg",
+        config.check_default_install_hook_types(),
+    );
+    report.should(
         "precommit-default-stages",
         "Pre-commit: default_stages is [pre-commit]",
         config.check_default_stages(),
