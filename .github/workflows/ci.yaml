@@ -58,6 +58,26 @@ jobs:
           arguments: --workspace --all-features
           command: check -D warnings bans licenses sources
 
+  cargo-lock:
+    name: Check that Cargo.lock is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+
+      - name: Check that Cargo.lock is up to date
+        run: cargo update --workspace --locked
+
   cargo-test:
     name: Run Rust tests
     runs-on: ubuntu-latest
@@ -79,7 +99,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [build-norms, cargo-deny, cargo-test, clippy, markdownlint, pre-commit, reuse, rustfmt, template, zizmor]
+    needs: [build-norms, cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, pre-commit, reuse, rustfmt, template, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -152,7 +172,7 @@ jobs:
       - name: Run the hooks that have no job of their own
         env:
           PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
-          SKIP: cargo-deny,cargo-test,clippy,markdownlint-cli2,reuse,rustfmt,zizmor
+          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,reuse,rustfmt,zizmor
         run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
 
   reuse:

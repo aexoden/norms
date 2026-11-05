@@ -949,10 +949,18 @@ The pre-commit hooks and CI both run:
 
 | Hook ID      | Command                                                                         |
 |--------------|---------------------------------------------------------------------------------|
+| `cargo-lock` | `cargo update --workspace --locked`                                             |
 | `rustfmt`    | `cargo fmt --all --check`                                                       |
 | `clippy`     | `cargo clippy --workspace --all-targets --all-features -- -D warnings`          |
 | `cargo-test` | `cargo test --workspace --all-features`                                         |
 | `cargo-deny` | `cargo deny --workspace --all-features check -D warnings bans licenses sources` |
+
+`cargo-lock` fails, naming the entries that would change, if `Cargo.lock` is
+out of date with `Cargo.toml`. Updating only the workspace's own packages,
+`cargo update --workspace` changes nothing in a current lock file, and
+`--locked` turns any change it would make into an error, so the lock file is
+left untouched. The other Cargo commands would quietly update a stale lock file
+instead.
 
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
 reads `rust-toolchain.toml` and caches builds with its built-in

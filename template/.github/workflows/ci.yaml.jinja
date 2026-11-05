@@ -57,7 +57,7 @@
 {%- endif %}
 {%- endmacro %}
 {%- set jobs = ['markdownlint', 'pre-commit', 'reuse', 'zizmor'] %}
-{%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
+{%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vitest'] %}{% endif %}
 {#- The pre-commit job skips the hooks that have a job of their own, the hook for
@@ -132,6 +132,15 @@ jobs:
 {%- if rust_prefix %}
           manifest-path: {{ rust_prefix }}Cargo.toml
 {%- endif %}
+{{ job('cargo-lock', 'Check that Cargo.lock is up to date', rust_dir) }}
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@{{ action_setup_rust_toolchain }}
+        with:
+          cache: false
+
+      - name: Check that Cargo.lock is up to date
+        run: cargo update --workspace --locked
 {{ job('cargo-test', 'Run Rust tests', rust_dir, timeout=30) }}
 {{- setup_rust() }}
 

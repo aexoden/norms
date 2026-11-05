@@ -53,6 +53,12 @@ repos:
   # Rust
   - repo: local
     hooks:
+      - id: cargo-lock
+        name: cargo lock
+        description: Check that Cargo.lock is up to date
+        entry: cargo update --workspace --locked
+        language: system
+        pass_filenames: false
       - id: rustfmt
         name: rustfmt
         description: Format Rust code using rustfmt
