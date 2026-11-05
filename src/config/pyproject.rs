@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 use std::str::FromStr as _;
 
-use pep508_rs::pep440_rs::Operator;
+use pep508_rs::pep440_rs::{Operator, Version, VersionSpecifiers};
 use pep508_rs::{PackageName, Pep508ErrorSource, Requirement, VerbatimUrl, VersionOrUrl};
 use serde::Deserialize;
 
@@ -54,6 +54,38 @@ pub(crate) struct ToolSection {
 }
 
 impl PyprojectToml {
+    /// The oldest Python `requires-python` allows: the highest version among its `>=`, `~=`, `==` and `===`
+    /// specifiers, since each excludes anything older. The other operators set no exact lower bound, and exclusions
+    /// aren't applied, so `>=3.12, !=3.12.*` gives 3.12.
+    pub(crate) fn min_python(&self) -> Result<Version, String> {
+        let Some(requires) = self
+            .project
+            .as_ref()
+            .and_then(|project| project.requires_python.as_deref())
+        else {
+            return Err("pyproject.toml sets no requires-python".to_owned());
+        };
+        let specifiers = VersionSpecifiers::from_str(requires)
+            .map_err(|error| format!("Invalid requires-python: {error}"))?;
+        specifiers
+            .iter()
+            .filter(|specifier| {
+                matches!(
+                    specifier.operator(),
+                    Operator::GreaterThanEqual
+                        | Operator::TildeEqual
+                        | Operator::Equal
+                        | Operator::EqualStar
+                        | Operator::ExactEqual
+                )
+            })
+            .map(|specifier| specifier.version().clone())
+            .max()
+            .ok_or_else(|| {
+                format!("requires-python ({requires}) sets no lower bound with >=, ~=, == or ===")
+            })
+    }
+
     /// Whether the project is an application rather than a library: whether it installs a command, through a
     /// non-empty `[project.scripts]` or `[project.gui-scripts]`.
     pub(crate) fn is_application(&self) -> bool {
@@ -302,6 +334,40 @@ mod tests {
 
     fn parse(pyproject: &str) -> PyprojectToml {
         toml::from_str(pyproject).unwrap()
+    }
+
+    #[test]
+    fn min_python_is_the_lower_bound() {
+        for (requires, min) in [
+            (">=3.12", "3.12"),
+            (">=3.10, <4", "3.10"),
+            ("~=3.11.2", "3.11.2"),
+            ("==3.15.0", "3.15.0"),
+            ("==3.13.*", "3.13"),
+            (">=3.10,>=3.12,!=3.12.1", "3.12"),
+        ] {
+            let pyproject = parse(&format!("[project]\nrequires-python = \"{requires}\"\n"));
+            assert_eq!(
+                pyproject.min_python(),
+                Ok(min.parse().unwrap()),
+                "{requires}"
+            );
+        }
+        assert_eq!(
+            parse("[project]\n").min_python(),
+            Err("pyproject.toml sets no requires-python".to_owned())
+        );
+        assert_eq!(
+            parse("[project]\nrequires-python = \">3.11, <4\"\n").min_python(),
+            Err(
+                "requires-python (>3.11, <4) sets no lower bound with >=, ~=, == or ===".to_owned()
+            )
+        );
+        assert!(
+            parse("[project]\nrequires-python = \">=three\"\n")
+                .min_python()
+                .is_err_and(|error| error.starts_with("Invalid requires-python: "))
+        );
     }
 
     #[test]

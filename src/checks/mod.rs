@@ -100,6 +100,7 @@ fn check_component(
             python::check_ruff(ctx, report);
             python::check_ruff_lint(ctx, report);
             python::check_mypy(ctx, report);
+            python::check_min_python_job(project, ctx, report);
         }
         Language::Rust => {
             rust::check_cargo(ctx, report);

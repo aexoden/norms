@@ -66,6 +66,8 @@ warn  ruff-lint-configured  [.] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [.] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
+      No job sets setup-uv's python-version input and runs pytest
 warn  python-precommit-ruff  Python pre-commit: Ruff hooks
 warn  python-precommit-mypy  Python pre-commit: Mypy hook
 warn  python-ci-ruff-format  Python CI: format check
