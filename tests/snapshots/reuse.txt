@@ -86,6 +86,8 @@ warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
+warn  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
+      No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
 warn  cargo-config-exists  .cargo/config.toml: exists
       File not found
 warn  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook

@@ -3,9 +3,12 @@
 
 //! Rust-specific checks.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::config::{CargoConfig, CargoToml, CargoWorkspace, Workflow, commands};
+use semver::Comparator;
+
+use crate::config::{CargoConfig, CargoToml, CargoWorkspace, Workflow, WorkflowStep, commands};
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
@@ -270,6 +273,121 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
             file_exists(&ctx.path().join("Cargo.lock")),
         );
     }
+}
+
+//
+// MSRV in CI
+//
+
+/// Whether a script line compiles the crate: `cargo check`, `cargo build` or `cargo test`, with or without a
+/// `+toolchain`.
+fn compiles_crate(line: &str) -> bool {
+    commands(line).any(|words| {
+        cargo_subcommand(&words)
+            .is_some_and(|(subcommand, _)| matches!(subcommand, "check" | "build" | "test"))
+    })
+}
+
+/// The toolchain a setup-rust-toolchain step makes the default for the job: the last of its comma-separated
+/// `toolchain` input, unless `override: false` leaves `rust-toolchain.toml` in charge.
+fn default_toolchain(step: &WorkflowStep) -> Option<String> {
+    if step.input("override").as_deref() == Some("false") {
+        return None;
+    }
+    let toolchains = step.input("toolchain")?;
+    Some(
+        toolchains
+            .rsplit(',')
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_owned(),
+    )
+}
+
+/// Whether the toolchain `toolchain` is the Rust version `msrv`: the same major and minor version, and the same patch
+/// version if both give one.
+fn is_msrv_toolchain(toolchain: &str, msrv: &str) -> bool {
+    let (Ok(toolchain), Ok(msrv)) = (
+        toolchain.trim().parse::<Comparator>(),
+        msrv.trim().parse::<Comparator>(),
+    ) else {
+        return false;
+    };
+    toolchain.major == msrv.major
+        && toolchain.minor.is_some()
+        && toolchain.minor == msrv.minor
+        && (toolchain.patch.is_none() || msrv.patch.is_none() || toolchain.patch == msrv.patch)
+}
+
+/// Whether some job of `workflow` that compiles the crate installs each of `msrvs` as its default toolchain, through
+/// setup-rust-toolchain's `toolchain` input.
+fn msrvs_tested(msrvs: &BTreeSet<&str>, workflow: &Workflow) -> Result<(), String> {
+    let toolchains: Vec<String> = workflow
+        .steps_using_in_jobs_running("actions-rust-lang/setup-rust-toolchain", compiles_crate)
+        .filter_map(default_toolchain)
+        .collect();
+    if toolchains.is_empty() {
+        return Err(
+            "No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check"
+                .to_owned(),
+        );
+    }
+    if msrvs.is_empty() {
+        return Err("Cargo.toml sets no rust-version for the job to match".to_owned());
+    }
+
+    let untested: Vec<&str> = msrvs
+        .iter()
+        .filter(|msrv| {
+            !toolchains
+                .iter()
+                .any(|toolchain| is_msrv_toolchain(toolchain, msrv))
+        })
+        .copied()
+        .collect();
+    if untested.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "No job checks with the rust-version {} (the jobs install {})",
+            untested.join(", "),
+            toolchains.join(", ")
+        ))
+    }
+}
+
+/// The `rust-version` of each package in the component: its own package's and its workspace members', with inherited
+/// values resolved.
+fn declared_msrvs<'a>(ctx: &'a ComponentContext, config: &'a CargoToml) -> BTreeSet<&'a str> {
+    let workspace = config.workspace.as_ref();
+    std::iter::once(config)
+        .chain(ctx.cargo_members().parsed().map(|(_, member)| member))
+        .filter_map(|manifest| manifest.metadata(workspace).rust_version)
+        .collect()
+}
+
+/// Check that a library's CI checks it with its MSRV: some job that compiles the crate installs each `rust-version`
+/// its packages set.
+pub(crate) fn check_msrv_job(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    report: &mut Report,
+) {
+    let (Some(config), ConfigStatus::Ok(workflow)) =
+        (ctx.cargo().as_ref_ok(), project.ci_workflow())
+    else {
+        return;
+    };
+    if is_application(ctx, config) {
+        return;
+    }
+
+    report.should(
+        "rust-ci-msrv",
+        "Rust CI: MSRV checked (library)",
+        msrvs_tested(&declared_msrvs(ctx, config), workflow),
+    );
 }
 
 //
@@ -560,6 +678,124 @@ mod tests {
 
         assert_eq!(warnings("[workspace]\n"), 1);
         assert_eq!(warnings("[package]\nname = \"x\"\n\n[workspace]\n"), 0);
+    }
+
+    #[test]
+    fn msrv_toolchains_match_rust_version() {
+        for (toolchain, msrv) in [("1.85", "1.85"), ("1.85.0", "1.85"), ("1.85", "1.85.1")] {
+            assert!(is_msrv_toolchain(toolchain, msrv), "{toolchain} {msrv}");
+        }
+        for (toolchain, msrv) in [
+            ("1.86", "1.85"),
+            ("1.85.1", "1.85.0"),
+            ("1", "1.85"),
+            ("stable", "1.85"),
+            ("${{ matrix.rust }}", "1.85"),
+        ] {
+            assert!(!is_msrv_toolchain(toolchain, msrv), "{toolchain} {msrv}");
+        }
+    }
+
+    #[test]
+    fn msrv_jobs_install_every_rust_version() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  msrv:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: \"nightly, 1.85\"
+      - run: cargo check --workspace --all-features --locked
+  clippy:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: \"1.90\"
+      - run: cargo clippy --workspace
+  kept:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: \"1.80\"
+          override: false
+      - run: cargo test
+  listed:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: \"1.81, nightly\"
+      - run: cargo build
+",
+        )
+        .unwrap();
+        assert_eq!(msrvs_tested(&BTreeSet::from(["1.85"]), &workflow), Ok(()));
+        for msrv in ["1.90", "1.80", "1.81"] {
+            assert_eq!(
+                msrvs_tested(&BTreeSet::from(["1.85", msrv]), &workflow),
+                Err(format!(
+                    "No job checks with the rust-version {msrv} (the jobs install nightly, 1.85)"
+                )),
+                "{msrv}"
+            );
+        }
+        assert_eq!(
+            msrvs_tested(&BTreeSet::new(), &workflow),
+            Err("Cargo.toml sets no rust-version for the job to match".to_owned())
+        );
+        assert_eq!(
+            msrvs_tested(&BTreeSet::from(["1.85"]), &Workflow::default()),
+            Err(
+                "No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check"
+                    .to_owned()
+            )
+        );
+        for line in [
+            "cargo check",
+            "cargo +1.85 test --locked",
+            "cd crate && cargo build",
+        ] {
+            assert!(compiles_crate(line), "{line}");
+        }
+        for line in ["cargo clippy", "cargo fmt --check", "echo cargo-check"] {
+            assert!(!compiles_crate(line), "{line}");
+        }
+    }
+
+    #[test]
+    fn workspace_members_declare_their_msrvs() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("Cargo.toml"),
+            "[workspace]\nmembers = [\"a\", \"b\", \"c\"]\n\n[workspace.package]\nrust-version = \"1.85\"\n",
+        )
+        .unwrap();
+        for (member, rust_version) in [
+            ("a", "rust-version.workspace = true"),
+            ("b", "rust-version = \"1.88\""),
+            ("c", ""),
+        ] {
+            fs::create_dir_all(dir.path().join(member)).unwrap();
+            fs::write(
+                dir.path().join(member).join("Cargo.toml"),
+                format!("[package]\nname = \"{member}\"\n{rust_version}\n"),
+            )
+            .unwrap();
+        }
+
+        let component = Component {
+            language: Language::Rust,
+            path: PathBuf::new(),
+        };
+        let project = ProjectContext::new(dir.path().to_path_buf());
+        let ctx = ComponentContext::new(&project, &component);
+        let ConfigStatus::Ok(config) = ctx.cargo() else {
+            panic!("invalid manifest");
+        };
+        assert_eq!(
+            declared_msrvs(&ctx, config),
+            BTreeSet::from(["1.85", "1.88"])
+        );
     }
 
     #[test]

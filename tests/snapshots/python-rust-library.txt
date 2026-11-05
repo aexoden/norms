@@ -1,0 +1,112 @@
+exit: 0
+languages: python, rust
+components: python (.), rust (rust)
+
+pass  readme-exists  README.md
+pass  license-exists  LICENSE
+pass  licenses-dir-exists  LICENSES/: holds the license texts
+pass  license-copies  LICENSE: root copies match LICENSES/
+pass  reuse-toml-exists  REUSE.toml: exists
+pass  reuse-toml-valid  REUSE.toml: valid
+pass  reuse-toml-version  REUSE.toml: version 1
+pass  changelog-exists  CHANGELOG.md
+pass  gitignore-exists  .gitignore
+pass  gitattributes-exists  .gitattributes: exists
+pass  gitattributes-valid  .gitattributes: valid
+pass  gitattributes-text-auto  .gitattributes: text=auto
+pass  gitattributes-eol-lf  .gitattributes: eol=lf
+pass  gitattributes-binary  .gitattributes: binary markers
+pass  editorconfig-exists  .editorconfig: exists
+pass  editorconfig-valid  .editorconfig: valid
+pass  editorconfig-root  .editorconfig: root=true
+pass  editorconfig-charset  .editorconfig: charset=utf-8
+pass  editorconfig-end-of-line  .editorconfig: end_of_line=lf
+pass  editorconfig-indent-style  .editorconfig: indent_style=space
+pass  editorconfig-indent-size  .editorconfig: indent_size=4
+pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
+pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
+pass  precommit-config-exists  .pre-commit-config.yaml
+pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+pass  precommit-reuse  Pre-commit: reuse hook
+pass  precommit-tombi  Pre-commit: tombi-format hook
+pass  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+pass  renovate-exists  renovate.json: exists
+pass  renovate-valid  renovate.json: valid
+pass  renovate-schema  renovate.json: has $schema
+pass  renovate-extends-preset  renovate.json: extends the shared preset
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+pass  ci-yaml-valid  CI: ci.yaml: valid
+pass  audit-yaml-exists  CI: audit.yaml: exists
+pass  audit-yaml-valid  CI: audit.yaml: valid
+pass  audit-yaml-schedule  CI: audit.yaml: runs on a schedule
+pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
+pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+pass  ci-reuse  CI: REUSE compliance
+pass  ci-tombi  CI: TOML formatting
+pass  ci-zizmor  CI: zizmor (pedantic)
+pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [.] pyproject.toml: exists
+pass  pyproject-valid  [.] pyproject.toml: valid
+pass  pyproject-project  [.] pyproject.toml: has [project] section
+pass  pyproject-license-texts  [.] pyproject.toml: license has its texts in LICENSES/
+pass  python-src-layout  [.] Python: src/ directory
+pass  python-src-packages  [.] Python: src/ contains packages
+pass  uv-lock-exists  [.] Python: uv.lock
+pass  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
+pass  python-dependency-groups  [.] Python: has dependency-groups
+pass  python-dev-group  [.] Python: has dev dependency group
+pass  ruff-configured  [.] Ruff: configured
+pass  ruff-line-length  [.] Ruff: line-length set
+pass  ruff-format-configured  [.] Ruff format: configured
+pass  ruff-format-lf  [.] Ruff format: LF line endings
+pass  ruff-lint-configured  [.] Ruff lint: configured
+pass  ruff-lint-preview  [.] Ruff lint: preview mode
+pass  ruff-lint-rules  [.] Ruff lint: has rules selected
+pass  ruff-lint-all  [.] Ruff lint: uses ALL rule
+pass  ruff-lint-ignores  [.] Ruff lint: has ignore list
+pass  ruff-lint-pydocstyle  [.] Ruff lint: pydocstyle convention
+pass  ruff-lint-isort  [.] Ruff lint: isort configured
+pass  ruff-lint-copyright  [.] Ruff lint: copyright notice regex
+pass  mypy-configured  [.] mypy: configured
+pass  mypy-strict  [.] mypy: strict mode
+pass  python-precommit-ruff  Python pre-commit: Ruff hooks
+pass  python-precommit-ruff-check  Python pre-commit: ruff-check
+pass  python-precommit-ruff-format  Python pre-commit: ruff-format
+pass  python-precommit-mypy  Python pre-commit: Mypy hook
+pass  python-ci-ruff-format  Python CI: format check
+pass  python-ci-ruff-check  Python CI: lint check
+pass  python-ci-mypy  Python CI: type check
+pass  python-audit-uv  Python audit: uv audit
+pass  cargo-toml-exists  [rust] Cargo.toml: exists
+pass  cargo-toml-valid  [rust] Cargo.toml: valid
+pass  cargo-toml-license  [rust] Cargo.toml: has license
+pass  cargo-toml-license-texts  [rust] Cargo.toml: license has its texts in LICENSES/
+pass  cargo-toml-description  [rust] Cargo.toml: has description
+pass  cargo-toml-repository  [rust] Cargo.toml: has repository
+pass  cargo-toml-edition  [rust] Cargo.toml: has edition
+pass  rust-toolchain-toml-exists  [rust] ../rust-toolchain.toml: exists
+pass  rust-toolchain-toml-valid  [rust] ../rust-toolchain.toml: valid
+pass  rust-toolchain-toml-channel  [rust] ../rust-toolchain.toml: exact channel
+pass  rust-toolchain-toml-components  [rust] ../rust-toolchain.toml: clippy and rustfmt components
+pass  cargo-toml-rust-version  [rust] Rust: MSRV defined (rust-version)
+pass  clippy-lints  [rust] Cargo.toml: Clippy lints configured
+pass  clippy-pedantic  [rust] Cargo.toml: Clippy pedantic enabled
+pass  deny-toml-exists  [rust] Rust: deny.toml
+pass  rust-ci-msrv  [rust] Rust CI: MSRV checked (library)
+pass  cargo-config-exists  .cargo/config.toml: exists
+pass  cargo-config-valid  .cargo/config.toml: valid
+pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)
+pass  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
+pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
+pass  rust-precommit-clippy  Rust pre-commit: clippy hook
+pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
+pass  rust-ci-rustfmt  Rust CI: format check
+pass  rust-ci-clippy  Rust CI: clippy check
+pass  rust-ci-test  Rust CI: test
+pass  rust-ci-cargo-deny  Rust CI: cargo deny
+pass  rust-audit-cargo-deny  Rust audit: cargo deny advisories

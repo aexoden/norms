@@ -67,6 +67,18 @@ impl WorkflowJob {
             .filter_map(|step| step.run.as_deref())
             .flat_map(join_continued_lines)
     }
+
+    /// Every step of the job that uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
+    pub(crate) fn steps_using<'a>(
+        &'a self,
+        action: &'a str,
+    ) -> impl Iterator<Item = &'a WorkflowStep> {
+        self.steps.iter().filter(move |step| {
+            step.uses
+                .as_deref()
+                .is_some_and(|uses| is_action(uses, action))
+        })
+    }
 }
 
 impl Workflow {
@@ -126,11 +138,22 @@ impl Workflow {
         &'a self,
         action: &'a str,
     ) -> impl Iterator<Item = &'a WorkflowStep> {
-        self.steps().filter(move |step| {
-            step.uses
-                .as_deref()
-                .is_some_and(|uses| is_action(uses, action))
-        })
+        self.jobs
+            .values()
+            .flat_map(move |job| job.steps_using(action))
+    }
+
+    /// Every step that uses the action `action`, in each job with a script line for which `runs` holds: for example,
+    /// the steps installing the toolchain a job runs a command with.
+    pub(crate) fn steps_using_in_jobs_running<'a>(
+        &'a self,
+        action: &'a str,
+        runs: impl Fn(&str) -> bool + 'a,
+    ) -> impl Iterator<Item = &'a WorkflowStep> {
+        self.jobs
+            .values()
+            .filter(move |job| job.run_lines().any(|line| runs(&line)))
+            .flat_map(move |job| job.steps_using(action))
     }
 
     /// Whether any step's `run` script contains `command`. Commands that reach a script only through an expression,
@@ -290,6 +313,35 @@ jobs:
         let workflow = workflow();
         assert!(workflow.runs_matching(&Regex::new(r"(?m)^\s*cargo test\b").unwrap()));
         assert!(!workflow.runs_matching(&Regex::new(r"\bcargo fmt\b").unwrap()));
+    }
+
+    #[test]
+    fn finds_steps_of_jobs_running_a_command() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  msrv:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.85
+      - run: cargo check
+  other:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+      - run: cargo fmt
+",
+        )
+        .expect("workflow parses");
+        let toolchains: Vec<_> = workflow
+            .steps_using_in_jobs_running("actions-rust-lang/setup-rust-toolchain", |line| {
+                line.contains("cargo check")
+            })
+            .filter_map(|step| step.input("toolchain"))
+            .collect();
+        assert_eq!(toolchains, ["1.85"]);
     }
 
     #[test]

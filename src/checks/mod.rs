@@ -46,7 +46,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
         for component in ctx.components().iter().filter(|c| c.language == language) {
             let component_ctx = ComponentContext::new(ctx, component);
             report.with_component(component, |report| {
-                check_component(&component_ctx, language, report);
+                check_component(ctx, &component_ctx, language, report);
             });
         }
 
@@ -78,8 +78,14 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     }
 }
 
-/// Run the checks of one component's own files.
-fn check_component(ctx: &ComponentContext, language: Language, report: &mut Report) {
+/// Run the checks of one component's own files, and of the repository-wide files that apply to it alone, such as the
+/// CI job testing a library's oldest supported version.
+fn check_component(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    language: Language,
+    report: &mut Report,
+) {
     match language {
         Language::Cpp => {
             // Placeholder
@@ -103,6 +109,7 @@ fn check_component(ctx: &ComponentContext, language: Language, report: &mut Repo
             rust::check_clippy_lints(ctx, report);
             rust::check_cargo_deny(ctx, report);
             rust::check_cargo_lock(ctx, report);
+            rust::check_msrv_job(project, ctx, report);
         }
         Language::TypeScript => {
             typescript::check_package_json(ctx, report);

@@ -55,7 +55,9 @@ prints a `Report`, exiting 1 if any check failed.
 - `config/`: serde models of only the fields checks inspect, with
   `#[serde(default)]` so missing keys don't fail parsing.
 - `checks/`: plain functions `fn(&ProjectContext, &mut Report)`, or
-  `fn(&ComponentContext, &mut Report)` for a check of a component's own files.
+  `fn(&ComponentContext, &mut Report)` for a check of a component's own files
+  (also given the `ProjectContext` when a repository-wide file applies to that
+  component alone, such as the CI job testing a library's MSRV).
   Registration is explicit: a new check must be added to the list in
   `checks/mod.rs`. `common.rs` runs for every project. For each detected
   language, the component checks run once per component of that language
@@ -102,10 +104,13 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 
 - The language fixtures are renders of the template, made as in the Template
   section below with `--skip-tasks`: `rust`, `python` and `typescript` with
-  `primary_language=<language>` and `project_name=demo-<language>`, and
+  `primary_language=<language>` and `project_name=demo-<language>`,
   `rust-typescript` with `project_name=demo`, `primary_language=rust`,
-  `secondary_languages=["typescript"]` and `typescript_path=frontend`. Each
-  drops `.copier-answers.yml` and has stub lock files apart from `Cargo.lock`.
+  `secondary_languages=["typescript"]` and `typescript_path=frontend`, and
+  `python-rust-library`, the only library render, with
+  `project_name=demo-library`, `primary_language=python`,
+  `project_type=library` and `secondary_languages=["rust"]`. Each drops
+  `.copier-answers.yml` and has stub lock files apart from `Cargo.lock`.
   Re-render them when the template changes in a way the checks see.
 - The other fixtures are written by hand: `empty` has no files, `devbox`
   has a services-only `devbox.json` beside a stub marker file for each

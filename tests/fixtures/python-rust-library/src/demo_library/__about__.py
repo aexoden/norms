@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+"""Package information."""
+
+from __future__ import annotations
+
+import importlib.metadata
+
+# Reported when the package is imported from a source tree without being installed.
+UNKNOWN_VERSION = "0.0.0+unknown"
+
+
+def _get_version() -> str:
+    """Read the version recorded in the package metadata.
+
+    Returns:
+        str: The version string of the package.
+    """
+    try:
+        return importlib.metadata.version("demo-library")
+    except importlib.metadata.PackageNotFoundError:
+        return UNKNOWN_VERSION
+
+
+__version__ = _get_version()
