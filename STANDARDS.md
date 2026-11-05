@@ -276,9 +276,9 @@ Include only the language blocks that apply. Python projects also mark
 Commit messages follow [Conventional
 Commits](https://www.conventionalcommits.org/), checked by the
 `conventional-pre-commit` hook (see [Pre-Commit Hooks](#pre-commit-hooks)). The
-[Conventional Commits
-Cheatsheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13) is
-a useful reference for choosing types.
+[Conventional Commit Types
+Cheatsheet](https://www.bavaga.com/blog/2025/01/27/my-ultimate-conventional-commit-types-cheatsheet/)
+is a useful reference for choosing types.
 
 The standard template for a commit message:
 
