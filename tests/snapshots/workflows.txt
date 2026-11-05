@@ -46,6 +46,8 @@ warn  ci-reuse  CI: REUSE compliance
 warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)
       A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
+warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+      No step runs pre-commit run
 pass  components-search  Components: every directory searched
 pass  pyproject-exists  [.] pyproject.toml: exists
 pass  pyproject-valid  [.] pyproject.toml: valid

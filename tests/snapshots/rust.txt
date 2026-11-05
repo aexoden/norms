@@ -48,6 +48,7 @@ pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 pass  ci-reuse  CI: REUSE compliance
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
+pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
 pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid

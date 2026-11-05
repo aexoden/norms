@@ -59,6 +59,16 @@ impl WorkflowStep {
     }
 }
 
+impl WorkflowJob {
+    /// Every command line of the job's `run` scripts, with lines continued by a trailing backslash joined into one.
+    pub(crate) fn run_lines(&self) -> impl Iterator<Item = String> {
+        self.steps
+            .iter()
+            .filter_map(|step| step.run.as_deref())
+            .flat_map(join_continued_lines)
+    }
+}
+
 impl Workflow {
     fn steps(&self) -> impl Iterator<Item = &WorkflowStep> {
         self.jobs.values().flat_map(|job| &job.steps)
@@ -139,6 +149,12 @@ impl Workflow {
     pub(crate) fn uses_action(&self, action: &str) -> bool {
         self.steps_using(action).next().is_some()
     }
+}
+
+/// The commands of a script line, split at the shell operators `&&`, `||`, `|` and `;`, each as its words.
+pub(crate) fn commands(line: &str) -> impl Iterator<Item = Vec<&str>> {
+    line.split(['&', '|', ';'])
+        .map(|command| command.split_whitespace().collect())
 }
 
 /// Whether a `concurrency` mapping's `group` names one: a non-blank string, or a number.

@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::config::{PrecommitHook, SHARED_PRESET, Workflow};
+use crate::config::{PrecommitHook, SHARED_PRESET, Workflow, commands};
 use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
@@ -336,6 +336,86 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
 }
 
 //
+// pre-commit in CI
+//
+
+/// A word of a shell command, with any quotes around it removed, that pins pre-commit to a version: as uvx takes it
+/// (`pre-commit@x.y.z`), or as pip and `uvx --from` do (`pre-commit==x.y.z`, also after `--from=`). A version from a
+/// shell variable counts, since its value can't be seen here.
+static PRE_COMMIT_PIN: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"(?:^|[=/])pre-commit(?:@|==)(?:[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc|\.post|\.dev)[0-9]+)?$|\$)").unwrap()
+});
+
+/// Whether a word of a shell command pins pre-commit to a version.
+fn is_pre_commit_pin(word: &str) -> bool {
+    PRE_COMMIT_PIN.is_match(word.trim_matches(['"', '\'']))
+}
+
+/// Whether a word of a shell command, with any quotes around it removed, invokes pre-commit: `pre-commit`, a path to
+/// it, or a versioned `pre-commit@x.y.z` as uvx takes it.
+fn is_pre_commit_command(word: &str) -> bool {
+    let word = word.trim_matches(['"', '\'']);
+    let name = word.rsplit('/').next().unwrap_or(word);
+    name == "pre-commit" || name.starts_with("pre-commit@")
+}
+
+/// Whether `workflow` runs every pre-commit hook it doesn't skip: a script runs `pre-commit run` with `--all-files`
+/// (or `-a`), with a pinned pre-commit. The pin belongs to that command, as `uvx pre-commit@x.y.z` or `uvx --from
+/// pre-commit==x.y.z pre-commit`, or, for a plain `pre-commit run`, to an earlier command of the same job that
+/// installs it, such as `pip install pre-commit==x.y.z`.
+fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), String> {
+    let mut runs = false;
+    let mut all_files = false;
+    let mut pinned = false;
+
+    for job in workflow.jobs.values() {
+        let mut installed = false;
+        for line in job.run_lines() {
+            for words in commands(&line) {
+                let Some(start) = words.windows(2).position(
+                    |pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)),
+                ) else {
+                    installed |= words.iter().any(|word| is_pre_commit_pin(word));
+                    continue;
+                };
+                runs = true;
+                if !words
+                    .iter()
+                    .skip(start + 2)
+                    .any(|arg| matches!(*arg, "--all-files" | "-a"))
+                {
+                    continue;
+                }
+                all_files = true;
+                pinned |= words
+                    .iter()
+                    .take(start + 1)
+                    .any(|word| is_pre_commit_pin(word))
+                    || (start == 0 && installed);
+            }
+        }
+    }
+
+    if !runs {
+        Err(if workflow.uses_action("pre-commit/action") {
+            "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned".to_owned()
+        } else {
+            "No step runs pre-commit run".to_owned()
+        })
+    } else if !all_files {
+        Err("pre-commit run doesn't pass --all-files".to_owned())
+    } else if !pinned {
+        Err(
+            "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)"
+                .to_owned(),
+        )
+    } else {
+        Ok(())
+    }
+}
+
+//
 // zizmor
 //
 
@@ -540,11 +620,86 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         workflow.runs_matching(&TOMBI_FORMAT_CHECK),
     );
     report.should("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
+    report.should(
+        "ci-pre-commit",
+        "CI: remaining pre-commit hooks (pinned, --all-files)",
+        pre_commit_in_ci(workflow),
+    );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn pre_commit(run: &str) -> Result<(), String> {
+        let yaml = format!("jobs:\n  hooks:\n    steps:\n      - run: {run:?}\n");
+        pre_commit_in_ci(&serde_saphyr::from_str(&yaml).unwrap())
+    }
+
+    #[test]
+    fn pre_commit_runs_every_file_pinned() {
+        for run in [
+            "uvx pre-commit@4.3.0 run --all-files --show-diff-on-failure",
+            "uvx \"pre-commit@$PRE_COMMIT_VERSION\" run --all-files",
+            "uvx --from pre-commit==4.3.0 pre-commit run -a",
+            "pip install pre-commit==4.3.0\npre-commit run --show-diff-on-failure --all-files",
+            "uv tool install 'pre-commit==4.3.0' && pre-commit run \\\n  --all-files",
+            "uvx --from=pre-commit==4.3.0rc1 pre-commit run -a",
+        ] {
+            assert_eq!(pre_commit(run), Ok(()), "{run}");
+        }
+        for (run, error) in [
+            ("pre-commit install", "No step runs pre-commit run"),
+            (
+                "uvx pre-commit@4.3.0 run",
+                "pre-commit run doesn't pass --all-files",
+            ),
+            (
+                "uvx pre-commit@4.3.0 run --all-files-later",
+                "pre-commit run doesn't pass --all-files",
+            ),
+            (
+                "uvx pre-commit@4.3.0 run cargo-test; echo --all-files",
+                "pre-commit run doesn't pass --all-files",
+            ),
+            (
+                "uvx pre-commit run --all-files",
+                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+            ),
+            (
+                "uvx pre-commit@latest run --all-files",
+                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+            ),
+            (
+                "pip install pre-commit==4.3.0\nuvx pre-commit run -a",
+                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+            ),
+            (
+                "pip install pre-commit>=4 && pre-commit run -a",
+                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+            ),
+        ] {
+            assert_eq!(pre_commit(run), Err(error.to_owned()), "{run}");
+        }
+
+        // A pin in another job doesn't apply.
+        let split: Workflow = serde_saphyr::from_str(
+            "jobs:\n  a:\n    steps:\n      - run: pip install pre-commit==4.3.0\n  b:\n    steps:\n      - run: pre-commit run -a\n",
+        )
+        .unwrap();
+        assert!(pre_commit_in_ci(&split).is_err());
+        let action: Workflow = serde_saphyr::from_str(
+            "jobs:\n  a:\n    steps:\n      - uses: pre-commit/action@v3.0.1\n",
+        )
+        .unwrap();
+        assert_eq!(
+            pre_commit_in_ci(&action),
+            Err(
+                "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned"
+                    .to_owned()
+            )
+        );
+    }
 
     #[test]
     fn reuse_lint_excludes_lint_file() {
