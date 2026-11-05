@@ -200,5 +200,5 @@ npm_vite:
 
 # renovate: datasource=npm depName=vitest
 npm_vitest:
-  default: "5.0.5"
+  default: "5.1.0"
   when: false
