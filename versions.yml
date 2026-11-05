@@ -87,11 +87,6 @@ action_setup_rust_toolchain:
   default: "ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0"
   when: false
 
-# renovate: datasource=github-tags depName=Swatinem/rust-cache
-action_rust_cache:
-  default: "d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3"
-  when: false
-
 # renovate: datasource=github-tags depName=actions-rust-lang/rustfmt
 action_rustfmt:
   default: "4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2"

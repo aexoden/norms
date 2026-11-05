@@ -934,9 +934,11 @@ The pre-commit hooks and CI both run:
 | `cargo-deny` | `cargo deny --workspace --all-features check -D warnings bans licenses sources` |
 
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
-reads `rust-toolchain.toml`, and caches builds with `Swatinem/rust-cache`. It
-runs cargo-deny with `EmbarkStudios/cargo-deny-action`. The advisory check runs
-in `audit.yaml` (see [Continuous Integration](#continuous-integration)).
+reads `rust-toolchain.toml` and caches builds with its built-in
+`Swatinem/rust-cache`, so jobs don't add a separate cache step. Jobs that build
+nothing, such as formatting, set `cache: false`. CI runs cargo-deny with
+`EmbarkStudios/cargo-deny-action`. The advisory check runs in `audit.yaml` (see
+[Continuous Integration](#continuous-integration)).
 
 ### TypeScript
 

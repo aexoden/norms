@@ -24,12 +24,9 @@
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@{{ action_setup_rust_toolchain }}
-
-      - name: Set up Rust cache
-        uses: Swatinem/rust-cache@{{ action_rust_cache }}
 {%- if rust_prefix %}
         with:
-          workspaces: {{ rust_dir }} -> target
+          cache-workspaces: {{ rust_dir }} -> target
 {%- endif %}
 {%- endmacro %}
 {%- macro setup_uv(sync=true) %}
@@ -128,6 +125,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@{{ action_setup_rust_toolchain }}
+        with:
+          cache: false
 
       - name: Check Rust code formatting
         uses: actions-rust-lang/rustfmt@{{ action_rustfmt }}
