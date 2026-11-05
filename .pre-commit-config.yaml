@@ -3,7 +3,6 @@
 
 # Pre-commit configuration
 # Install: pre-commit install
-# Update: pre-commit autoupdate
 
 default_install_hook_types: [pre-commit, commit-msg]
 # Hooks without their own stages run only before a commit, not on its message.
