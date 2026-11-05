@@ -3,6 +3,8 @@
 
 //! Type-safe model for `'.pre-commit-config.yaml`.
 
+use std::collections::HashMap;
+
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -50,6 +52,8 @@ pub(crate) struct PrecommitRepo {
 #[serde(default)]
 pub(crate) struct PrecommitHook {
     pub id: String,
+    /// Another name that `SKIP` and `pre-commit run` match; empty or null means none.
+    pub alias: Option<String>,
     pub name: Option<String>,
     pub entry: Option<String>,
     pub language: Option<String>,
@@ -110,6 +114,54 @@ impl PrecommitConfig {
                 }
             }
             Some(_) => Err("default_install_hook_types isn't a list".to_owned()),
+        }
+    }
+
+    /// Whether `SKIP` (or `pre-commit run`) can select each hook alone: each hook needs an ID or alias that no other
+    /// hook has as its ID or alias. pre-commit matches a hook by either, so the same remote hook can run twice under
+    /// one ID if each copy has an alias of its own.
+    pub(crate) fn check_unique_hook_ids(&self) -> Result<(), String> {
+        fn names(hook: &PrecommitHook) -> Vec<&str> {
+            let mut names = vec![hook.id.as_str()];
+            if let Some(alias) = hook
+                .alias
+                .as_deref()
+                .filter(|alias| !alias.is_empty() && *alias != hook.id)
+            {
+                names.push(alias);
+            }
+            names
+        }
+
+        let hooks: Vec<_> = self.repos.iter().flat_map(|repo| &repo.hooks).collect();
+        let mut counts: HashMap<&str, usize> = HashMap::new();
+        for hook in &hooks {
+            for name in names(hook) {
+                *counts.entry(name).or_default() += 1;
+            }
+        }
+        let mut ambiguous: Vec<&str> = Vec::new();
+        for hook in &hooks {
+            let label = if hook.id.is_empty() {
+                "(no id)"
+            } else {
+                &hook.id
+            };
+            if names(hook)
+                .iter()
+                .all(|name| counts.get(name).is_some_and(|&count| count > 1))
+                && !ambiguous.contains(&label)
+            {
+                ambiguous.push(label);
+            }
+        }
+        if ambiguous.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Hooks with no ID or alias of their own: {}",
+                ambiguous.join(", ")
+            ))
         }
     }
 
@@ -191,6 +243,55 @@ mod tests {
                 default_install_hook_types(yaml),
                 Err(error.to_owned()),
                 "{yaml}"
+            );
+        }
+    }
+
+    fn unique_hook_ids(hooks: &str) -> Result<(), String> {
+        serde_saphyr::from_str::<PrecommitConfig>(&format!(
+            "repos:\n  - repo: local\n    hooks: {hooks}\n"
+        ))
+        .unwrap()
+        .check_unique_hook_ids()
+    }
+
+    #[test]
+    fn hooks_need_an_id_or_alias_of_their_own() {
+        for hooks in [
+            "[]",
+            "[{id: pytest}, {id: cargo-test}, {id: vitest}]",
+            "[{id: eslint, alias: eslint-admin}, {id: eslint, alias: eslint-web}]",
+            "[{id: test, alias: test}, {id: vitest}]",
+            "[{id: test, alias: ~}, {id: vitest}]",
+            "[{id: test, alias: ''}, {id: vitest}]",
+        ] {
+            assert_eq!(unique_hook_ids(hooks), Ok(()), "{hooks}");
+        }
+        for (hooks, ambiguous) in [
+            ("[{id: test}, {id: test}]", "test"),
+            ("[{id: test}, {id: test}, {id: test}]", "test"),
+            ("[{id: test}, {id: test, alias: test}]", "test"),
+            // SKIP=eslint-admin selects the first hook alone, but nothing selects the second.
+            (
+                "[{id: eslint, alias: eslint-admin}, {id: eslint}]",
+                "eslint",
+            ),
+            ("[{id: a}, {id: b}, {id: a}, {id: b}]", "a, b"),
+            ("[{id: test, alias: ~}, {id: test}]", "test"),
+            ("[{alias: a}, {alias: a}]", "(no id)"),
+            (
+                "[{id: eslint, alias: lint}, {id: eslint, alias: lint}]",
+                "eslint",
+            ),
+            // The first hook's only name is the second's alias; the second has an ID of its own.
+            ("[{id: vitest}, {id: test, alias: vitest}]", "vitest"),
+        ] {
+            assert_eq!(
+                unique_hook_ids(hooks),
+                Err(format!(
+                    "Hooks with no ID or alias of their own: {ambiguous}"
+                )),
+                "{hooks}"
             );
         }
     }

@@ -140,7 +140,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
   advisories check, beside stub `Cargo.toml` and `pyproject.toml` files.
   `precommit` has only a `.pre-commit-config.yaml`, which breaks the pre-commit
-  standards: its `default_install_hook_types` lacks `pre-commit`.
+  standards: its `default_install_hook_types` lacks `pre-commit`, and among
+  remote and local hooks whose IDs or aliases collide, some have aliases of
+  their own and some can't be selected alone.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

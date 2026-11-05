@@ -21,6 +21,8 @@ pass  precommit-config-exists  .pre-commit-config.yaml
 warn  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
       default_install_hook_types lacks pre-commit
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+warn  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
+      Hooks with no ID or alias of their own: eslint, vitest
 pass  precommit-reuse  Pre-commit: reuse hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)

@@ -5,3 +5,34 @@ repos:
     rev: v6.2.0
     hooks:
       - id: reuse
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff-check
+        alias: ruff-check-api
+        files: ^api/
+      - id: ruff-check
+        alias: ruff-check-worker
+        files: ^worker/
+  - repo: local
+    hooks:
+      - id: eslint
+        alias: eslint-admin
+        name: eslint (admin)
+        entry: pnpm --dir admin exec eslint . --max-warnings 0
+        language: system
+        pass_filenames: false
+      - id: eslint
+        name: eslint (web)
+        entry: pnpm --dir web exec eslint . --max-warnings 0
+        language: system
+        pass_filenames: false
+      - id: vitest
+        entry: pnpm --dir web exec vitest run
+        language: system
+        pass_filenames: false
+      - id: test
+        alias: vitest
+        entry: pnpm --dir admin exec vitest run
+        language: system
+        pass_filenames: false

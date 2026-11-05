@@ -318,6 +318,11 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         config.check_default_stages(),
     );
     report.should(
+        "precommit-hook-ids-unique",
+        "Pre-commit: each hook has a unique ID or alias",
+        config.check_unique_hook_ids(),
+    );
+    report.should(
         "precommit-reuse",
         "Pre-commit: reuse hook",
         config.has_hook("reuse"),

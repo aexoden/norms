@@ -27,6 +27,7 @@ warn  precommit-install-hook-types  Pre-commit: default_install_hook_types inclu
       No default_install_hook_types, so pre-commit install installs only the pre-commit hook
 warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
+pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
 warn  precommit-reuse  Pre-commit: reuse hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
