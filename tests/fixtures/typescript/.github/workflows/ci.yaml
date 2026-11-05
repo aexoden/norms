@@ -18,7 +18,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [eslint, markdownlint, pnpm-peer-dependencies, pre-commit, prettier, reuse, tsc, vitest, zizmor]
+    needs: [eslint, markdownlint, pnpm-peer-dependencies, pre-commit, prettier, reuse, tsc, vite-build, vitest, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -64,7 +64,7 @@ jobs:
 
       - name: Run the hooks that have no job of their own
         env:
-          SKIP: eslint,markdownlint-cli2,pnpm-lock,pnpm-peer-dependencies,prettier,reuse,tsc,vitest,zizmor
+          SKIP: eslint,markdownlint-cli2,pnpm-lock,pnpm-peer-dependencies,prettier,reuse,tsc,vite-build,vitest,zizmor
         run: uvx pre-commit@4.7.0 run --all-files --show-diff-on-failure
 
   reuse:
@@ -172,6 +172,24 @@ jobs:
 
       - name: Type check TypeScript code
         run: pnpm exec tsc -b --noEmit
+
+  vite-build:
+    name: Build the TypeScript application with Vite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm, Node.js and dependencies
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+
+      - name: Build the TypeScript application with Vite
+        run: pnpm exec vite build
 
   vitest:
     name: Run TypeScript tests

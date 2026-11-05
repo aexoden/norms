@@ -119,6 +119,12 @@ repos:
         entry: pnpm --dir frontend exec tsc -b --noEmit
         language: system
         pass_filenames: false
+      - id: vite-build
+        name: vite build
+        description: Build the TypeScript application using Vite
+        entry: pnpm --dir frontend exec vite build
+        language: system
+        pass_filenames: false
       - id: vitest
         name: vitest
         description: Run TypeScript tests using Vitest

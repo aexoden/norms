@@ -1067,7 +1067,13 @@ sets the job's working directory instead:
 | `prettier`               | `pnpm exec prettier --check .`        |
 | `eslint`                 | `pnpm exec eslint . --max-warnings 0` |
 | `tsc`                    | `pnpm exec tsc -b --noEmit`           |
+| `vite-build`             | `pnpm exec vite build`                |
 | `vitest`                 | `pnpm exec vitest run`                |
+
+`vite-build` catches errors that only bundling reveals, such as a missing
+stylesheet or asset, which `tsc` accepts through Vite's module declarations, or
+a broken script in `index.html`. It writes the build to `dist/`, which is
+ignored, so like the other hooks it changes no tracked file.
 
 CI has no `pnpm-lock` job: `pnpm/setup` installs the dependencies, and pnpm
 defaults to `--frozen-lockfile` in CI, so every job fails on a stale lock file.

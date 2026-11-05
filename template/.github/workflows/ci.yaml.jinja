@@ -62,7 +62,7 @@
 {%- set jobs = ['markdownlint', 'pre-commit', 'reuse', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
-{%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vitest'] %}{% endif %}
+{%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vite-build', 'vitest'] %}{% endif %}
 {#- The pre-commit job skips the hooks that have a job of their own, the hook for
     markdownlint being markdownlint-cli2, and pnpm-lock, since pnpm/setup installs
     with a frozen lock file. #}
@@ -241,6 +241,11 @@ jobs:
 
       - name: Type check TypeScript code
         run: pnpm exec tsc -b --noEmit
+{{ job('vite-build', 'Build the TypeScript application with Vite', typescript_dir, timeout=30) }}
+{{- setup_pnpm() }}
+
+      - name: Build the TypeScript application with Vite
+        run: pnpm exec vite build
 {{ job('vitest', 'Run TypeScript tests', typescript_dir, timeout=30) }}
 {{- setup_pnpm() }}
 
