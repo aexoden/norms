@@ -77,7 +77,7 @@ jobs:
     name: CI success
     if: always()
     needs: [build-norms, cargo-deny, cargo-test, clippy, markdownlint, reuse, rustfmt, template, zizmor]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions: {}
     steps:
       - name: Fail unless every job succeeded
@@ -103,7 +103,7 @@ jobs:
 
   markdownlint:
     name: Lint Markdown with markdownlint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:

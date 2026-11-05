@@ -6,10 +6,11 @@
         with:
           persist-credentials: false
 {%- endmacro %}
-{%- macro job(id, name, dir) %}
+{#- Jobs that install nothing, the gate, markdownlint and zizmor, run on ubuntu-slim. #}
+{%- macro job(id, name, dir, runner='ubuntu-latest') %}
   {{ id }}:
     name: {{ name }}
-    runs-on: ubuntu-latest
+    runs-on: {{ runner }}
     permissions:
       contents: read
 {%- if dir not in ['', '.'] %}
@@ -76,13 +77,13 @@ jobs:
     name: CI success
     if: always()
     needs: [{{ jobs | sort | join(', ') }}]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions: {}
     steps:
       - name: Fail unless every job succeeded
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
         run: exit 1
-{{ job('markdownlint', 'Lint Markdown with markdownlint', '') }}
+{{ job('markdownlint', 'Lint Markdown with markdownlint', '', 'ubuntu-slim') }}
 
       - name: Lint Markdown with markdownlint
         uses: DavidAnson/markdownlint-cli2-action@{{ action_markdownlint_cli2 }}
@@ -92,7 +93,7 @@ jobs:
 
       - name: Check REUSE compliance
         uses: fsfe/reuse-action@{{ action_reuse }}
-{{ job('zizmor', 'GitHub Actions security analysis with zizmor 🌈', '') }}
+{{ job('zizmor', 'GitHub Actions security analysis with zizmor 🌈', '', 'ubuntu-slim') }}
 
       - name: Run zizmor 🌈
         uses: zizmorcore/zizmor-action@{{ action_zizmor }}

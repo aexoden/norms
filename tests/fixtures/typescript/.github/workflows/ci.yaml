@@ -19,7 +19,7 @@ jobs:
     name: CI success
     if: always()
     needs: [eslint, markdownlint, pnpm-peer-dependencies, prettier, reuse, tsc, vitest, zizmor]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions: {}
     steps:
       - name: Fail unless every job succeeded
@@ -28,7 +28,7 @@ jobs:
 
   markdownlint:
     name: Lint Markdown with markdownlint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:
@@ -58,7 +58,7 @@ jobs:
 
   zizmor:
     name: GitHub Actions security analysis with zizmor 🌈
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     steps:

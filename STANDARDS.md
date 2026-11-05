@@ -447,6 +447,13 @@ Split checks into parallel jobs where feasible. Use an operating system matrix
 when platform differences could plausibly cause problems, such as file system
 behavior or external tools.
 
+Jobs that install nothing and run only one JavaScript action or shell step,
+namely the gate job, markdownlint and zizmor, run on `ubuntu-slim`, which
+starts faster. It runs jobs in a container without Docker, so Docker-based
+actions such as `fsfe/reuse-action` and `EmbarkStudios/cargo-deny-action` can't
+run there. The other jobs, which install a toolchain or tools, stay on
+`ubuntu-latest`.
+
 Each workflow sets a `concurrency` group that cancels superseded runs of the
 same ref.
 
@@ -466,7 +473,7 @@ ci-success:
   name: CI success
   if: always()
   needs: [lint, test]
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-slim
   steps:
     - name: Fail unless every job succeeded
       if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
