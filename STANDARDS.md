@@ -223,6 +223,11 @@ suffixed with `-<description>` (for example, `LICENSE-MIT` and
 byte for byte, and each root copy is one of those texts. More complicated
 licensing schemes should be documented in the README.
 
+Each manifest's license (`license` in `Cargo.toml`, `pyproject.toml` and
+`package.json`) is an SPDX expression, and `LICENSES/` holds a text for every
+license and exception it names. In `pyproject.toml` it is a string, as PEP 639
+requires, not the older table form.
+
 ### File Headers
 
 Every source file starts with SPDX headers, in the file's comment syntax, giving

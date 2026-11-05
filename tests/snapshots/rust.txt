@@ -41,6 +41,7 @@ pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
 pass  cargo-toml-license  [.] Cargo.toml: has license
+pass  cargo-toml-license-texts  [.] Cargo.toml: license has its texts in LICENSES/
 pass  cargo-toml-description  [.] Cargo.toml: has description
 pass  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition

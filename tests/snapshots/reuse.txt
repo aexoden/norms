@@ -1,6 +1,6 @@
 exit: 1
-languages: (none)
-components: (none)
+languages: python, rust, typescript
+components: python (py), rust (.), typescript (web)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -31,3 +31,91 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 warn  ci-reuse  CI: REUSE compliance
 pass  components-search  Components: every directory searched
+pass  pyproject-exists  [py] pyproject.toml: exists
+pass  pyproject-valid  [py] pyproject.toml: valid
+pass  pyproject-project  [py] pyproject.toml: has [project] section
+warn  pyproject-license-texts  [py] pyproject.toml: license has its texts in LICENSES/
+      Not an SPDX expression string
+warn  python-src-layout  [py] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [py] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [py] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [py] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [py] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [py] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [py] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+warn  python-precommit-ruff  Python pre-commit: Ruff hooks
+warn  python-precommit-mypy  Python pre-commit: Mypy hook
+warn  python-ci-ruff-format  Python CI: format check
+warn  python-ci-ruff-check  Python CI: lint check
+warn  python-ci-mypy  Python CI: type check
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+pass  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-license-texts  [.] Cargo.toml: license has its texts in LICENSES/
+      No text in LICENSES/ for: BSD-3-Clause
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+pass  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [.] Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  [.] Rust: deny.toml
+      Not found: deny.toml
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found
+warn  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
+warn  rust-precommit-clippy  Rust pre-commit: clippy hook
+warn  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+warn  rust-ci-rustfmt  Rust CI: format check
+warn  rust-ci-clippy  Rust CI: clippy check
+warn  rust-ci-test  Rust CI: test
+warn  rust-ci-cargo-deny  Rust CI: cargo deny
+pass  package-json-exists  [web] package.json: exists
+pass  package-json-valid  [web] package.json: valid
+pass  package-json-name  [web] package.json: has name
+warn  package-json-license-texts  [web] package.json: license has its texts in LICENSES/
+      Not a valid SPDX expression (invalid character(s)): MIT/Apache-2.0
+warn  package-json-esm  [web] package.json: uses ESM (type: module)
+      Consider setting "type": "module" for ESM support
+pass  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
+warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
+      Missing devEngines.runtime
+warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
+      Missing devEngines.packageManager
+warn  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+warn  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
+      File not found
+fail  tsconfig-exists  [web] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [web] ESLint: configured
+      Not found: eslint.config.ts
+warn  eslint-dependency  [web] ESLint: in dependencies
+warn  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
+      Consider adding typescript-eslint for TypeScript-aware linting
+fail  prettier-config-exists  [web] Prettier: configured
+      Not found: .prettierrc
+warn  prettier-ignore-exists  [web] Prettier: .prettierignore exists
+      Consider adding .prettierignore
+warn  prettier-dependency  [web] Prettier: in dependencies
+warn  package-json-scripts  [web] package.json: has scripts
+      No scripts defined in package.json
+warn  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
+      Consider adding a pnpm-lock hook to ensure lockfile is up to date
+warn  typescript-precommit-eslint  Pre-commit: has ESLint hook
+      Consider adding an ESLint hook to pre-commit configuration
+warn  typescript-precommit-prettier  Pre-commit: has Prettier hook
+      Consider adding a Prettier hook to pre-commit configuration
+warn  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
+      Consider adding a TypeScript type check hook to pre-commit configuration
+warn  typescript-ci-lint  TypeScript CI: lint check
+warn  typescript-ci-format  TypeScript CI: format check
+warn  typescript-ci-tsc  TypeScript CI: type check
+warn  typescript-ci-test  TypeScript CI: tests

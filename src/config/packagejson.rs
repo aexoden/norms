@@ -18,6 +18,9 @@ pub(crate) struct PackageJson {
     pub name: Option<String>,
     pub description: Option<String>,
 
+    /// The license, as an SPDX expression. Kept unparsed, so that one of the wrong type fails only its check.
+    pub license: Option<Value>,
+
     /// Module type (`"module"` for ESM, `"commonjs"` or absent for CJS).
     #[serde(rename = "type")]
     pub module_type: Option<String>,

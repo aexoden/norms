@@ -44,7 +44,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Language-specific checks
     for &language in ctx.languages() {
         for component in ctx.components().iter().filter(|c| c.language == language) {
-            let component_ctx = ComponentContext::new(ctx.path(), component);
+            let component_ctx = ComponentContext::new(ctx, component);
             report.with_component(component, |report| {
                 check_component(&component_ctx, language, report);
             });

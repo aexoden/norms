@@ -24,6 +24,17 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         config.name.as_ref().is_some_and(|n| !n.is_empty()),
     );
 
+    if let Some(license) = &config.license {
+        report.should(
+            "package-json-license-texts",
+            "package.json: license has its texts in LICENSES/",
+            license.as_str().map_or_else(
+                || Err("Not an SPDX expression string".to_owned()),
+                |expression| ctx.license_files().check_expression(expression),
+            ),
+        );
+    }
+
     // ESM module type
     if config.is_esm() {
         report.should(

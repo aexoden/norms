@@ -43,6 +43,14 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
         package.and_then(|p| p.license.as_ref()).is_some(),
     );
 
+    if let Some(license) = package.and_then(|p| p.license.as_deref()) {
+        report.should(
+            "cargo-toml-license-texts",
+            "Cargo.toml: license has its texts in LICENSES/",
+            ctx.license_files().check_expression(license),
+        );
+    }
+
     report.should(
         "cargo-toml-description",
         "Cargo.toml: has description",
@@ -167,7 +175,7 @@ pub(crate) fn check_cargo_config(ctx: &ProjectContext, report: &mut Report) {
         .iter()
         .filter(|c| c.language == Language::Rust && !c.path.as_os_str().is_empty())
     {
-        let component_ctx = ComponentContext::new(ctx.path(), component);
+        let component_ctx = ComponentContext::new(ctx, component);
         if !matches!(component_ctx.cargo_config(), ConfigStatus::NotFound) {
             report.with_component(component, |report| {
                 check_cargo_config_file(component_ctx.cargo_config(), report);
@@ -270,7 +278,8 @@ mod tests {
             language: Language::Rust,
             path: PathBuf::new(),
         };
-        let ctx = ComponentContext::new(dir.path(), &component);
+        let project = ProjectContext::new(dir.path().to_path_buf());
+        let ctx = ComponentContext::new(&project, &component);
         let ConfigStatus::Ok(config) = ctx.cargo() else {
             panic!("invalid manifest");
         };

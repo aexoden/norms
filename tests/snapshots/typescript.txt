@@ -41,6 +41,7 @@ pass  components-search  Components: every directory searched
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid
 pass  package-json-name  [.] package.json: has name
+pass  package-json-license-texts  [.] package.json: license has its texts in LICENSES/
 pass  package-json-esm  [.] package.json: uses ESM (type: module)
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
 pass  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines

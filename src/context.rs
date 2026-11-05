@@ -26,7 +26,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use crate::config::{
     CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
@@ -92,7 +92,7 @@ pub(crate) struct ProjectContext {
     languages: OnceLock<BTreeSet<Language>>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
-    license_files: OnceLock<LicenseFiles>,
+    license_files: OnceLock<Arc<LicenseFiles>>,
     norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
     reuse_toml: OnceLock<ConfigStatus<ReuseToml>>,
@@ -174,8 +174,13 @@ impl ProjectContext {
 
     /// The license texts in `LICENSES/` and their copies at the root (cached).
     pub(crate) fn license_files(&self) -> &LicenseFiles {
+        self.shared_license_files()
+    }
+
+    /// [`license_files`](Self::license_files), shared with each [`ComponentContext`].
+    fn shared_license_files(&self) -> &Arc<LicenseFiles> {
         self.license_files
-            .get_or_init(|| LicenseFiles::read(&self.path))
+            .get_or_init(|| Arc::new(LicenseFiles::read(&self.path)))
     }
 
     /// Parsed `norms.toml` (cached).
@@ -257,6 +262,7 @@ impl ProjectContext {
 /// getters are ever called.
 pub(crate) struct ComponentContext {
     path: PathBuf,
+    license_files: Arc<LicenseFiles>,
     cargo: OnceLock<ConfigStatus<CargoToml>>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
@@ -267,10 +273,11 @@ pub(crate) struct ComponentContext {
 }
 
 impl ComponentContext {
-    /// Create a new context for the given component of the project at `root`.
-    pub(crate) fn new(root: &Path, component: &Component) -> Self {
+    /// Create a new context for the given component of `project`.
+    pub(crate) fn new(project: &ProjectContext, component: &Component) -> Self {
         Self {
-            path: root.join(&component.path),
+            path: project.path().join(&component.path),
+            license_files: Arc::clone(project.shared_license_files()),
             cargo: OnceLock::new(),
             cargo_config: OnceLock::new(),
             pyproject: OnceLock::new(),
@@ -284,6 +291,12 @@ impl ComponentContext {
     /// The component's directory.
     pub(crate) fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// The license texts in the project's `LICENSES/` and their copies at the project root, which the component's
+    /// manifest names its license from. See [`ProjectContext::license_files`].
+    pub(crate) fn license_files(&self) -> &LicenseFiles {
+        &self.license_files
     }
 
     /// Parsed `Cargo.toml` (cached).

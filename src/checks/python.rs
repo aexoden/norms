@@ -21,6 +21,17 @@ pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
         "pyproject.toml: has [project] section",
         config.project.is_some(),
     );
+
+    if let Some(license) = config.project.as_ref().and_then(|p| p.license.as_ref()) {
+        report.should(
+            "pyproject-license-texts",
+            "pyproject.toml: license has its texts in LICENSES/",
+            license.as_str().map_or_else(
+                || Err("Not an SPDX expression string".to_owned()),
+                |expression| ctx.license_files().check_expression(expression),
+            ),
+        );
+    }
 }
 
 //

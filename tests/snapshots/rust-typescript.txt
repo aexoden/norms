@@ -41,6 +41,7 @@ pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
 pass  cargo-toml-license  [.] Cargo.toml: has license
+pass  cargo-toml-license-texts  [.] Cargo.toml: license has its texts in LICENSES/
 pass  cargo-toml-description  [.] Cargo.toml: has description
 pass  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition
@@ -63,6 +64,7 @@ pass  rust-ci-cargo-deny  Rust CI: cargo deny
 pass  package-json-exists  [frontend] package.json: exists
 pass  package-json-valid  [frontend] package.json: valid
 pass  package-json-name  [frontend] package.json: has name
+pass  package-json-license-texts  [frontend] package.json: license has its texts in LICENSES/
 pass  package-json-esm  [frontend] package.json: uses ESM (type: module)
 pass  package-json-dependencies-exact  [frontend] package.json: dependencies pinned exactly (application)
 pass  package-json-dev-engines-runtime  [frontend] package.json: pins Node.js in devEngines
