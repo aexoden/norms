@@ -90,7 +90,7 @@ warn  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition
 warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
-warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
 warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml

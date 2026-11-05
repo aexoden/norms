@@ -186,18 +186,35 @@ pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) 
             toolchain.check_components(),
         );
     }
+}
 
-    let has_msrv = ctx.cargo().as_ref_ok().is_some_and(|config| {
-        config
-            .metadata(config.workspace.as_ref())
-            .rust_version
-            .is_some()
-    });
-    report.should(
-        "cargo-toml-rust-version",
-        "Rust: MSRV defined (rust-version)",
-        has_msrv,
-    );
+/// Check that a library sets its MSRV: its package, unless the manifest is virtual, and each member of its workspace
+/// set `rust-version`, directly or inherited from the workspace. Applications need none, since `rust-toolchain.toml`
+/// already pins their compiler.
+pub(crate) fn check_rust_version(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.cargo().as_ref_ok() else {
+        return;
+    };
+    if is_application(ctx, config) {
+        return;
+    }
+
+    let workspace = config.workspace.as_ref();
+    let root = config
+        .package
+        .is_some()
+        .then(|| ("Cargo.toml".to_owned(), config));
+    let members = ctx
+        .cargo_members()
+        .parsed()
+        .map(|(path, member)| (member_manifest(path), member));
+    for (label, manifest) in root.into_iter().chain(members) {
+        report.should(
+            "cargo-toml-rust-version",
+            format!("{label}: MSRV set (rust-version, library)"),
+            manifest.metadata(workspace).rust_version.is_some(),
+        );
+    }
 }
 
 //
@@ -582,7 +599,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::models::Component;
+    use crate::models::{Component, Status};
 
     /// Whether a package with the given manifest and files is an application.
     fn is_application_with(manifest: &str, files: &[&str]) -> bool {
@@ -795,6 +812,72 @@ jobs:
         assert_eq!(
             declared_msrvs(&ctx, config),
             BTreeSet::from(["1.85", "1.88"])
+        );
+    }
+
+    #[test]
+    fn libraries_set_their_msrvs() {
+        let results = |manifest: &str, files: &[(&str, &str)]| {
+            let dir = tempfile::tempdir().unwrap();
+            fs::write(dir.path().join("Cargo.toml"), manifest).unwrap();
+            for (path, contents) in files {
+                let path = dir.path().join(path);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, contents).unwrap();
+            }
+            let component = Component {
+                language: Language::Rust,
+                path: PathBuf::new(),
+            };
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_rust_version(&ComponentContext::new(&project, &component), &mut report);
+            report
+                .results
+                .iter()
+                .map(|result| (result.name.clone(), result.status))
+                .collect::<Vec<_>>()
+        };
+        let workspace = "[workspace]\nmembers = [\"crates/*\"]\n\n[workspace.package]\nrust-version = \"1.85\"\n";
+        let members = [
+            (
+                "crates/a/Cargo.toml",
+                "[package]\nname = \"a\"\nrust-version.workspace = true\n",
+            ),
+            ("crates/b/Cargo.toml", "[package]\nname = \"b\"\n"),
+        ];
+
+        // The virtual root isn't a package, so only its members need an MSRV.
+        assert_eq!(
+            results(workspace, &members),
+            [
+                (
+                    "crates/a/Cargo.toml: MSRV set (rust-version, library)".to_owned(),
+                    Status::Pass
+                ),
+                (
+                    "crates/b/Cargo.toml: MSRV set (rust-version, library)".to_owned(),
+                    Status::Warn
+                ),
+            ]
+        );
+        assert_eq!(
+            results("[package]\nname = \"x\"\nrust-version = \"1.85\"\n", &[]),
+            [(
+                "Cargo.toml: MSRV set (rust-version, library)".to_owned(),
+                Status::Pass
+            )]
+        );
+
+        // An application needs no MSRV, nor do its members.
+        let none = Vec::<(String, Status)>::new();
+        assert_eq!(
+            results("[package]\nname = \"x\"\n", &[("src/main.rs", "")]),
+            none
+        );
+        assert_eq!(
+            results(workspace, &[members[1], ("crates/b/src/main.rs", "")]),
+            none
         );
     }
 

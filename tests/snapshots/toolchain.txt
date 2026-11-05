@@ -34,7 +34,7 @@ pass  rust-toolchain-toml-exists  [backend] rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [backend] rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [backend] rust-toolchain.toml: exact channel
 pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy and rustfmt components
-warn  cargo-toml-rust-version  [backend] Rust: MSRV defined (rust-version)
+warn  cargo-toml-rust-version  [backend] Cargo.toml: MSRV set (rust-version, library)
 warn  clippy-lints  [backend] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  deny-toml-exists  [backend] Rust: deny.toml
@@ -51,7 +51,7 @@ warn  rust-toolchain-toml-channel  [tools/cli] ../../rust-toolchain.toml: exact 
       channel is "stable", not an exact x.y.z release
 warn  rust-toolchain-toml-components  [tools/cli] ../../rust-toolchain.toml: clippy and rustfmt components
       Missing components: clippy
-warn  cargo-toml-rust-version  [tools/cli] Rust: MSRV defined (rust-version)
+warn  cargo-toml-rust-version  [tools/cli] Cargo.toml: MSRV set (rust-version, library)
 warn  clippy-lints  [tools/cli] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  deny-toml-exists  [tools/cli] Rust: deny.toml

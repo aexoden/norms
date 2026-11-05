@@ -110,6 +110,7 @@ fn check_component(
             rust::check_cargo_workspace(ctx, report);
             rust::check_cargo_dependencies(ctx, report);
             rust::check_rust_toolchain(ctx, report);
+            rust::check_rust_version(ctx, report);
             rust::check_clippy_lints(ctx, report);
             rust::check_cargo_deny(ctx, report);
             rust::check_cargo_lock(ctx, report);

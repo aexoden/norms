@@ -67,7 +67,6 @@ warn  cargo-toml-dependencies-exact  [.] tools/helper/Cargo.toml: dependencies p
       Not pinned with =x.y.z: dependencies.itoa ("^1.0")
 warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
-warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
 pass  clippy-lints  [.] crates/cli/Cargo.toml: Clippy lints configured
 pass  clippy-pedantic  [.] crates/cli/Cargo.toml: Clippy pedantic enabled
 warn  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured

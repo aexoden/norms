@@ -872,13 +872,14 @@ rustup uses the nearest `rust-toolchain.toml` in the directory it runs in or a
 parent, so a Rust component in a subdirectory shares the root's file unless it
 has its own. Either way, the file the component uses must meet these rules.
 
-Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. Applications do
-not need one, since the toolchain file already pins their compiler. A library's
-CI checks the MSRV in an `msrv` job, which installs that toolchain with
-`actions-rust-lang/setup-rust-toolchain`'s `toolchain` input, overriding
-`rust-toolchain.toml`, and runs `cargo check --workspace --all-features
---locked`. It checks only the library, not its tests, since development
-dependencies may need a newer Rust.
+Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. In a workspace,
+each member sets it, or inherits it with `rust-version.workspace = true`.
+Applications do not need one, since the toolchain file already pins their
+compiler. A library's CI checks the MSRV in an `msrv` job, which installs that
+toolchain with `actions-rust-lang/setup-rust-toolchain`'s `toolchain` input,
+overriding `rust-toolchain.toml`, and runs `cargo check --workspace
+--all-features --locked`. It checks only the library, not its tests, since
+development dependencies may need a newer Rust.
 
 `.cargo/config.toml` sets the release age (see [Release Age](#release-age)):
 

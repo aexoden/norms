@@ -1,0 +1,4 @@
+[package]
+name = "own"
+version = "0.1.0"
+rust-version = "1.88"

@@ -68,7 +68,8 @@ warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
 warn  cargo-toml-edition  [.] crates/core/Cargo.toml: has edition
 warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
-warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
+warn  cargo-toml-rust-version  [.] crates/core/Cargo.toml: MSRV set (rust-version, library)
 warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured

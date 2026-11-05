@@ -1,0 +1,62 @@
+exit: 1
+languages: rust
+components: rust (.)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+pass  cargo-workspace-members  [.] Cargo.toml: workspace members found
+pass  cargo-toml-exists  [.] crates/inherits/Cargo.toml: exists
+pass  cargo-toml-valid  [.] crates/inherits/Cargo.toml: valid
+warn  cargo-toml-license  [.] crates/inherits/Cargo.toml: has license
+warn  cargo-toml-description  [.] crates/inherits/Cargo.toml: has description
+warn  cargo-toml-repository  [.] crates/inherits/Cargo.toml: has repository
+warn  cargo-toml-edition  [.] crates/inherits/Cargo.toml: has edition
+pass  cargo-toml-exists  [.] crates/missing/Cargo.toml: exists
+pass  cargo-toml-valid  [.] crates/missing/Cargo.toml: valid
+warn  cargo-toml-license  [.] crates/missing/Cargo.toml: has license
+warn  cargo-toml-description  [.] crates/missing/Cargo.toml: has description
+warn  cargo-toml-repository  [.] crates/missing/Cargo.toml: has repository
+warn  cargo-toml-edition  [.] crates/missing/Cargo.toml: has edition
+pass  cargo-toml-exists  [.] crates/own/Cargo.toml: exists
+pass  cargo-toml-valid  [.] crates/own/Cargo.toml: valid
+warn  cargo-toml-license  [.] crates/own/Cargo.toml: has license
+warn  cargo-toml-description  [.] crates/own/Cargo.toml: has description
+warn  cargo-toml-repository  [.] crates/own/Cargo.toml: has repository
+warn  cargo-toml-edition  [.] crates/own/Cargo.toml: has edition
+warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+      File not found
+pass  cargo-toml-rust-version  [.] crates/inherits/Cargo.toml: MSRV set (rust-version, library)
+warn  cargo-toml-rust-version  [.] crates/missing/Cargo.toml: MSRV set (rust-version, library)
+pass  cargo-toml-rust-version  [.] crates/own/Cargo.toml: MSRV set (rust-version, library)
+warn  clippy-lints  [.] crates/inherits/Cargo.toml: Clippy lints configured
+      No [lints.clippy] section
+warn  clippy-lints  [.] crates/missing/Cargo.toml: Clippy lints configured
+      No [lints.clippy] section
+warn  clippy-lints  [.] crates/own/Cargo.toml: Clippy lints configured
+      No [lints.clippy] section
+warn  deny-toml-exists  [.] Rust: deny.toml
+      Not found: deny.toml
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found
