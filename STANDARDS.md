@@ -865,7 +865,9 @@ global-min-publish-age = "3 days"
 #### Package Metadata
 
 `Cargo.toml` sets `description`, `repository`, `license`, `edition` (the latest
-edition), `keywords` and `categories`.
+edition), `keywords` and `categories`. In a workspace, a package may inherit
+them from `[workspace.package]` instead, with `license.workspace = true` and so
+on.
 
 #### Lints
 
@@ -955,6 +957,10 @@ unused_qualifications = "warn"
 
 Groups are set to priority -1 so that individual lints, which default to 0, can
 override them.
+
+In a workspace, the lints may be set once in `[workspace.lints.clippy]`. Cargo
+applies them only to packages that inherit them with `[lints] workspace = true`,
+including the package in the root manifest, if there is one.
 
 `multiple_crate_versions` is allowed because transitive dependencies routinely
 pull in several versions of the same crate, which a project cannot fix.

@@ -72,7 +72,7 @@ warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
 warn  clippy-lints  [.] Clippy: lints configured
-      No [lints.clippy] or [workspace.lints.clippy] section
+      No [lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)

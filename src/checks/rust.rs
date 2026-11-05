@@ -37,15 +37,15 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
     };
 
     //  Package metadata
-    let package = config.package.as_ref();
+    let package = config.metadata(config.workspace.as_ref());
 
     report.should(
         "cargo-toml-license",
         "Cargo.toml: has license",
-        package.and_then(|p| p.license.as_ref()).is_some(),
+        package.license.is_some(),
     );
 
-    if let Some(license) = package.and_then(|p| p.license.as_deref()) {
+    if let Some(license) = package.license {
         report.should(
             "cargo-toml-license-texts",
             "Cargo.toml: license has its texts in LICENSES/",
@@ -56,19 +56,19 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
     report.should(
         "cargo-toml-description",
         "Cargo.toml: has description",
-        package.and_then(|p| p.description.as_ref()).is_some(),
+        package.description.is_some(),
     );
 
     report.should(
         "cargo-toml-repository",
         "Cargo.toml: has repository",
-        package.and_then(|p| p.repository.as_ref()).is_some(),
+        package.repository.is_some(),
     );
 
     report.should(
         "cargo-toml-edition",
         "Cargo.toml: has edition",
-        package.and_then(|p| p.edition.as_ref()).is_some(),
+        package.edition.is_some(),
     );
 }
 
@@ -117,9 +117,12 @@ pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) 
         );
     }
 
-    let package = ctx.cargo().as_ref_ok().and_then(|c| c.package.as_ref());
-
-    let has_msrv = package.and_then(|p| p.rust_version.as_ref()).is_some();
+    let has_msrv = ctx.cargo().as_ref_ok().is_some_and(|config| {
+        config
+            .metadata(config.workspace.as_ref())
+            .rust_version
+            .is_some()
+    });
     report.should(
         "cargo-toml-rust-version",
         "Rust: MSRV defined (rust-version)",
@@ -136,22 +139,23 @@ pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
         return;
     };
 
-    let has_clippy_lints = config.effective_clippy_lints().is_some();
-
-    if !has_clippy_lints {
-        report.should(
-            "clippy-lints",
-            "Clippy: lints configured",
-            Outcome::fail("No [lints.clippy] or [workspace.lints.clippy] section"),
-        );
-        return;
-    }
+    let lints = match config.clippy_lints(config.workspace.as_ref()) {
+        Ok(lints) => lints,
+        Err(error) => {
+            report.should(
+                "clippy-lints",
+                "Clippy: lints configured",
+                Outcome::fail(error),
+            );
+            return;
+        }
+    };
 
     report.should("clippy-lints", "Clippy: lints configured", Outcome::Pass);
     report.should(
         "clippy-pedantic",
         "Clippy: pedantic enabled",
-        config.has_clippy_lint("pedantic"),
+        lints.contains_key("pedantic"),
     );
 }
 
