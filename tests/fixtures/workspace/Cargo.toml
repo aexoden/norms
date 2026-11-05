@@ -1,0 +1,16 @@
+[workspace]
+members = ["crates/*"]
+exclude = ["crates/excluded"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://example.com/demo"
+
+[workspace.dependencies]
+helper = { path = "tools/helper" }
+serde = "1.0"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }

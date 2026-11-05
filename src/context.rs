@@ -28,6 +28,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
     CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
     PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
@@ -273,6 +274,7 @@ pub(crate) struct ComponentContext {
     relative: PathBuf,
     license_files: Arc<LicenseFiles>,
     cargo: OnceLock<ConfigStatus<CargoToml>>,
+    cargo_members: OnceLock<CargoWorkspaceMembers>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
@@ -292,6 +294,7 @@ impl ComponentContext {
             relative: component.path.clone(),
             license_files: Arc::clone(project.shared_license_files()),
             cargo: OnceLock::new(),
+            cargo_members: OnceLock::new(),
             cargo_config: OnceLock::new(),
             rust_toolchain: OnceLock::new(),
             pyproject: OnceLock::new(),
@@ -318,6 +321,17 @@ impl ComponentContext {
     pub(crate) fn cargo(&self) -> &ConfigStatus<CargoToml> {
         self.cargo
             .get_or_init(|| parse_toml_file::<CargoToml>(&self.path.join("Cargo.toml")))
+    }
+
+    /// The members of the Cargo workspace whose root manifest is the component's `Cargo.toml` (cached), other than the
+    /// package in that manifest. There are none if it has no `[workspace]` table, or doesn't parse.
+    pub(crate) fn cargo_members(&self) -> &CargoWorkspaceMembers {
+        self.cargo_members.get_or_init(|| {
+            self.cargo()
+                .as_ref_ok()
+                .map(|manifest| find_members(&self.path, manifest))
+                .unwrap_or_default()
+        })
     }
 
     /// Parsed `.cargo/config.toml` in the component's own directory (cached). For a component at the root, this is
@@ -452,8 +466,8 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
     }
 }
 
-// Parse a TOML file into the given type.
-fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
+/// Parse a TOML file into the given type.
+pub(crate) fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
     if !path.exists() {
         return ConfigStatus::NotFound;
     }

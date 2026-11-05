@@ -66,8 +66,15 @@ reason = "The repository holds no binary files."
   a library, and a Python component as an application if it installs a command
   (a non-empty `[project.scripts]` or `[project.gui-scripts]`). Other components
   of these languages are libraries. Every TypeScript component is an
-  application. Only a Rust component's own `Cargo.toml` is read, so the binaries
-  and dependencies of a workspace's members aren't considered.
+  application. A Rust component that is a Cargo workspace is an application if
+  any of its members builds a binary, and then every member pins its
+  dependencies exactly.
+- norms finds a workspace's members as Cargo does: the directories that
+  `[workspace] members` names or matches, and the packages inside the workspace
+  that the root package or a member depends on by path, less those `exclude`
+  lists. A member without a valid `Cargo.toml` fails; one outside the
+  workspace's directory, or a pattern norms can't expand, is reported as a
+  warning.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search
   them. An entry must be a plain relative path, without `.` or `..`; one that

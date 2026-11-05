@@ -1,0 +1,64 @@
+exit: 1
+languages: rust
+components: rust (.)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+warn  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+warn  cargo-toml-edition  [.] Cargo.toml: has edition
+pass  cargo-workspace-members  [.] Cargo.toml: workspace members found
+pass  cargo-toml-exists  [.] crates/broken/Cargo.toml: exists
+fail  cargo-toml-valid  [.] crates/broken/Cargo.toml: valid
+      Invalid TOML: TOML parse error at line 1, column 9
+        |
+      1 | [package
+        |         ^
+      unclosed table, expected `]`
+pass  cargo-toml-exists  [.] crates/cli/Cargo.toml: exists
+pass  cargo-toml-valid  [.] crates/cli/Cargo.toml: valid
+pass  cargo-toml-exists  [.] crates/core/Cargo.toml: exists
+pass  cargo-toml-valid  [.] crates/core/Cargo.toml: valid
+pass  cargo-toml-exists  [.] tools/helper/Cargo.toml: exists
+pass  cargo-toml-valid  [.] tools/helper/Cargo.toml: valid
+warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
+      Not pinned with =x.y.z: workspace.dependencies.serde ("1.0")
+warn  cargo-toml-dependencies-exact  [.] crates/cli/Cargo.toml: dependencies pinned exactly (application)
+      Not pinned with =x.y.z: dependencies.anyhow ("1")
+pass  cargo-toml-dependencies-exact  [.] crates/core/Cargo.toml: dependencies pinned exactly (application)
+warn  cargo-toml-dependencies-exact  [.] tools/helper/Cargo.toml: dependencies pinned exactly (application)
+      Not pinned with =x.y.z: dependencies.itoa ("^1.0")
+warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+      File not found
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+pass  clippy-lints  [.] Clippy: lints configured
+pass  clippy-pedantic  [.] Clippy: pedantic enabled
+warn  deny-toml-exists  [.] Rust: deny.toml
+      Not found: deny.toml
+warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+      Not found: Cargo.lock
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found

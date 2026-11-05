@@ -71,6 +71,19 @@ pub(crate) struct CargoDependencyDetail {
 }
 
 impl CargoDependency {
+    /// The path of a dependency on a local package, relative to the manifest declaring it.
+    pub(crate) fn path(&self) -> Option<&str> {
+        match self {
+            Self::Detailed(detail) => detail.path.as_ref()?.as_str(),
+            Self::Version(_) | Self::Other(_) => None,
+        }
+    }
+
+    /// Whether the dependency is inherited from the workspace's `[workspace.dependencies]` (`workspace = true`).
+    pub(crate) fn is_inherited(&self) -> bool {
+        matches!(self, Self::Detailed(detail) if detail.workspace.as_ref().and_then(toml::Value::as_bool) == Some(true))
+    }
+
     /// Check that this dependency is pinned to an exact version (`=x.y.z`).
     ///
     /// Dependencies from a path or a Git repository have no version to pin, and one inherited from the workspace is
@@ -188,6 +201,10 @@ pub(crate) struct CargoWorkspace {
     pub package: Option<CargoWorkspacePackage>,
     /// The lints members may inherit.
     pub lints: Option<CargoLints>,
+    /// The members' directories, or glob patterns matching them, relative to the workspace root.
+    pub members: Vec<String>,
+    /// Directories whose packages aren't members, relative to the workspace root.
+    pub exclude: Vec<String>,
     /// Dependencies that members inherit with `workspace = true`.
     pub dependencies: BTreeMap<String, CargoDependency>,
 }
@@ -207,11 +224,11 @@ impl CargoToml {
         !self.bin.is_empty()
     }
 
-    /// Check that every dependency this manifest declares is pinned exactly, including those of each target and of
-    /// `[workspace.dependencies]`.
-    ///
-    /// The error lists each dependency that isn't, by its table and name, with the reason.
-    pub(crate) fn check_dependencies_exact(&self) -> Result<(), String> {
+    /// The package's dependency tables, including those of each target, by their names in the manifest. The
+    /// workspace's `[workspace.dependencies]` isn't one of them.
+    pub(crate) fn package_dependency_tables(
+        &self,
+    ) -> impl Iterator<Item = (String, &BTreeMap<String, CargoDependency>)> {
         let package = self
             .dependencies
             .tables()
@@ -223,13 +240,22 @@ impl CargoToml {
                 .into_iter()
                 .map(move |(table, deps)| (format!("target.'{target}'.{table}"), deps))
         });
+
+        package.chain(targets)
+    }
+
+    /// Check that every dependency this manifest declares is pinned exactly, including those of each target and of
+    /// `[workspace.dependencies]`.
+    ///
+    /// The error lists each dependency that isn't, by its table and name, with the reason.
+    pub(crate) fn check_dependencies_exact(&self) -> Result<(), String> {
         let workspace = self
             .workspace
             .iter()
             .map(|workspace| ("workspace.dependencies".to_owned(), &workspace.dependencies));
 
-        let unpinned: Vec<String> = package
-            .chain(targets)
+        let unpinned: Vec<String> = self
+            .package_dependency_tables()
             .chain(workspace)
             .flat_map(|(table, deps)| {
                 deps.iter().filter_map(move |(name, dep)| {

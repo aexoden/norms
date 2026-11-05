@@ -1,0 +1,13 @@
+[package]
+name = "helper"
+version = "0.1.0"
+description = "A helper the CLI depends on by path."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+itoa = "^1.0"
+
+[lints]
+workspace = true

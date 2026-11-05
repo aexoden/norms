@@ -82,6 +82,12 @@ prints a `Report`, exiting 1 if any check failed.
   directories, and counts a symlinked marker only if it resolves inside the
   root. A marker nested in a component of the same language is folded into it.
   C++ is detected but has no checks yet.
+- `cargo_workspace.rs`: a Rust component that is a Cargo workspace has its
+  members found by Cargo's rules (`members` globs with the `glob` crate,
+  `exclude`, path dependencies inside the workspace), which
+  `ComponentContext::cargo_members` caches. They aren't components: their
+  results belong to the workspace's component and name the member's manifest
+  (`crates/cli/Cargo.toml: ...`).
 
 `norms verify` is not yet gating in CI: it still reports false findings on
 projects rendered from the template.
@@ -119,6 +125,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `toolchain` has two Rust components in subdirectories, one with a
   conforming `rust-toolchain.toml` of its own and one using the root's,
   which pins no exact channel and lacks clippy.
+  `workspace` is a virtual Cargo workspace with a binary and a library member
+  matched by a glob, an excluded crate, a malformed member, a member found
+  only as a path dependency, and an unrelated crate that isn't a member.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

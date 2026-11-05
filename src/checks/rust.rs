@@ -3,6 +3,8 @@
 
 //! Rust-specific checks.
 
+use std::path::Path;
+
 use crate::config::{CargoConfig, CargoToml};
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -10,21 +12,33 @@ use crate::context::{
 use crate::models::Language;
 use crate::report::{Outcome, Report, file_exists};
 
-/// Whether the component is an application rather than a library: whether it builds a binary, from an explicit
-/// `[[bin]]` target or, unless `autobins = false`, `src/main.rs` or `src/bin/`. A package with both a library and a
-/// binary counts as an application.
-///
-/// Only the component's own manifest counts, so the members of a Cargo workspace aren't considered.
-fn is_application(ctx: &ComponentContext, config: &CargoToml) -> bool {
-    let autobins = config
-        .package
-        .as_ref()
-        .and_then(|p| p.autobins)
-        .unwrap_or(true);
+/// Whether the package whose manifest, `config`, is in `dir` builds a binary, from an explicit `[[bin]]` target or,
+/// unless `autobins = false`, `src/main.rs` or `src/bin/`. A virtual manifest, without a `[package]`, builds nothing.
+fn builds_binary(dir: &Path, config: &CargoToml) -> bool {
+    let Some(package) = &config.package else {
+        return false;
+    };
 
     config.has_explicit_bin_targets()
-        || (autobins
-            && (ctx.path().join("src/main.rs").is_file() || ctx.path().join("src/bin").is_dir()))
+        || (package.autobins.unwrap_or(true)
+            && (dir.join("src/main.rs").is_file() || dir.join("src/bin").is_dir()))
+}
+
+/// Whether the component is an application rather than a library: whether its package, or any member of its
+/// workspace, builds a binary. A package with both a library and a binary counts as an application, and so does a
+/// workspace with both library and binary members.
+fn is_application(ctx: &ComponentContext, config: &CargoToml) -> bool {
+    builds_binary(ctx.path(), config)
+        || ctx
+            .cargo_members()
+            .parsed()
+            .any(|(path, member)| builds_binary(&ctx.path().join(path), member))
+}
+
+/// The label of a workspace member's manifest, by its path from the component.
+fn member_manifest(path: &Path) -> String {
+    let parts: Vec<_> = path.iter().map(|part| part.to_string_lossy()).collect();
+    format!("{}/Cargo.toml", parts.join("/"))
 }
 
 //
@@ -72,20 +86,56 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
     );
 }
 
+/// Check that the members of the component's Cargo workspace can be found, and that each has a valid manifest.
+pub(crate) fn check_cargo_workspace(ctx: &ComponentContext, report: &mut Report) {
+    if ctx
+        .cargo()
+        .as_ref_ok()
+        .and_then(|c| c.workspace.as_ref())
+        .is_none()
+    {
+        return;
+    }
+
+    let members = ctx.cargo_members();
+    report.should(
+        "cargo-workspace-members",
+        "Cargo.toml: workspace members found",
+        if members.errors.is_empty() {
+            Outcome::Pass
+        } else {
+            Outcome::fail(members.errors.join("; "))
+        },
+    );
+
+    for (path, status) in &members.members {
+        report.require_parsed("cargo-toml", &member_manifest(path), status);
+    }
+}
+
 //
 // Version pinning
 //
 
+/// Check that an application pins its dependencies exactly, in its root manifest and in each workspace member's.
 pub(crate) fn check_cargo_dependencies(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
     };
 
-    if is_application(ctx, config) {
+    if !is_application(ctx, config) {
+        return;
+    }
+
+    let members = ctx
+        .cargo_members()
+        .parsed()
+        .map(|(path, member)| (member_manifest(path), member));
+    for (label, manifest) in std::iter::once(("Cargo.toml".to_owned(), config)).chain(members) {
         report.should(
             "cargo-toml-dependencies-exact",
-            "Cargo.toml: dependencies pinned exactly (application)",
-            config.check_dependencies_exact(),
+            format!("{label}: dependencies pinned exactly (application)"),
+            manifest.check_dependencies_exact(),
         );
     }
 }
@@ -299,7 +349,12 @@ mod tests {
         for file in files {
             let path = dir.path().join(file);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
-            fs::write(path, "fn main() {}\n").unwrap();
+            let content = if path.ends_with("Cargo.toml") {
+                "[package]\nname = \"member\"\n"
+            } else {
+                "fn main() {}\n"
+            };
+            fs::write(path, content).unwrap();
         }
 
         let component = Component {
@@ -334,9 +389,33 @@ mod tests {
             "[package]\nname = \"x\"\nautobins = false\n",
             &["src/lib.rs", "src/main.rs", "src/bin/tool.rs"]
         ));
+    }
+
+    #[test]
+    fn workspaces_with_a_binary_member_are_applications() {
+        let workspace = "[workspace]\nmembers = [\"crates/*\"]\n";
+        assert!(is_application_with(
+            workspace,
+            &[
+                "crates/lib/Cargo.toml",
+                "crates/lib/src/lib.rs",
+                "crates/app/Cargo.toml",
+                "crates/app/src/main.rs"
+            ]
+        ));
+        assert!(is_application_with(
+            "[package]\nname = \"x\"\n\n[workspace]\n",
+            &["src/main.rs"]
+        ));
+
         assert!(!is_application_with(
-            "[workspace]\nmembers = [\"app\"]\n",
-            &["app/src/main.rs"]
+            workspace,
+            &["crates/lib/Cargo.toml", "crates/lib/src/lib.rs"]
+        ));
+        // A virtual manifest builds nothing itself, and a directory without a manifest isn't a package.
+        assert!(!is_application_with(
+            workspace,
+            &["src/main.rs", "crates/app/src/main.rs"]
         ));
     }
 }
