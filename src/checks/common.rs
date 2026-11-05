@@ -113,17 +113,57 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
-pub(crate) fn check_license(ctx: &ProjectContext, report: &mut Report) {
-    let candidates = ["LICENSE", "LICENSE-APACHE-2.0", "LICENSE-MIT"];
-    let found = candidates.iter().any(|name| ctx.path().join(name).exists());
-    report.must("license-exists", "LICENSE", found);
-}
-
 pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "changelog-exists",
         "CHANGELOG.md",
         file_exists(&ctx.path().join("CHANGELOG.md")),
+    );
+}
+
+//
+// Licensing
+//
+
+/// Check the license files: the REUSE texts in `LICENSES/`, their copies at the root, and `REUSE.toml`. Whether every
+/// file carries SPDX headers or a `REUSE.toml` annotation is left to `reuse lint`.
+pub(crate) fn check_licenses(ctx: &ProjectContext, report: &mut Report) {
+    let files = ctx.license_files();
+
+    report.must("license-exists", "LICENSE", files.has_copy());
+
+    report.must(
+        "licenses-dir-exists",
+        "LICENSES/: holds the license texts",
+        if files.texts.is_empty() {
+            Outcome::fail("No license texts in LICENSES/")
+        } else {
+            Outcome::Pass
+        },
+    );
+
+    if !files.texts.is_empty() || files.has_copy() {
+        let problems = files.copy_problems();
+
+        report.must(
+            "license-copies",
+            "LICENSE: root copies match LICENSES/",
+            if problems.is_empty() {
+                Ok(())
+            } else {
+                Err(problems.join("\n"))
+            },
+        );
+    }
+
+    let Some(config) = report.recommend_parsed("reuse-toml", "REUSE.toml", ctx.reuse_toml()) else {
+        return;
+    };
+
+    report.must(
+        "reuse-toml-version",
+        "REUSE.toml: version 1",
+        config.check_version(),
     );
 }
 

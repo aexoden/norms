@@ -30,7 +30,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_norms_config(ctx, report);
     common::check_readme(ctx, report);
-    common::check_license(ctx, report);
+    common::check_licenses(ctx, report);
     common::check_changelog(ctx, report);
     common::check_gitignore(ctx, report);
     common::check_gitattributes(ctx, report);

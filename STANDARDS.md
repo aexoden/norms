@@ -219,8 +219,9 @@ texts live in `LICENSES/`, named by SPDX identifier (for example,
 Projects also keep a copy at the repository root, where GitHub and most readers
 look for it. The copy is `LICENSE` for a single license. Multiple licenses are
 suffixed with `-<description>` (for example, `LICENSE-MIT` and
-`LICENSE-APACHE-2.0`). The root copies must match the texts in `LICENSES/`. More
-complicated licensing schemes should be documented in the README.
+`LICENSE-APACHE-2.0`). Each text in `LICENSES/` has a root copy identical to it,
+byte for byte, and each root copy is one of those texts. More complicated
+licensing schemes should be documented in the README.
 
 ### File Headers
 

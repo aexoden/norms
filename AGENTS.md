@@ -112,6 +112,8 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   skip; its `norms.toml` also excludes a missing directory. `unpinned` has
   applications whose manifests break the pinning standards, beside a Python
   library that isn't checked for them, and release ages other than 3 days.
+  `reuse` breaks the licensing standards: two license texts whose root copies
+  are misnamed or differ, and a `REUSE.toml` of the wrong version.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

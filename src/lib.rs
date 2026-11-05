@@ -6,5 +6,6 @@ pub mod cli;
 mod config;
 mod context;
 mod detection;
+mod licenses;
 mod models;
 mod report;

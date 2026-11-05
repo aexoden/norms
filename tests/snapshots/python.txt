@@ -4,6 +4,11 @@ components: python (.)
 
 pass  readme-exists  README.md
 pass  license-exists  LICENSE
+pass  licenses-dir-exists  LICENSES/: holds the license texts
+pass  license-copies  LICENSE: root copies match LICENSES/
+pass  reuse-toml-exists  REUSE.toml: exists
+pass  reuse-toml-valid  REUSE.toml: valid
+pass  reuse-toml-version  REUSE.toml: version 1
 warn  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md
 pass  gitignore-exists  .gitignore

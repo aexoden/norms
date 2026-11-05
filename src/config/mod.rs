@@ -11,6 +11,7 @@ mod precommit;
 mod pyproject;
 mod release_age;
 mod renovate;
+mod reuse;
 mod tsconfig;
 mod workflow;
 
@@ -24,5 +25,6 @@ pub(crate) use precommit::PrecommitConfig;
 pub(crate) use pyproject::PyprojectToml;
 pub(crate) use release_age::check_release_age_value;
 pub(crate) use renovate::{RenovateConfig, SHARED_PRESET};
+pub(crate) use reuse::ReuseToml;
 pub(crate) use tsconfig::{TsCompilerOptions, TsConfig};
 pub(crate) use workflow::Workflow;

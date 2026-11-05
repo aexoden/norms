@@ -1,0 +1,31 @@
+exit: 1
+languages: (none)
+components: (none)
+
+fail  readme-exists  README.md
+      Not found: README.md
+pass  license-exists  LICENSE
+pass  licenses-dir-exists  LICENSES/: holds the license texts
+fail  license-copies  LICENSE: root copies match LICENSES/
+      LICENSE: with several licenses, each copy is named LICENSE-<description>
+      LICENSES/Apache-2.0.txt: no identical copy at the root
+      LICENSE-APACHE-2.0: matches no text in LICENSES/
+pass  reuse-toml-exists  REUSE.toml: exists
+pass  reuse-toml-valid  REUSE.toml: valid
+fail  reuse-toml-version  REUSE.toml: version 1
+      version is 2, not 1
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched

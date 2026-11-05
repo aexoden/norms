@@ -30,9 +30,10 @@ use std::sync::OnceLock;
 
 use crate::config::{
     CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
-    PyprojectToml, RenovateConfig, TsConfig, Workflow,
+    PyprojectToml, RenovateConfig, ReuseToml, TsConfig, Workflow,
 };
 use crate::detection::Detection;
+use crate::licenses::LicenseFiles;
 use crate::models::{Component, Language};
 
 /// The file name of the CI workflow in `.github/workflows/`.
@@ -91,8 +92,10 @@ pub(crate) struct ProjectContext {
     languages: OnceLock<BTreeSet<Language>>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
+    license_files: OnceLock<LicenseFiles>,
     norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
+    reuse_toml: OnceLock<ConfigStatus<ReuseToml>>,
     precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
@@ -108,8 +111,10 @@ impl ProjectContext {
             languages: OnceLock::new(),
             cargo_config: OnceLock::new(),
             devbox: OnceLock::new(),
+            license_files: OnceLock::new(),
             norms: OnceLock::new(),
             renovate: OnceLock::new(),
+            reuse_toml: OnceLock::new(),
             precommit: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
@@ -167,6 +172,12 @@ impl ProjectContext {
             .get_or_init(|| parse_json5_file::<DevboxConfig>(&self.path.join("devbox.json")))
     }
 
+    /// The license texts in `LICENSES/` and their copies at the root (cached).
+    pub(crate) fn license_files(&self) -> &LicenseFiles {
+        self.license_files
+            .get_or_init(|| LicenseFiles::read(&self.path))
+    }
+
     /// Parsed `norms.toml` (cached).
     pub(crate) fn norms(&self) -> &ConfigStatus<NormsConfig> {
         self.norms
@@ -177,6 +188,12 @@ impl ProjectContext {
     pub(crate) fn renovate(&self) -> &ConfigStatus<RenovateConfig> {
         self.renovate
             .get_or_init(|| parse_json5_file::<RenovateConfig>(&self.path.join("renovate.json")))
+    }
+
+    /// Parsed `REUSE.toml` (cached).
+    pub(crate) fn reuse_toml(&self) -> &ConfigStatus<ReuseToml> {
+        self.reuse_toml
+            .get_or_init(|| parse_toml_file::<ReuseToml>(&self.path.join("REUSE.toml")))
     }
 
     /// Parsed `.pre-commit-config.yaml` (cached).
