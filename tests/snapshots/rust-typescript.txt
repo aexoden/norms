@@ -37,6 +37,7 @@ pass  cargo-toml-license  [.] Cargo.toml: has license
 pass  cargo-toml-description  [.] Cargo.toml: has description
 pass  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition
+pass  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
 pass  clippy-lints  [.] Clippy: lints configured
 pass  clippy-pedantic  [.] Clippy: pedantic enabled

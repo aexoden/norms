@@ -1,0 +1,12 @@
+[package]
+name = "unpinned"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "=1.0.104"
+serde = { version = "1.0", features = ["derive"] }
+local = { path = "local" }
+
+[dev-dependencies]
+tempfile = "^3.27"

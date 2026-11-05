@@ -60,6 +60,12 @@ reason = "The repository holds no binary files."
   `.gitignore` files exclude, `node_modules`, `target` and `.venv`, and doesn't
   follow symlinked directories or symlinked markers that lead outside the
   project. A directory it can't read is reported as a warning.
+- Some standards differ between applications and libraries. norms treats a Rust
+  component as an application if it builds a binary (`src/main.rs` or
+  `src/bin/`, unless `autobins = false`, or a `[[bin]]` target), even alongside
+  a library, and as a library otherwise. Only the component's own `Cargo.toml`
+  is read, so the binaries and dependencies of a workspace's members aren't
+  considered.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search
   them. An entry must be a plain relative path, without `.` or `..`; one that
@@ -605,6 +611,9 @@ version:
 | Cargo     | `serde = "=1.0.228"`                | `Cargo.lock`     |
 | Python    | `"pydantic==2.12.0"`                | `uv.lock`        |
 | pnpm      | `"react": "19.2.0"` (no `^` or `~`) | `pnpm-lock.yaml` |
+
+Dependencies from a path, a Git repository, a URL or another workspace member
+have no version to pin, so this applies to those from a registry.
 
 Libraries instead declare compatible version ranges, so that downstream projects
 can resolve shared dependencies to a single version. Their lock files are still

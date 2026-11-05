@@ -1,0 +1,37 @@
+exit: 1
+languages: rust
+components: rust (.)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+warn  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+pass  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
+      Not pinned with =x.y.z: dependencies.serde ("1.0"), dev-dependencies.tempfile ("^3.27")
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [.] Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  [.] Rust: deny.toml
+      Not found: deny.toml
+warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+      Not found: Cargo.lock

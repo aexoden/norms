@@ -91,6 +91,7 @@ fn check_component(ctx: &ComponentContext, language: Language, report: &mut Repo
         }
         Language::Rust => {
             rust::check_cargo(ctx, report);
+            rust::check_cargo_dependencies(ctx, report);
             rust::check_rust_toolchain(ctx, report);
             rust::check_clippy_lints(ctx, report);
             rust::check_cargo_deny(ctx, report);

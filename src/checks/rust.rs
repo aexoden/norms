@@ -3,8 +3,26 @@
 
 //! Rust-specific checks.
 
+use crate::config::CargoToml;
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
+
+/// Whether the component is an application rather than a library: whether it builds a binary, from an explicit
+/// `[[bin]]` target or, unless `autobins = false`, `src/main.rs` or `src/bin/`. A package with both a library and a
+/// binary counts as an application.
+///
+/// Only the component's own manifest counts, so the members of a Cargo workspace aren't considered.
+fn is_application(ctx: &ComponentContext, config: &CargoToml) -> bool {
+    let autobins = config
+        .package
+        .as_ref()
+        .and_then(|p| p.autobins)
+        .unwrap_or(true);
+
+    config.has_explicit_bin_targets()
+        || (autobins
+            && (ctx.path().join("src/main.rs").is_file() || ctx.path().join("src/bin").is_dir()))
+}
 
 //
 // Project configuration
@@ -41,6 +59,24 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
         "Cargo.toml: has edition",
         package.and_then(|p| p.edition.as_ref()).is_some(),
     );
+}
+
+//
+// Version pinning
+//
+
+pub(crate) fn check_cargo_dependencies(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.cargo().as_ref_ok() else {
+        return;
+    };
+
+    if is_application(ctx, config) {
+        report.should(
+            "cargo-toml-dependencies-exact",
+            "Cargo.toml: dependencies pinned exactly (application)",
+            config.check_dependencies_exact(),
+        );
+    }
 }
 
 //
@@ -107,10 +143,7 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
         return;
     };
 
-    // Determine if the project produces a binary
-    let has_binary = config.has_explicit_bin_targets() || ctx.path().join("src/main.rs").exists();
-
-    if has_binary {
+    if is_application(ctx, config) {
         report.should(
             "cargo-lock-exists",
             "Rust: Cargo.lock comitted (binary)",
@@ -177,4 +210,60 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         workflow.runs_command("cargo deny")
             || workflow.uses_action("EmbarkStudios/cargo-deny-action"),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::models::{Component, Language};
+
+    /// Whether a package with the given manifest and files is an application.
+    fn is_application_with(manifest: &str, files: &[&str]) -> bool {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("Cargo.toml"), manifest).unwrap();
+        for file in files {
+            let path = dir.path().join(file);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, "fn main() {}\n").unwrap();
+        }
+
+        let component = Component {
+            language: Language::Rust,
+            path: PathBuf::new(),
+        };
+        let ctx = ComponentContext::new(dir.path(), &component);
+        let ConfigStatus::Ok(config) = ctx.cargo() else {
+            panic!("invalid manifest");
+        };
+        is_application(&ctx, config)
+    }
+
+    #[test]
+    fn applications_build_a_binary() {
+        let package = "[package]\nname = \"x\"\n";
+        assert!(is_application_with(package, &["src/main.rs"]));
+        assert!(is_application_with(package, &["src/lib.rs", "src/main.rs"]));
+        assert!(is_application_with(package, &["src/bin/tool.rs"]));
+        assert!(is_application_with(
+            "[package]\nname = \"x\"\n\n[[bin]]\nname = \"tool\"\npath = \"tool.rs\"\n",
+            &["tool.rs"]
+        ));
+        assert!(is_application_with(
+            "[package]\nname = \"x\"\nautobins = false\n\n[[bin]]\nname = \"x\"\npath = \"src/main.rs\"\n",
+            &["src/main.rs"]
+        ));
+
+        assert!(!is_application_with(package, &["src/lib.rs"]));
+        assert!(!is_application_with(
+            "[package]\nname = \"x\"\nautobins = false\n",
+            &["src/lib.rs", "src/main.rs", "src/bin/tool.rs"]
+        ));
+        assert!(!is_application_with(
+            "[workspace]\nmembers = [\"app\"]\n",
+            &["app/src/main.rs"]
+        ));
+    }
 }
