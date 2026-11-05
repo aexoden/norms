@@ -6,7 +6,7 @@
         with:
           persist-credentials: false
 {%- endmacro %}
-{#- Jobs that install nothing, the gate, markdownlint and zizmor, run on ubuntu-slim.
+{#- Jobs that need no toolchain, the gate, markdownlint, tombi and zizmor, run on ubuntu-slim.
     Jobs that compile, type check or run tests get 30 minutes, the others 10. #}
 {%- macro job(id, name, dir, runner='ubuntu-latest', timeout=10) %}
   {{ id }}:
@@ -59,14 +59,14 @@
           working-directory: {{ typescript_dir }}
 {%- endif %}
 {%- endmacro %}
-{%- set jobs = ['markdownlint', 'pre-commit', 'reuse', 'zizmor'] %}
+{%- set jobs = ['markdownlint', 'pre-commit', 'reuse', 'tombi', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vite-build', 'vitest'] %}{% endif %}
-{#- The pre-commit job skips the hooks that have a job of their own, the hook for
-    markdownlint being markdownlint-cli2, and pnpm-lock, since pnpm/setup installs
-    with a frozen lock file. #}
-{%- set skip = jobs | reject('in', ['markdownlint', 'pre-commit']) | list + ['markdownlint-cli2'] %}
+{#- The pre-commit job skips the hooks that have a job of their own, the hooks for
+    markdownlint and tombi being markdownlint-cli2 and tombi-format, and pnpm-lock,
+    since pnpm/setup installs with a frozen lock file. #}
+{%- set skip = jobs | reject('in', ['markdownlint', 'pre-commit', 'tombi']) | list + ['markdownlint-cli2', 'tombi-format'] %}
 {%- if 'typescript' in languages %}{% set skip = skip + ['pnpm-lock'] %}{% endif %}
 {#- Libraries also test the oldest versions they support, in CI only. #}
 {%- if project_type == 'library' and 'rust' in languages %}{% set jobs = jobs + ['msrv'] %}{% endif %}
@@ -119,6 +119,15 @@ jobs:
 
       - name: Check REUSE compliance
         uses: fsfe/reuse-action@{{ action_reuse }}
+{{ job('tombi', 'Check TOML formatting with Tombi', '', 'ubuntu-slim') }}
+
+      - name: Install Tombi
+        uses: tombi-toml/setup-tombi@{{ action_setup_tombi }}
+        with:
+          enable-cache: false
+
+      - name: Check TOML formatting with Tombi
+        run: tombi format --check --diagnostics-format github
 {{ job('zizmor', 'GitHub Actions security analysis with zizmor 🌈', '', 'ubuntu-slim') }}
 
       - name: Run zizmor 🌈

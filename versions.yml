@@ -57,6 +57,11 @@ hook_markdownlint_cli2:
   default: "v0.24.0"
   when: false
 
+# renovate: datasource=github-tags depName=tombi-toml/tombi-pre-commit
+hook_tombi:
+  default: "v1.9.8"
+  when: false
+
 # renovate: datasource=github-tags depName=zizmorcore/zizmor-pre-commit
 hook_zizmor:
   default: "v1.31.1"
@@ -82,6 +87,11 @@ action_markdownlint_cli2:
 # renovate: datasource=github-tags depName=fsfe/reuse-action
 action_reuse:
   default: "676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0"
+  when: false
+
+# renovate: datasource=github-tags depName=tombi-toml/setup-tombi
+action_setup_tombi:
+  default: "88295e71426671820b98934ea75ea352d73eba8b # v1.9.8"
   when: false
 
 # renovate: datasource=github-tags depName=zizmorcore/zizmor-action

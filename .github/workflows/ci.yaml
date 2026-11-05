@@ -99,7 +99,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [build-norms, cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, pre-commit, reuse, rustfmt, template, zizmor]
+    needs: [build-norms, cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, pre-commit, reuse, rustfmt, template, tombi, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -172,7 +172,7 @@ jobs:
       - name: Run the hooks that have no job of their own
         env:
           PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
-          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,reuse,rustfmt,zizmor
+          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,reuse,rustfmt,tombi-format,zizmor
         run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
 
   reuse:
@@ -313,6 +313,26 @@ jobs:
         run: |
           chmod +x "$RUNNER_TEMP/norms/norms"
           "$RUNNER_TEMP/norms/norms" verify "$RUNNER_TEMP/project"
+
+  tombi:
+    name: Check TOML formatting with Tombi
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Tombi
+        uses: tombi-toml/setup-tombi@88295e71426671820b98934ea75ea352d73eba8b # v1.9.8
+        with:
+          enable-cache: false
+
+      - name: Check TOML formatting with Tombi
+        run: tombi format --check --diagnostics-format github
 
   zizmor:
     name: GitHub Actions security analysis with zizmor 🌈

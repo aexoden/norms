@@ -474,7 +474,8 @@ behavior or external tools.
 
 Jobs that install nothing and run only one JavaScript action or shell step,
 namely the gate job, markdownlint and zizmor, run on `ubuntu-slim`, which
-starts faster. It runs jobs in a container without Docker, so Docker-based
+starts faster, as does the Tombi job, whose setup action only downloads a
+prebuilt binary. It runs jobs in a container without Docker, so Docker-based
 actions such as `fsfe/reuse-action` and `EmbarkStudios/cargo-deny-action` can't
 run there. The other jobs, which install a toolchain or tools, stay on
 `ubuntu-latest`.
@@ -564,6 +565,24 @@ Every project uses these hooks:
   [Licensing](#licensing)).
 - [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2):
   `markdownlint-cli2` (see [Markdown](#markdown)).
+- [Tombi](https://github.com/tombi-toml/tombi-pre-commit): `tombi-format`,
+  which checks the formatting of every TOML file apart from the generated lock
+  files. In `Cargo.toml` and `pyproject.toml`, that includes the order of keys
+  their schemas define one for, such as those of `[package]`, as well as of
+  dependencies (see [Dependency Order](#dependency-order)):
+
+  ```yaml
+  - id: tombi-format
+    args: [--check]
+    exclude: (^|/)(Cargo|uv)\.lock$
+  ```
+
+  CI runs Tombi in a `tombi` job instead, installed by `tombi-toml/setup-tombi`
+  and run as `tombi format --check --diagnostics-format github`, which annotates
+  each unformatted file. When given no files, Tombi formats only `*.toml` files,
+  so it skips the lock files too. Any further exclusions go in `tombi.toml`'s
+  `[files] exclude`, which applies to the hook as well.
+
 - [zizmor](https://github.com/zizmorcore/zizmor-pre-commit): `zizmor`.
 - [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit):
   `conventional-pre-commit` in the `commit-msg` stage, with the recognized
@@ -626,6 +645,18 @@ have no version to pin, so this applies to those from a registry.
 Libraries instead declare compatible version ranges, so that downstream projects
 can resolve shared dependencies to a single version. Their lock files are still
 committed for reproducible development and CI.
+
+### Dependency Order
+
+Dependencies are listed in alphabetical order within each table or list, such
+as `[dependencies]` in `Cargo.toml`, `[project] dependencies` and each
+dependency group in `pyproject.toml`. Formatters keep the order, so it needs no
+manual care:
+
+- `Cargo.toml` and `pyproject.toml`: [Tombi](https://tombi-toml.github.io/tombi/)
+  sorts them using the schemas it ships with. The `tombi-format` hook checks
+  the order, and formatting the file with Tombi (or its editor extension) fixes
+  it.
 
 ### Release Age
 
@@ -718,7 +749,7 @@ The package version comes from git tags through
 dynamic = ["version"]
 
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatch-vcs", "hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]

@@ -28,6 +28,7 @@ pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=tru
 pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
 pass  precommit-config-exists  .pre-commit-config.yaml
 pass  precommit-reuse  Pre-commit: reuse hook
+pass  precommit-tombi  Pre-commit: tombi-format hook
 pass  renovate-exists  renovate.json: exists
 pass  renovate-valid  renovate.json: valid
 pass  renovate-schema  renovate.json: has $schema
@@ -37,6 +38,7 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: audit.yaml: valid
 pass  ci-reuse  CI: REUSE compliance
+pass  ci-tombi  CI: TOML formatting
 pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid

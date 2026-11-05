@@ -312,6 +312,11 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "Pre-commit: reuse hook",
         config.has_hook("reuse"),
     );
+    report.should(
+        "precommit-tombi",
+        "Pre-commit: tombi-format hook",
+        config.has_hook("tombi-format"),
+    );
 }
 
 //
@@ -347,6 +352,12 @@ pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
 static REUSE_LINT: LazyLock<Regex> = LazyLock::new(|| {
     #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
     Regex::new(r"(?m)\breuse\s+lint(?:$|[^\w-])").unwrap()
+});
+
+/// `tombi format --check` in a CI script, which fails on unformatted files instead of rewriting them.
+static TOMBI_FORMAT_CHECK: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"(?m)\btombi\s+format\b[^\n]*\s--check\b").unwrap()
 });
 
 pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
@@ -389,6 +400,11 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         "CI: REUSE compliance",
         workflow.uses_action("fsfe/reuse-action") || workflow.runs_matching(&REUSE_LINT),
     );
+    report.should(
+        "ci-tombi",
+        "CI: TOML formatting",
+        workflow.runs_matching(&TOMBI_FORMAT_CHECK),
+    );
 }
 
 #[cfg(test)]
@@ -411,6 +427,25 @@ mod tests {
             "nonreuse lint",
         ] {
             assert!(!REUSE_LINT.is_match(run), "{run}");
+        }
+    }
+
+    #[test]
+    fn tombi_format_must_check() {
+        for run in [
+            "tombi format --check",
+            "tombi format --check --diagnostics-format github",
+            "uvx tombi format . --check",
+        ] {
+            assert!(TOMBI_FORMAT_CHECK.is_match(run), "{run}");
+        }
+        for run in [
+            "tombi format",
+            "tombi format\necho --check",
+            "tombi lint --check",
+            "tombi format --checked",
+        ] {
+            assert!(!TOMBI_FORMAT_CHECK.is_match(run), "{run}");
         }
     }
 }

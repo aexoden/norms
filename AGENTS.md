@@ -21,7 +21,7 @@ NORMS_BLESS=1 cargo test --test fixtures  # rewrite the fixture snapshots
 # cargo-deny is installed separately
 cargo deny --workspace --all-features check -D warnings bans licenses sources
 cargo run -- verify <path>                # run norms against a project
-pre-commit run --all-files                # every hook, incl. reuse, markdownlint, zizmor
+pre-commit run --all-files                # every hook, incl. reuse, markdownlint, tombi, zizmor
 ```
 
 Clippy runs `pedantic`, `nursery` and `cargo` with `-D warnings`, plus the
@@ -122,9 +122,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.
-- Fixtures are kept exactly as written: pre-commit and markdownlint skip them,
-  and `REUSE.toml` covers them, so one may be deliberately broken or lack
-  headers. A fix or new check that depends on a project's layout gets a fixture.
+- Fixtures are kept exactly as written: pre-commit, markdownlint and Tombi
+  (`tombi.toml`) skip them, and `REUSE.toml` covers them, so one may be
+  deliberately broken or lack headers. A fix or new check that depends on a
+  project's layout gets a fixture.
 
 ## Template
 
@@ -157,6 +158,8 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 - Commits use Conventional Commits with the types listed in `STANDARDS.md`;
   the subject is imperative and lowercase, aiming for 50 characters and never
   over 72.
+- TOML files are formatted by Tombi (the `tombi-format` hook), which also keeps
+  dependencies in alphabetical order.
 - Dependencies in `Cargo.toml` are pinned exactly (`=x.y.z`). New dependencies
   must have licenses allowed by `deny.toml`.
 - `CHANGELOG.md` is maintained by hand in Keep a Changelog format, with no

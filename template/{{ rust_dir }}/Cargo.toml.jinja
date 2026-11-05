@@ -9,11 +9,11 @@ edition = "2024"
 rust-version = "{{ rust_msrv }}"
 {%- endif %}
 description = "{{ description }}"
-repository = "{{ repository_url }}"
-license = "{{ license }}"
 {%- if rust_prefix %}
 readme = "{% for _ in rust_dir.split('/') %}../{% endfor %}README.md"
 {%- endif %}
+repository = "{{ repository_url }}"
+license = "{{ license }}"
 keywords = {{ rust_keywords | tojson }}
 categories = {{ rust_categories | tojson }}
 
