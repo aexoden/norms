@@ -20,6 +20,7 @@ jobs:
     if: always()
     needs: [markdownlint, mypy, pytest, reuse, ruff-check, ruff-format, uv-lock, zizmor]
     runs-on: ubuntu-slim
+    timeout-minutes: 10
     permissions: {}
     steps:
       - name: Fail unless every job succeeded
@@ -29,6 +30,7 @@ jobs:
   markdownlint:
     name: Lint Markdown with markdownlint
     runs-on: ubuntu-slim
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -45,6 +47,7 @@ jobs:
   reuse:
     name: Check REUSE compliance
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -59,6 +62,7 @@ jobs:
   zizmor:
     name: GitHub Actions security analysis with zizmor 🌈
     runs-on: ubuntu-slim
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -77,6 +81,7 @@ jobs:
   mypy:
     name: Type check Python code with mypy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -99,6 +104,7 @@ jobs:
   pytest:
     name: Run Python tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -121,6 +127,7 @@ jobs:
   ruff-check:
     name: Lint Python code with Ruff
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -143,6 +150,7 @@ jobs:
   ruff-format:
     name: Check Python code formatting
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -165,6 +173,7 @@ jobs:
   uv-lock:
     name: Check that uv.lock is up to date
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

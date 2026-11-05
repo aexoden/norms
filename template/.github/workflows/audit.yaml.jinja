@@ -19,6 +19,7 @@ jobs:
   cargo-deny:
     name: Run cargo-deny advisory check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -41,6 +42,7 @@ jobs:
   uv-audit:
     name: Run uv advisory check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
 {%- if python_prefix %}
@@ -70,6 +72,7 @@ jobs:
   pnpm-audit:
     name: Run pnpm advisory check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
 {%- if typescript_prefix %}

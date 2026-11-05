@@ -6,11 +6,13 @@
         with:
           persist-credentials: false
 {%- endmacro %}
-{#- Jobs that install nothing, the gate, markdownlint and zizmor, run on ubuntu-slim. #}
-{%- macro job(id, name, dir, runner='ubuntu-latest') %}
+{#- Jobs that install nothing, the gate, markdownlint and zizmor, run on ubuntu-slim.
+    Jobs that compile, type check or run tests get 30 minutes, the others 10. #}
+{%- macro job(id, name, dir, runner='ubuntu-latest', timeout=10) %}
   {{ id }}:
     name: {{ name }}
     runs-on: {{ runner }}
+    timeout-minutes: {{ timeout }}
     permissions:
       contents: read
 {%- if dir not in ['', '.'] %}
@@ -78,6 +80,7 @@ jobs:
     if: always()
     needs: [{{ jobs | sort | join(', ') }}]
     runs-on: ubuntu-slim
+    timeout-minutes: 10
     permissions: {}
     steps:
       - name: Fail unless every job succeeded
@@ -112,12 +115,12 @@ jobs:
 {%- if rust_prefix %}
           manifest-path: {{ rust_prefix }}Cargo.toml
 {%- endif %}
-{{ job('cargo-test', 'Run Rust tests', rust_dir) }}
+{{ job('cargo-test', 'Run Rust tests', rust_dir, timeout=30) }}
 {{- setup_rust() }}
 
       - name: Run Rust tests
         run: cargo test --workspace --all-features
-{{ job('clippy', 'Lint Rust code with Clippy', rust_dir) }}
+{{ job('clippy', 'Lint Rust code with Clippy', rust_dir, timeout=30) }}
 {{- setup_rust() }}
 
       - name: Lint Rust code with Clippy
@@ -137,12 +140,12 @@ jobs:
 {%- endif %}
 {%- endif %}
 {%- if 'python' in languages %}
-{{ job('mypy', 'Type check Python code with mypy', python_dir) }}
+{{ job('mypy', 'Type check Python code with mypy', python_dir, timeout=30) }}
 {{- setup_uv() }}
 
       - name: Type check Python code with mypy
         run: uv run mypy .
-{{ job('pytest', 'Run Python tests', python_dir) }}
+{{ job('pytest', 'Run Python tests', python_dir, timeout=30) }}
 {{- setup_uv() }}
 
       - name: Run Python tests
@@ -164,7 +167,7 @@ jobs:
         run: uv lock --check
 {%- endif %}
 {%- if 'typescript' in languages %}
-{{ job('eslint', 'Lint TypeScript code with ESLint', typescript_dir) }}
+{{ job('eslint', 'Lint TypeScript code with ESLint', typescript_dir, timeout=30) }}
 {{- setup_pnpm() }}
 
       - name: Lint TypeScript code with ESLint
@@ -179,12 +182,12 @@ jobs:
 
       - name: Check formatting with Prettier
         run: pnpm exec prettier --check .
-{{ job('tsc', 'Type check TypeScript code', typescript_dir) }}
+{{ job('tsc', 'Type check TypeScript code', typescript_dir, timeout=30) }}
 {{- setup_pnpm() }}
 
       - name: Type check TypeScript code
         run: pnpm exec tsc -b --noEmit
-{{ job('vitest', 'Run TypeScript tests', typescript_dir) }}
+{{ job('vitest', 'Run TypeScript tests', typescript_dir, timeout=30) }}
 {{- setup_pnpm() }}
 
       - name: Run TypeScript tests

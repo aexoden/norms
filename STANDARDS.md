@@ -457,6 +457,12 @@ run there. The other jobs, which install a toolchain or tools, stay on
 Each workflow sets a `concurrency` group that cancels superseded runs of the
 same ref.
 
+Every job sets `timeout-minutes`, so a hung step fails within minutes rather
+than at GitHub's six-hour default: 30 for jobs that compile, type check or run
+tests, such as Clippy, mypy, ESLint and the test suites, and 10 for the rest. A
+project whose jobs legitimately take longer raises the value for those jobs.
+Jobs on `ubuntu-slim` can't exceed its own 15-minute limit.
+
 `ci.yaml` never filters `pull_request` by `paths` or `branches`. The ruleset
 waits for its result, and a workflow that does not run leaves the pull request
 blocked.
@@ -474,6 +480,7 @@ ci-success:
   if: always()
   needs: [lint, test]
   runs-on: ubuntu-slim
+  timeout-minutes: 10
   steps:
     - name: Fail unless every job succeeded
       if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
