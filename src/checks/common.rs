@@ -308,6 +308,11 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.should(
+        "precommit-default-stages",
+        "Pre-commit: default_stages is [pre-commit]",
+        config.check_default_stages(),
+    );
+    report.should(
         "precommit-reuse",
         "Pre-commit: reuse hook",
         config.has_hook("reuse"),

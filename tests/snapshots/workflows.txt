@@ -18,6 +18,8 @@ fail  gitattributes-exists  .gitattributes: exists
 fail  editorconfig-exists  .editorconfig: exists
       File not found
 pass  precommit-config-exists  .pre-commit-config.yaml
+warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+      No default_stages, so hooks without stages of their own run in every installed stage
 warn  precommit-reuse  Pre-commit: reuse hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
