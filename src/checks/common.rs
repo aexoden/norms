@@ -503,6 +503,11 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
                 Err(format!("No timeout-minutes: {}", untimed.join(", ")))
             },
         );
+        report.should(
+            "workflow-concurrency",
+            format!("CI: {name}: concurrency cancels superseded runs"),
+            workflow.cancels_superseded_runs(),
+        );
     }
 
     let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {

@@ -44,6 +44,8 @@ fail  workflow-valid  CI: audit.yml: valid
 pass  workflow-valid  CI: release.yaml: valid
 warn  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
       No timeout-minutes: release
+warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
+      No concurrency group
 pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid

@@ -14,6 +14,8 @@ use serde_json::Value;
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct Workflow {
+    /// A group name, or a mapping with `group` and `cancel-in-progress`.
+    pub concurrency: Option<Value>,
     pub jobs: BTreeMap<String, WorkflowJob>,
 }
 
@@ -57,6 +59,24 @@ impl WorkflowStep {
 impl Workflow {
     fn steps(&self) -> impl Iterator<Item = &WorkflowStep> {
         self.jobs.values().flat_map(|job| &job.steps)
+    }
+
+    /// Whether the workflow's `concurrency` cancels superseded runs: a mapping naming a `group` and setting
+    /// `cancel-in-progress: true`. A group name alone queues runs instead, and an expression for `cancel-in-progress`
+    /// may cancel only some.
+    pub(crate) fn cancels_superseded_runs(&self) -> Result<(), String> {
+        match &self.concurrency {
+            None | Some(Value::Null) => Err("No concurrency group".to_owned()),
+            Some(Value::Object(concurrency)) if !has_group(concurrency.get("group")) => {
+                Err("concurrency has no group".to_owned())
+            }
+            Some(Value::Object(concurrency))
+                if concurrency.get("cancel-in-progress") == Some(&Value::Bool(true)) =>
+            {
+                Ok(())
+            }
+            Some(_) => Err("concurrency doesn't set cancel-in-progress: true".to_owned()),
+        }
     }
 
     /// The IDs of the jobs that don't set `timeout-minutes`. A job calling a reusable workflow can't set it, so it
@@ -106,6 +126,15 @@ impl Workflow {
     /// Whether any step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
     pub(crate) fn uses_action(&self, action: &str) -> bool {
         self.steps_using(action).next().is_some()
+    }
+}
+
+/// Whether a `concurrency` mapping's `group` names one: a non-blank string, or a number.
+fn has_group(group: Option<&Value>) -> bool {
+    match group {
+        Some(Value::String(group)) => !group.trim().is_empty(),
+        Some(Value::Number(_)) => true,
+        _ => false,
     }
 }
 
@@ -279,6 +308,52 @@ jobs:
         )
         .expect("workflow parses");
         assert_eq!(workflow.jobs_without_timeout(), ["empty", "untimed"]);
+    }
+
+    #[test]
+    fn concurrency_must_cancel_superseded_runs() {
+        let cancels = |yaml: &str| {
+            serde_saphyr::from_str::<Workflow>(yaml)
+                .expect("workflow parses")
+                .cancels_superseded_runs()
+        };
+        assert_eq!(
+            cancels(
+                "concurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n"
+            ),
+            Ok(())
+        );
+
+        let no_cancel = Err("concurrency doesn't set cancel-in-progress: true".to_owned());
+        for yaml in [
+            "concurrency: ci\n",
+            "concurrency:\n  group: ci\n",
+            "concurrency:\n  group: ci\n  cancel-in-progress: false\n",
+            "concurrency:\n  group: ci\n  cancel-in-progress: \"true\"\n",
+            "concurrency:\n  group: ci\n  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n",
+            "concurrency: [ci]\n",
+        ] {
+            assert_eq!(cancels(yaml), no_cancel, "{yaml}");
+        }
+        for yaml in [
+            "concurrency:\n  cancel-in-progress: true\n",
+            "concurrency:\n  group:\n  cancel-in-progress: true\n",
+            "concurrency:\n  group: ' '\n  cancel-in-progress: true\n",
+            "concurrency:\n  group: [ci]\n  cancel-in-progress: true\n",
+        ] {
+            assert_eq!(
+                cancels(yaml),
+                Err("concurrency has no group".to_owned()),
+                "{yaml}"
+            );
+        }
+        for yaml in ["name: CI\n", "concurrency:\n"] {
+            assert_eq!(
+                cancels(yaml),
+                Err("No concurrency group".to_owned()),
+                "{yaml}"
+            );
+        }
     }
 
     #[test]

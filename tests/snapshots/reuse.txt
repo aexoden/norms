@@ -34,6 +34,8 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: pre-commit, reuse
+warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+      No concurrency group
 warn  ci-reuse  CI: REUSE compliance
 warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)

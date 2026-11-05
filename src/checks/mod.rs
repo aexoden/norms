@@ -415,6 +415,7 @@ mod tests {
                     "norms-toml-exclude-exists",
                     "workflow-valid",
                     "workflow-job-timeouts",
+                    "workflow-concurrency",
                 ]
                 .contains(&result.id.as_str())
                     || seen.insert((&result.component, &result.id)),

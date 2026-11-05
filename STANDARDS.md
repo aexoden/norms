@@ -491,7 +491,8 @@ run there. The other jobs, which install a toolchain or tools, stay on
 `ubuntu-latest`.
 
 Each workflow sets a `concurrency` group that cancels superseded runs of the
-same ref.
+same ref, with `cancel-in-progress: true` rather than an expression that cancels
+only some of them.
 
 Every job sets `timeout-minutes`, so a hung step fails within minutes rather
 than at GitHub's six-hour default: 30 for jobs that compile, type check or run

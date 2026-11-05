@@ -39,7 +39,9 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: audit.yaml: valid
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 pass  ci-reuse  CI: REUSE compliance
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)

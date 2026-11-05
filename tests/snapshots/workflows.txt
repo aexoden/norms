@@ -30,7 +30,11 @@ pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: release.yaml: valid
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: zizmor-run
+warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+      No concurrency group
 pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
+warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
+      concurrency doesn't set cancel-in-progress: true
 warn  ci-reuse  CI: REUSE compliance
 warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)

@@ -129,8 +129,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   matched by a glob, an excluded crate, a malformed member, a member found
   only as a path dependency, and an unrelated crate that isn't a member.
   `workflows` breaks the Actions standards: a zizmor hook and CI steps that
-  don't run its pedantic persona or don't fail on findings; and a job without
-  `timeout-minutes`, beside a call to a reusable workflow, which can't set one.
+  don't run its pedantic persona or don't fail on findings; a job without
+  `timeout-minutes`, beside a call to a reusable workflow, which can't set one;
+  and workflows whose `concurrency` is missing or doesn't cancel.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.
