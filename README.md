@@ -27,11 +27,26 @@ The `--vcs-ref main` option is needed until norms tags a release that includes
 the template; without it, Copier uses the latest tag, `v0.1.0`, which predates
 the template.
 
+## Development
+
+Install [pre-commit](https://pre-commit.com/#install), then the hooks:
+
+```sh
+pre-commit install
+```
+
+Rust uses [rustup](https://rustup.rs/), which installs the toolchain pinned in
+`rust-toolchain.toml`. Install
+[cargo-deny](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny) for
+the dependency policy hook.
+
 ## License
 
 Licensed under either of
 
-- Apache License, Version 2.0, ([LICENSE-APACHE-2.0](LICENSE-APACHE-2.0) or <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0 ([LICENSE-APACHE-2.0](LICENSE-APACHE-2.0) or
+  <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  <https://opensource.org/licenses/MIT>)
 
 at your option.
