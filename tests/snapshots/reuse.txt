@@ -88,9 +88,11 @@ warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-config-exists  .cargo/config.toml: exists
       File not found
+warn  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
 warn  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
 warn  rust-precommit-clippy  Rust pre-commit: clippy hook
 warn  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+warn  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 warn  rust-ci-rustfmt  Rust CI: format check
 warn  rust-ci-clippy  Rust CI: clippy check
 warn  rust-ci-test  Rust CI: test

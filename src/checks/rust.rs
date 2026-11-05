@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::config::{CargoConfig, CargoToml, CargoWorkspace, Workflow};
+use crate::config::{CargoConfig, CargoToml, CargoWorkspace, Workflow, commands};
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
@@ -317,6 +317,12 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.should(
+        "rust-precommit-cargo-lock",
+        "Rust pre-commit: cargo-lock hook",
+        config.has_hook("cargo-lock"),
+    );
+
+    report.should(
         "rust-precommit-rustfmt",
         "Rust pre-commit: rustfmt hook",
         config.has_hook("rustfmt"),
@@ -345,6 +351,11 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.should(
+        "rust-ci-cargo-lock",
+        "Rust CI: Cargo.lock up to date",
+        workflow.run_lines().any(|line| checks_cargo_lock(&line)),
+    );
+    report.should(
         "rust-ci-rustfmt",
         "Rust CI: format check",
         workflow.runs_command("cargo fmt") || workflow.uses_action("actions-rust-lang/rustfmt"),
@@ -365,6 +376,32 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         workflow.runs_command("cargo deny")
             || workflow.uses_action("EmbarkStudios/cargo-deny-action"),
     );
+}
+
+/// The Cargo subcommand a command's words run, after any `+toolchain`, and the arguments that follow it.
+fn cargo_subcommand<'a>(words: &[&'a str]) -> Option<(&'a str, Vec<&'a str>)> {
+    let mut words = words
+        .iter()
+        .copied()
+        .skip_while(|word| *word != "cargo")
+        .skip(1)
+        .skip_while(|word| word.starts_with('+'));
+    Some((words.next()?, words.collect()))
+}
+
+/// Whether a script line checks that `Cargo.lock` is up to date: `cargo update` with `--locked` (or `--frozen`, which
+/// implies it), which fails instead of changing the lock file, and `--workspace` (or `-w`), which limits it to the
+/// workspace's own packages so that a current lock file needs no change.
+fn checks_cargo_lock(line: &str) -> bool {
+    commands(line).any(|words| {
+        cargo_subcommand(&words).is_some_and(|(subcommand, args)| {
+            subcommand == "update"
+                && args
+                    .iter()
+                    .any(|arg| matches!(*arg, "--locked" | "--frozen"))
+                && args.iter().any(|arg| matches!(*arg, "--workspace" | "-w"))
+        })
+    })
 }
 
 /// The checks cargo-deny's `check` command runs: those it names, or every one if it names none.
@@ -523,6 +560,27 @@ mod tests {
 
         assert_eq!(warnings("[workspace]\n"), 1);
         assert_eq!(warnings("[package]\nname = \"x\"\n\n[workspace]\n"), 0);
+    }
+
+    #[test]
+    fn cargo_lock_needs_locked_workspace_update() {
+        for line in [
+            "cargo update --workspace --locked",
+            "cargo +1.99.1 update -w --locked --manifest-path backend/Cargo.toml",
+            "cd backend && cargo update --locked --workspace",
+            "cargo update --workspace --frozen",
+        ] {
+            assert!(checks_cargo_lock(line), "{line}");
+        }
+        for line in [
+            "cargo update --workspace",
+            "cargo update --locked",
+            "cargo test --workspace --locked",
+            "cargo update; cargo test --workspace --locked",
+            "echo cargo-update --workspace --locked",
+        ] {
+            assert!(!checks_cargo_lock(line), "{line}");
+        }
     }
 
     #[test]
