@@ -1,0 +1,60 @@
+exit: 1
+languages: rust
+components: rust (backend), rust (tools/cli)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  cargo-toml-exists  [backend] Cargo.toml: exists
+pass  cargo-toml-valid  [backend] Cargo.toml: valid
+warn  cargo-toml-license  [backend] Cargo.toml: has license
+warn  cargo-toml-description  [backend] Cargo.toml: has description
+warn  cargo-toml-repository  [backend] Cargo.toml: has repository
+pass  cargo-toml-edition  [backend] Cargo.toml: has edition
+pass  rust-toolchain-toml-exists  [backend] rust-toolchain.toml: exists
+pass  rust-toolchain-toml-valid  [backend] rust-toolchain.toml: valid
+pass  rust-toolchain-toml-channel  [backend] rust-toolchain.toml: exact channel
+pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy and rustfmt components
+warn  cargo-toml-rust-version  [backend] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [backend] Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  [backend] Rust: deny.toml
+      Not found: deny.toml
+pass  cargo-toml-exists  [tools/cli] Cargo.toml: exists
+pass  cargo-toml-valid  [tools/cli] Cargo.toml: valid
+warn  cargo-toml-license  [tools/cli] Cargo.toml: has license
+warn  cargo-toml-description  [tools/cli] Cargo.toml: has description
+warn  cargo-toml-repository  [tools/cli] Cargo.toml: has repository
+pass  cargo-toml-edition  [tools/cli] Cargo.toml: has edition
+pass  rust-toolchain-toml-exists  [tools/cli] ../../rust-toolchain.toml: exists
+pass  rust-toolchain-toml-valid  [tools/cli] ../../rust-toolchain.toml: valid
+warn  rust-toolchain-toml-channel  [tools/cli] ../../rust-toolchain.toml: exact channel
+      channel is "stable", not an exact x.y.z release
+warn  rust-toolchain-toml-components  [tools/cli] ../../rust-toolchain.toml: clippy and rustfmt components
+      Missing components: clippy
+warn  cargo-toml-rust-version  [tools/cli] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [tools/cli] Clippy: lints configured
+      No [lints.clippy] or [workspace.lints.clippy] section
+warn  deny-toml-exists  [tools/cli] Rust: deny.toml
+      Not found: deny.toml
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found

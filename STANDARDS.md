@@ -809,6 +809,10 @@ channel = "1.99.1"
 components = ["clippy", "rustfmt"]
 ```
 
+rustup uses the nearest `rust-toolchain.toml` in the directory it runs in or a
+parent, so a Rust component in a subdirectory shares the root's file unless it
+has its own. Either way, the file the component uses must meet these rules.
+
 Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. Applications do
 not need one, since the toolchain file already pins their compiler. A library's
 CI checks the MSRV in an `msrv` job, which installs that toolchain with

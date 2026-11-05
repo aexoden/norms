@@ -4,7 +4,9 @@
 //! Rust-specific checks.
 
 use crate::config::{CargoConfig, CargoToml};
-use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
+use crate::context::{
+    ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
+};
 use crate::models::Language;
 use crate::report::{Outcome, Report, file_exists};
 
@@ -93,6 +95,28 @@ pub(crate) fn check_cargo_dependencies(ctx: &ComponentContext, report: &mut Repo
 //
 
 pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) {
+    let (label, status) = ctx.rust_toolchain();
+    if label.ends_with(LEGACY_RUST_TOOLCHAIN) {
+        report.should(
+            "rust-toolchain-toml-exists",
+            format!("{label}: exists"),
+            Outcome::fail(format!(
+                "rustup uses the legacy {label}, which should be named {RUST_TOOLCHAIN}"
+            )),
+        );
+    } else if let Some(toolchain) = report.recommend_parsed("rust-toolchain-toml", label, status) {
+        report.should(
+            "rust-toolchain-toml-channel",
+            format!("{label}: exact channel"),
+            toolchain.check_channel(),
+        );
+        report.should(
+            "rust-toolchain-toml-components",
+            format!("{label}: clippy and rustfmt components"),
+            toolchain.check_components(),
+        );
+    }
+
     let package = ctx.cargo().as_ref_ok().and_then(|c| c.package.as_ref());
 
     let has_msrv = package.and_then(|p| p.rust_version.as_ref()).is_some();

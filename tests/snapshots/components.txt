@@ -55,6 +55,8 @@ warn  cargo-toml-license  [.] Cargo.toml: has license
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
 warn  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+      File not found
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
 warn  clippy-lints  [.] Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section

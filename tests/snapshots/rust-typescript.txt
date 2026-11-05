@@ -46,6 +46,10 @@ pass  cargo-toml-description  [.] Cargo.toml: has description
 pass  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition
 pass  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
+pass  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+pass  rust-toolchain-toml-valid  [.] rust-toolchain.toml: valid
+pass  rust-toolchain-toml-channel  [.] rust-toolchain.toml: exact channel
+pass  rust-toolchain-toml-components  [.] rust-toolchain.toml: clippy and rustfmt components
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
 pass  clippy-lints  [.] Clippy: lints configured
 pass  clippy-pedantic  [.] Clippy: pedantic enabled

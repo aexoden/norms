@@ -116,6 +116,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   are misnamed or differ, a `REUSE.toml` of the wrong version, hooks and CI
   that don't run `reuse lint` on the whole project, and a Rust, Python and
   TypeScript manifest whose licenses lack a text or aren't SPDX expressions.
+  `toolchain` has two Rust components in subdirectories, one with a
+  conforming `rust-toolchain.toml` of its own and one using the root's,
+  which pins no exact channel and lacks clippy.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

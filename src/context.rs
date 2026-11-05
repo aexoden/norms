@@ -30,7 +30,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::config::{
     CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
-    PyprojectToml, RenovateConfig, ReuseToml, TsConfig, Workflow,
+    PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -38,6 +38,12 @@ use crate::models::{Component, Language};
 
 /// The file name of the CI workflow in `.github/workflows/`.
 pub(crate) const CI_WORKFLOW: &str = "ci.yaml";
+
+/// The file that pins a Rust component's toolchain.
+pub(crate) const RUST_TOOLCHAIN: &str = "rust-toolchain.toml";
+
+/// rustup's legacy name for [`RUST_TOOLCHAIN`], which it still reads.
+pub(crate) const LEGACY_RUST_TOOLCHAIN: &str = "rust-toolchain";
 
 /// The result of attempting to read and parse a config file.
 ///
@@ -262,9 +268,13 @@ impl ProjectContext {
 /// getters are ever called.
 pub(crate) struct ComponentContext {
     path: PathBuf,
+    root: PathBuf,
+    /// The component's directory, relative to the root.
+    relative: PathBuf,
     license_files: Arc<LicenseFiles>,
     cargo: OnceLock<ConfigStatus<CargoToml>>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
+    rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
@@ -277,9 +287,12 @@ impl ComponentContext {
     pub(crate) fn new(project: &ProjectContext, component: &Component) -> Self {
         Self {
             path: project.path().join(&component.path),
+            root: project.path().to_path_buf(),
+            relative: component.path.clone(),
             license_files: Arc::clone(project.shared_license_files()),
             cargo: OnceLock::new(),
             cargo_config: OnceLock::new(),
+            rust_toolchain: OnceLock::new(),
             pyproject: OnceLock::new(),
             package_json: OnceLock::new(),
             pnpm_workspace: OnceLock::new(),
@@ -310,6 +323,36 @@ impl ComponentContext {
     pub(crate) fn cargo_config(&self) -> &ConfigStatus<CargoConfig> {
         self.cargo_config
             .get_or_init(|| parse_toml_file::<CargoConfig>(&self.path.join(".cargo/config.toml")))
+    }
+
+    /// The toolchain file that rustup uses in the component (cached): the nearest `rust-toolchain.toml` or legacy
+    /// `rust-toolchain` in the component's directory or a parent, up to the project root, with its path relative to
+    /// the component. A legacy file is reported as `NotFound`, since only `rust-toolchain.toml` is read; if there is
+    /// no file at all, the path is the bare `rust-toolchain.toml`.
+    pub(crate) fn rust_toolchain(&self) -> &(String, ConfigStatus<RustToolchain>) {
+        self.rust_toolchain.get_or_init(|| {
+            for (depth, dir) in self.relative.ancestors().enumerate() {
+                let dir = self.root.join(dir);
+                let up = "../".repeat(depth);
+
+                // rustup prefers the legacy file when a directory has both.
+                if dir.join(LEGACY_RUST_TOOLCHAIN).is_file() {
+                    return (
+                        format!("{up}{LEGACY_RUST_TOOLCHAIN}"),
+                        ConfigStatus::NotFound,
+                    );
+                }
+                let path = dir.join(RUST_TOOLCHAIN);
+                if path.is_file() {
+                    return (
+                        format!("{up}{RUST_TOOLCHAIN}"),
+                        parse_toml_file::<RustToolchain>(&path),
+                    );
+                }
+            }
+
+            (RUST_TOOLCHAIN.to_owned(), ConfigStatus::NotFound)
+        })
     }
 
     /// Parsed `pyproject.toml` (cached).

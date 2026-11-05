@@ -68,6 +68,8 @@ warn  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: dependencies.serde ("1.0"), dev-dependencies.tempfile ("^3.27")
+warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+      File not found
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
 warn  clippy-lints  [.] Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section

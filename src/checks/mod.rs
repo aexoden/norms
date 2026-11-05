@@ -281,6 +281,62 @@ mod tests {
         );
     }
 
+    #[test]
+    fn components_use_the_nearest_toolchain_file() {
+        let project = TempProject::new("toolchain", None);
+        for component in ["legacy/app", "broken/app", "plain"] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
+        }
+        fs::write(project.0.join("legacy/rust-toolchain"), "1.99.1\n").unwrap();
+        fs::write(
+            project.0.join("rust-toolchain.toml"),
+            "[toolchain]\nchannel = \"1.99.1\"\n",
+        )
+        .unwrap();
+        fs::write(project.0.join("broken/rust-toolchain.toml"), "[toolchain\n").unwrap();
+        let results = project.verify();
+
+        let toolchain: Vec<_> = results
+            .iter()
+            .filter(|r| {
+                r.id.starts_with("rust-toolchain-toml-") && r.id != "rust-toolchain-toml-components"
+            })
+            .map(|r| (r.component.as_deref(), r.name.as_str(), r.status))
+            .collect();
+        assert_eq!(
+            toolchain,
+            [
+                (
+                    Some("broken/app"),
+                    "../rust-toolchain.toml: exists",
+                    Status::Pass
+                ),
+                (
+                    Some("broken/app"),
+                    "../rust-toolchain.toml: valid",
+                    Status::Fail
+                ),
+                (
+                    Some("legacy/app"),
+                    "../rust-toolchain: exists",
+                    Status::Warn
+                ),
+                (
+                    Some("plain"),
+                    "../rust-toolchain.toml: exists",
+                    Status::Pass
+                ),
+                (Some("plain"), "../rust-toolchain.toml: valid", Status::Pass),
+                (
+                    Some("plain"),
+                    "../rust-toolchain.toml: exact channel",
+                    Status::Pass
+                ),
+            ]
+        );
+    }
+
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
     /// per waiver or excluded directory, no check here records more than one result for each component, so an ID
     /// repeated within a component means two checks share it.
