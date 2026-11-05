@@ -648,15 +648,18 @@ committed for reproducible development and CI.
 
 ### Dependency Order
 
-Dependencies are listed in alphabetical order within each table or list, such
-as `[dependencies]` in `Cargo.toml`, `[project] dependencies` and each
-dependency group in `pyproject.toml`. Formatters keep the order, so it needs no
-manual care:
+Dependencies are listed in alphabetical order within each table, list or
+object, such as `[dependencies]` in `Cargo.toml`, `[project] dependencies` and
+each dependency group in `pyproject.toml`, and `devDependencies` in
+`package.json`. Formatters keep the order, so it needs no manual care:
 
 - `Cargo.toml` and `pyproject.toml`: [Tombi](https://tombi-toml.github.io/tombi/)
   sorts them using the schemas it ships with. The `tombi-format` hook checks
   the order, and formatting the file with Tombi (or its editor extension) fixes
   it.
+- `package.json`: Prettier sorts them through prettier-plugin-packagejson (see
+  [Formatting and Linting](#formatting-and-linting-1) under TypeScript), as pnpm
+  also does whenever it writes the file.
 
 ### Release Age
 
@@ -1093,8 +1096,21 @@ minimumReleaseAge: 4320
 
 #### Formatting and Linting
 
-Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc`
-with `printWidth: 120`, along with a `.prettierignore`.
+Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc`,
+along with a `.prettierignore`. The `.prettierrc` is:
+
+```json
+{
+  "plugins": ["prettier-plugin-packagejson"],
+  "printWidth": 120
+}
+```
+
+[prettier-plugin-packagejson](https://github.com/matzkoh/prettier-plugin-packagejson),
+a development dependency, formats `package.json` with
+[sort-package-json](https://github.com/keithamus/sort-package-json): its fields
+in a conventional order, and its scripts and dependencies sorted (see
+[Dependency Order](#dependency-order)).
 
 Use [ESLint](https://eslint.org/) for linting, configured in `eslint.config.ts`.
 The configuration includes the `strictTypeChecked` and `stylisticTypeChecked`

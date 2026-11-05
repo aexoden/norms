@@ -102,9 +102,11 @@ pass  tsconfig-isolated-modules  [frontend] tsconfig.node.json: isolatedModules 
 pass  eslint-config-exists  [frontend] ESLint: configured
 pass  eslint-dependency  [frontend] ESLint: in dependencies
 pass  eslint-typescript-eslint  [frontend] ESLint: typescript-eslint configured
-pass  prettier-config-exists  [frontend] Prettier: configured
+pass  prettier-config-exists  [frontend] .prettierrc: exists
+pass  prettier-config-valid  [frontend] .prettierrc: valid
 pass  prettier-ignore-exists  [frontend] Prettier: .prettierignore exists
 pass  prettier-dependency  [frontend] Prettier: in dependencies
+pass  prettier-plugin-packagejson  [frontend] Prettier: formats package.json with prettier-plugin-packagejson
 pass  package-json-scripts  [frontend] package.json: has scripts
 pass  package-json-script-build  [frontend] Scripts: has 'build'
 pass  package-json-script-lint  [frontend] Scripts: has 'lint'

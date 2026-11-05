@@ -352,20 +352,17 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
 // Formatting
 //
 
+/// The Prettier plugin that formats `package.json`, sorting its dependencies.
+const PACKAGEJSON_PLUGIN: &str = "prettier-plugin-packagejson";
+
 pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
-    let ts_root = ctx.path();
-    let prettierrc = ts_root.join(".prettierrc");
-    report.must(
-        "prettier-config-exists",
-        "Prettier: configured",
-        file_exists(&prettierrc),
-    );
+    let config = report.require_parsed("prettier-config", ".prettierrc", ctx.prettier());
 
     // .prettierignore
     report.should(
         "prettier-ignore-exists",
         "Prettier: .prettierignore exists",
-        if ts_root.join(".prettierignore").exists() {
+        if ctx.path().join(".prettierignore").exists() {
             Outcome::Pass
         } else {
             Outcome::fail("Consider adding .prettierignore")
@@ -373,13 +370,33 @@ pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
     );
 
     // Prettier in dependencies
-    if let Some(pkg) = ctx.package_json().as_ref_ok() {
+    let package_json = ctx.package_json().as_ref_ok();
+    if let Some(pkg) = package_json {
         report.should(
             "prettier-dependency",
             "Prettier: in dependencies",
             pkg.has_dep("prettier"),
         );
     }
+
+    let Some(config) = config else {
+        return;
+    };
+
+    // package.json formatting, which sorts its dependencies
+    report.should(
+        "prettier-plugin-packagejson",
+        "Prettier: formats package.json with prettier-plugin-packagejson",
+        if !config.has_plugin(PACKAGEJSON_PLUGIN) {
+            Outcome::fail(format!(
+                "{PACKAGEJSON_PLUGIN} isn't in .prettierrc's plugins"
+            ))
+        } else if package_json.is_some_and(|pkg| !pkg.has_dep(PACKAGEJSON_PLUGIN)) {
+            Outcome::fail(format!("{PACKAGEJSON_PLUGIN} isn't in dependencies"))
+        } else {
+            Outcome::Pass
+        },
+    );
 }
 
 //

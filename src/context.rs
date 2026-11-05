@@ -30,7 +30,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::config::{
     CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
-    PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
+    PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -278,6 +278,7 @@ pub(crate) struct ComponentContext {
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
+    prettier: OnceLock<ConfigStatus<PrettierConfig>>,
     tsconfig: OnceLock<ConfigStatus<TsConfig>>,
     typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
 }
@@ -296,6 +297,7 @@ impl ComponentContext {
             pyproject: OnceLock::new(),
             package_json: OnceLock::new(),
             pnpm_workspace: OnceLock::new(),
+            prettier: OnceLock::new(),
             tsconfig: OnceLock::new(),
             typescript_referenced_configs: OnceLock::new(),
         }
@@ -372,6 +374,12 @@ impl ComponentContext {
         self.pnpm_workspace.get_or_init(|| {
             parse_yaml_file::<PnpmWorkspace>(&self.path.join("pnpm-workspace.yaml"))
         })
+    }
+
+    /// Parsed `.prettierrc` (cached).
+    pub(crate) fn prettier(&self) -> &ConfigStatus<PrettierConfig> {
+        self.prettier
+            .get_or_init(|| parse_yaml_file::<PrettierConfig>(&self.path.join(".prettierrc")))
     }
 
     /// Parsed `tsconfig.json` (cached).

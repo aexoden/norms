@@ -82,8 +82,8 @@ fail  eslint-config-exists  [.] ESLint: configured
 warn  eslint-dependency  [.] ESLint: in dependencies
 warn  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
       Consider adding typescript-eslint for TypeScript-aware linting
-fail  prettier-config-exists  [.] Prettier: configured
-      Not found: .prettierrc
+fail  prettier-config-exists  [.] .prettierrc: exists
+      File not found
 warn  prettier-ignore-exists  [.] Prettier: .prettierignore exists
       Consider adding .prettierignore
 warn  prettier-dependency  [.] Prettier: in dependencies

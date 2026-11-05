@@ -337,6 +337,65 @@ mod tests {
         );
     }
 
+    #[test]
+    fn prettier_must_load_and_depend_on_the_packagejson_plugin() {
+        let project = TempProject::new("prettier", None);
+        for (component, prettierrc) in [
+            ("listed", "plugins: [prettier-plugin-packagejson]\n"),
+            ("unlisted", "{ \"printWidth\": 120 }\n"),
+            ("malformed", "plugins: [\n"),
+        ] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::write(
+                project.0.join(component).join("package.json"),
+                "{ \"devDependencies\": { \"prettier\": \"3.9.10\" } }\n",
+            )
+            .unwrap();
+            fs::write(project.0.join(component).join(".prettierrc"), prettierrc).unwrap();
+        }
+        let results = project.verify();
+
+        let prettier: Vec<_> = results
+            .iter()
+            .filter(|r| {
+                ["prettier-config-valid", "prettier-plugin-packagejson"].contains(&r.id.as_str())
+            })
+            .map(|r| {
+                (
+                    r.component.as_deref(),
+                    r.id.as_str(),
+                    r.status,
+                    r.message.lines().next().unwrap_or_default(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            prettier,
+            [
+                (Some("listed"), "prettier-config-valid", Status::Pass, ""),
+                (
+                    Some("listed"),
+                    "prettier-plugin-packagejson",
+                    Status::Warn,
+                    "prettier-plugin-packagejson isn't in dependencies"
+                ),
+                (
+                    Some("malformed"),
+                    "prettier-config-valid",
+                    Status::Fail,
+                    "Invalid YAML: error: line 1 column 10: unclosed bracket '['"
+                ),
+                (Some("unlisted"), "prettier-config-valid", Status::Pass, ""),
+                (
+                    Some("unlisted"),
+                    "prettier-plugin-packagejson",
+                    Status::Warn,
+                    "prettier-plugin-packagejson isn't in .prettierrc's plugins"
+                ),
+            ]
+        );
+    }
+
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
     /// per waiver or excluded directory, no check here records more than one result for each component, so an ID
     /// repeated within a component means two checks share it.
