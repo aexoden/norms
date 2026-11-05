@@ -86,7 +86,7 @@ action_reuse:
 
 # renovate: datasource=github-tags depName=zizmorcore/zizmor-action
 action_zizmor:
-  default: "53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0"
+  default: "45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1"
   when: false
 
 # renovate: datasource=github-tags depName=actions-rust-lang/setup-rust-toolchain
