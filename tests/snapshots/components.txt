@@ -59,6 +59,7 @@ pass  package-json-valid  [apps/admin] package.json: valid
 pass  package-json-name  [apps/admin] package.json: has name
 warn  package-json-esm  [apps/admin] package.json: uses ESM (type: module)
       Consider setting "type": "module" for ESM support
+pass  package-json-dependencies-exact  [apps/admin] package.json: dependencies pinned exactly (application)
 warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
@@ -84,6 +85,7 @@ pass  package-json-valid  [apps/web] package.json: valid
 pass  package-json-name  [apps/web] package.json: has name
 warn  package-json-esm  [apps/web] package.json: uses ESM (type: module)
       Consider setting "type": "module" for ESM support
+pass  package-json-dependencies-exact  [apps/web] package.json: dependencies pinned exactly (application)
 warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines

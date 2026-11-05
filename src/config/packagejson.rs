@@ -35,6 +35,9 @@ pub(crate) struct PackageJson {
 
     // Development dependencies.
     pub dev_dependencies: Option<HashMap<String, String>>,
+
+    /// Dependencies whose installation may fail without failing the install.
+    pub optional_dependencies: Option<HashMap<String, String>>,
 }
 
 /// One dependency in `devEngines`, such as `{ "name": "node", "version":
@@ -87,7 +90,72 @@ pub(crate) fn check_dev_engine(
     named.try_for_each(DevEngine::check_pinned)
 }
 
+/// Check that a dependency's specifier pins an exact version (`x.y.z`, without `^`, `~` or a range).
+///
+/// An alias to a registry package (`npm:name@x.y.z`, or `jsr:`) is checked by its version. Other protocols, such as
+/// `workspace:`, `link:`, `file:`, `catalog:` and Git or tarball URLs, and local paths, tarballs and GitHub
+/// `owner/repo` shorthands, don't name a registry version, so they pass.
+fn check_specifier_exact(specifier: &str) -> Result<(), String> {
+    // npm matches protocols regardless of case.
+    let alias = ["npm:", "jsr:"].iter().find_map(|protocol| {
+        let (prefix, rest) = specifier.split_at_checked(protocol.len())?;
+        prefix.eq_ignore_ascii_case(protocol).then_some(rest)
+    });
+    let lowercase = specifier.to_ascii_lowercase();
+
+    let version = if let Some(alias) = alias {
+        // The version follows the last `@`, past a scope's leading one; without one, the alias names no version.
+        let unscoped = alias.strip_prefix('@').unwrap_or(alias);
+        unscoped
+            .rsplit_once('@')
+            .map_or(unscoped, |(_, version)| version)
+    } else if specifier.contains([':', '/', '\\'])
+        || specifier.starts_with('.')
+        || [".tgz", ".tar", ".tar.gz"]
+            .iter()
+            .any(|extension| lowercase.ends_with(extension))
+    {
+        // A protocol, URL, path or tarball, as npm-package-arg reads them.
+        return Ok(());
+    } else {
+        specifier
+    };
+
+    if semver::Version::parse(version).is_ok_and(|v| v.build.is_empty()) {
+        Ok(())
+    } else {
+        Err(format!("\"{specifier}\""))
+    }
+}
+
 impl PackageJson {
+    /// Check that every dependency, development dependency and optional dependency is pinned exactly. Peer
+    /// dependencies are ranges by design, so they aren't checked.
+    ///
+    /// The error lists each dependency that isn't, by its field and name, with its specifier.
+    pub(crate) fn check_dependencies_exact(&self) -> Result<(), String> {
+        let mut unpinned = Vec::new();
+        for (field, dependencies) in [
+            ("dependencies", &self.dependencies),
+            ("devDependencies", &self.dev_dependencies),
+            ("optionalDependencies", &self.optional_dependencies),
+        ] {
+            let mut names: Vec<_> = dependencies.iter().flatten().collect();
+            names.sort();
+            unpinned.extend(names.into_iter().filter_map(|(name, specifier)| {
+                check_specifier_exact(specifier)
+                    .err()
+                    .map(|specifier| format!("{field}.{name} ({specifier})"))
+            }));
+        }
+
+        if unpinned.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("Not pinned with x.y.z: {}", unpinned.join(", ")))
+        }
+    }
+
     /// The dependencies of the `devEngines` entry `field`, which npm allows to
     /// be one object or an array of alternatives.
     pub(crate) fn dev_engine(&self, field: &str) -> Result<Vec<DevEngine>, String> {
@@ -150,6 +218,89 @@ impl PackageJson {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exact_specifiers_name_one_version() {
+        for specifier in [
+            "19.2.0",
+            "1.0.0-rc.1",
+            "npm:react@19.2.0",
+            "npm:@scope/name@1.2.3",
+            "jsr:@std/path@1.1.2",
+            "jsr:1.1.2",
+            "workspace:*",
+            "workspace:^",
+            "link:../local",
+            "file:../local.tgz",
+            "catalog:",
+            "git+https://example.com/repo.git#main",
+            "https://example.com/package.tgz",
+            "github:owner/repo",
+            "owner/repo#main",
+            "owner/repo#semver:^1",
+            "github:owner/repo#semver:^1",
+            "git+ssh://git@github.com:owner/repo.git#v1",
+            "git@github.com:owner/repo.git",
+            "../local",
+            "./local",
+            ".",
+            "..",
+            "~/local",
+            "..\\local",
+            "C:\\local",
+            "local.tgz",
+            "local.TAR.GZ",
+            "local.tar",
+            "NPM:react@19.2.0",
+        ] {
+            assert_eq!(check_specifier_exact(specifier), Ok(()), "{specifier}");
+        }
+
+        for specifier in [
+            "^19.2.0",
+            "~19.2.0",
+            "19.2",
+            "19",
+            ">=19.2.0",
+            "19.2.0 || 20.0.0",
+            "19.2.x",
+            "*",
+            "",
+            "latest",
+            "=19.2.0",
+            "v19.2.0",
+            "19.2.0+build",
+            "npm:react@^19",
+            "npm:react",
+            "npm:@scope/name",
+            "jsr:^1.1.2",
+            "jsr:@std/path",
+            "npm:react@latest",
+            "NPM:react@^19",
+            "Jsr:^1.1.2",
+            "1.2.3 - 1.2.4",
+        ] {
+            assert!(check_specifier_exact(specifier).is_err(), "{specifier}");
+        }
+    }
+
+    #[test]
+    fn lists_unpinned_dependencies_in_order() {
+        let config = parse(
+            r#"{
+                "dependencies": { "react": "^19.2.0", "local": "workspace:*", "pinned": "1.0.0" },
+                "devDependencies": { "vitest": "5.0.5", "eslint": "~10.14", "@types/node": "latest" },
+                "optionalDependencies": { "fsevents": "2" },
+                "peerDependencies": { "react": ">=19" }
+            }"#,
+        );
+
+        assert_eq!(
+            config.check_dependencies_exact(),
+            Err(r#"Not pinned with x.y.z: dependencies.react ("^19.2.0"), devDependencies.@types/node ("latest"), devDependencies.eslint ("~10.14"), optionalDependencies.fsevents ("2")"#.to_owned())
+        );
+        assert_eq!(parse("{}").check_dependencies_exact(), Ok(()));
+    }
 
     fn parse(json: &str) -> PackageJson {
         serde_json::from_str(json).unwrap()

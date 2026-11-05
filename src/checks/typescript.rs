@@ -39,6 +39,13 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         );
     }
 
+    // Version pinning. Every TypeScript component is an application.
+    report.should(
+        "package-json-dependencies-exact",
+        "package.json: dependencies pinned exactly (application)",
+        config.check_dependencies_exact(),
+    );
+
     // Toolchain pins
     report.should(
         "package-json-dev-engines-runtime",

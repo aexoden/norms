@@ -1,6 +1,6 @@
 exit: 1
-languages: python, rust
-components: python (python-app), python (python-lib), rust (.)
+languages: python, rust, typescript
+components: python (python-app), python (python-lib), rust (.), typescript (web)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -67,3 +67,29 @@ warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
       Not found: Cargo.lock
+pass  package-json-exists  [web] package.json: exists
+pass  package-json-valid  [web] package.json: valid
+pass  package-json-name  [web] package.json: has name
+pass  package-json-esm  [web] package.json: uses ESM (type: module)
+warn  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
+      Not pinned with x.y.z: dependencies.react ("^19.2.0"), devDependencies.vite ("~8.3")
+warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
+      Missing devEngines.runtime
+warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
+      Missing devEngines.packageManager
+warn  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+fail  tsconfig-exists  [web] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [web] ESLint: configured
+      Not found: eslint.config.ts
+warn  eslint-dependency  [web] ESLint: in dependencies
+warn  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
+      Consider adding typescript-eslint for TypeScript-aware linting
+fail  prettier-config-exists  [web] Prettier: configured
+      Not found: .prettierrc
+warn  prettier-ignore-exists  [web] Prettier: .prettierignore exists
+      Consider adding .prettierignore
+warn  prettier-dependency  [web] Prettier: in dependencies
+warn  package-json-scripts  [web] package.json: has scripts
+      No scripts defined in package.json

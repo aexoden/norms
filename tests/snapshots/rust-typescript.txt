@@ -54,6 +54,7 @@ pass  package-json-exists  [frontend] package.json: exists
 pass  package-json-valid  [frontend] package.json: valid
 pass  package-json-name  [frontend] package.json: has name
 pass  package-json-esm  [frontend] package.json: uses ESM (type: module)
+pass  package-json-dependencies-exact  [frontend] package.json: dependencies pinned exactly (application)
 pass  package-json-dev-engines-runtime  [frontend] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [frontend] package.json: pins pnpm in devEngines
 pass  pnpm-lock-exists  [frontend] pnpm: pnpm-lock.yaml exists
