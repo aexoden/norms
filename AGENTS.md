@@ -130,6 +130,12 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `toolchain` has two Rust components in subdirectories, one with a
   conforming `rust-toolchain.toml` of its own and one using the root's,
   which pins no exact channel and lacks clippy.
+  `classifiers` has Python components whose classifiers are checked against
+  `requires-python`: an application and a library with gaps in its range,
+  each with its own `.python-version`, one capped by `requires-python`
+  without a pin, one open-ended whose only pin is in its parent directory,
+  which uv ignores, and one capped whose `.python-version` isn't a plain
+  version.
   `workspace` is a virtual Cargo workspace with a binary and a library member
   matched by a glob, an excluded crate, a malformed member, a member found
   only as a path dependency, and an unrelated crate that isn't a member.

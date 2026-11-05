@@ -5,7 +5,7 @@
 
 use pep508_rs::pep440_rs::Version;
 
-use crate::config::{PyprojectToml, Workflow, check_release_age_value};
+use crate::config::{PYTHON_VERSION, PyprojectToml, Workflow, check_release_age_value};
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
@@ -34,6 +34,31 @@ pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
             ),
         );
     }
+}
+
+/// Check that the Python classifiers match `requires-python`, up to the version in `.python-version`.
+pub(crate) fn check_python_classifiers(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+    let pinned = match ctx.python_version() {
+        ConfigStatus::Ok(version) => Some(version),
+        ConfigStatus::NotFound => None,
+        ConfigStatus::ParseError { error, .. } => {
+            report.should(
+                "pyproject-python-classifiers",
+                "pyproject.toml: Python classifiers match requires-python",
+                Outcome::fail(format!("Invalid {PYTHON_VERSION}: {error}")),
+            );
+            return;
+        }
+    };
+
+    report.should(
+        "pyproject-python-classifiers",
+        "pyproject.toml: Python classifiers match requires-python",
+        config.check_python_classifiers(pinned),
+    );
 }
 
 //

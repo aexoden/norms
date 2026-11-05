@@ -27,6 +27,8 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [python-app] pyproject.toml: exists
 pass  pyproject-valid  [python-app] pyproject.toml: valid
 pass  pyproject-project  [python-app] pyproject.toml: has [project] section
+warn  pyproject-python-classifiers  [python-app] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
 warn  python-src-layout  [python-app] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [python-app] Python: uv.lock
@@ -46,6 +48,8 @@ fail  mypy-configured  [python-app] mypy: configured
 pass  pyproject-exists  [python-lib] pyproject.toml: exists
 pass  pyproject-valid  [python-lib] pyproject.toml: valid
 pass  pyproject-project  [python-lib] pyproject.toml: has [project] section
+warn  pyproject-python-classifiers  [python-lib] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
 warn  python-src-layout  [python-lib] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [python-lib] Python: uv.lock

@@ -1,0 +1,120 @@
+exit: 1
+languages: python
+components: python (app), python (bad-pin), python (capped), python (lib), python (parent-pin/open)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [app] pyproject.toml: exists
+pass  pyproject-valid  [app] pyproject.toml: valid
+pass  pyproject-project  [app] pyproject.toml: has [project] section
+pass  pyproject-python-classifiers  [app] pyproject.toml: Python classifiers match requires-python
+warn  python-src-layout  [app] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [app] Python: uv.lock
+      Not found: uv.lock
+pass  pyproject-dependencies-exact  [app] pyproject.toml: dependencies pinned exactly (application)
+warn  uv-exclude-newer  [app] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [app] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [app] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [app] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [app] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [bad-pin] pyproject.toml: exists
+pass  pyproject-valid  [bad-pin] pyproject.toml: valid
+pass  pyproject-project  [bad-pin] pyproject.toml: has [project] section
+warn  pyproject-python-classifiers  [bad-pin] pyproject.toml: Python classifiers match requires-python
+      Invalid .python-version: Not a plain version, cpython@3.15: expected version to start with a number, but no leading ASCII digits were found
+warn  python-src-layout  [bad-pin] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [bad-pin] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [bad-pin] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [bad-pin] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [bad-pin] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [bad-pin] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [bad-pin] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [capped] pyproject.toml: exists
+pass  pyproject-valid  [capped] pyproject.toml: valid
+pass  pyproject-project  [capped] pyproject.toml: has [project] section
+pass  pyproject-python-classifiers  [capped] pyproject.toml: Python classifiers match requires-python
+warn  python-src-layout  [capped] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [capped] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [capped] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [capped] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [capped] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [capped] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [capped] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [lib] pyproject.toml: exists
+pass  pyproject-valid  [lib] pyproject.toml: valid
+pass  pyproject-project  [lib] pyproject.toml: has [project] section
+warn  pyproject-python-classifiers  [lib] pyproject.toml: Python classifiers match requires-python
+      Expected classifiers for Python 3.12, 3.14, 3.15, from requires-python (>=3.12, !=3.13.*) up to 3.15.2 in .python-version: missing 3.15; unexpected 3.11
+warn  python-src-layout  [lib] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [lib] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [lib] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [lib] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [lib] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [lib] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [lib] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [parent-pin/open] pyproject.toml: exists
+pass  pyproject-valid  [parent-pin/open] pyproject.toml: valid
+pass  pyproject-project  [parent-pin/open] pyproject.toml: has [project] section
+warn  pyproject-python-classifiers  [parent-pin/open] pyproject.toml: Python classifiers match requires-python
+      No .python-version to give the newest supported Python, and requires-python (>=3.12) has no upper bound within Python 3
+warn  python-src-layout  [parent-pin/open] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [parent-pin/open] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [parent-pin/open] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [parent-pin/open] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [parent-pin/open] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [parent-pin/open] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [parent-pin/open] mypy: configured
+      Missing [tool.mypy] in pyproject.toml

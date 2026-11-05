@@ -747,7 +747,8 @@ project/
 - Applications set `requires-python` to that same exact version (for example,
   `==3.15.0`). Libraries set the range of versions they support.
 - The `Programming Language :: Python :: 3.x` classifiers match
-  `requires-python`.
+  `requires-python`: they list each minor version it allows, from its lower
+  bound up to the version in `.python-version`.
 - `[tool.uv] required-version` sets the minimum uv version the project needs,
   and the CI setup step pins the exact uv version.
 - A library's CI also runs its tests on the oldest Python it supports, in a

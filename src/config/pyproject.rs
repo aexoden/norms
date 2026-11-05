@@ -6,12 +6,18 @@
 //! Only the subset of fields inspected by checks is modeled. All structs use `#[serde(default)]` so that missing keys
 //! deserialize to `None` / empty rather than causing a parse error.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Bound;
 use std::str::FromStr as _;
 
-use pep508_rs::pep440_rs::{Operator, Version, VersionSpecifiers};
+use pep508_rs::pep440_rs::{
+    Operator, Version, VersionSpecifier, VersionSpecifiers, release_specifier_to_range,
+    release_specifiers_to_ranges,
+};
 use pep508_rs::{PackageName, Pep508ErrorSource, Requirement, VerbatimUrl, VersionOrUrl};
 use serde::Deserialize;
+
+use super::python_version::PYTHON_VERSION;
 
 /// Top-level `pyproject.toml` structure.
 #[derive(Debug, Deserialize, Default)]
@@ -34,6 +40,7 @@ pub(crate) struct ProjectSection {
     pub description: Option<String>,
     pub requires_python: Option<String>,
     pub license: Option<toml::Value>,
+    pub classifiers: Option<toml::Value>,
     /// The fields that the build backend fills in, rather than this table.
     pub dynamic: Option<toml::Value>,
     pub dependencies: Option<toml::Value>,
@@ -58,15 +65,7 @@ impl PyprojectToml {
     /// specifiers, since each excludes anything older. The other operators set no exact lower bound, and exclusions
     /// aren't applied, so `>=3.12, !=3.12.*` gives 3.12.
     pub(crate) fn min_python(&self) -> Result<Version, String> {
-        let Some(requires) = self
-            .project
-            .as_ref()
-            .and_then(|project| project.requires_python.as_deref())
-        else {
-            return Err("pyproject.toml sets no requires-python".to_owned());
-        };
-        let specifiers = VersionSpecifiers::from_str(requires)
-            .map_err(|error| format!("Invalid requires-python: {error}"))?;
+        let (requires, specifiers) = self.requires_python()?;
         specifiers
             .iter()
             .filter(|specifier| {
@@ -86,6 +85,20 @@ impl PyprojectToml {
             })
     }
 
+    /// `requires-python`, as written and parsed.
+    fn requires_python(&self) -> Result<(&str, VersionSpecifiers), String> {
+        let Some(requires) = self
+            .project
+            .as_ref()
+            .and_then(|project| project.requires_python.as_deref())
+        else {
+            return Err("pyproject.toml sets no requires-python".to_owned());
+        };
+        let specifiers = VersionSpecifiers::from_str(requires)
+            .map_err(|error| format!("Invalid requires-python: {error}"))?;
+        Ok((requires, specifiers))
+    }
+
     /// Whether the project is an application rather than a library: whether it installs a command, through a
     /// non-empty `[project.scripts]` or `[project.gui-scripts]`.
     pub(crate) fn is_application(&self) -> bool {
@@ -98,6 +111,112 @@ impl PyprojectToml {
         self.project
             .as_ref()
             .is_some_and(|p| installs(p.scripts.as_ref()) || installs(p.gui_scripts.as_ref()))
+    }
+
+    /// Check that the `Programming Language :: Python :: 3.x` classifiers list exactly the minor versions
+    /// `requires-python` allows, from its lower bound up to `pinned`, the version in `.python-version`.
+    ///
+    /// A minor version is allowed if `requires-python` admits any of its releases, so `==3.15.2` allows only 3.15 and
+    /// `>=3.12, !=3.13.*` skips 3.13. Without a pin, the newest version is the upper bound of `requires-python`, if it
+    /// is within Python 3 (such as `<3.14` or `<=3.14`, but not `<4`). Other classifiers are ignored, including
+    /// `Programming Language :: Python :: 3` and `3 :: Only`.
+    pub(crate) fn check_python_classifiers(&self, pinned: Option<&Version>) -> Result<(), String> {
+        let project = self.project.as_ref();
+        let dynamic = project
+            .and_then(|p| p.dynamic.as_ref())
+            .and_then(toml::Value::as_array);
+        if dynamic
+            .into_iter()
+            .flatten()
+            .any(|field| field.as_str() == Some("classifiers"))
+        {
+            return Err("project.classifiers is dynamic, so it can't be checked".to_owned());
+        }
+        let listed: BTreeSet<u64> = match project.and_then(|p| p.classifiers.as_ref()) {
+            None => BTreeSet::new(),
+            Some(classifiers) => classifiers
+                .as_array()
+                .ok_or_else(|| "project.classifiers is not a list".to_owned())?
+                .iter()
+                .filter_map(toml::Value::as_str)
+                .filter_map(|classifier| {
+                    classifier
+                        .strip_prefix("Programming Language :: Python :: 3.")?
+                        .parse()
+                        .ok()
+                })
+                .collect(),
+        };
+
+        let (requires, specifiers) = self.requires_python()?;
+        let allowed = release_specifiers_to_ranges(specifiers);
+        let Some((lower, upper)) = allowed.bounding_range() else {
+            return Err(format!("requires-python ({requires}) allows no version"));
+        };
+        let oldest = match lower {
+            Bound::Included(version) | Bound::Excluded(version) => match version.release() {
+                [3, minor, ..] => *minor,
+                [3] | [0..3, ..] => 0,
+                // Above Python 3, so no minor version is expected.
+                _ => u64::MAX,
+            },
+            Bound::Unbounded => {
+                return Err(format!("requires-python ({requires}) sets no lower bound"));
+            }
+        };
+        let (newest, source) = match (pinned, upper) {
+            (Some(version), _) => match version.release() {
+                [3, minor, ..] => (*minor, format!("{version} in {PYTHON_VERSION}")),
+                _ => {
+                    return Err(format!(
+                        "{PYTHON_VERSION} pins {version}, which isn't Python 3"
+                    ));
+                }
+            },
+            (None, Bound::Included(version) | Bound::Excluded(version))
+                if version.release().first() == Some(&3) =>
+            {
+                (
+                    version.release().get(1).copied().unwrap_or_default(),
+                    "its upper bound".to_owned(),
+                )
+            }
+            (None, _) => {
+                return Err(format!(
+                    "No {PYTHON_VERSION} to give the newest supported Python, and requires-python \
+                     ({requires}) has no upper bound within Python 3"
+                ));
+            }
+        };
+
+        let expected: BTreeSet<u64> = (oldest..=newest)
+            .filter(|minor| {
+                let series = VersionSpecifier::equals_star_version(Version::new([3, *minor]));
+                !allowed.is_disjoint(&release_specifier_to_range(series))
+            })
+            .collect();
+        if expected.is_empty() {
+            return Err(format!(
+                "requires-python ({requires}) allows no Python 3 version up to {source}"
+            ));
+        }
+        if expected == listed {
+            return Ok(());
+        }
+        let mut problems = Vec::new();
+        let missing = versions(expected.difference(&listed));
+        if !missing.is_empty() {
+            problems.push(format!("missing {missing}"));
+        }
+        let unexpected = versions(listed.difference(&expected));
+        if !unexpected.is_empty() {
+            problems.push(format!("unexpected {unexpected}"));
+        }
+        Err(format!(
+            "Expected classifiers for Python {}, from requires-python ({requires}) up to {source}: {}",
+            versions(&expected),
+            problems.join("; ")
+        ))
     }
 
     /// Check that every dependency of the project, its extras and its dependency groups is pinned exactly, with a
@@ -197,6 +316,15 @@ impl PyprojectToml {
             .filter_map(|(name, _)| PackageName::from_str(name).ok())
             .collect()
     }
+}
+
+/// Python 3 minor versions as a list, such as `3.12, 3.14`.
+fn versions<'a>(minors: impl IntoIterator<Item = &'a u64>) -> String {
+    minors
+        .into_iter()
+        .map(|minor| format!("3.{minor}"))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Check that a PEP 508 requirement pins an exact version, unless the package comes from one of the `unindexed`
@@ -334,6 +462,141 @@ mod tests {
 
     fn parse(pyproject: &str) -> PyprojectToml {
         toml::from_str(pyproject).unwrap()
+    }
+
+    /// Check a `pyproject.toml` whose classifiers list the 3.x `minors`, among other Python classifiers.
+    fn check_classifiers(
+        requires: &str,
+        minors: &[u64],
+        pinned: Option<&Version>,
+    ) -> Result<(), String> {
+        let classifiers: Vec<_> = minors
+            .iter()
+            .map(|minor| format!("\"Programming Language :: Python :: 3.{minor}\""))
+            .chain([
+                "\"Programming Language :: Python :: 3\"".to_owned(),
+                "\"Programming Language :: Python :: 3 :: Only\"".to_owned(),
+                "\"Typing :: Typed\"".to_owned(),
+            ])
+            .collect();
+        parse(&format!(
+            "[project]\nrequires-python = \"{requires}\"\nclassifiers = [{}]\n",
+            classifiers.join(", ")
+        ))
+        .check_python_classifiers(pinned)
+    }
+
+    #[test]
+    fn classifiers_match_requires_python() {
+        let pin = Version::new([3, 15, 2]);
+        for (requires, minors) in [
+            ("==3.15.2", &[15][..]),
+            ("===3.15.2", &[15]),
+            ("==3.15.*", &[15]),
+            (">=3.12", &[12, 13, 14, 15]),
+            (">3.12", &[12, 13, 14, 15]),
+            (">=3.12.0rc1", &[12, 13, 14, 15]),
+            ("~=3.13", &[13, 14, 15]),
+            ("~=3.13.1", &[13]),
+            (">=3.12, !=3.13.*", &[12, 14, 15]),
+            (">=3.11, <3.14", &[11, 12, 13]),
+            (">=3.11, <=3.14", &[11, 12, 13, 14]),
+            (">=2.7", &(0..=15).collect::<Vec<_>>()),
+        ] {
+            assert_eq!(
+                check_classifiers(requires, minors, Some(&pin)),
+                Ok(()),
+                "{requires}"
+            );
+        }
+        // Without a pin, an upper bound within Python 3 gives the newest version.
+        for (requires, minors) in [
+            (">=3.11, <3.14", &[11, 12, 13][..]),
+            (">=3.11, <=3.14", &[11, 12, 13, 14]),
+            ("==3.15.2", &[15]),
+        ] {
+            assert_eq!(
+                check_classifiers(requires, minors, None),
+                Ok(()),
+                "{requires}"
+            );
+        }
+        for requires in [">=3.12", ">=3.12, <4", "~=3.13"] {
+            assert_eq!(
+                check_classifiers(requires, &[13], None),
+                Err(format!(
+                    "No .python-version to give the newest supported Python, and requires-python \
+                     ({requires}) has no upper bound within Python 3"
+                )),
+                "{requires}"
+            );
+        }
+    }
+
+    #[test]
+    fn classifier_mismatches_are_reported() {
+        let pin = Version::new([3, 15, 2]);
+        assert_eq!(
+            check_classifiers(">=3.12, !=3.13.*", &[11, 12, 13, 14], Some(&pin)),
+            Err(
+                "Expected classifiers for Python 3.12, 3.14, 3.15, from requires-python \
+                 (>=3.12, !=3.13.*) up to 3.15.2 in .python-version: missing 3.15; unexpected \
+                 3.11, 3.13"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            check_classifiers("==3.15.2", &[], None),
+            Err(
+                "Expected classifiers for Python 3.15, from requires-python (==3.15.2) up to its \
+                 upper bound: missing 3.15"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            parse("[project]\nrequires-python = \">=3.14\"\n").check_python_classifiers(Some(&pin)),
+            Err(
+                "Expected classifiers for Python 3.14, 3.15, from requires-python (>=3.14) up to \
+                 3.15.2 in .python-version: missing 3.14, 3.15"
+                    .to_owned()
+            )
+        );
+        for requires in [">=3.16", ">=4"] {
+            assert_eq!(
+                check_classifiers(requires, &[16], Some(&pin)),
+                Err(format!(
+                    "requires-python ({requires}) allows no Python 3 version up to 3.15.2 in \
+                     .python-version"
+                )),
+                "{requires}"
+            );
+        }
+        assert_eq!(
+            check_classifiers(">=3.12", &[12], Some(&Version::new([4, 0]))),
+            Err(".python-version pins 4.0, which isn't Python 3".to_owned())
+        );
+        assert_eq!(
+            check_classifiers("<3.14", &[13], Some(&pin)),
+            Err("requires-python (<3.14) sets no lower bound".to_owned())
+        );
+        assert_eq!(
+            check_classifiers(">=3.14, <3.12", &[], Some(&pin)),
+            Err("requires-python (>=3.14, <3.12) allows no version".to_owned())
+        );
+        assert_eq!(
+            parse("[project]\nclassifiers = []\n").check_python_classifiers(Some(&pin)),
+            Err("pyproject.toml sets no requires-python".to_owned())
+        );
+        assert_eq!(
+            parse("[project]\nrequires-python = \">=3.12\"\nclassifiers = \"3.12\"\n")
+                .check_python_classifiers(Some(&pin)),
+            Err("project.classifiers is not a list".to_owned())
+        );
+        assert_eq!(
+            parse("[project]\nrequires-python = \">=3.12\"\ndynamic = [\"classifiers\"]\n")
+                .check_python_classifiers(Some(&pin)),
+            Err("project.classifiers is dynamic, so it can't be checked".to_owned())
+        );
     }
 
     #[test]

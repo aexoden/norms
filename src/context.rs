@@ -28,10 +28,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use pep508_rs::pep440_rs::Version;
+
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
-    CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
-    PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
+    CargoConfig, CargoToml, DevboxConfig, NormsConfig, PYTHON_VERSION, PackageJson, PnpmWorkspace,
+    PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain,
+    TsConfig, Workflow, parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -288,6 +291,7 @@ pub(crate) struct ComponentContext {
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
+    python_version: OnceLock<ConfigStatus<Version>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
     prettier: OnceLock<ConfigStatus<PrettierConfig>>,
@@ -308,6 +312,7 @@ impl ComponentContext {
             cargo_config: OnceLock::new(),
             rust_toolchain: OnceLock::new(),
             pyproject: OnceLock::new(),
+            python_version: OnceLock::new(),
             package_json: OnceLock::new(),
             pnpm_workspace: OnceLock::new(),
             prettier: OnceLock::new(),
@@ -385,6 +390,20 @@ impl ComponentContext {
     pub(crate) fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
         self.pyproject
             .get_or_init(|| parse_toml_file::<PyprojectToml>(&self.path.join("pyproject.toml")))
+    }
+
+    /// Parsed `.python-version` in the component's own directory (cached). uv reads it only at the root of the
+    /// project's workspace, which a Python component always is, since nested Python markers are folded into it.
+    pub(crate) fn python_version(&self) -> &ConfigStatus<Version> {
+        self.python_version
+            .get_or_init(|| match read_text_file(&self.path.join(PYTHON_VERSION)) {
+                ConfigStatus::Ok(raw) => match parse_python_version(&raw) {
+                    Ok(version) => ConfigStatus::Ok(version),
+                    Err(error) => ConfigStatus::ParseError { raw, error },
+                },
+                ConfigStatus::ParseError { raw, error } => ConfigStatus::ParseError { raw, error },
+                ConfigStatus::NotFound => ConfigStatus::NotFound,
+            })
     }
 
     /// Parsed `package.json` (cached).

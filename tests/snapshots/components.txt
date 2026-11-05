@@ -35,6 +35,8 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [tools] pyproject.toml: exists
 pass  pyproject-valid  [tools] pyproject.toml: valid
 pass  pyproject-project  [tools] pyproject.toml: has [project] section
+warn  pyproject-python-classifiers  [tools] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
 warn  python-src-layout  [tools] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [tools] Python: uv.lock

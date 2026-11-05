@@ -56,6 +56,7 @@ pass  pyproject-exists  [.] pyproject.toml: exists
 pass  pyproject-valid  [.] pyproject.toml: valid
 pass  pyproject-project  [.] pyproject.toml: has [project] section
 pass  pyproject-license-texts  [.] pyproject.toml: license has its texts in LICENSES/
+pass  pyproject-python-classifiers  [.] pyproject.toml: Python classifiers match requires-python
 pass  python-src-layout  [.] Python: src/ directory
 pass  python-src-packages  [.] Python: src/ contains packages
 pass  uv-lock-exists  [.] Python: uv.lock

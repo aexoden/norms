@@ -1,0 +1,4 @@
+[project]
+name = "open"
+requires-python = ">=3.12"
+classifiers = ["Programming Language :: Python :: 3.12"]
