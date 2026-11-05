@@ -61,28 +61,35 @@ pub(crate) struct ToolSection {
 }
 
 impl PyprojectToml {
-    /// The oldest Python `requires-python` allows: the highest version among its `>=`, `~=`, `==` and `===`
-    /// specifiers, since each excludes anything older. The other operators set no exact lower bound, and exclusions
-    /// aren't applied, so `>=3.12, !=3.12.*` gives 3.12.
+    /// The oldest Python release that `requires-python` allows, read as uv reads it: as release versions only, without
+    /// pre-releases or epochs. This is the lower bound as written if it is allowed and has at most three segments
+    /// (`>=3.12` gives 3.12), or else the next micro release that is allowed: `>3.12` gives 3.12.1, and
+    /// `>=3.12, !=3.12.0, !=3.12.1` gives 3.12.2. Exclusions apply, so `>=3.12, !=3.12.*` gives 3.13.
     pub(crate) fn min_python(&self) -> Result<Version, String> {
         let (requires, specifiers) = self.requires_python()?;
-        specifiers
-            .iter()
-            .filter(|specifier| {
-                matches!(
-                    specifier.operator(),
-                    Operator::GreaterThanEqual
-                        | Operator::TildeEqual
-                        | Operator::Equal
-                        | Operator::EqualStar
-                        | Operator::ExactEqual
-                )
-            })
-            .map(|specifier| specifier.version().clone())
-            .max()
-            .ok_or_else(|| {
-                format!("requires-python ({requires}) sets no lower bound with >=, ~=, == or ===")
-            })
+        let allowed = release_specifiers_to_ranges(specifiers);
+        for (lower, _) in allowed.iter() {
+            let (Bound::Included(lower) | Bound::Excluded(lower)) = lower else {
+                return Err(format!("requires-python ({requires}) sets no lower bound"));
+            };
+            // The first release in this segment is its lower bound, if allowed and a release of up to three segments,
+            // or else the next micro release.
+            let mut release = lower.release().to_vec();
+            release.truncate(3);
+            let first = Version::new(&release);
+            if allowed.contains(&first) {
+                return Ok(first);
+            }
+            release.resize(3, 0);
+            if let Some(micro) = release.last_mut() {
+                *micro = micro.saturating_add(1);
+            }
+            let next = Version::new(&release);
+            if allowed.contains(&next) {
+                return Ok(next);
+            }
+        }
+        Err(format!("requires-python ({requires}) allows no version"))
     }
 
     /// `requires-python`, as written and parsed.
@@ -150,19 +157,14 @@ impl PyprojectToml {
 
         let (requires, specifiers) = self.requires_python()?;
         let allowed = release_specifiers_to_ranges(specifiers);
-        let Some((lower, upper)) = allowed.bounding_range() else {
-            return Err(format!("requires-python ({requires}) allows no version"));
+        let oldest = match self.min_python()?.release() {
+            [3, minor, ..] => *minor,
+            [3] | [0..3, ..] => 0,
+            // Above Python 3, so no minor version is expected.
+            _ => u64::MAX,
         };
-        let oldest = match lower {
-            Bound::Included(version) | Bound::Excluded(version) => match version.release() {
-                [3, minor, ..] => *minor,
-                [3] | [0..3, ..] => 0,
-                // Above Python 3, so no minor version is expected.
-                _ => u64::MAX,
-            },
-            Bound::Unbounded => {
-                return Err(format!("requires-python ({requires}) sets no lower bound"));
-            }
+        let Some((_, upper)) = allowed.bounding_range() else {
+            return Err(format!("requires-python ({requires}) allows no version"));
         };
         let (newest, source) = match (pinned, upper) {
             (Some(version), _) => match version.release() {
@@ -608,6 +610,20 @@ mod tests {
             ("==3.15.0", "3.15.0"),
             ("==3.13.*", "3.13"),
             (">=3.10,>=3.12,!=3.12.1", "3.12"),
+            (">=3.12, !=3.12.*", "3.13"),
+            (">=3.12, !=3.12.0", "3.12.1"),
+            (">3.12", "3.12.1"),
+            (">3.11.4, <4", "3.11.5"),
+            (">=3.12.0rc1", "3.12.0"),
+            ("===3.15.2", "3.15.2"),
+            (">=2.7", "2.7"),
+            (">=3.12, !=3.12.0, !=3.12.1", "3.12.2"),
+            (">3.12, !=3.12.1", "3.12.2"),
+            (">=3.12, !=3.12", "3.12.1"),
+            (">3", "3.0.1"),
+            (">3.12.0.5", "3.12.1"),
+            (">=3.12.0.5", "3.12.1"),
+            (">=1!3.12", "3.12"),
         ] {
             let pyproject = parse(&format!("[project]\nrequires-python = \"{requires}\"\n"));
             assert_eq!(
@@ -621,11 +637,20 @@ mod tests {
             Err("pyproject.toml sets no requires-python".to_owned())
         );
         assert_eq!(
-            parse("[project]\nrequires-python = \">3.11, <4\"\n").min_python(),
-            Err(
-                "requires-python (>3.11, <4) sets no lower bound with >=, ~=, == or ===".to_owned()
-            )
+            parse("[project]\nrequires-python = \"<4\"\n").min_python(),
+            Err("requires-python (<4) sets no lower bound".to_owned())
         );
+        for requires in [
+            ">=3.14, <3.12",
+            ">3.12, <3.12.1",
+            ">3.12.18446744073709551615, <3.13",
+        ] {
+            assert_eq!(
+                parse(&format!("[project]\nrequires-python = \"{requires}\"\n")).min_python(),
+                Err(format!("requires-python ({requires}) allows no version")),
+                "{requires}"
+            );
+        }
         assert!(
             parse("[project]\nrequires-python = \">=three\"\n")
                 .min_python()
