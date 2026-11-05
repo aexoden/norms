@@ -27,6 +27,8 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [python-app] pyproject.toml: exists
 pass  pyproject-valid  [python-app] pyproject.toml: valid
 pass  pyproject-project  [python-app] pyproject.toml: has [project] section
+warn  python-version-exists  [python-app] Python: .python-version
+      Not found: .python-version
 warn  pyproject-python-classifiers  [python-app] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
 warn  python-src-layout  [python-app] Python: src/ directory
@@ -48,6 +50,8 @@ fail  mypy-configured  [python-app] mypy: configured
 pass  pyproject-exists  [python-lib] pyproject.toml: exists
 pass  pyproject-valid  [python-lib] pyproject.toml: valid
 pass  pyproject-project  [python-lib] pyproject.toml: has [project] section
+warn  python-version-exists  [python-lib] Python: .python-version
+      Not found: .python-version
 warn  pyproject-python-classifiers  [python-lib] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
 warn  python-src-layout  [python-lib] Python: src/ directory

@@ -27,7 +27,9 @@ pub(crate) use pnpmworkspace::PnpmWorkspace;
 pub(crate) use precommit::{PrecommitConfig, PrecommitHook};
 pub(crate) use prettier::PrettierConfig;
 pub(crate) use pyproject::PyprojectToml;
-pub(crate) use python_version::{PYTHON_VERSION, parse_python_version};
+pub(crate) use python_version::{
+    PYTHON_VERSION, check_exact as check_python_version_exact, parse_python_version,
+};
 pub(crate) use release_age::check_release_age_value;
 pub(crate) use renovate::{RenovateConfig, SHARED_PRESET};
 pub(crate) use reuse::ReuseToml;

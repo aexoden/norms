@@ -5,7 +5,9 @@
 
 use pep508_rs::pep440_rs::Version;
 
-use crate::config::{PYTHON_VERSION, PyprojectToml, Workflow, check_release_age_value};
+use crate::config::{
+    PYTHON_VERSION, PyprojectToml, Workflow, check_python_version_exact, check_release_age_value,
+};
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
@@ -36,6 +38,27 @@ pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
     }
 }
 
+/// Check that the component pins its development Python with an exact version in its own `.python-version`.
+pub(crate) fn check_python_version(ctx: &ComponentContext, report: &mut Report) {
+    report.should(
+        "python-version-exists",
+        "Python: .python-version",
+        file_exists(&ctx.path().join(PYTHON_VERSION)),
+    );
+    // A pin that isn't a plain version, such as `cpython@3.15`, is reported here rather than as invalid: uv accepts
+    // it, but it isn't the exact version the standards ask for.
+    let exact = match ctx.python_version() {
+        ConfigStatus::NotFound => return,
+        ConfigStatus::ParseError { error, .. } => Err(error.clone()),
+        ConfigStatus::Ok(version) => check_python_version_exact(version),
+    };
+    report.should(
+        "python-version-exact",
+        "Python: .python-version pins an exact version",
+        exact,
+    );
+}
+
 /// Check that the Python classifiers match `requires-python`, up to the version in `.python-version`.
 pub(crate) fn check_python_classifiers(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
@@ -44,14 +67,8 @@ pub(crate) fn check_python_classifiers(ctx: &ComponentContext, report: &mut Repo
     let pinned = match ctx.python_version() {
         ConfigStatus::Ok(version) => Some(version),
         ConfigStatus::NotFound => None,
-        ConfigStatus::ParseError { error, .. } => {
-            report.should(
-                "pyproject-python-classifiers",
-                "pyproject.toml: Python classifiers match requires-python",
-                Outcome::fail(format!("Invalid {PYTHON_VERSION}: {error}")),
-            );
-            return;
-        }
+        // python-version-exact reports it.
+        ConfigStatus::ParseError { .. } => return,
     };
 
     report.should(

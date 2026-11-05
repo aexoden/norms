@@ -35,6 +35,8 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [tools] pyproject.toml: exists
 pass  pyproject-valid  [tools] pyproject.toml: valid
 pass  pyproject-project  [tools] pyproject.toml: has [project] section
+warn  python-version-exists  [tools] Python: .python-version
+      Not found: .python-version
 warn  pyproject-python-classifiers  [tools] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
 warn  python-src-layout  [tools] Python: src/ directory

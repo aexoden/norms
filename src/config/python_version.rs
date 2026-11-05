@@ -23,9 +23,40 @@ pub(crate) fn parse_python_version(text: &str) -> Result<Version, String> {
     Version::from_str(line).map_err(|error| format!("Not a plain version, {line}: {error}"))
 }
 
+/// Check that a pinned version is a plain release, `x.y.z`: not a minor version such as `3.15`, which uv resolves to
+/// whichever patch release it finds, nor a version with more segments, a pre-, post- or dev release, a local version
+/// or an epoch.
+pub(crate) fn check_exact(version: &Version) -> Result<(), String> {
+    if version.release().len() == 3 && *version == version.clone().only_release() {
+        Ok(())
+    } else {
+        Err(format!("Not an exact x.y.z release: {version}"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pins_are_exact_releases() {
+        assert_eq!(check_exact(&Version::new([3, 15, 2])), Ok(()));
+        for version in [
+            "3.15",
+            "3",
+            "3.15.2.1",
+            "3.15.0rc1",
+            "3.15.2.post1",
+            "1!3.15.2",
+            "3.15.2+local",
+        ] {
+            let version = Version::from_str(version).unwrap();
+            assert_eq!(
+                check_exact(&version),
+                Err(format!("Not an exact x.y.z release: {version}"))
+            );
+        }
+    }
 
     #[test]
     fn reads_the_first_version_line() {

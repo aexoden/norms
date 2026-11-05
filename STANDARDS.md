@@ -743,7 +743,8 @@ project/
 
 #### Python and uv Versions
 
-- `.python-version` names the exact Python version used for development and CI.
+- `.python-version`, beside `pyproject.toml`, names the exact Python version
+  (`x.y.z`) used for development and CI.
 - Applications set `requires-python` to that same exact version (for example,
   `==3.15.0`). Libraries set the range of versions they support.
 - The `Programming Language :: Python :: 3.x` classifiers match

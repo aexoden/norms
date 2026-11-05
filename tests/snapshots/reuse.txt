@@ -55,6 +55,8 @@ pass  pyproject-valid  [py] pyproject.toml: valid
 pass  pyproject-project  [py] pyproject.toml: has [project] section
 warn  pyproject-license-texts  [py] pyproject.toml: license has its texts in LICENSES/
       Not an SPDX expression string
+warn  python-version-exists  [py] Python: .python-version
+      Not found: .python-version
 warn  pyproject-python-classifiers  [py] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
 warn  python-src-layout  [py] Python: src/ directory

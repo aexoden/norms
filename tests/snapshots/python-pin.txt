@@ -1,0 +1,47 @@
+exit: 1
+languages: python
+components: python (minor)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [minor] pyproject.toml: exists
+pass  pyproject-valid  [minor] pyproject.toml: valid
+pass  pyproject-project  [minor] pyproject.toml: has [project] section
+pass  python-version-exists  [minor] Python: .python-version
+warn  python-version-exact  [minor] Python: .python-version pins an exact version
+      Not an exact x.y.z release: 3.15
+pass  pyproject-python-classifiers  [minor] pyproject.toml: Python classifiers match requires-python
+warn  python-src-layout  [minor] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [minor] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [minor] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [minor] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [minor] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [minor] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [minor] mypy: configured
+      Missing [tool.mypy] in pyproject.toml

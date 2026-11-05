@@ -27,6 +27,8 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [app] pyproject.toml: exists
 pass  pyproject-valid  [app] pyproject.toml: valid
 pass  pyproject-project  [app] pyproject.toml: has [project] section
+pass  python-version-exists  [app] Python: .python-version
+pass  python-version-exact  [app] Python: .python-version pins an exact version
 pass  pyproject-python-classifiers  [app] pyproject.toml: Python classifiers match requires-python
 warn  python-src-layout  [app] Python: src/ directory
       Consider using a src/ layout
@@ -46,8 +48,9 @@ fail  mypy-configured  [app] mypy: configured
 pass  pyproject-exists  [bad-pin] pyproject.toml: exists
 pass  pyproject-valid  [bad-pin] pyproject.toml: valid
 pass  pyproject-project  [bad-pin] pyproject.toml: has [project] section
-warn  pyproject-python-classifiers  [bad-pin] pyproject.toml: Python classifiers match requires-python
-      Invalid .python-version: Not a plain version, cpython@3.15: expected version to start with a number, but no leading ASCII digits were found
+pass  python-version-exists  [bad-pin] Python: .python-version
+warn  python-version-exact  [bad-pin] Python: .python-version pins an exact version
+      Not a plain version, cpython@3.15: expected version to start with a number, but no leading ASCII digits were found
 warn  python-src-layout  [bad-pin] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [bad-pin] Python: uv.lock
@@ -65,6 +68,8 @@ fail  mypy-configured  [bad-pin] mypy: configured
 pass  pyproject-exists  [capped] pyproject.toml: exists
 pass  pyproject-valid  [capped] pyproject.toml: valid
 pass  pyproject-project  [capped] pyproject.toml: has [project] section
+warn  python-version-exists  [capped] Python: .python-version
+      Not found: .python-version
 pass  pyproject-python-classifiers  [capped] pyproject.toml: Python classifiers match requires-python
 warn  python-src-layout  [capped] Python: src/ directory
       Consider using a src/ layout
@@ -83,6 +88,8 @@ fail  mypy-configured  [capped] mypy: configured
 pass  pyproject-exists  [lib] pyproject.toml: exists
 pass  pyproject-valid  [lib] pyproject.toml: valid
 pass  pyproject-project  [lib] pyproject.toml: has [project] section
+pass  python-version-exists  [lib] Python: .python-version
+pass  python-version-exact  [lib] Python: .python-version pins an exact version
 warn  pyproject-python-classifiers  [lib] pyproject.toml: Python classifiers match requires-python
       Expected classifiers for Python 3.12, 3.14, 3.15, from requires-python (>=3.12, !=3.13.*) up to 3.15.2 in .python-version: missing 3.15; unexpected 3.11
 warn  python-src-layout  [lib] Python: src/ directory
@@ -102,6 +109,8 @@ fail  mypy-configured  [lib] mypy: configured
 pass  pyproject-exists  [parent-pin/open] pyproject.toml: exists
 pass  pyproject-valid  [parent-pin/open] pyproject.toml: valid
 pass  pyproject-project  [parent-pin/open] pyproject.toml: has [project] section
+warn  python-version-exists  [parent-pin/open] Python: .python-version
+      Not found: .python-version
 warn  pyproject-python-classifiers  [parent-pin/open] pyproject.toml: Python classifiers match requires-python
       No .python-version to give the newest supported Python, and requires-python (>=3.12) has no upper bound within Python 3
 warn  python-src-layout  [parent-pin/open] Python: src/ directory
