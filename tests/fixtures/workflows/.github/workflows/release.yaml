@@ -1,0 +1,21 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Build
+        run: echo build
+
+  publish:
+    name: Publish
+    needs: [build]
+    uses: ./.github/workflows/publish.yaml

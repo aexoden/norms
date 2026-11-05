@@ -398,8 +398,8 @@ mod tests {
     }
 
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
-    /// per waiver or excluded directory, no check here records more than one result for each component, so an ID
-    /// repeated within a component means two checks share it.
+    /// per waiver, excluded directory or workflow, no check here records more than one result for each component, so
+    /// an ID repeated within a component means two checks share it.
     #[test]
     fn check_ids_are_valid_and_unique() {
         let ctx = ProjectContext::new(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
@@ -410,8 +410,13 @@ mod tests {
         for result in &report.results {
             assert!(is_valid_check_id(&result.id), "invalid ID: {}", result.id);
             assert!(
-                ["norms-toml-waiver-needed", "norms-toml-exclude-exists"]
-                    .contains(&result.id.as_str())
+                [
+                    "norms-toml-waiver-needed",
+                    "norms-toml-exclude-exists",
+                    "workflow-valid",
+                    "workflow-job-timeouts",
+                ]
+                .contains(&result.id.as_str())
                     || seen.insert((&result.component, &result.id)),
                 "duplicate ID: {}",
                 result.id

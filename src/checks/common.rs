@@ -488,6 +488,23 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 
+    for (name, workflow) in ctx
+        .workflows()
+        .iter()
+        .filter_map(|(name, status)| Some((name, status.as_ref_ok()?)))
+    {
+        let untimed = workflow.jobs_without_timeout();
+        report.should(
+            "workflow-job-timeouts",
+            format!("CI: {name}: every job sets timeout-minutes"),
+            if untimed.is_empty() {
+                Ok(())
+            } else {
+                Err(format!("No timeout-minutes: {}", untimed.join(", ")))
+            },
+        );
+    }
+
     let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
         return;
     };

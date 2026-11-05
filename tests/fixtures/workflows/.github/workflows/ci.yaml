@@ -16,6 +16,7 @@ jobs:
   zizmor-action:
     name: Run zizmor-action
     runs-on: ubuntu-slim
+    timeout-minutes: 10
     steps:
       - name: Run zizmor-action in its default mode
         uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3

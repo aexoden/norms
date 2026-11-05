@@ -22,6 +22,11 @@ pub(crate) struct Workflow {
 #[serde(default)]
 pub(crate) struct WorkflowJob {
     pub steps: Vec<WorkflowStep>,
+    /// The reusable workflow the job calls instead of running steps.
+    pub uses: Option<String>,
+    /// A number of minutes, or an expression giving one.
+    #[serde(rename = "timeout-minutes")]
+    pub timeout_minutes: Option<Value>,
 }
 
 /// A single step in a job, which either runs an action (`uses`) or a script (`run`).
@@ -52,6 +57,16 @@ impl WorkflowStep {
 impl Workflow {
     fn steps(&self) -> impl Iterator<Item = &WorkflowStep> {
         self.jobs.values().flat_map(|job| &job.steps)
+    }
+
+    /// The IDs of the jobs that don't set `timeout-minutes`. A job calling a reusable workflow can't set it, so it
+    /// isn't counted: the called workflow's own jobs set theirs.
+    pub(crate) fn jobs_without_timeout(&self) -> Vec<&str> {
+        self.jobs
+            .iter()
+            .filter(|(_, job)| job.uses.is_none() && job.timeout_minutes.is_none())
+            .map(|(id, _)| id.as_str())
+            .collect()
     }
 
     /// Every step's `run` script.
@@ -243,6 +258,27 @@ jobs:
         assert_eq!(step.input("empty"), None);
         assert_eq!(step.input("list"), None);
         assert_eq!(step.input("missing"), None);
+    }
+
+    #[test]
+    fn finds_jobs_without_timeouts() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  timed:
+    timeout-minutes: 10
+  expression:
+    timeout-minutes: ${{ inputs.timeout }}
+  untimed:
+    steps: []
+  empty:
+    timeout-minutes:
+  call:
+    uses: ./.github/workflows/reusable.yaml
+",
+        )
+        .expect("workflow parses");
+        assert_eq!(workflow.jobs_without_timeout(), ["empty", "untimed"]);
     }
 
     #[test]

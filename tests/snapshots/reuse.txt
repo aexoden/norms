@@ -32,6 +32,8 @@ warn  renovate-exists  renovate.json: exists
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
+warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
+      No timeout-minutes: pre-commit, reuse
 warn  ci-reuse  CI: REUSE compliance
 warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)

@@ -42,6 +42,8 @@ fail  workflow-valid  CI: audit.yml: valid
       3 | jobs: {}
         |     ^ illegal placement of ':' indicator
 pass  workflow-valid  CI: release.yaml: valid
+warn  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
+      No timeout-minutes: release
 pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
