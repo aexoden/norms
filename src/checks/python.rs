@@ -66,6 +66,20 @@ pub(crate) fn check_uv_lock(ctx: &ComponentContext, report: &mut Report) {
     );
 }
 
+pub(crate) fn check_dependencies_exact(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+
+    if config.is_application() {
+        report.should(
+            "pyproject-dependencies-exact",
+            "pyproject.toml: dependencies pinned exactly (application)",
+            config.check_dependencies_exact(),
+        );
+    }
+}
+
 pub(crate) fn check_dependency_groups(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;

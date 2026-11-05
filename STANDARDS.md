@@ -63,8 +63,10 @@ reason = "The repository holds no binary files."
 - Some standards differ between applications and libraries. norms treats a Rust
   component as an application if it builds a binary (`src/main.rs` or
   `src/bin/`, unless `autobins = false`, or a `[[bin]]` target), even alongside
-  a library, and as a library otherwise. Only the component's own `Cargo.toml`
-  is read, so the binaries and dependencies of a workspace's members aren't
+  a library, and a Python component as an application if it installs a command
+  (a non-empty `[project.scripts]` or `[project.gui-scripts]`). Other components
+  of these languages are libraries. Only a Rust component's own `Cargo.toml` is
+  read, so the binaries and dependencies of a workspace's members aren't
   considered.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search

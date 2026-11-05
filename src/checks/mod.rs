@@ -84,6 +84,7 @@ fn check_component(ctx: &ComponentContext, language: Language, report: &mut Repo
             python::check_pyproject(ctx, report);
             python::check_src_layout(ctx, report);
             python::check_uv_lock(ctx, report);
+            python::check_dependencies_exact(ctx, report);
             python::check_dependency_groups(ctx, report);
             python::check_ruff(ctx, report);
             python::check_ruff_lint(ctx, report);

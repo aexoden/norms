@@ -1,6 +1,6 @@
 exit: 1
-languages: rust
-components: rust (.)
+languages: python, rust
+components: python (python-app), python (python-lib), rust (.)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -20,6 +20,38 @@ warn  renovate-exists  renovate.json: exists
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
 pass  components-search  Components: every directory searched
+pass  pyproject-exists  [python-app] pyproject.toml: exists
+pass  pyproject-valid  [python-app] pyproject.toml: valid
+pass  pyproject-project  [python-app] pyproject.toml: has [project] section
+warn  python-src-layout  [python-app] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [python-app] Python: uv.lock
+      Not found: uv.lock
+warn  pyproject-dependencies-exact  [python-app] pyproject.toml: dependencies pinned exactly (application)
+      Not pinned with ==: project.dependencies "httpx>=0.28" (not a single == version), dependency-groups.dev "ruff" (no version)
+pass  python-dependency-groups  [python-app] Python: has dependency-groups
+pass  python-dev-group  [python-app] Python: has dev dependency group
+fail  ruff-configured  [python-app] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [python-app] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [python-app] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [python-lib] pyproject.toml: exists
+pass  pyproject-valid  [python-lib] pyproject.toml: valid
+pass  pyproject-project  [python-lib] pyproject.toml: has [project] section
+warn  python-src-layout  [python-lib] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [python-lib] Python: uv.lock
+      Not found: uv.lock
+warn  python-dependency-groups  [python-lib] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [python-lib] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [python-lib] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [python-lib] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
 warn  cargo-toml-license  [.] Cargo.toml: has license
