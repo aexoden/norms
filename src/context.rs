@@ -40,6 +40,9 @@ use crate::models::{Component, Language};
 /// The file name of the CI workflow in `.github/workflows/`.
 pub(crate) const CI_WORKFLOW: &str = "ci.yaml";
 
+/// The file name of the scheduled advisory audit workflow in `.github/workflows/`.
+pub(crate) const AUDIT_WORKFLOW: &str = "audit.yaml";
+
 /// The file that pins a Rust component's toolchain.
 pub(crate) const RUST_TOOLCHAIN: &str = "rust-toolchain.toml";
 
@@ -259,6 +262,13 @@ impl ProjectContext {
         static NOT_FOUND: ConfigStatus<Workflow> = ConfigStatus::NotFound;
 
         self.workflows().get(CI_WORKFLOW).unwrap_or(&NOT_FOUND)
+    }
+
+    /// Parsed `.github/workflows/audit.yaml`, from [`workflows`](Self::workflows).
+    pub(crate) fn audit_workflow(&self) -> &ConfigStatus<Workflow> {
+        static NOT_FOUND: ConfigStatus<Workflow> = ConfigStatus::NotFound;
+
+        self.workflows().get(AUDIT_WORKFLOW).unwrap_or(&NOT_FOUND)
     }
 }
 

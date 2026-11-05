@@ -37,7 +37,9 @@ pass  renovate-extends-preset  renovate.json: extends the shared preset
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
-pass  workflow-valid  CI: audit.yaml: valid
+pass  audit-yaml-exists  CI: audit.yaml: exists
+pass  audit-yaml-valid  CI: audit.yaml: valid
+pass  audit-yaml-schedule  CI: audit.yaml: runs on a schedule
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
@@ -100,3 +102,4 @@ pass  typescript-ci-lint  TypeScript CI: lint check
 pass  typescript-ci-format  TypeScript CI: format check
 pass  typescript-ci-tsc  TypeScript CI: type check
 pass  typescript-ci-test  TypeScript CI: tests
+pass  typescript-audit-pnpm  TypeScript audit: pnpm audit

@@ -1,6 +1,6 @@
 exit: 1
-languages: (none)
-components: (none)
+languages: python, rust
+components: python (.), rust (.)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -27,7 +27,12 @@ warn  renovate-exists  renovate.json: exists
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
+pass  audit-yaml-exists  CI: audit.yaml: exists
+pass  audit-yaml-valid  CI: audit.yaml: valid
+warn  audit-yaml-schedule  CI: audit.yaml: runs on a schedule
 pass  workflow-valid  CI: release.yaml: valid
+pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: zizmor-run
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
@@ -40,3 +45,49 @@ warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)
       A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
 pass  components-search  Components: every directory searched
+pass  pyproject-exists  [.] pyproject.toml: exists
+pass  pyproject-valid  [.] pyproject.toml: valid
+pass  pyproject-project  [.] pyproject.toml: has [project] section
+warn  python-src-layout  [.] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [.] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [.] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [.] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [.] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [.] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+warn  python-precommit-ruff  Python pre-commit: Ruff hooks
+warn  python-precommit-mypy  Python pre-commit: Mypy hook
+warn  python-ci-ruff-format  Python CI: format check
+warn  python-ci-ruff-check  Python CI: lint check
+warn  python-ci-mypy  Python CI: type check
+pass  python-audit-uv  Python audit: uv audit
+pass  cargo-toml-exists  [.] Cargo.toml: exists
+pass  cargo-toml-valid  [.] Cargo.toml: valid
+warn  cargo-toml-license  [.] Cargo.toml: has license
+warn  cargo-toml-description  [.] Cargo.toml: has description
+warn  cargo-toml-repository  [.] Cargo.toml: has repository
+warn  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+      File not found
+warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
+warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
+      No [lints.clippy] section
+warn  deny-toml-exists  [.] Rust: deny.toml
+      Not found: deny.toml
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found
+warn  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
+warn  rust-precommit-clippy  Rust pre-commit: clippy hook
+warn  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+warn  rust-ci-rustfmt  Rust CI: format check
+warn  rust-ci-clippy  Rust CI: clippy check
+warn  rust-ci-test  Rust CI: test
+warn  rust-ci-cargo-deny  Rust CI: cargo deny
+warn  rust-audit-cargo-deny  Rust audit: cargo deny advisories

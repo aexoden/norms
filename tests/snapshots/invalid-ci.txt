@@ -33,6 +33,8 @@ fail  ci-yaml-valid  CI: ci.yaml: valid
         |   ^ duplicate mapping key: test, set DuplicateKeyPolicy in Options if acceptable
       7 |     steps: []
         |
+warn  audit-yaml-exists  CI: audit.yaml: exists
+      File not found
 fail  workflow-valid  CI: audit.yml: valid
       Invalid YAML: error: line 3 column 5: illegal placement of ':' indicator
        --> <input>:3:5

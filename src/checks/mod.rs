@@ -57,15 +57,18 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
             Language::Python => {
                 python::check_precommit_hooks(ctx, report);
                 python::check_ci(ctx, report);
+                python::check_audit(ctx, report);
             }
             Language::Rust => {
                 rust::check_cargo_config(ctx, report);
                 rust::check_precommit_hooks(ctx, report);
                 rust::check_ci(ctx, report);
+                rust::check_audit(ctx, report);
             }
             Language::TypeScript => {
                 typescript::check_precommit_hooks(ctx, report);
                 typescript::check_ci(ctx, report);
+                typescript::check_audit(ctx, report);
             }
         }
     }

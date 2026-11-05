@@ -14,6 +14,9 @@ use serde_json::Value;
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct Workflow {
+    /// The events that trigger the workflow: one event's name, a list of names, or a mapping of each event to its
+    /// configuration.
+    pub on: Option<Value>,
     /// A group name, or a mapping with `group` and `cancel-in-progress`.
     pub concurrency: Option<Value>,
     pub jobs: BTreeMap<String, WorkflowJob>,
@@ -77,6 +80,15 @@ impl Workflow {
             }
             Some(_) => Err("concurrency doesn't set cancel-in-progress: true".to_owned()),
         }
+    }
+
+    /// Whether the workflow runs on a schedule: `on` maps `schedule` to at least one entry. A `schedule` given only by
+    /// name, as a string or in a list, sets no times and never runs.
+    pub(crate) fn runs_on_schedule(&self) -> bool {
+        let Some(Value::Object(on)) = &self.on else {
+            return false;
+        };
+        matches!(on.get("schedule"), Some(Value::Array(entries)) if !entries.is_empty())
     }
 
     /// The IDs of the jobs that don't set `timeout-minutes`. A job calling a reusable workflow can't set it, so it
@@ -353,6 +365,28 @@ jobs:
                 Err("No concurrency group".to_owned()),
                 "{yaml}"
             );
+        }
+    }
+
+    #[test]
+    fn finds_schedule_triggers() {
+        let scheduled = |yaml: &str| {
+            serde_saphyr::from_str::<Workflow>(yaml)
+                .expect("workflow parses")
+                .runs_on_schedule()
+        };
+        assert!(scheduled(
+            "on:\n  schedule:\n    - cron: '0 0 * * *'\n  workflow_dispatch:\n"
+        ));
+        for yaml in [
+            "name: Audit\n",
+            "on: schedule\n",
+            "on: [schedule, push]\n",
+            "on:\n  schedule:\n  push:\n",
+            "on:\n  schedule: []\n",
+            "on:\n  workflow_dispatch:\n",
+        ] {
+            assert!(!scheduled(yaml), "{yaml}");
         }
     }
 

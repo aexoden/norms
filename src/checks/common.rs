@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::{PrecommitHook, SHARED_PRESET, Workflow};
-use crate::context::{CI_WORKFLOW, ConfigStatus, ProjectContext};
+use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
 //
@@ -471,11 +471,21 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
     report.require_parsed("ci-yaml", "CI: ci.yaml", ctx.ci_workflow());
 
-    // Every other workflow must parse too. The checks above already cover ci.yaml.
+    if let Some(audit) =
+        report.recommend_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
+    {
+        report.should(
+            "audit-yaml-schedule",
+            "CI: audit.yaml: runs on a schedule",
+            audit.runs_on_schedule(),
+        );
+    }
+
+    // Every other workflow must parse too. The checks above already cover ci.yaml and audit.yaml.
     for (name, status) in ctx
         .workflows()
         .iter()
-        .filter(|(name, _)| *name != CI_WORKFLOW)
+        .filter(|(name, _)| *name != CI_WORKFLOW && *name != AUDIT_WORKFLOW)
     {
         report.must(
             "workflow-valid",

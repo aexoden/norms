@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::config::{CargoConfig, CargoToml, CargoWorkspace};
+use crate::config::{CargoConfig, CargoToml, CargoWorkspace, Workflow};
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
@@ -367,6 +367,60 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// The checks cargo-deny's `check` command runs: those it names, or every one if it names none.
+const CARGO_DENY_CHECKS: [&str; 4] = ["advisories", "bans", "licenses", "sources"];
+
+/// Whether cargo-deny's arguments, as they follow `cargo deny` or as the action's `command` and `command-arguments`
+/// inputs give them, run its advisories check: `check`, naming either no checks or `advisories` among them. The
+/// arguments end at a shell operator, where another command begins.
+fn cargo_deny_checks_advisories(args: &str) -> bool {
+    let args = args.split(['&', '|', ';']).next().unwrap_or_default();
+    let mut words = args.split_whitespace().skip_while(|word| *word != "check");
+    if words.next().is_none() {
+        return false;
+    }
+    let checks: Vec<&str> = words
+        .filter(|word| CARGO_DENY_CHECKS.contains(word))
+        .collect();
+    checks.is_empty() || checks.contains(&"advisories")
+}
+
+/// Whether `workflow` runs cargo-deny's advisories check, either from a script line or through
+/// `EmbarkStudios/cargo-deny-action`, whose `command` input defaults to `check` and is followed by its
+/// `command-arguments`.
+fn runs_cargo_deny_advisories(workflow: &Workflow) -> bool {
+    let runs = workflow.run_lines().any(|line| {
+        ["cargo deny", "cargo-deny"].iter().any(|command| {
+            line.split_once(command)
+                .is_some_and(|(_, args)| cargo_deny_checks_advisories(args))
+        })
+    });
+    runs || workflow
+        .steps_using("EmbarkStudios/cargo-deny-action")
+        .any(|step| {
+            let command = step.input("command");
+            let arguments = step.input("command-arguments");
+            cargo_deny_checks_advisories(&format!(
+                "{} {}",
+                command.as_deref().unwrap_or("check"),
+                arguments.as_deref().unwrap_or_default()
+            ))
+        })
+}
+
+/// Check that `audit.yaml` runs cargo-deny's advisories check.
+pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
+    let ConfigStatus::Ok(workflow) = ctx.audit_workflow() else {
+        return;
+    };
+
+    report.should(
+        "rust-audit-cargo-deny",
+        "Rust audit: cargo deny advisories",
+        runs_cargo_deny_advisories(workflow),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -469,5 +523,53 @@ mod tests {
 
         assert_eq!(warnings("[workspace]\n"), 1);
         assert_eq!(warnings("[package]\nname = \"x\"\n\n[workspace]\n"), 0);
+    }
+
+    #[test]
+    fn cargo_deny_must_check_advisories() {
+        for args in [
+            "check",
+            "--workspace --all-features check -D warnings advisories",
+            "check advisories bans",
+            "check -D warnings",
+        ] {
+            assert!(cargo_deny_checks_advisories(args), "{args}");
+        }
+        for args in [
+            "",
+            "fetch",
+            "check bans licenses sources",
+            "list advisories",
+            "fetch && echo check",
+            "check bans; echo advisories",
+        ] {
+            assert!(!cargo_deny_checks_advisories(args), "{args}");
+        }
+    }
+
+    #[test]
+    fn audit_runs_cargo_deny_advisories() {
+        let runs = |steps: &str| {
+            let yaml = format!("jobs:\n  audit:\n    steps:\n{steps}");
+            runs_cargo_deny_advisories(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        let action = "      - uses: EmbarkStudios/cargo-deny-action@abc # v2.1.1\n";
+        for steps in [
+            "      - run: cargo deny --workspace check -D warnings advisories\n".to_owned(),
+            "      - run: |\n          cargo deny --workspace --all-features \\\n            check -D warnings advisories\n".to_owned(),
+            action.to_owned(),
+            format!("{action}        with:\n          command: check advisories\n"),
+        ] {
+            assert!(runs(&steps), "{steps}");
+        }
+        for steps in [
+            "      - run: cargo deny check bans\n".to_owned(),
+            "      - run: cargo build\n".to_owned(),
+            format!(
+                "{action}        with:\n          command: check\n          command-arguments: bans licenses\n"
+            ),
+        ] {
+            assert!(!runs(&steps), "{steps}");
+        }
     }
 }

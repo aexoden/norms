@@ -591,3 +591,16 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
             || workflow.runs_command("pnpm run test"),
     );
 }
+
+/// Check that `audit.yaml` runs `pnpm audit`.
+pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
+    let ConfigStatus::Ok(workflow) = ctx.audit_workflow() else {
+        return;
+    };
+
+    report.should(
+        "typescript-audit-pnpm",
+        "TypeScript audit: pnpm audit",
+        workflow.runs_command("pnpm audit"),
+    );
+}

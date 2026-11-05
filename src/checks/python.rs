@@ -361,3 +361,16 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         workflow.runs_command("mypy"),
     );
 }
+
+/// Check that `audit.yaml` runs `uv audit`.
+pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
+    let ConfigStatus::Ok(workflow) = ctx.audit_workflow() else {
+        return;
+    };
+
+    report.should(
+        "python-audit-uv",
+        "Python audit: uv audit",
+        workflow.runs_command("uv audit"),
+    );
+}
