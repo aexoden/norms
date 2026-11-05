@@ -113,7 +113,8 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   applications whose manifests break the pinning standards, beside a Python
   library that isn't checked for them, and release ages other than 3 days.
   `reuse` breaks the licensing standards: two license texts whose root copies
-  are misnamed or differ, and a `REUSE.toml` of the wrong version.
+  are misnamed or differ, a `REUSE.toml` of the wrong version, and hooks and
+  CI that don't run `reuse lint` on the whole project.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

@@ -5,6 +5,7 @@
 
 use std::collections::BTreeMap;
 
+use regex::Regex;
 use serde::Deserialize;
 
 /// Top-level workflow structure.
@@ -40,6 +41,14 @@ impl Workflow {
         self.steps()
             .filter_map(|step| step.run.as_deref())
             .any(|run| run.contains(command))
+    }
+
+    /// Whether any step's `run` script matches `pattern`, for a command that a plain substring would confuse with
+    /// another, such as `reuse lint` and `reuse lint-file`.
+    pub(crate) fn runs_matching(&self, pattern: &Regex) -> bool {
+        self.steps()
+            .filter_map(|step| step.run.as_deref())
+            .any(|run| pattern.is_match(run))
     }
 
     /// Whether any step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
@@ -141,6 +150,13 @@ jobs:
             "./.github/actions/rustfmt",
             "actions-rust-lang/rustfmt"
         ));
+    }
+
+    #[test]
+    fn matches_commands_by_pattern() {
+        let workflow = workflow();
+        assert!(workflow.runs_matching(&Regex::new(r"(?m)^\s*cargo test\b").unwrap()));
+        assert!(!workflow.runs_matching(&Regex::new(r"\bcargo fmt\b").unwrap()));
     }
 
     #[test]

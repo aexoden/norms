@@ -22,10 +22,12 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
+pass  precommit-config-exists  .pre-commit-config.yaml
+warn  precommit-reuse  Pre-commit: reuse hook
 warn  renovate-exists  renovate.json: exists
       File not found
-fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
-      Not found: workflows
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+pass  ci-yaml-valid  CI: ci.yaml: valid
+warn  ci-reuse  CI: REUSE compliance
 pass  components-search  Components: every directory searched

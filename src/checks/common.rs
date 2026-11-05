@@ -3,6 +3,10 @@
 
 //! Common checks that apply to all projects reqgardless of language.
 
+use std::sync::LazyLock;
+
+use regex::Regex;
+
 use crate::config::SHARED_PRESET;
 use crate::context::{CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists, matches_regex};
@@ -298,6 +302,16 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         ".pre-commit-config.yaml",
         file_exists(&ctx.path().join(".pre-commit-config.yaml")),
     );
+
+    let Some(config) = ctx.precommit().as_ref_ok() else {
+        return;
+    };
+
+    report.should(
+        "precommit-reuse",
+        "Pre-commit: reuse hook",
+        config.has_hook("reuse"),
+    );
 }
 
 //
@@ -329,6 +343,12 @@ pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
 // Continuous integration
 //
 
+/// `reuse lint` in a CI script, but not `reuse lint-file`, which lints only the files it's given.
+static REUSE_LINT: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"(?m)\breuse\s+lint(?:$|[^\w-])").unwrap()
+});
+
 pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
     let workflows_dir = ctx.path().join(".github/workflows");
     report.must(
@@ -358,5 +378,39 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
                 ConfigStatus::Ok(_) => Outcome::Pass,
             },
         );
+    }
+
+    let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
+        return;
+    };
+
+    report.should(
+        "ci-reuse",
+        "CI: REUSE compliance",
+        workflow.uses_action("fsfe/reuse-action") || workflow.runs_matching(&REUSE_LINT),
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reuse_lint_excludes_lint_file() {
+        for run in [
+            "reuse lint",
+            "uvx reuse lint --json",
+            "reuse  lint\necho done",
+            "reuse lint; echo",
+        ] {
+            assert!(REUSE_LINT.is_match(run), "{run}");
+        }
+        for run in [
+            "reuse lint-file src/main.rs",
+            "reuse --root . lint",
+            "nonreuse lint",
+        ] {
+            assert!(!REUSE_LINT.is_match(run), "{run}");
+        }
     }
 }
