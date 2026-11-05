@@ -111,10 +111,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   under `node_modules/`, a hidden directory and an excluded `vendor/` to
   skip; its `norms.toml` also excludes a missing directory. `unpinned` has
   applications whose manifests break the pinning standards, beside a Python
-  library that isn't checked for them. Symlinks and
-  `.gitignore` handling are covered by the unit tests in `detection.rs`
-  instead: a fixture's `.gitignore` would also apply to this repository, so
-  the files it ignores couldn't be committed.
+  library that isn't checked for them, and release ages other than 3 days.
+  Symlinks and `.gitignore` handling are covered by the unit tests in
+  `detection.rs` instead: a fixture's `.gitignore` would also apply to this
+  repository, so the files it ignores couldn't be committed.
 - Fixtures are kept exactly as written: pre-commit and markdownlint skip them,
   and `REUSE.toml` covers them, so one may be deliberately broken or lack
   headers. A fix or new check that depends on a project's layout gets a fixture.

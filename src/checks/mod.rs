@@ -59,6 +59,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 python::check_ci(ctx, report);
             }
             Language::Rust => {
+                rust::check_cargo_config(ctx, report);
                 rust::check_precommit_hooks(ctx, report);
                 rust::check_ci(ctx, report);
             }
@@ -85,6 +86,7 @@ fn check_component(ctx: &ComponentContext, language: Language, report: &mut Repo
             python::check_src_layout(ctx, report);
             python::check_uv_lock(ctx, report);
             python::check_dependencies_exact(ctx, report);
+            python::check_uv_exclude_newer(ctx, report);
             python::check_dependency_groups(ctx, report);
             python::check_ruff(ctx, report);
             python::check_ruff_lint(ctx, report);
@@ -101,6 +103,7 @@ fn check_component(ctx: &ComponentContext, language: Language, report: &mut Repo
         Language::TypeScript => {
             typescript::check_package_json(ctx, report);
             typescript::check_pnpm(ctx, report);
+            typescript::check_pnpm_workspace(ctx, report);
             typescript::check_tsconfig(ctx, report);
             typescript::check_eslint(ctx, report);
             typescript::check_prettier(ctx, report);
@@ -244,6 +247,37 @@ mod tests {
                     Status::Warn
                 ),
             ]
+        );
+    }
+
+    #[test]
+    fn component_cargo_configs_are_checked_too() {
+        let project = TempProject::new("cargo-config", None);
+        fs::create_dir_all(project.0.join(".cargo")).unwrap();
+        fs::write(
+            project.0.join(".cargo/config.toml"),
+            "[registry]\nglobal-min-publish-age = \"3 days\"\n",
+        )
+        .unwrap();
+        for component in ["backend", "tools"] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
+        }
+        fs::create_dir_all(project.0.join("backend/.cargo")).unwrap();
+        fs::write(
+            project.0.join("backend/.cargo/config.toml"),
+            "[registry]\nglobal-min-publish-age = \"0\"\n",
+        )
+        .unwrap();
+        let results = project.verify();
+
+        let ages: Vec<_> = find(&results, "cargo-config-min-publish-age")
+            .iter()
+            .map(|r| (r.component.as_deref(), r.status))
+            .collect();
+        assert_eq!(
+            ages,
+            [(None, Status::Pass), (Some("backend"), Status::Warn)]
         );
     }
 

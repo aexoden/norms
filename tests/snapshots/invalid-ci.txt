@@ -50,3 +50,5 @@ warn  clippy-lints  [.] Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found

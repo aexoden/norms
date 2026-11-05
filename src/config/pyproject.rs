@@ -277,6 +277,9 @@ pub(crate) struct RuffLintCopyrightConfig {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
 pub(crate) struct UvConfig {
+    /// The newest release uv may resolve: a duration back from now, or a fixed date. Kept unparsed, so that a
+    /// malformed value fails only the check reading it.
+    pub exclude_newer: Option<toml::Value>,
     /// Where packages come from, when not from the default index. Kept unparsed, so that a malformed entry fails
     /// only the checks reading it.
     pub sources: Option<toml::Value>,

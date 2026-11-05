@@ -38,6 +38,7 @@ pass  python-src-layout  [.] Python: src/ directory
 pass  python-src-packages  [.] Python: src/ contains packages
 pass  uv-lock-exists  [.] Python: uv.lock
 pass  pyproject-dependencies-exact  [.] pyproject.toml: dependencies pinned exactly (application)
+pass  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
 pass  python-dependency-groups  [.] Python: has dependency-groups
 pass  python-dev-group  [.] Python: has dev dependency group
 pass  ruff-configured  [.] Ruff: configured

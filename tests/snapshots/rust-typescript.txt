@@ -43,6 +43,9 @@ pass  clippy-lints  [.] Clippy: lints configured
 pass  clippy-pedantic  [.] Clippy: pedantic enabled
 pass  deny-toml-exists  [.] Rust: deny.toml
 pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+pass  cargo-config-exists  .cargo/config.toml: exists
+pass  cargo-config-valid  .cargo/config.toml: valid
+pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)
 pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
@@ -58,6 +61,9 @@ pass  package-json-dependencies-exact  [frontend] package.json: dependencies pin
 pass  package-json-dev-engines-runtime  [frontend] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [frontend] package.json: pins pnpm in devEngines
 pass  pnpm-lock-exists  [frontend] pnpm: pnpm-lock.yaml exists
+pass  pnpm-workspace-exists  [frontend] pnpm-workspace.yaml: exists
+pass  pnpm-workspace-valid  [frontend] pnpm-workspace.yaml: valid
+pass  pnpm-workspace-minimum-release-age  [frontend] pnpm: release age of 3 days (minimumReleaseAge)
 pass  tsconfig-exists  [frontend] tsconfig.json: exists
 pass  tsconfig-valid  [frontend] tsconfig.json: valid
 pass  tsconfig-project-references  [frontend] tsconfig.json: uses project references

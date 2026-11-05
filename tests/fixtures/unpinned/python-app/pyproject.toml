@@ -7,3 +7,6 @@ python-app = "python_app.main:main"
 
 [dependency-groups]
 dev = ["ruff", "pytest==9.2.0"]
+
+[tool.uv]
+exclude-newer = "1 day"

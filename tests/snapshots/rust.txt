@@ -43,6 +43,9 @@ pass  clippy-lints  [.] Clippy: lints configured
 pass  clippy-pedantic  [.] Clippy: pedantic enabled
 pass  deny-toml-exists  [.] Rust: deny.toml
 pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+pass  cargo-config-exists  .cargo/config.toml: exists
+pass  cargo-config-valid  .cargo/config.toml: valid
+pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)
 pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook

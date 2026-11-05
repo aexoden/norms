@@ -29,10 +29,12 @@ warn  uv-lock-exists  [python-app] Python: uv.lock
       Not found: uv.lock
 warn  pyproject-dependencies-exact  [python-app] pyproject.toml: dependencies pinned exactly (application)
       Not pinned with ==: project.dependencies "httpx>=0.28" (not a single == version), dependency-groups.dev "ruff" (no version)
+warn  uv-exclude-newer  [python-app] uv: release age of 3 days (exclude-newer)
+      "1 day" isn't 3 days
 pass  python-dependency-groups  [python-app] Python: has dependency-groups
 pass  python-dev-group  [python-app] Python: has dev dependency group
 fail  ruff-configured  [python-app] Ruff: configured
-      No [tool] section in pyproject.toml
+      Missing [tool.ruff] in pyrpoject.toml
 warn  ruff-lint-configured  [python-app] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [python-app] mypy: configured
@@ -44,6 +46,8 @@ warn  python-src-layout  [python-lib] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [python-lib] Python: uv.lock
       Not found: uv.lock
+warn  uv-exclude-newer  [python-lib] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
 warn  python-dependency-groups  [python-lib] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [python-lib] Ruff: configured
@@ -67,6 +71,10 @@ warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
       Not found: Cargo.lock
+pass  cargo-config-exists  .cargo/config.toml: exists
+pass  cargo-config-valid  .cargo/config.toml: valid
+warn  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)
+      global-min-publish-age: "7 days" isn't 3 days
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
 pass  package-json-name  [web] package.json: has name
@@ -79,6 +87,10 @@ warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in
       Missing devEngines.packageManager
 warn  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
+pass  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
+pass  pnpm-workspace-valid  [web] pnpm-workspace.yaml: valid
+warn  pnpm-workspace-minimum-release-age  [web] pnpm: release age of 3 days (minimumReleaseAge)
+      1440 minutes isn't 3 days (4320)
 fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [web] ESLint: configured

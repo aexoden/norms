@@ -39,6 +39,9 @@ pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exa
 pass  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
 pass  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
+pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
+pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
+pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minimumReleaseAge)
 pass  tsconfig-exists  [.] tsconfig.json: exists
 pass  tsconfig-valid  [.] tsconfig.json: valid
 pass  tsconfig-project-references  [.] tsconfig.json: uses project references

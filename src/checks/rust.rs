@@ -3,8 +3,9 @@
 
 //! Rust-specific checks.
 
-use crate::config::CargoToml;
+use crate::config::{CargoConfig, CargoToml};
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
+use crate::models::Language;
 use crate::report::{Outcome, Report, file_exists};
 
 /// Whether the component is an application rather than a library: whether it builds a binary, from an explicit
@@ -153,6 +154,41 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
 }
 
 //
+// Release age
+//
+
+/// Check the release age in the root's `.cargo/config.toml`, which applies wherever Cargo runs in the repository, and
+/// in the `.cargo/config.toml` of any Rust component in a subdirectory, which overrides it there.
+pub(crate) fn check_cargo_config(ctx: &ProjectContext, report: &mut Report) {
+    check_cargo_config_file(ctx.cargo_config(), report);
+
+    for component in ctx
+        .components()
+        .iter()
+        .filter(|c| c.language == Language::Rust && !c.path.as_os_str().is_empty())
+    {
+        let component_ctx = ComponentContext::new(ctx.path(), component);
+        if !matches!(component_ctx.cargo_config(), ConfigStatus::NotFound) {
+            report.with_component(component, |report| {
+                check_cargo_config_file(component_ctx.cargo_config(), report);
+            });
+        }
+    }
+}
+
+fn check_cargo_config_file(status: &ConfigStatus<CargoConfig>, report: &mut Report) {
+    let Some(config) = report.recommend_parsed("cargo-config", ".cargo/config.toml", status) else {
+        return;
+    };
+
+    report.should(
+        "cargo-config-min-publish-age",
+        "Cargo: release age of 3 days (global-min-publish-age)",
+        config.check_min_publish_age(),
+    );
+}
+
+//
 // Pre-commit integration
 //
 
@@ -218,7 +254,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::models::{Component, Language};
+    use crate::models::Component;
 
     /// Whether a package with the given manifest and files is an application.
     fn is_application_with(manifest: &str, files: &[&str]) -> bool {

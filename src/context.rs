@@ -29,8 +29,8 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use crate::config::{
-    CargoToml, DevboxConfig, NormsConfig, PackageJson, PrecommitConfig, PyprojectToml,
-    RenovateConfig, TsConfig, Workflow,
+    CargoConfig, CargoToml, DevboxConfig, NormsConfig, PackageJson, PnpmWorkspace, PrecommitConfig,
+    PyprojectToml, RenovateConfig, TsConfig, Workflow,
 };
 use crate::detection::Detection;
 use crate::models::{Component, Language};
@@ -89,6 +89,7 @@ pub(crate) struct ProjectContext {
     path: PathBuf,
     detection: OnceLock<Detection>,
     languages: OnceLock<BTreeSet<Language>>,
+    cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
@@ -105,6 +106,7 @@ impl ProjectContext {
             path,
             detection: OnceLock::new(),
             languages: OnceLock::new(),
+            cargo_config: OnceLock::new(),
             devbox: OnceLock::new(),
             norms: OnceLock::new(),
             renovate: OnceLock::new(),
@@ -148,6 +150,15 @@ impl ProjectContext {
                 .map(|component| component.language)
                 .collect()
         })
+    }
+
+    /// Parsed `.cargo/config.toml` (cached).
+    ///
+    /// Cargo merges the config files of the directory it runs in and each of its parents, so the root's applies to
+    /// every Rust component, wherever Cargo runs in the repository.
+    pub(crate) fn cargo_config(&self) -> &ConfigStatus<CargoConfig> {
+        self.cargo_config
+            .get_or_init(|| parse_toml_file::<CargoConfig>(&self.path.join(".cargo/config.toml")))
     }
 
     /// Parsed `devbox.json` (cached). Uses JSON5 for flexibility.
@@ -230,8 +241,10 @@ impl ProjectContext {
 pub(crate) struct ComponentContext {
     path: PathBuf,
     cargo: OnceLock<ConfigStatus<CargoToml>>,
+    cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
+    pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
     tsconfig: OnceLock<ConfigStatus<TsConfig>>,
     typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
 }
@@ -242,8 +255,10 @@ impl ComponentContext {
         Self {
             path: root.join(&component.path),
             cargo: OnceLock::new(),
+            cargo_config: OnceLock::new(),
             pyproject: OnceLock::new(),
             package_json: OnceLock::new(),
+            pnpm_workspace: OnceLock::new(),
             tsconfig: OnceLock::new(),
             typescript_referenced_configs: OnceLock::new(),
         }
@@ -260,6 +275,13 @@ impl ComponentContext {
             .get_or_init(|| parse_toml_file::<CargoToml>(&self.path.join("Cargo.toml")))
     }
 
+    /// Parsed `.cargo/config.toml` in the component's own directory (cached). For a component at the root, this is
+    /// [`ProjectContext::cargo_config`].
+    pub(crate) fn cargo_config(&self) -> &ConfigStatus<CargoConfig> {
+        self.cargo_config
+            .get_or_init(|| parse_toml_file::<CargoConfig>(&self.path.join(".cargo/config.toml")))
+    }
+
     /// Parsed `pyproject.toml` (cached).
     pub(crate) fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
         self.pyproject
@@ -270,6 +292,13 @@ impl ComponentContext {
     pub(crate) fn package_json(&self) -> &ConfigStatus<PackageJson> {
         self.package_json
             .get_or_init(|| parse_json5_file::<PackageJson>(&self.path.join("package.json")))
+    }
+
+    /// Parsed `pnpm-workspace.yaml` (cached).
+    pub(crate) fn pnpm_workspace(&self) -> &ConfigStatus<PnpmWorkspace> {
+        self.pnpm_workspace.get_or_init(|| {
+            parse_yaml_file::<PnpmWorkspace>(&self.path.join("pnpm-workspace.yaml"))
+        })
     }
 
     /// Parsed `tsconfig.json` (cached).

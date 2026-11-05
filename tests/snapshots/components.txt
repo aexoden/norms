@@ -35,6 +35,8 @@ warn  python-src-layout  [tools] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [tools] Python: uv.lock
       Not found: uv.lock
+warn  uv-exclude-newer  [tools] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
 warn  python-dependency-groups  [tools] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [tools] Ruff: configured
@@ -54,6 +56,8 @@ warn  clippy-lints  [.] Clippy: lints configured
       No [lints.clippy] or [workspace.lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
+warn  cargo-config-exists  .cargo/config.toml: exists
+      File not found
 pass  package-json-exists  [apps/admin] package.json: exists
 pass  package-json-valid  [apps/admin] package.json: valid
 pass  package-json-name  [apps/admin] package.json: has name
@@ -66,6 +70,8 @@ warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins 
       Missing devEngines.packageManager
 warn  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
+warn  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
+      File not found
 fail  tsconfig-exists  [apps/admin] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [apps/admin] ESLint: configured
@@ -92,6 +98,8 @@ warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pn
       Missing devEngines.packageManager
 warn  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
+warn  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists
+      File not found
 fail  tsconfig-exists  [apps/web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [apps/web] ESLint: configured

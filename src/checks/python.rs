@@ -3,6 +3,7 @@
 
 //! Python-specific checks.
 
+use crate::config::check_release_age_value;
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
@@ -78,6 +79,27 @@ pub(crate) fn check_dependencies_exact(ctx: &ComponentContext, report: &mut Repo
             config.check_dependencies_exact(),
         );
     }
+}
+
+pub(crate) fn check_uv_exclude_newer(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+
+    let exclude_newer = config
+        .tool
+        .as_ref()
+        .and_then(|t| t.uv.as_ref())
+        .and_then(|uv| uv.exclude_newer.as_ref());
+
+    report.should(
+        "uv-exclude-newer",
+        "uv: release age of 3 days (exclude-newer)",
+        exclude_newer.map_or_else(
+            || Err("Missing [tool.uv] exclude-newer".to_owned()),
+            check_release_age_value,
+        ),
+    );
 }
 
 pub(crate) fn check_dependency_groups(ctx: &ComponentContext, report: &mut Report) {

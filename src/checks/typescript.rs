@@ -94,6 +94,22 @@ pub(crate) fn check_pnpm(ctx: &ComponentContext, report: &mut Report) {
     }
 }
 
+pub(crate) fn check_pnpm_workspace(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = report.recommend_parsed(
+        "pnpm-workspace",
+        "pnpm-workspace.yaml",
+        ctx.pnpm_workspace(),
+    ) else {
+        return;
+    };
+
+    report.should(
+        "pnpm-workspace-minimum-release-age",
+        "pnpm: release age of 3 days (minimumReleaseAge)",
+        config.check_minimum_release_age(),
+    );
+}
+
 //
 // TypeScript configuration
 //
