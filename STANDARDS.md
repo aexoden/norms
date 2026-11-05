@@ -419,6 +419,9 @@ offending lines, so a finding shows up on the CI run like any other failure. CI
 also runs zizmor's online audits, which the pre-commit hook skips when no GitHub
 token is available.
 
+Both run zizmor's pedantic persona, the action with `persona: pedantic` and the
+hook with `--pedantic`, so they report the same findings.
+
 The action's default GitHub Advanced Security mode is not used. It uploads
 findings to code scanning and passes the job, relying on a code scanning rule in
 the ruleset to block the merge. Findings on commits pushed straight to `dev`
@@ -1010,6 +1013,9 @@ sets the job's working directory instead:
 | `eslint`                 | `pnpm exec eslint . --max-warnings 0` |
 | `tsc`                    | `pnpm exec tsc -b --noEmit`           |
 | `vitest`                 | `pnpm exec vitest run`                |
+
+CI has no `pnpm-lock` job: `pnpm/setup` installs the dependencies, and pnpm
+defaults to `--frozen-lockfile` in CI, so every job fails on a stale lock file.
 
 pnpm switches to the version pinned in `devEngines` only when it runs in the
 project's own directory, and `--dir` doesn't count. In a subdirectory, the hooks
