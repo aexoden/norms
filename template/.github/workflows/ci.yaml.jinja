@@ -32,11 +32,14 @@
           cache-workspaces: {{ rust_dir }} -> target
 {%- endif %}
 {%- endmacro %}
-{%- macro setup_uv(sync=true) %}
+{%- macro setup_uv(sync=true, python='') %}
 
       - name: Install uv
         uses: astral-sh/setup-uv@{{ action_setup_uv }}
         with:
+{%- if python %}
+          python-version: "{{ python }}"
+{%- endif %}
           version: "{{ uv_version }}"
 {%- if python_prefix %}
           working-directory: {{ python_dir }}
@@ -65,6 +68,9 @@
     with a frozen lock file. #}
 {%- set skip = jobs | reject('in', ['markdownlint', 'pre-commit']) | list + ['markdownlint-cli2'] %}
 {%- if 'typescript' in languages %}{% set skip = skip + ['pnpm-lock'] %}{% endif %}
+{#- Libraries also test the oldest versions they support, in CI only. #}
+{%- if project_type == 'library' and 'rust' in languages %}{% set jobs = jobs + ['msrv'] %}{% endif %}
+{%- if project_type == 'library' and 'python' in languages %}{% set jobs = jobs + ['pytest-min-python'] %}{% endif %}
 
 name: CI
 
@@ -151,6 +157,21 @@ jobs:
 
       - name: Lint Rust code with Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+{%- if project_type == 'library' %}
+{{ job('msrv', 'Check the minimum supported Rust version', rust_dir, timeout=30) }}
+
+      - name: Install the minimum supported Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@{{ action_setup_rust_toolchain }}
+        with:
+{%- if rust_prefix %}
+          cache-workspaces: {{ rust_dir }} -> target
+{%- endif %}
+          toolchain: "{{ rust_msrv }}"
+
+      # Development dependencies may need a newer Rust, so only the library is checked.
+      - name: Check the library with the minimum supported Rust version
+        run: cargo check --workspace --all-features --locked
+{%- endif %}
 {{ job('rustfmt', 'Check Rust code formatting', '') }}
 
       - name: Install Rust toolchain
@@ -176,6 +197,13 @@ jobs:
 
       - name: Run Python tests
         run: uv run pytest --cov=src/{{ python_package }} --cov-report=term-missing
+{%- if project_type == 'library' %}
+{{ job('pytest-min-python', 'Run Python tests on the oldest supported Python', python_dir, timeout=30) }}
+{{- setup_uv(python=python_min_version) }}
+
+      - name: Run Python tests
+        run: uv run pytest --cov=src/{{ python_package }} --cov-report=term-missing
+{%- endif %}
 {{ job('ruff-check', 'Lint Python code with Ruff', python_dir) }}
 {{- setup_uv() }}
 

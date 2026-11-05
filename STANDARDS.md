@@ -409,6 +409,10 @@ through `astral-sh/setup-uv` and run with `uvx`. Its `SKIP` lists every hook
 that has its own job, so a hook added later runs in this job until it gets one.
 The `commit-msg` hooks don't run in it.
 
+Libraries also check the oldest versions they support, which the hooks don't,
+since that needs a second toolchain: Rust libraries in an `msrv` job and Python
+libraries in a `pytest-min-python` job (see the language sections).
+
 Security advisories are checked by `audit.yaml` rather than `ci.yaml`. New
 advisories appear independently of code changes, so a daily audit catches them
 promptly without blocking unrelated pull requests. The audit tools are:
@@ -673,6 +677,9 @@ project/
   `requires-python`.
 - `[tool.uv] required-version` sets the minimum uv version the project needs,
   and the CI setup step pins the exact uv version.
+- A library's CI also runs its tests on the oldest Python it supports, in a
+  `pytest-min-python` job whose `astral-sh/setup-uv` step sets that version as
+  `python-version`.
 
 #### Dependencies
 
@@ -786,7 +793,12 @@ components = ["clippy", "rustfmt"]
 ```
 
 Libraries also set `rust-version` (the MSRV) in `Cargo.toml`. Applications do
-not need one, since the toolchain file already pins their compiler.
+not need one, since the toolchain file already pins their compiler. A library's
+CI checks the MSRV in an `msrv` job, which installs that toolchain with
+`actions-rust-lang/setup-rust-toolchain`'s `toolchain` input, overriding
+`rust-toolchain.toml`, and runs `cargo check --workspace --all-features
+--locked`. It checks only the library, not its tests, since development
+dependencies may need a newer Rust.
 
 `.cargo/config.toml` sets the release age (see [Release Age](#release-age)):
 

@@ -231,6 +231,8 @@ jobs:
             answers: "{primary_language: python}"
           - name: Python library
             answers: "{primary_language: python, project_type: library}"
+          - name: Python library with Rust
+            answers: "{primary_language: python, project_type: library, secondary_languages: [rust]}"
           - name: TypeScript application
             answers: "{primary_language: typescript}"
           - name: Rust with a TypeScript frontend
