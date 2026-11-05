@@ -33,6 +33,13 @@ pnpm_version:
   default: "12.16.1"
   when: false
 
+# pre-commit, which CI runs for the hooks that have no job of their own
+
+# renovate: datasource=pypi depName=pre-commit
+pre_commit_version:
+  default: "4.7.0"
+  when: false
+
 # pre-commit hooks
 
 # renovate: datasource=github-tags depName=pre-commit/pre-commit-hooks

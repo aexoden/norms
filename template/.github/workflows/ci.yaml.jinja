@@ -56,10 +56,15 @@
           working-directory: {{ typescript_dir }}
 {%- endif %}
 {%- endmacro %}
-{%- set jobs = ['markdownlint', 'reuse', 'zizmor'] %}
+{%- set jobs = ['markdownlint', 'pre-commit', 'reuse', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vitest'] %}{% endif %}
+{#- The pre-commit job skips the hooks that have a job of their own, the hook for
+    markdownlint being markdownlint-cli2, and pnpm-lock, since pnpm/setup installs
+    with a frozen lock file. #}
+{%- set skip = jobs | reject('in', ['markdownlint', 'pre-commit']) | list + ['markdownlint-cli2'] %}
+{%- if 'typescript' in languages %}{% set skip = skip + ['pnpm-lock'] %}{% endif %}
 
 name: CI
 
@@ -92,6 +97,18 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@{{ action_markdownlint_cli2 }}
         with:
           globs: '**/*.md'
+{{ job('pre-commit', 'Run the remaining pre-commit hooks', '') }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@{{ action_setup_uv }}
+        with:
+          enable-cache: false
+          version: "{{ uv_version }}"
+
+      - name: Run the hooks that have no job of their own
+        env:
+          SKIP: {{ skip | sort | join(',') }}
+        run: uvx pre-commit@{{ pre_commit_version }} run --all-files --show-diff-on-failure
 {{ job('reuse', 'Check REUSE compliance', '') }}
 
       - name: Check REUSE compliance

@@ -402,6 +402,13 @@ deny --workspace --all-features check -D warnings bans licenses sources` and
 lock file freshness. CI should fail in every case where the pre-commit hooks
 would.
 
+Most hooks have a job of their own. A `pre-commit` job runs the rest, such as
+the [common hooks](#common-hooks) from pre-commit-hooks, with `pre-commit run
+--all-files --show-diff-on-failure` at a pinned pre-commit version, installed
+through `astral-sh/setup-uv` and run with `uvx`. Its `SKIP` lists every hook
+that has its own job, so a hook added later runs in this job until it gets one.
+The `commit-msg` hooks don't run in it.
+
 Security advisories are checked by `audit.yaml` rather than `ci.yaml`. New
 advisories appear independently of code changes, so a daily audit catches them
 promptly without blocking unrelated pull requests. The audit tools are:
