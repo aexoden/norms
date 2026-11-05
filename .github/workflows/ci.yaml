@@ -307,9 +307,8 @@ jobs:
           name: norms
           path: ${{ runner.temp }}/norms
 
-      # Not yet gating: norms verify still reports false findings on standard projects.
+      # Fails on norms' failures only; its warnings don't change the exit code.
       - name: Verify the rendered project with norms
-        continue-on-error: true
         run: |
           chmod +x "$RUNNER_TEMP/norms/norms"
           "$RUNNER_TEMP/norms/norms" verify "$RUNNER_TEMP/project"

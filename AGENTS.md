@@ -91,8 +91,8 @@ prints a `Report`, exiting 1 if any check failed.
   results belong to the workspace's component and name the member's manifest
   (`crates/cli/Cargo.toml: ...`).
 
-`norms verify` is not yet gating in CI: it still reports false findings on
-projects rendered from the template.
+CI's `template` job runs `norms verify` on each render and fails if it reports
+a failure; warnings don't change its exit code.
 
 ## Tests
 
