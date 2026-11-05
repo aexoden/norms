@@ -29,6 +29,7 @@ pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whites
 pass  precommit-config-exists  .pre-commit-config.yaml
 pass  precommit-reuse  Pre-commit: reuse hook
 pass  precommit-tombi  Pre-commit: tombi-format hook
+pass  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
 pass  renovate-exists  renovate.json: exists
 pass  renovate-valid  renovate.json: valid
 pass  renovate-schema  renovate.json: has $schema
@@ -39,6 +40,7 @@ pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  workflow-valid  CI: audit.yaml: valid
 pass  ci-reuse  CI: REUSE compliance
 pass  ci-tombi  CI: TOML formatting
+pass  ci-zizmor  CI: zizmor (pedantic)
 pass  components-search  Components: every directory searched
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid

@@ -25,6 +25,8 @@ fail  editorconfig-exists  .editorconfig: exists
 pass  precommit-config-exists  .pre-commit-config.yaml
 warn  precommit-reuse  Pre-commit: reuse hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
+warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+      No zizmor hook
 warn  renovate-exists  renovate.json: exists
       File not found
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
@@ -32,6 +34,8 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 warn  ci-reuse  CI: REUSE compliance
 warn  ci-tombi  CI: TOML formatting
+warn  ci-zizmor  CI: zizmor (pedantic)
+      No step runs zizmor or uses zizmorcore/zizmor-action
 pass  components-search  Components: every directory searched
 pass  pyproject-exists  [py] pyproject.toml: exists
 pass  pyproject-valid  [py] pyproject.toml: valid

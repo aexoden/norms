@@ -3,10 +3,12 @@
 
 //! Type-safe model for a GitHub Actions workflow file.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use regex::Regex;
 use serde::Deserialize;
+use serde_json::Value;
 
 /// Top-level workflow structure.
 #[derive(Debug, Deserialize, Default)]
@@ -28,6 +30,23 @@ pub(crate) struct WorkflowJob {
 pub(crate) struct WorkflowStep {
     pub uses: Option<String>,
     pub run: Option<String>,
+    /// The action's inputs, kept as YAML wrote them rather than as strings, so that a list or mapping where a string
+    /// belongs fails only the check reading it. A value serde can't represent at all, such as `.nan`, still fails the
+    /// whole workflow.
+    pub with: BTreeMap<String, Value>,
+}
+
+impl WorkflowStep {
+    /// The value of the action input `name` as the action receives it: a string, whether the YAML wrote it as one or
+    /// as a boolean or number. A null or collection is no value.
+    pub(crate) fn input(&self, name: &str) -> Option<Cow<'_, str>> {
+        match self.with.get(name)? {
+            Value::String(value) => Some(Cow::Borrowed(value)),
+            Value::Bool(value) => Some(Cow::Owned(value.to_string())),
+            Value::Number(value) => Some(Cow::Owned(value.to_string())),
+            Value::Null | Value::Array(_) | Value::Object(_) => None,
+        }
+    }
 }
 
 impl Workflow {
@@ -35,28 +54,63 @@ impl Workflow {
         self.jobs.values().flat_map(|job| &job.steps)
     }
 
+    /// Every step's `run` script.
+    pub(crate) fn run_scripts(&self) -> impl Iterator<Item = &str> {
+        self.steps().filter_map(|step| step.run.as_deref())
+    }
+
+    /// Every command line of every step's `run` script, with lines continued by a trailing backslash joined into one.
+    pub(crate) fn run_lines(&self) -> impl Iterator<Item = String> {
+        self.run_scripts().flat_map(join_continued_lines)
+    }
+
+    /// Every step that uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
+    pub(crate) fn steps_using<'a>(
+        &'a self,
+        action: &'a str,
+    ) -> impl Iterator<Item = &'a WorkflowStep> {
+        self.steps().filter(move |step| {
+            step.uses
+                .as_deref()
+                .is_some_and(|uses| is_action(uses, action))
+        })
+    }
+
     /// Whether any step's `run` script contains `command`. Commands that reach a script only through an expression,
     /// such as `${{ matrix.command }}`, are not seen.
     pub(crate) fn runs_command(&self, command: &str) -> bool {
-        self.steps()
-            .filter_map(|step| step.run.as_deref())
-            .any(|run| run.contains(command))
+        self.run_scripts().any(|run| run.contains(command))
     }
 
     /// Whether any step's `run` script matches `pattern`, for a command that a plain substring would confuse with
     /// another, such as `reuse lint` and `reuse lint-file`.
     pub(crate) fn runs_matching(&self, pattern: &Regex) -> bool {
-        self.steps()
-            .filter_map(|step| step.run.as_deref())
-            .any(|run| pattern.is_match(run))
+        self.run_scripts().any(|run| pattern.is_match(run))
     }
 
     /// Whether any step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
     pub(crate) fn uses_action(&self, action: &str) -> bool {
-        self.steps()
-            .filter_map(|step| step.uses.as_deref())
-            .any(|uses| is_action(uses, action))
+        self.steps_using(action).next().is_some()
     }
+}
+
+/// The lines of a shell script, with each line ending in a backslash joined to the next.
+fn join_continued_lines(script: &str) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for line in script.lines() {
+        if let Some(head) = line.strip_suffix('\\') {
+            current.push_str(head);
+            current.push(' ');
+        } else {
+            current.push_str(line);
+            lines.push(std::mem::take(&mut current));
+        }
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines
 }
 
 /// Whether `uses` refers to `action`, ignoring the ref after `@`. GitHub owner and repository names are
@@ -95,6 +149,13 @@ jobs:
           persist-credentials: false
       - name: Check formatting
         uses: Actions-Rust-Lang/RustFmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
+        with:
+          flag: false
+          count: 3
+          text: plain
+          quoted: \"false\"
+          empty:
+          list: [a]
   test:
     steps:
       - name: cargo deny
@@ -157,6 +218,31 @@ jobs:
         let workflow = workflow();
         assert!(workflow.runs_matching(&Regex::new(r"(?m)^\s*cargo test\b").unwrap()));
         assert!(!workflow.runs_matching(&Regex::new(r"\bcargo fmt\b").unwrap()));
+    }
+
+    #[test]
+    fn joins_continued_lines() {
+        assert_eq!(
+            join_continued_lines("one \\\n  two\nthree\nfour \\"),
+            ["one    two", "three", "four  "]
+        );
+        assert_eq!(join_continued_lines(""), Vec::<String>::new());
+    }
+
+    #[test]
+    fn reads_action_inputs_as_strings() {
+        let workflow = workflow();
+        let step = workflow
+            .steps_using("actions-rust-lang/rustfmt")
+            .next()
+            .expect("rustfmt step");
+        assert_eq!(step.input("flag").as_deref(), Some("false"));
+        assert_eq!(step.input("count").as_deref(), Some("3"));
+        assert_eq!(step.input("text").as_deref(), Some("plain"));
+        assert_eq!(step.input("quoted").as_deref(), Some("false"));
+        assert_eq!(step.input("empty"), None);
+        assert_eq!(step.input("list"), None);
+        assert_eq!(step.input("missing"), None);
     }
 
     #[test]

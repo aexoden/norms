@@ -1,0 +1,34 @@
+exit: 1
+languages: (none)
+components: (none)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+pass  precommit-config-exists  .pre-commit-config.yaml
+warn  precommit-reuse  Pre-commit: reuse hook
+warn  precommit-tombi  Pre-commit: tombi-format hook
+warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+      The zizmor hook doesn't pass --pedantic
+warn  renovate-exists  renovate.json: exists
+      File not found
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+pass  ci-yaml-valid  CI: ci.yaml: valid
+warn  ci-reuse  CI: REUSE compliance
+warn  ci-tombi  CI: TOML formatting
+warn  ci-zizmor  CI: zizmor (pedantic)
+      A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
+pass  components-search  Components: every directory searched

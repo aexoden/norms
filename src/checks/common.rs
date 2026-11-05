@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::config::SHARED_PRESET;
+use crate::config::{PrecommitHook, SHARED_PRESET, Workflow};
 use crate::context::{CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
@@ -317,6 +317,103 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "Pre-commit: tombi-format hook",
         config.has_hook("tombi-format"),
     );
+    report.should(
+        "precommit-zizmor",
+        "Pre-commit: zizmor hook (pedantic)",
+        if !config.has_hook("zizmor") {
+            Err("No zizmor hook".to_owned())
+        } else if config.hooks("zizmor").any(zizmor_hook_strict) {
+            Ok(())
+        } else {
+            Err("The zizmor hook doesn't pass --pedantic".to_owned())
+        },
+    );
+}
+
+//
+// zizmor
+//
+
+/// The zizmor personas that report at least what the pedantic one does: pedantic itself, and auditor.
+const STRICT_ZIZMOR_PERSONAS: [&str; 2] = ["pedantic", "auditor"];
+
+/// Whether zizmor's command-line arguments select a persona at least as strict as pedantic: `--pedantic` (or `-p`), or
+/// `--persona` naming one, as `--persona=<name>` or `--persona <name>`.
+fn zizmor_args_strict<'a>(args: impl IntoIterator<Item = &'a str>) -> bool {
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        let persona = match arg {
+            "--pedantic" | "-p" => return true,
+            "--persona" => args.next(),
+            _ => arg.strip_prefix("--persona="),
+        };
+        if persona.is_some_and(|persona| STRICT_ZIZMOR_PERSONAS.contains(&persona)) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Whether a zizmor hook runs a persona at least as strict as pedantic, from its args or, for a local hook, its entry,
+/// to which pre-commit appends the args.
+fn zizmor_hook_strict(hook: &PrecommitHook) -> bool {
+    let entry = hook.entry.as_deref().unwrap_or_default().split_whitespace();
+    zizmor_args_strict(
+        entry
+            .skip_while(|word| !is_zizmor_command(word))
+            .skip(1)
+            .chain(hook.args.iter().map(String::as_str)),
+    )
+}
+
+/// Whether a word of a shell command invokes zizmor: `zizmor`, a path to it, or a versioned `zizmor@x.y.z` as uvx
+/// takes it.
+fn is_zizmor_command(word: &str) -> bool {
+    let name = word.rsplit('/').next().unwrap_or(word);
+    name == "zizmor" || name.starts_with("zizmor@") || name.starts_with("zizmor==")
+}
+
+/// Whether `workflow` runs zizmor so that its findings fail the job, with a persona at least as strict as pedantic:
+/// either a `run` script line invoking it with such a persona, or a `zizmorcore/zizmor-action` step setting one in
+/// `persona` and turning off `advanced-security`, whose default uploads findings to code scanning and passes the job.
+fn zizmor_in_ci(workflow: &Workflow) -> Result<(), String> {
+    let mut issues = Vec::new();
+
+    for line in workflow.run_lines() {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        let Some(start) = words.iter().position(|word| is_zizmor_command(word)) else {
+            continue;
+        };
+        if zizmor_args_strict(words.iter().skip(start + 1).copied()) {
+            return Ok(());
+        }
+        issues.push("A step runs zizmor without --pedantic".to_owned());
+    }
+
+    for step in workflow.steps_using("zizmorcore/zizmor-action") {
+        let strict = step
+            .input("persona")
+            .is_some_and(|persona| STRICT_ZIZMOR_PERSONAS.contains(&persona.as_ref()));
+        let gating = step.input("advanced-security").as_deref() == Some("false");
+        match (strict, gating) {
+            (true, true) => return Ok(()),
+            (false, true) => issues.push("zizmor-action doesn't set persona: pedantic".to_owned()),
+            (true, false) => {
+                issues.push("zizmor-action doesn't set advanced-security: false".to_owned());
+            }
+            (false, false) => issues.push(
+                "zizmor-action doesn't set persona: pedantic or advanced-security: false"
+                    .to_owned(),
+            ),
+        }
+    }
+
+    if issues.is_empty() {
+        Err("No step runs zizmor or uses zizmorcore/zizmor-action".to_owned())
+    } else {
+        issues.dedup();
+        Err(issues.join("; "))
+    }
 }
 
 //
@@ -405,6 +502,7 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         "CI: TOML formatting",
         workflow.runs_matching(&TOMBI_FORMAT_CHECK),
     );
+    report.should("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
 }
 
 #[cfg(test)]
@@ -428,6 +526,107 @@ mod tests {
         ] {
             assert!(!REUSE_LINT.is_match(run), "{run}");
         }
+    }
+
+    #[test]
+    fn zizmor_args_need_a_strict_persona() {
+        for args in [
+            "--pedantic",
+            "--offline --pedantic",
+            "-p",
+            "--persona=pedantic",
+            "--persona=auditor",
+            "--persona pedantic .",
+        ] {
+            assert!(zizmor_args_strict(args.split_whitespace()), "{args}");
+        }
+        for args in [
+            "",
+            "--offline",
+            "--persona=regular",
+            "--persona",
+            "--persona regular --pedantic-ish",
+            "pedantic",
+        ] {
+            assert!(!zizmor_args_strict(args.split_whitespace()), "{args}");
+        }
+    }
+
+    #[test]
+    fn zizmor_hooks_need_a_strict_persona() {
+        let hook = |entry: Option<&str>, args: &[&str]| PrecommitHook {
+            id: "zizmor".to_owned(),
+            entry: entry.map(str::to_owned),
+            args: args.iter().map(|arg| (*arg).to_owned()).collect(),
+            ..PrecommitHook::default()
+        };
+        assert!(zizmor_hook_strict(&hook(None, &["--pedantic"])));
+        assert!(zizmor_hook_strict(&hook(Some("zizmor --pedantic"), &[])));
+        assert!(zizmor_hook_strict(&hook(
+            Some("uvx zizmor"),
+            &["--persona", "auditor"]
+        )));
+        assert!(!zizmor_hook_strict(&hook(None, &[])));
+        assert!(!zizmor_hook_strict(&hook(Some("zizmor --offline"), &["."])));
+        assert!(!zizmor_hook_strict(&hook(Some("echo --pedantic"), &[])));
+    }
+
+    fn zizmor_in(yaml: &str) -> Result<(), String> {
+        let workflow: Workflow = serde_saphyr::from_str(yaml).expect("workflow parses");
+        zizmor_in_ci(&workflow)
+    }
+
+    #[test]
+    fn zizmor_runs_in_ci() {
+        let script = |run: &str| format!("jobs:\n  z:\n    steps:\n      - run: \"{run}\"\n");
+        for run in [
+            "zizmor --pedantic .",
+            "uvx zizmor@1.32.0 --persona=pedantic --format github .",
+            "echo start\\n  ~/.cargo/bin/zizmor --pedantic .",
+            "zizmor --format github \\\\\\n  --pedantic .",
+        ] {
+            assert_eq!(zizmor_in(&script(run)), Ok(()), "{run}");
+        }
+        assert_eq!(
+            zizmor_in(&script("zizmor .")),
+            Err("A step runs zizmor without --pedantic".to_owned())
+        );
+        assert_eq!(
+            zizmor_in(&script("echo zizmorish --pedantic")),
+            Err("No step runs zizmor or uses zizmorcore/zizmor-action".to_owned())
+        );
+    }
+
+    #[test]
+    fn zizmor_action_must_be_pedantic_and_gating() {
+        let step = |with: &str| {
+            format!(
+                "jobs:\n  z:\n    steps:\n      - uses: zizmorcore/zizmor-action@abc # v0.8.1\n        with: {{{with}}}\n"
+            )
+        };
+        assert_eq!(
+            zizmor_in(&step("persona: pedantic, advanced-security: false")),
+            Ok(())
+        );
+        assert_eq!(
+            zizmor_in(&step("persona: auditor, advanced-security: \"false\"")),
+            Ok(())
+        );
+        assert_eq!(
+            zizmor_in(&step("advanced-security: false")),
+            Err("zizmor-action doesn't set persona: pedantic".to_owned())
+        );
+        assert_eq!(
+            zizmor_in(&step("persona: pedantic")),
+            Err("zizmor-action doesn't set advanced-security: false".to_owned())
+        );
+        assert_eq!(
+            zizmor_in(&step("")),
+            Err(
+                "zizmor-action doesn't set persona: pedantic or advanced-security: false"
+                    .to_owned()
+            )
+        );
     }
 
     #[test]

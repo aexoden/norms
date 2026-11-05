@@ -33,15 +33,21 @@ pub(crate) struct PrecommitHook {
     pub entry: Option<String>,
     pub language: Option<String>,
     pub stages: Option<Vec<String>>,
+    pub args: Vec<String>,
 }
 
 impl PrecommitConfig {
     /// Check if any hook with the given ID exists across all repos.
     pub(crate) fn has_hook(&self, hook_id: &str) -> bool {
+        self.hooks(hook_id).next().is_some()
+    }
+
+    /// Every hook with the given ID, across all repos.
+    pub(crate) fn hooks<'a>(&'a self, hook_id: &'a str) -> impl Iterator<Item = &'a PrecommitHook> {
         self.repos
             .iter()
             .flat_map(|r| &r.hooks)
-            .any(|h| h.id == hook_id)
+            .filter(move |h| h.id == hook_id)
     }
 
     /// Check if any repo URL contains the given substring.

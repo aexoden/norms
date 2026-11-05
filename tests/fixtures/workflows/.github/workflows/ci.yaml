@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  zizmor-run:
+    name: Run zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run zizmor without a persona
+        run: uvx zizmor .
+
+  zizmor-action:
+    name: Run zizmor-action
+    runs-on: ubuntu-slim
+    steps:
+      - name: Run zizmor-action in its default mode
+        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+        with:
+          persona: pedantic
