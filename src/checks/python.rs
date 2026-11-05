@@ -59,6 +59,25 @@ pub(crate) fn check_python_version(ctx: &ComponentContext, report: &mut Report) 
     );
 }
 
+/// Check that `requires-python` agrees with the version in `.python-version`.
+pub(crate) fn check_requires_python_pin(ctx: &ComponentContext, report: &mut Report) {
+    // python-version-exists and python-version-exact report a missing or inexact pin.
+    let (Some(config), ConfigStatus::Ok(pinned)) =
+        (ctx.pyproject().as_ref_ok(), ctx.python_version())
+    else {
+        return;
+    };
+    if check_python_version_exact(pinned).is_err() {
+        return;
+    }
+
+    report.should(
+        "pyproject-requires-python-pin",
+        "pyproject.toml: requires-python agrees with .python-version",
+        config.check_requires_python_pin(pinned),
+    );
+}
+
 /// Check that the Python classifiers match `requires-python`, up to the version in `.python-version`.
 pub(crate) fn check_python_classifiers(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {

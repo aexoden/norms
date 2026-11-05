@@ -137,7 +137,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   which uv ignores, and one capped whose `.python-version` isn't a plain
   version.
   `python-pin` breaks the Python pinning standards: one component's
-  `.python-version` pins only a minor version.
+  `.python-version` pins only a minor version, two applications'
+  `requires-python` name another version or a range, and a library's range
+  excludes its pin.
   `workspace` is a virtual Cargo workspace with a binary and a library member
   matched by a glob, an excluded crate, a malformed member, a member found
   only as a path dependency, and an unrelated crate that isn't a member.

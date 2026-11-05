@@ -1,6 +1,6 @@
 exit: 1
 languages: python
-components: python (minor)
+components: python (app-other), python (app-range), python (lib-below), python (minor)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -24,6 +24,74 @@ warn  renovate-exists  renovate.json: exists
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
 pass  components-search  Components: every directory searched
+pass  pyproject-exists  [app-other] pyproject.toml: exists
+pass  pyproject-valid  [app-other] pyproject.toml: valid
+pass  pyproject-project  [app-other] pyproject.toml: has [project] section
+pass  python-version-exists  [app-other] Python: .python-version
+pass  python-version-exact  [app-other] Python: .python-version pins an exact version
+warn  pyproject-requires-python-pin  [app-other] pyproject.toml: requires-python agrees with .python-version
+      An application's requires-python (==3.15.1) isn't ==3.15.2, the version in .python-version
+pass  pyproject-python-classifiers  [app-other] pyproject.toml: Python classifiers match requires-python
+warn  python-src-layout  [app-other] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [app-other] Python: uv.lock
+      Not found: uv.lock
+pass  pyproject-dependencies-exact  [app-other] pyproject.toml: dependencies pinned exactly (application)
+warn  uv-exclude-newer  [app-other] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [app-other] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [app-other] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [app-other] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [app-other] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [app-range] pyproject.toml: exists
+pass  pyproject-valid  [app-range] pyproject.toml: valid
+pass  pyproject-project  [app-range] pyproject.toml: has [project] section
+pass  python-version-exists  [app-range] Python: .python-version
+pass  python-version-exact  [app-range] Python: .python-version pins an exact version
+warn  pyproject-requires-python-pin  [app-range] pyproject.toml: requires-python agrees with .python-version
+      An application's requires-python (>=3.15) isn't ==3.15.2, the version in .python-version
+pass  pyproject-python-classifiers  [app-range] pyproject.toml: Python classifiers match requires-python
+warn  python-src-layout  [app-range] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [app-range] Python: uv.lock
+      Not found: uv.lock
+pass  pyproject-dependencies-exact  [app-range] pyproject.toml: dependencies pinned exactly (application)
+warn  uv-exclude-newer  [app-range] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [app-range] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [app-range] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [app-range] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [app-range] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [lib-below] pyproject.toml: exists
+pass  pyproject-valid  [lib-below] pyproject.toml: valid
+pass  pyproject-project  [lib-below] pyproject.toml: has [project] section
+pass  python-version-exists  [lib-below] Python: .python-version
+pass  python-version-exact  [lib-below] Python: .python-version pins an exact version
+warn  pyproject-requires-python-pin  [lib-below] pyproject.toml: requires-python agrees with .python-version
+      requires-python (>=3.12, <3.15) doesn't allow 3.15.2, the version in .python-version
+pass  pyproject-python-classifiers  [lib-below] pyproject.toml: Python classifiers match requires-python
+warn  python-src-layout  [lib-below] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [lib-below] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [lib-below] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [lib-below] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [lib-below] Ruff: configured
+      No [tool] section in pyproject.toml
+warn  ruff-lint-configured  [lib-below] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [lib-below] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
 pass  pyproject-exists  [minor] pyproject.toml: exists
 pass  pyproject-valid  [minor] pyproject.toml: valid
 pass  pyproject-project  [minor] pyproject.toml: has [project] section

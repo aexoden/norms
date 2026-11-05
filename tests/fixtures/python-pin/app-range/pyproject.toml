@@ -1,0 +1,7 @@
+[project]
+name = "app-range"
+requires-python = ">=3.15"
+classifiers = ["Programming Language :: Python :: 3.15"]
+
+[project.scripts]
+app-range = "app_range:main"

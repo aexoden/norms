@@ -1,0 +1,7 @@
+[project]
+name = "app-other"
+requires-python = "==3.15.1"
+classifiers = ["Programming Language :: Python :: 3.15"]
+
+[project.scripts]
+app-other = "app_other:main"

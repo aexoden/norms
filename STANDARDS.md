@@ -746,7 +746,8 @@ project/
 - `.python-version`, beside `pyproject.toml`, names the exact Python version
   (`x.y.z`) used for development and CI.
 - Applications set `requires-python` to that same exact version (for example,
-  `==3.15.0`). Libraries set the range of versions they support.
+  `==3.15.0`). Libraries set the range of versions they support, which
+  includes that version.
 - The `Programming Language :: Python :: 3.x` classifiers match
   `requires-python`: they list each minor version it allows, from its lower
   bound up to the version in `.python-version`.

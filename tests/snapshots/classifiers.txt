@@ -29,6 +29,7 @@ pass  pyproject-valid  [app] pyproject.toml: valid
 pass  pyproject-project  [app] pyproject.toml: has [project] section
 pass  python-version-exists  [app] Python: .python-version
 pass  python-version-exact  [app] Python: .python-version pins an exact version
+pass  pyproject-requires-python-pin  [app] pyproject.toml: requires-python agrees with .python-version
 pass  pyproject-python-classifiers  [app] pyproject.toml: Python classifiers match requires-python
 warn  python-src-layout  [app] Python: src/ directory
       Consider using a src/ layout
@@ -90,6 +91,7 @@ pass  pyproject-valid  [lib] pyproject.toml: valid
 pass  pyproject-project  [lib] pyproject.toml: has [project] section
 pass  python-version-exists  [lib] Python: .python-version
 pass  python-version-exact  [lib] Python: .python-version pins an exact version
+pass  pyproject-requires-python-pin  [lib] pyproject.toml: requires-python agrees with .python-version
 warn  pyproject-python-classifiers  [lib] pyproject.toml: Python classifiers match requires-python
       Expected classifiers for Python 3.12, 3.14, 3.15, from requires-python (>=3.12, !=3.13.*) up to 3.15.2 in .python-version: missing 3.15; unexpected 3.11
 warn  python-src-layout  [lib] Python: src/ directory

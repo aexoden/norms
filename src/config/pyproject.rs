@@ -120,6 +120,33 @@ impl PyprojectToml {
             .is_some_and(|p| installs(p.scripts.as_ref()) || installs(p.gui_scripts.as_ref()))
     }
 
+    /// Check that `requires-python` agrees with `pinned`, the version in `.python-version`: an application's is
+    /// exactly `==` that version, and a library's range allows it.
+    pub(crate) fn check_requires_python_pin(&self, pinned: &Version) -> Result<(), String> {
+        let (requires, specifiers) = self.requires_python()?;
+        if self.is_application() {
+            match &*specifiers {
+                [specifier]
+                    if *specifier.operator() == Operator::Equal
+                        && specifier.version() == pinned =>
+                {
+                    Ok(())
+                }
+                _ => Err(format!(
+                    "An application's requires-python ({requires}) isn't =={pinned}, the version in \
+                     {PYTHON_VERSION}"
+                )),
+            }
+        } else if release_specifiers_to_ranges(specifiers).contains(&pinned.clone().only_release())
+        {
+            Ok(())
+        } else {
+            Err(format!(
+                "requires-python ({requires}) doesn't allow {pinned}, the version in {PYTHON_VERSION}"
+            ))
+        }
+    }
+
     /// Check that the `Programming Language :: Python :: 3.x` classifiers list exactly the minor versions
     /// `requires-python` allows, from its lower bound up to `pinned`, the version in `.python-version`.
     ///
@@ -598,6 +625,69 @@ mod tests {
             parse("[project]\nrequires-python = \">=3.12\"\ndynamic = [\"classifiers\"]\n")
                 .check_python_classifiers(Some(&pin)),
             Err("project.classifiers is dynamic, so it can't be checked".to_owned())
+        );
+    }
+
+    #[test]
+    fn requires_python_agrees_with_the_pin() {
+        let pin = Version::new([3, 15, 2]);
+        let application = |requires: &str| {
+            parse(&format!(
+                "[project]\nrequires-python = \"{requires}\"\n[project.scripts]\ndemo = \"demo:main\"\n"
+            ))
+            .check_requires_python_pin(&pin)
+        };
+        let library = |requires: &str| {
+            parse(&format!("[project]\nrequires-python = \"{requires}\"\n"))
+                .check_requires_python_pin(&pin)
+        };
+
+        for requires in ["==3.15.2", "== 3.15.2", "==3.15.2.0"] {
+            assert_eq!(application(requires), Ok(()), "{requires}");
+        }
+        for requires in [
+            "==3.15.1",
+            "==3.15.*",
+            "===3.15.2",
+            ">=3.15",
+            "==3.15.2, <4",
+        ] {
+            assert_eq!(
+                application(requires),
+                Err(format!(
+                    "An application's requires-python ({requires}) isn't ==3.15.2, the version in \
+                     .python-version"
+                )),
+                "{requires}"
+            );
+        }
+        for requires in [
+            ">=3.12",
+            ">=3.15.2",
+            "==3.15.*",
+            ">=3.12, <3.16",
+            "~=3.15.0",
+        ] {
+            assert_eq!(library(requires), Ok(()), "{requires}");
+        }
+        for requires in [
+            ">=3.12, <3.15",
+            ">3.15.2",
+            ">=3.12, !=3.15.*",
+            ">=3.12, !=3.15.2",
+            "==3.14.*",
+        ] {
+            assert_eq!(
+                library(requires),
+                Err(format!(
+                    "requires-python ({requires}) doesn't allow 3.15.2, the version in .python-version"
+                )),
+                "{requires}"
+            );
+        }
+        assert_eq!(
+            parse("[project]\n").check_requires_python_pin(&pin),
+            Err("pyproject.toml sets no requires-python".to_owned())
         );
     }
 
