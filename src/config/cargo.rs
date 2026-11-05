@@ -307,8 +307,7 @@ impl CargoToml {
     ///
     /// A package's lints are its own `[lints.clippy]`, or the workspace's `[workspace.lints.clippy]` if it inherits
     /// them with `[lints] workspace = true`; Cargo doesn't apply the workspace's lints otherwise, even to the package in
-    /// the root manifest. A virtual manifest, which has no package, is checked for the lints its members can inherit.
-    /// The error says why there are none.
+    /// the root manifest. A manifest without a package has no lints. The error says why there are none.
     pub(crate) fn clippy_lints<'a>(
         &'a self,
         workspace: Option<&'a CargoWorkspace>,
@@ -318,7 +317,7 @@ impl CargoToml {
             .and_then(|lints| lints.clippy.as_ref());
 
         if self.package.is_none() {
-            return workspace_lints.ok_or_else(|| "No [workspace.lints.clippy] section".to_owned());
+            return Err("No [package] section, so no lints apply".to_owned());
         }
 
         match &self.lints {
@@ -523,11 +522,10 @@ mod tests {
             )),
             Ok(vec!["nursery".to_owned()])
         );
-        assert_eq!(lints(workspace), Ok(vec!["nursery".to_owned()]));
 
         assert!(lints(&format!("[package]\nname = \"x\"\n\n{workspace}")).is_err());
         assert!(lints("[package]\nname = \"x\"\n\n[lints]\nworkspace = true\n").is_err());
         assert!(lints("[package]\nname = \"x\"\n").is_err());
-        assert!(lints("[workspace]\n").is_err());
+        assert!(lints(workspace).is_err());
     }
 }

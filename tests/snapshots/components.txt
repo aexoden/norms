@@ -58,10 +58,16 @@ warn  cargo-toml-edition  [.] Cargo.toml: has edition
 pass  cargo-workspace-members  [.] Cargo.toml: workspace members found
 pass  cargo-toml-exists  [.] crates/core/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/core/Cargo.toml: valid
+warn  cargo-toml-license  [.] crates/core/Cargo.toml: has license
+warn  cargo-toml-description  [.] crates/core/Cargo.toml: has description
+warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
+warn  cargo-toml-edition  [.] crates/core/Cargo.toml: has edition
 warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
-warn  clippy-lints  [.] Clippy: lints configured
+warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
+      No [lints.clippy] section
+warn  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml

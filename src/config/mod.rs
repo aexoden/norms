@@ -17,7 +17,7 @@ mod rust_toolchain;
 mod tsconfig;
 mod workflow;
 
-pub(crate) use cargo::{CargoDependency, CargoToml};
+pub(crate) use cargo::{CargoDependency, CargoToml, CargoWorkspace};
 pub(crate) use cargoconfig::CargoConfig;
 pub(crate) use devbox::DevboxConfig;
 pub(crate) use norms::{NormsConfig, Waiver};

@@ -71,7 +71,7 @@ warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly
 warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
-warn  clippy-lints  [.] Clippy: lints configured
+warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml

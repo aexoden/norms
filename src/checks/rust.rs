@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::config::{CargoConfig, CargoToml};
+use crate::config::{CargoConfig, CargoToml, CargoWorkspace};
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
@@ -50,66 +50,83 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
         return;
     };
 
-    //  Package metadata
-    let package = config.metadata(config.workspace.as_ref());
+    // A virtual manifest has no package of its own; its members are checked instead.
+    if config.package.is_some() {
+        check_package_metadata(ctx, "Cargo.toml", config, config.workspace.as_ref(), report);
+    }
+}
+
+/// Check the metadata of the package whose manifest, labeled `label`, is `manifest`, with the fields it inherits
+/// resolved from `workspace`.
+fn check_package_metadata(
+    ctx: &ComponentContext,
+    label: &str,
+    manifest: &CargoToml,
+    workspace: Option<&CargoWorkspace>,
+    report: &mut Report,
+) {
+    let package = manifest.metadata(workspace);
 
     report.should(
         "cargo-toml-license",
-        "Cargo.toml: has license",
+        format!("{label}: has license"),
         package.license.is_some(),
     );
 
     if let Some(license) = package.license {
         report.should(
             "cargo-toml-license-texts",
-            "Cargo.toml: license has its texts in LICENSES/",
+            format!("{label}: license has its texts in LICENSES/"),
             ctx.license_files().check_expression(license),
         );
     }
 
     report.should(
         "cargo-toml-description",
-        "Cargo.toml: has description",
+        format!("{label}: has description"),
         package.description.is_some(),
     );
 
     report.should(
         "cargo-toml-repository",
-        "Cargo.toml: has repository",
+        format!("{label}: has repository"),
         package.repository.is_some(),
     );
 
     report.should(
         "cargo-toml-edition",
-        "Cargo.toml: has edition",
+        format!("{label}: has edition"),
         package.edition.is_some(),
     );
 }
 
-/// Check that the members of the component's Cargo workspace can be found, and that each has a valid manifest.
+/// Check that the members of the component's Cargo workspace can be found, and that each has a valid manifest and
+/// the package metadata.
 pub(crate) fn check_cargo_workspace(ctx: &ComponentContext, report: &mut Report) {
-    if ctx
-        .cargo()
-        .as_ref_ok()
-        .and_then(|c| c.workspace.as_ref())
-        .is_none()
-    {
+    let Some(workspace) = ctx.cargo().as_ref_ok().and_then(|c| c.workspace.as_ref()) else {
         return;
-    }
+    };
 
     let members = ctx.cargo_members();
+    let is_empty =
+        members.members.is_empty() && ctx.cargo().as_ref_ok().is_some_and(|c| c.package.is_none());
     report.should(
         "cargo-workspace-members",
         "Cargo.toml: workspace members found",
-        if members.errors.is_empty() {
-            Outcome::Pass
-        } else {
+        if !members.errors.is_empty() {
             Outcome::fail(members.errors.join("; "))
+        } else if is_empty {
+            Outcome::fail("The virtual workspace has no members, so no package is checked")
+        } else {
+            Outcome::Pass
         },
     );
 
     for (path, status) in &members.members {
-        report.require_parsed("cargo-toml", &member_manifest(path), status);
+        let label = member_manifest(path);
+        if let Some(member) = report.require_parsed("cargo-toml", &label, status) {
+            check_package_metadata(ctx, &label, member, Some(workspace), report);
+        }
     }
 }
 
@@ -184,27 +201,43 @@ pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) 
 // Clippy lints
 //
 
+/// Check the Clippy lints of the component's package and of each member of its workspace. A virtual manifest has no
+/// package of its own to lint.
 pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
     };
+    let workspace = config.workspace.as_ref();
 
-    let lints = match config.clippy_lints(config.workspace.as_ref()) {
+    if config.package.is_some() {
+        check_package_lints("Cargo.toml", config, workspace, report);
+    }
+    for (path, member) in ctx.cargo_members().parsed() {
+        check_package_lints(&member_manifest(path), member, workspace, report);
+    }
+}
+
+/// Check the Clippy lints of the package whose manifest, labeled `label`, is `manifest`, with any it inherits resolved
+/// from `workspace`.
+fn check_package_lints(
+    label: &str,
+    manifest: &CargoToml,
+    workspace: Option<&CargoWorkspace>,
+    report: &mut Report,
+) {
+    let name = format!("{label}: Clippy lints configured");
+    let lints = match manifest.clippy_lints(workspace) {
         Ok(lints) => lints,
         Err(error) => {
-            report.should(
-                "clippy-lints",
-                "Clippy: lints configured",
-                Outcome::fail(error),
-            );
+            report.should("clippy-lints", name, Outcome::fail(error));
             return;
         }
     };
 
-    report.should("clippy-lints", "Clippy: lints configured", Outcome::Pass);
+    report.should("clippy-lints", name, Outcome::Pass);
     report.should(
         "clippy-pedantic",
-        "Clippy: pedantic enabled",
+        format!("{label}: Clippy pedantic enabled"),
         lints.contains_key("pedantic"),
     );
 }
@@ -417,5 +450,24 @@ mod tests {
             workspace,
             &["src/main.rs", "crates/app/src/main.rs"]
         ));
+    }
+
+    #[test]
+    fn empty_virtual_workspaces_warn() {
+        let warnings = |manifest: &str| {
+            let dir = tempfile::tempdir().unwrap();
+            fs::write(dir.path().join("Cargo.toml"), manifest).unwrap();
+            let component = Component {
+                language: Language::Rust,
+                path: PathBuf::new(),
+            };
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_cargo_workspace(&ComponentContext::new(&project, &component), &mut report);
+            report.warnings()
+        };
+
+        assert_eq!(warnings("[workspace]\n"), 1);
+        assert_eq!(warnings("[package]\nname = \"x\"\n\n[workspace]\n"), 0);
     }
 }

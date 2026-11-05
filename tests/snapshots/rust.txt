@@ -53,8 +53,8 @@ pass  rust-toolchain-toml-valid  [.] rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [.] rust-toolchain.toml: exact channel
 pass  rust-toolchain-toml-components  [.] rust-toolchain.toml: clippy and rustfmt components
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
-pass  clippy-lints  [.] Clippy: lints configured
-pass  clippy-pedantic  [.] Clippy: pedantic enabled
+pass  clippy-lints  [.] Cargo.toml: Clippy lints configured
+pass  clippy-pedantic  [.] Cargo.toml: Clippy pedantic enabled
 pass  deny-toml-exists  [.] Rust: deny.toml
 pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
 pass  cargo-config-exists  .cargo/config.toml: exists

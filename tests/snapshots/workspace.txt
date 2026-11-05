@@ -26,10 +26,6 @@ fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  components-search  Components: every directory searched
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
-warn  cargo-toml-license  [.] Cargo.toml: has license
-warn  cargo-toml-description  [.] Cargo.toml: has description
-warn  cargo-toml-repository  [.] Cargo.toml: has repository
-warn  cargo-toml-edition  [.] Cargo.toml: has edition
 pass  cargo-workspace-members  [.] Cargo.toml: workspace members found
 pass  cargo-toml-exists  [.] crates/broken/Cargo.toml: exists
 fail  cargo-toml-valid  [.] crates/broken/Cargo.toml: valid
@@ -40,10 +36,28 @@ fail  cargo-toml-valid  [.] crates/broken/Cargo.toml: valid
       unclosed table, expected `]`
 pass  cargo-toml-exists  [.] crates/cli/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/cli/Cargo.toml: valid
+pass  cargo-toml-license  [.] crates/cli/Cargo.toml: has license
+warn  cargo-toml-license-texts  [.] crates/cli/Cargo.toml: license has its texts in LICENSES/
+      No text in LICENSES/ for: MIT
+pass  cargo-toml-description  [.] crates/cli/Cargo.toml: has description
+pass  cargo-toml-repository  [.] crates/cli/Cargo.toml: has repository
+pass  cargo-toml-edition  [.] crates/cli/Cargo.toml: has edition
 pass  cargo-toml-exists  [.] crates/core/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/core/Cargo.toml: valid
+pass  cargo-toml-license  [.] crates/core/Cargo.toml: has license
+warn  cargo-toml-license-texts  [.] crates/core/Cargo.toml: license has its texts in LICENSES/
+      No text in LICENSES/ for: MIT
+warn  cargo-toml-description  [.] crates/core/Cargo.toml: has description
+warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
+pass  cargo-toml-edition  [.] crates/core/Cargo.toml: has edition
 pass  cargo-toml-exists  [.] tools/helper/Cargo.toml: exists
 pass  cargo-toml-valid  [.] tools/helper/Cargo.toml: valid
+pass  cargo-toml-license  [.] tools/helper/Cargo.toml: has license
+warn  cargo-toml-license-texts  [.] tools/helper/Cargo.toml: license has its texts in LICENSES/
+      No text in LICENSES/ for: MIT
+pass  cargo-toml-description  [.] tools/helper/Cargo.toml: has description
+pass  cargo-toml-repository  [.] tools/helper/Cargo.toml: has repository
+pass  cargo-toml-edition  [.] tools/helper/Cargo.toml: has edition
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: workspace.dependencies.serde ("1.0")
 warn  cargo-toml-dependencies-exact  [.] crates/cli/Cargo.toml: dependencies pinned exactly (application)
@@ -54,8 +68,12 @@ warn  cargo-toml-dependencies-exact  [.] tools/helper/Cargo.toml: dependencies p
 warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Rust: MSRV defined (rust-version)
-pass  clippy-lints  [.] Clippy: lints configured
-pass  clippy-pedantic  [.] Clippy: pedantic enabled
+pass  clippy-lints  [.] crates/cli/Cargo.toml: Clippy lints configured
+pass  clippy-pedantic  [.] crates/cli/Cargo.toml: Clippy pedantic enabled
+warn  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured
+      No [lints.clippy] section, and [workspace.lints.clippy] isn't inherited ([lints] workspace = true)
+pass  clippy-lints  [.] tools/helper/Cargo.toml: Clippy lints configured
+pass  clippy-pedantic  [.] tools/helper/Cargo.toml: Clippy pedantic enabled
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)

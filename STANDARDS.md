@@ -74,7 +74,10 @@ reason = "The repository holds no binary files."
   that the root package or a member depends on by path, less those `exclude`
   lists. A member without a valid `Cargo.toml` fails; one outside the
   workspace's directory, or a pattern norms can't expand, is reported as a
-  warning.
+  warning. Each member's package metadata and Clippy lints are checked like
+  any package's, with what it inherits from the workspace resolved. A virtual
+  manifest, which has no `[package]`, isn't checked for them itself, so one
+  with no members is reported as a warning.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search
   them. An entry must be a plain relative path, without `.` or `..`; one that
