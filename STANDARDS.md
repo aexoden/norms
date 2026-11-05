@@ -493,11 +493,16 @@ ci-success:
 Pre-commit hooks are provided by [pre-commit](https://pre-commit.com/),
 configured in `.pre-commit-config.yaml` at the repository root. The
 configuration sets `default_install_hook_types` so that a plain `pre-commit
-install` also installs the commit message hook:
+install` also installs the commit message hook, and `default_stages` so that
+the other hooks run only once per commit:
 
 ```yaml
 default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 ```
+
+Without `default_stages`, a hook that doesn't list its own stages runs in every
+installed stage, so the language hooks would run again on the commit message.
 
 Hook revisions are pinned to release tags and updated by Renovate.
 

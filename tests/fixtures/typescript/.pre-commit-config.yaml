@@ -5,6 +5,8 @@
 # Install: pre-commit install
 
 default_install_hook_types: [pre-commit, commit-msg]
+# Hooks without their own stages run only before a commit, not on its message.
+default_stages: [pre-commit]
 
 repos:
   # General hooks
