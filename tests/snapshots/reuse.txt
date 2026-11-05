@@ -135,7 +135,9 @@ warn  typescript-precommit-prettier  Pre-commit: has Prettier hook
       Consider adding a Prettier hook to pre-commit configuration
 warn  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
       Consider adding a TypeScript type check hook to pre-commit configuration
+warn  typescript-precommit-vite-build  Pre-commit: has vite-build hook
 warn  typescript-ci-lint  TypeScript CI: lint check
 warn  typescript-ci-format  TypeScript CI: format check
 warn  typescript-ci-tsc  TypeScript CI: type check
 warn  typescript-ci-test  TypeScript CI: tests
+warn  typescript-ci-vite-build  TypeScript CI: Vite build

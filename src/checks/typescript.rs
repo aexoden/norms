@@ -3,6 +3,10 @@
 
 //! TypeScript-specific checks.
 
+use std::sync::LazyLock;
+
+use regex::Regex;
+
 use crate::config::{TsCompilerOptions, TsConfig, check_dev_engine};
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
@@ -550,11 +554,27 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
             ),
         );
     }
+
+    // Build
+    report.should(
+        "typescript-precommit-vite-build",
+        "Pre-commit: has vite-build hook",
+        precommit.has_hook("vite-build"),
+    );
 }
 
 //
 // CI integration
 //
+
+/// A Vite build in a CI script: `vite build`, directly or through `pnpm exec`, or the `build` script, which runs it
+/// after `tsc -b`. CI sets the job's working directory for a component in a subdirectory, so pnpm options before the
+/// script, such as `--dir`, aren't recognized.
+static VITE_BUILD: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"(?m)(?:^|[^\w-])(?:vite[ \t]+build|pnpm[ \t]+(?:run[ \t]+)?build)(?:$|[^\w:-])")
+        .unwrap()
+});
 
 pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
@@ -590,6 +610,13 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
             || workflow.runs_command("pnpm test")
             || workflow.runs_command("pnpm run test"),
     );
+
+    // Build
+    report.should(
+        "typescript-ci-vite-build",
+        "TypeScript CI: Vite build",
+        workflow.runs_matching(&VITE_BUILD),
+    );
 }
 
 /// Check that `audit.yaml` runs `pnpm audit`.
@@ -603,4 +630,30 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
         "TypeScript audit: pnpm audit",
         workflow.runs_command("pnpm audit"),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vite_build_runs_vite_or_the_build_script() {
+        for run in [
+            "pnpm exec vite build",
+            "vite build --mode production",
+            "pnpm run build",
+            "pnpm build\npnpm exec vitest run",
+        ] {
+            assert!(VITE_BUILD.is_match(run), "{run}");
+        }
+        for run in [
+            "pnpm run build:docs",
+            "pnpm build-storybook",
+            "vite preview",
+            "pnpm exec vite",
+            "pnpm exec vite\nbuild",
+        ] {
+            assert!(!VITE_BUILD.is_match(run), "{run}");
+        }
+    }
 }

@@ -130,8 +130,10 @@ pass  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
 pass  typescript-precommit-eslint  Pre-commit: has ESLint hook
 pass  typescript-precommit-prettier  Pre-commit: has Prettier hook
 pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
+pass  typescript-precommit-vite-build  Pre-commit: has vite-build hook
 pass  typescript-ci-lint  TypeScript CI: lint check
 pass  typescript-ci-format  TypeScript CI: format check
 pass  typescript-ci-tsc  TypeScript CI: type check
 pass  typescript-ci-test  TypeScript CI: tests
+pass  typescript-ci-vite-build  TypeScript CI: Vite build
 pass  typescript-audit-pnpm  TypeScript audit: pnpm audit
