@@ -427,7 +427,9 @@ findings to code scanning and passes the job, relying on a code scanning rule in
 the ruleset to block the merge. Findings on commits pushed straight to `dev`
 then appear only in the code scanning alert list for that branch, and every
 finding must be fixed before merge regardless of severity, so the alert triage
-it offers adds little. It is also specific to GitHub.
+it offers adds little. It is also specific to GitHub, and it is the only reason
+zizmor would need more than `contents: read`: its upload needs
+`security-events: write`, and in a private repository `actions: read`.
 
 Repositories still using a separate `zizmor.yaml` with code scanning switch to
 the `ci.yaml` job, then remove the workflow and the ruleset's **Require code
@@ -485,6 +487,11 @@ ci-success:
   (`uses: actions/checkout@<sha> # v7.0.1`). Renovate keeps these current.
 - Set `permissions: {}` at the top level of every workflow, and grant each job
   only the permissions it needs.
+- Grant `contents: read` to every job that checks out the repository, and
+  nothing to a job that doesn't, such as the gate job. Only private and internal
+  repositories need it, for `actions/checkout`, but granting it everywhere keeps
+  the workflows the same whatever the repository's visibility, and in a public
+  repository it exposes nothing that isn't already public. No job needs more.
 - Set `persist-credentials: false` on every `actions/checkout` step.
 - Run [zizmor](https://docs.zizmor.sh/) in both CI and the pre-commit hooks.
 
