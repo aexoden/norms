@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  uv-lock:
+    name: Check uv.lock with lock's older --locked flag
+    runs-on: ubuntu-latest
+    steps:
+      - run: uv --directory . lock --locked
+
+  ruff-check:
+    name: Sync without checking the lock file
+    runs-on: ubuntu-latest
+    steps:
+      - run: uv sync --frozen
+      - run: uv run ruff check
+
+  ruff-format:
+    name: Sync with --locked first
+    runs-on: ubuntu-latest
+    steps:
+      - run: uv sync --locked
+      - run: uv run ruff format --check
+
+  mypy:
+    name: Run with --locked
+    runs-on: ubuntu-latest
+    steps:
+      - run: uv run --locked mypy .
+
+  pytest:
+    name: Sync with --locked too late
+    runs-on: ubuntu-latest
+    steps:
+      - run: uv run pytest
+      - run: uv sync --locked

@@ -7,6 +7,7 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::config::{
     PYTHON_VERSION, PyprojectToml, Workflow, check_python_version_exact, check_release_age_value,
+    commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
@@ -377,6 +378,12 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
+    report.should(
+        "python-precommit-uv-lock",
+        "Python pre-commit: uv-lock hook",
+        config.has_hook("uv-lock"),
+    );
+
     // Ruff hooks
     let has_ruff = config.has_repo_containing("ruff") || config.has_repo_containing("local");
     report.should(
@@ -416,6 +423,24 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.should(
+        "python-ci-uv-lock",
+        "Python CI: uv.lock up to date",
+        workflow.run_lines().any(|line| checks_uv_lock(&line)),
+    );
+    let unlocked = jobs_running_unlocked(workflow);
+    report.should(
+        "python-ci-uv-sync-locked",
+        "Python CI: uv sync --locked before uv run",
+        if unlocked.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Jobs that uv run without uv sync --locked first: {}",
+                unlocked.join(", ")
+            ))
+        },
+    );
+    report.should(
         "python-ci-ruff-format",
         "Python CI: format check",
         workflow.runs_command("ruff format"),
@@ -430,6 +455,70 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "Python CI: type check",
         workflow.runs_command("mypy"),
     );
+}
+
+/// uv's global options that take a value as the next word, such as the `--directory` that the hooks of a component in a
+/// subdirectory pass before the subcommand.
+const UV_GLOBAL_OPTIONS_WITH_VALUES: [&str; 8] = [
+    "--allow-insecure-host",
+    "--cache-dir",
+    "--color",
+    "--config-file",
+    "--directory",
+    "--project",
+    "--python-fetch",
+    "--python-preference",
+];
+
+/// The uv subcommand a command's words run, after any global options, and the arguments that follow it.
+fn uv_subcommand<'a, 'b>(words: &'b [&'a str]) -> Option<(&'a str, &'b [&'a str])> {
+    let mut rest = program_args(words, "uv")?;
+    loop {
+        let (&word, tail) = rest.split_first()?;
+        if UV_GLOBAL_OPTIONS_WITH_VALUES.contains(&word) {
+            rest = tail.get(1..)?;
+        } else if word.starts_with('-') {
+            rest = tail;
+        } else {
+            return Some((word, tail));
+        }
+    }
+}
+
+/// Whether a script line checks that `uv.lock` is up to date: `uv lock` with `--check`, or `--locked`, its older
+/// spelling, which fail instead of changing the lock file.
+fn checks_uv_lock(line: &str) -> bool {
+    commands(line).any(|words| {
+        matches!(uv_subcommand(&words), Some(("lock", args))
+            if args.iter().any(|arg| matches!(*arg, "--check" | "--locked")))
+    })
+}
+
+/// The jobs of `workflow` with a `uv run` that has no `--locked` of its own and comes before any `uv sync --locked`.
+/// `uv run` locks the project first, so such a job would quietly update a stale `uv.lock` rather than fail. A `--locked`
+/// anywhere after `run` counts, since telling uv's own options from those of the program it runs would need all of
+/// their values.
+fn jobs_running_unlocked(workflow: &Workflow) -> Vec<&str> {
+    workflow
+        .jobs
+        .iter()
+        .filter(|(_, job)| {
+            let mut synced = false;
+            for line in job.run_lines() {
+                for words in commands(&line) {
+                    match uv_subcommand(&words) {
+                        Some(("sync", args)) if args.contains(&"--locked") => synced = true,
+                        Some(("run", args)) if !synced && !args.contains(&"--locked") => {
+                            return true;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            false
+        })
+        .map(|(id, _)| id.as_str())
+        .collect()
 }
 
 /// Whether a script line runs pytest, directly, through `uv run` or as `python -m pytest`.
@@ -516,6 +605,78 @@ pub(crate) fn check_min_python_job(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn uv_subcommands_follow_global_options() {
+        fn subcommand(line: &str) -> Option<String> {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            uv_subcommand(&words)
+                .map(|(subcommand, args)| format!("{subcommand}: {}", args.join(" ")))
+        }
+        assert_eq!(
+            subcommand("uv lock --check").as_deref(),
+            Some("lock: --check")
+        );
+        assert_eq!(
+            subcommand("uv --directory api --no-cache run --locked pytest").as_deref(),
+            Some("run: --locked pytest")
+        );
+        assert_eq!(
+            subcommand("~/.local/bin/uv --color=never sync").as_deref(),
+            Some("sync: ")
+        );
+        assert_eq!(
+            subcommand("uv --python-preference managed run pytest").as_deref(),
+            Some("run: pytest")
+        );
+        assert_eq!(subcommand("uvx pre-commit run"), None);
+        assert_eq!(subcommand("uv --directory"), None);
+
+        for line in [
+            "uv lock --check",
+            "uv --directory api lock --locked",
+            "cd api && uv lock --check",
+        ] {
+            assert!(checks_uv_lock(line), "{line}");
+        }
+        for line in [
+            "uv lock",
+            "uv sync --locked",
+            "uv lock --upgrade && echo --check",
+        ] {
+            assert!(!checks_uv_lock(line), "{line}");
+        }
+    }
+
+    #[test]
+    fn uv_run_needs_a_locked_sync_first() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  synced:
+    steps:
+      - run: uv sync --locked
+      - run: uv run ruff check
+  locked-run:
+    steps:
+      - run: uv run --locked mypy .
+  frozen:
+    steps:
+      - run: uv sync --frozen
+      - run: uv run pytest
+  late-sync:
+    steps:
+      - run: |
+          uv run pytest
+          uv sync --locked
+  no-run:
+    steps:
+      - run: uv lock --check
+",
+        )
+        .unwrap();
+        assert_eq!(jobs_running_unlocked(&workflow), ["frozen", "late-sync"]);
+    }
 
     #[test]
     fn min_python_jobs_set_the_lower_bound() {

@@ -85,10 +85,13 @@ pass  ruff-lint-copyright  [.] Ruff lint: copyright notice regex
 pass  mypy-configured  [.] mypy: configured
 pass  mypy-strict  [.] mypy: strict mode
 pass  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
+pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
 pass  python-precommit-ruff  Python pre-commit: Ruff hooks
 pass  python-precommit-ruff-check  Python pre-commit: ruff-check
 pass  python-precommit-ruff-format  Python pre-commit: ruff-format
 pass  python-precommit-mypy  Python pre-commit: Mypy hook
+pass  python-ci-uv-lock  Python CI: uv.lock up to date
+pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 pass  python-ci-ruff-format  Python CI: format check
 pass  python-ci-ruff-check  Python CI: lint check
 pass  python-ci-mypy  Python CI: type check

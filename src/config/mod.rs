@@ -35,4 +35,4 @@ pub(crate) use renovate::{RenovateConfig, SHARED_PRESET};
 pub(crate) use reuse::ReuseToml;
 pub(crate) use rust_toolchain::RustToolchain;
 pub(crate) use tsconfig::{TsCompilerOptions, TsConfig};
-pub(crate) use workflow::{GATE_JOB, Workflow, WorkflowStep, commands};
+pub(crate) use workflow::{GATE_JOB, Workflow, WorkflowStep, commands, program_args};

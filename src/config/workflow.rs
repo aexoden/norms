@@ -411,6 +411,14 @@ pub(crate) fn commands(line: &str) -> impl Iterator<Item = Vec<&str>> {
         .map(|command| command.split_whitespace().collect())
 }
 
+/// The arguments that follow the first word of a command that runs the program `name`, itself or through a path to it.
+pub(crate) fn program_args<'a, 'b>(words: &'b [&'a str], name: &str) -> Option<&'b [&'a str]> {
+    let start = words
+        .iter()
+        .position(|word| word.rsplit('/').next() == Some(name))?;
+    words.get(start + 1..)
+}
+
 /// Whether a `concurrency` mapping's `group` names one: a non-blank string, or a number.
 fn has_group(group: Option<&Value>) -> bool {
     match group {
@@ -492,6 +500,19 @@ jobs:
 
     fn workflow() -> Workflow {
         serde_saphyr::from_str(WORKFLOW).expect("workflow parses")
+    }
+
+    #[test]
+    fn program_args_follow_the_program_or_a_path_to_it() {
+        assert_eq!(
+            program_args(&["uv", "run", "pytest"], "pytest"),
+            Some([].as_slice())
+        );
+        assert_eq!(
+            program_args(&[".venv/bin/pytest", "-q"], "pytest"),
+            Some(["-q"].as_slice())
+        );
+        assert_eq!(program_args(&["uv", "run", "pytest-cov"], "pytest"), None);
     }
 
     #[test]

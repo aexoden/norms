@@ -162,6 +162,11 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   standards: its `default_install_hook_types` lacks `pre-commit`, and among
   remote and local hooks whose IDs or aliases collide, some have aliases of
   their own and some can't be selected alone.
+  `hooks` has language hooks and a `ci.yaml` that come close to the standards'
+  hook and CI tables, beside a stub `pyproject.toml`: a `uv-lock` hook and CI
+  step run through uv's global options, and of the jobs that `uv run`, one
+  syncs with `--frozen`, one syncs with `--locked` only afterwards, and the
+  others sync or run with `--locked`.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.
