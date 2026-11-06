@@ -1,3 +1,6 @@
 {
-  "name": "hooks"
+  "name": "hooks",
+  "scripts": {
+    "lint": "eslint ."
+  }
 }

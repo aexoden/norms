@@ -123,8 +123,17 @@ fail  prettier-config-exists  [.] .prettierrc: exists
 warn  prettier-ignore-exists  [.] Prettier: .prettierignore exists
       Consider adding .prettierignore
 warn  prettier-dependency  [.] Prettier: in dependencies
-warn  package-json-scripts  [.] package.json: has scripts
-      No scripts defined in package.json
+pass  package-json-scripts  [.] package.json: has scripts
+warn  package-json-script-build  [.] Scripts: has 'build'
+      Consider adding a 'build' script
+warn  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
+      The lint script runs eslint without --max-warnings 0
+warn  package-json-script-format  [.] Scripts: has 'format'
+      Consider adding a 'format' script
+warn  package-json-script-typecheck  [.] Scripts: has 'typecheck'
+      Consider adding a 'typecheck' script
+warn  package-json-script-test  [.] Scripts: has 'test'
+      Consider adding a 'test' script
 warn  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
       Consider adding a pnpm-lock hook to ensure lockfile is up to date
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook

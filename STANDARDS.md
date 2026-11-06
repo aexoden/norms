@@ -1121,13 +1121,15 @@ it, so it would be a second pnpm pin that can drift from `devEngines`.
 
 `package.json` defines these scripts:
 
-| Script      | Command                |
-|-------------|------------------------|
-| `build`     | `tsc -b && vite build` |
-| `format`    | `prettier --check .`   |
-| `lint`      | `eslint .`             |
-| `test`      | `vitest run`           |
-| `typecheck` | `tsc -b --noEmit`      |
+| Script      | Command                     |
+|-------------|-----------------------------|
+| `build`     | `tsc -b && vite build`      |
+| `format`    | `prettier --check .`        |
+| `lint`      | `eslint . --max-warnings 0` |
+| `test`      | `vitest run`                |
+| `typecheck` | `tsc -b --noEmit`           |
+
+Like the hook and CI job, the `lint` script fails on warnings as well as errors.
 
 `pnpm-workspace.yaml` sets the release age, and lists explicitly the
 dependencies allowed to run build scripts:

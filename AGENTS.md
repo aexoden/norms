@@ -178,7 +178,7 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   afterwards, and the others sync or run with `--locked`; neither the `pytest`
   hook nor the job running pytest passes `--cov`; `pnpm peers check` runs
   through `pnpm --dir . exec`; and the `eslint` hook passes `--max-warnings 10`
-  while CI lints through the `lint` script.
+  while CI lints through the `lint` script, which runs plain `eslint .`.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

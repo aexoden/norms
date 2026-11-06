@@ -138,7 +138,7 @@ pass  prettier-dependency  [frontend] Prettier: in dependencies
 pass  prettier-plugin-packagejson  [frontend] Prettier: formats package.json with prettier-plugin-packagejson
 pass  package-json-scripts  [frontend] package.json: has scripts
 pass  package-json-script-build  [frontend] Scripts: has 'build'
-pass  package-json-script-lint  [frontend] Scripts: has 'lint'
+pass  package-json-script-lint  [frontend] Scripts: has 'lint' (eslint with --max-warnings 0)
 pass  package-json-script-format  [frontend] Scripts: has 'format'
 pass  package-json-script-typecheck  [frontend] Scripts: has 'typecheck'
 pass  package-json-script-test  [frontend] Scripts: has 'test'

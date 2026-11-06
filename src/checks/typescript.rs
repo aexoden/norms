@@ -448,12 +448,15 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     // Lint script
     report.should(
         "package-json-script-lint",
-        "Scripts: has 'lint'",
-        if config.has_script("lint") {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider adding a 'lint' script")
-        },
+        "Scripts: has 'lint' (eslint with --max-warnings 0)",
+        config
+            .scripts
+            .as_ref()
+            .and_then(|scripts| scripts.get("lint"))
+            .map_or_else(
+                || Err("Consider adding a 'lint' script".to_owned()),
+                |script| lint_script_strict(script),
+            ),
     );
 
     // Format script
@@ -667,6 +670,16 @@ fn eslint_max_warnings_zero(words: &[&str]) -> Option<bool> {
     Some(strict)
 }
 
+/// Whether a `lint` script fails on warnings from `eslint`: each command of it that runs `eslint` passes
+/// `--max-warnings 0`. A script that doesn't run `eslint` itself, such as one running another script, isn't judged.
+fn lint_script_strict(script: &str) -> Result<(), String> {
+    if commands(script).any(|words| eslint_max_warnings_zero(&words) == Some(false)) {
+        Err("The lint script runs eslint without --max-warnings 0".to_owned())
+    } else {
+        Ok(())
+    }
+}
+
 /// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args pre-commit appends to it. A hook without
 /// an entry, as a remote hook may leave it to the hook's repository, is taken to run `eslint`.
 fn eslint_hook_strict(hook: &PrecommitHook) -> bool {
@@ -753,6 +766,16 @@ mod tests {
         assert!(eslint_hook_strict(&hook(None, &["--max-warnings", "0"])));
         assert!(!eslint_hook_strict(&hook(Some("pnpm exec eslint ."), &[])));
         assert!(!eslint_hook_strict(&hook(None, &[])));
+        for script in [
+            "eslint . --max-warnings 0",
+            "eslint . --max-warnings=0 && prettier --check .",
+            "pnpm run lint:all",
+        ] {
+            assert_eq!(lint_script_strict(script), Ok(()), "{script}");
+        }
+        for script in ["eslint .", "tsc -b && eslint . --max-warnings 5"] {
+            assert!(lint_script_strict(script).is_err(), "{script}");
+        }
         assert!(!eslint_hook_strict(&hook(
             Some("pnpm exec eslint '--max-warnings 0'"),
             &[]
