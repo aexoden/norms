@@ -10,7 +10,7 @@ fail  licenses-dir-exists  LICENSES/: holds the license texts
 warn  reuse-toml-exists  REUSE.toml: exists
       File not found
 warn  changelog-exists  CHANGELOG.md
-      Not found: CHANGELOG.md, which the project needs because the Python component at python-lib is a library
+      Not found: CHANGELOG.md, which the project needs because the Python component at python-lib is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
 fail  gitattributes-exists  .gitattributes: exists

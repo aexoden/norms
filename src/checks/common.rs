@@ -126,7 +126,7 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
 }
 
 /// Check for `CHANGELOG.md`, which a project needs if it publishes versioned releases: if it has a Rust or Python
-/// library component, or a release tag. An application deployed without releases needs none, so it isn't checked.
+/// library component that may be published, or a release tag. An application deployed without releases needs none, so it isn't checked.
 pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     if ctx.path().join("CHANGELOG.md").exists() {
         report.should("changelog-exists", "CHANGELOG.md", Outcome::Pass);
@@ -137,14 +137,14 @@ pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
         .component_contexts()
         .iter()
         .find(|component_ctx| match component_ctx.component().language {
-            Language::Python => python::is_library(component_ctx),
-            Language::Rust => rust::is_library(component_ctx),
+            Language::Python => python::publishes_library(component_ctx),
+            Language::Rust => rust::publishes_library(component_ctx),
             Language::Cpp | Language::TypeScript => false,
         })
         .map(ComponentContext::component)
     {
         format!(
-            "the {} component at {} is a library",
+            "the {} component at {} is a published library",
             library.language,
             library.display_path()
         )

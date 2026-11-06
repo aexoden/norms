@@ -137,6 +137,26 @@ pub(crate) struct CargoPackage {
     pub repository: Option<Inheritable<String>>,
     /// Whether Cargo discovers binaries in `src/main.rs` and `src/bin/` (default `true`).
     pub autobins: Option<bool>,
+    /// Whether `cargo publish` may publish the package, and to which registries (default: any).
+    pub publish: Option<Inheritable<CargoPublish>>,
+}
+
+/// The `publish` field: whether the package may be published at all, or the registries it may be published to.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum CargoPublish {
+    Allowed(bool),
+    Registries(Vec<String>),
+}
+
+impl CargoPublish {
+    /// Whether the package may be published anywhere: `true`, or a non-empty list of registries.
+    const fn allowed(&self) -> bool {
+        match self {
+            Self::Allowed(allowed) => *allowed,
+            Self::Registries(registries) => !registries.is_empty(),
+        }
+    }
 }
 
 /// A `[package]` field that may be inherited from the workspace's `[workspace.package]`, with `field.workspace = true`.
@@ -170,6 +190,7 @@ pub(crate) struct CargoWorkspacePackage {
     pub edition: Option<String>,
     pub rust_version: Option<String>,
     pub repository: Option<String>,
+    pub publish: Option<CargoPublish>,
 }
 
 /// A package's metadata, with the fields it inherits from its workspace resolved. A field is `None` if it isn't set,
@@ -300,6 +321,23 @@ impl CargoToml {
             rust_version: resolve(&package.rust_version, |p| &p.rust_version),
             repository: resolve(&package.repository, |p| &p.repository),
         }
+    }
+
+    /// Whether the manifest's package may be published, with an inherited `publish` resolved from `workspace`, the
+    /// `[workspace]` table of its workspace's root manifest: unless `publish` is `false` or an empty list of
+    /// registries. A manifest without a package publishes nothing.
+    pub(crate) fn is_publishable(&self, workspace: Option<&CargoWorkspace>) -> bool {
+        let Some(package) = &self.package else {
+            return false;
+        };
+        let inherited = workspace
+            .and_then(|workspace| workspace.package.as_ref())
+            .and_then(|shared| shared.publish.as_ref());
+        package
+            .publish
+            .as_ref()
+            .and_then(|publish| publish.resolve(inherited))
+            .is_none_or(CargoPublish::allowed)
     }
 
     /// The Clippy lints that apply, resolved against `workspace`, the `[workspace]` table of the workspace's root
@@ -500,6 +538,39 @@ mod tests {
             manifest.metadata(manifest.workspace.as_ref()),
             PackageMetadata::default()
         );
+    }
+
+    #[test]
+    fn publish_resolves_inherited_values() {
+        let workspace = |publish: &str| parse(&format!("[workspace.package]\n{publish}\n"));
+        let publishable = |package: &str, shared: &CargoToml| {
+            parse(&format!("[package]\nname = \"demo\"\n{package}\n"))
+                .is_publishable(shared.workspace.as_ref())
+        };
+        let none = workspace("");
+
+        for package in [
+            "",
+            "publish = true",
+            "publish = [\"internal\"]",
+            "publish.workspace = true",
+        ] {
+            assert!(publishable(package, &none), "{package}");
+        }
+        for package in ["publish = false", "publish = []"] {
+            assert!(!publishable(package, &none), "{package}");
+        }
+        assert!(!publishable(
+            "publish.workspace = true",
+            &workspace("publish = false")
+        ));
+        assert!(publishable(
+            "publish.workspace = true",
+            &workspace("publish = [\"internal\"]")
+        ));
+        // A package's own value wins over the workspace's, which it doesn't inherit.
+        assert!(publishable("", &workspace("publish = false")));
+        assert!(!parse("[workspace]\n").is_publishable(None));
     }
 
     #[test]

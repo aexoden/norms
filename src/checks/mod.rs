@@ -441,6 +441,46 @@ mod tests {
         );
     }
 
+    #[test]
+    fn unpublished_libraries_need_no_changelog() {
+        let project = TempProject::new("changelog", None);
+        for (component, manifest, file) in [
+            (
+                "crates",
+                "[workspace]\nmembers = [\"core\"]\n\n[workspace.package]\npublish = false\n",
+                "Cargo.toml",
+            ),
+            (
+                "crates/core",
+                "[package]\nname = \"core\"\npublish.workspace = true\n",
+                "Cargo.toml",
+            ),
+            (
+                "py",
+                "[project]\nname = \"lib\"\nclassifiers = [\"Private :: Do Not Upload\"]\n",
+                "pyproject.toml",
+            ),
+        ] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::write(project.0.join(component).join(file), manifest).unwrap();
+        }
+        assert!(find(&project.verify(), "changelog-exists").is_empty());
+
+        fs::write(
+            project.0.join("crates/core/Cargo.toml"),
+            "[package]\nname = \"core\"\n",
+        )
+        .unwrap();
+        let results = project.verify();
+        let changelog = find(&results, "changelog-exists");
+        assert!(matches!(
+            changelog.as_slice(),
+            [r] if r.status == Status::Warn
+                && r.message == "Not found: CHANGELOG.md, which the project needs because the Rust component at crates \
+                                 is a published library"
+        ));
+    }
+
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
     /// per waiver, excluded directory or workflow, no check here records more than one result for each component, so
     /// an ID repeated within a component means two checks share it.

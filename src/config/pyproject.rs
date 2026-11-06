@@ -30,6 +30,10 @@ pub(crate) struct PyprojectToml {
     pub dependency_groups: Option<BTreeMap<String, toml::Value>>,
 }
 
+/// The classifier that marks a project as never to be published: the Python Package Index rejects any upload carrying
+/// it.
+const PRIVATE_CLASSIFIER: &str = "Private :: Do Not Upload";
+
 /// The `[project]` table.
 ///
 /// The fields that only the dependency checks read are kept unparsed, so that a malformed one fails only those checks.
@@ -116,6 +120,21 @@ impl PyprojectToml {
             .and_then(|uv| uv.package.as_ref())
             .is_some_and(|package| package.as_bool() == Some(false));
         self.project.is_some() && !unpackaged && !self.is_application()
+    }
+
+    /// Whether the project is published: it isn't marked `Private :: Do Not Upload`, the classifier that the Python
+    /// Package Index rejects on upload.
+    pub(crate) fn is_publishable(&self) -> bool {
+        !self
+            .project
+            .as_ref()
+            .and_then(|project| project.classifiers.as_ref())
+            .and_then(toml::Value::as_array)
+            .is_some_and(|classifiers| {
+                classifiers
+                    .iter()
+                    .any(|classifier| classifier.as_str() == Some(PRIVATE_CLASSIFIER))
+            })
     }
 
     /// Whether the project is an application rather than a library: whether it installs a command, through a
@@ -517,6 +536,20 @@ mod tests {
         assert!(!parse("[tool.ruff]\nline-length = 120\n").is_library());
         assert!(!parse("[project]\nname = 'service'\n\n[tool.uv]\npackage = false\n").is_library());
         assert!(parse("[project]\nname = 'lib'\n\n[tool.uv]\npackage = true\n").is_library());
+    }
+
+    #[test]
+    fn private_projects_are_not_publishable() {
+        assert!(parse("[project]\nname = 'lib'\n").is_publishable());
+        assert!(parse("").is_publishable());
+        assert!(
+            parse("[project]\nclassifiers = ['License :: OSI Approved :: MIT License']\n")
+                .is_publishable()
+        );
+        assert!(
+            !parse("[project]\nclassifiers = ['Typing :: Typed', 'Private :: Do Not Upload']\n")
+                .is_publishable()
+        );
     }
 
     /// Check a `pyproject.toml` whose classifiers list the 3.x `minors`, among other Python classifiers.

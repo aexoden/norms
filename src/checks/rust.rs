@@ -38,12 +38,18 @@ fn is_application(ctx: &ComponentContext, config: &CargoToml) -> bool {
             .any(|(path, member)| builds_binary(&ctx.path().join(path), member))
 }
 
-/// Whether the component is a library: its `Cargo.toml` parses, and neither its package nor any member of its
-/// workspace builds a binary.
-pub(crate) fn is_library(ctx: &ComponentContext) -> bool {
-    ctx.cargo()
-        .as_ref_ok()
-        .is_some_and(|config| !is_application(ctx, config))
+/// Whether the component is a published library: its `Cargo.toml` parses, neither its package nor any member of its
+/// workspace builds a binary, and one of them may be published, as it may unless its `publish` is `false` or `[]`.
+pub(crate) fn publishes_library(ctx: &ComponentContext) -> bool {
+    ctx.cargo().as_ref_ok().is_some_and(|config| {
+        let workspace = config.workspace.as_ref();
+        !is_application(ctx, config)
+            && (config.is_publishable(workspace)
+                || ctx
+                    .cargo_members()
+                    .parsed()
+                    .any(|(_, member)| member.is_publishable(workspace)))
+    })
 }
 
 /// The label of a workspace member's manifest, by its path from the component.
