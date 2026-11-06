@@ -726,6 +726,12 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         pre_commit_in_ci(workflow),
     );
 
+    report.should(
+        "ci-yaml-pull-request",
+        "CI: ci.yaml: runs on every pull request",
+        workflow.runs_on_every_pull_request(),
+    );
+
     check_gate(workflow, report);
 }
 

@@ -51,6 +51,8 @@ warn  ci-zizmor  CI: zizmor (pedantic)
       A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
 warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
+warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
+      pull_request filters by branches, paths-ignore
 pass  ci-gate-exists  CI: gate job ci-success
 warn  ci-gate-always  CI: the gate runs whatever the other jobs' results
       ci-success doesn't set if: always(), so it's skipped when a job fails, which passes a required check

@@ -213,6 +213,58 @@ impl Workflow {
         }
     }
 
+    /// Whether the workflow runs for every pull request and every commit pushed to one: `on` names `pull_request`
+    /// without filtering it by `branches` or `paths`, and any `types` it lists include `opened`, `synchronize` and
+    /// `reopened`, the activity types it runs for by default.
+    pub(crate) fn runs_on_every_pull_request(&self) -> Result<(), String> {
+        const FILTERS: [&str; 4] = ["branches", "branches-ignore", "paths", "paths-ignore"];
+        const DEFAULT_TYPES: [&str; 3] = ["opened", "synchronize", "reopened"];
+
+        let not_run = || Err("Doesn't run on pull_request".to_owned());
+        let config = match &self.on {
+            Some(Value::String(event)) if event == "pull_request" => return Ok(()),
+            Some(Value::Array(events)) if events.iter().any(|event| event == "pull_request") => {
+                return Ok(());
+            }
+            Some(Value::Object(events)) => match events.get("pull_request") {
+                Some(config) => config,
+                None => return not_run(),
+            },
+            _ => return not_run(),
+        };
+        let Value::Object(config) = config else {
+            return Ok(());
+        };
+
+        let mut problems = Vec::new();
+        let filters: Vec<_> = FILTERS
+            .into_iter()
+            .filter(|filter| config.contains_key(*filter))
+            .collect();
+        if !filters.is_empty() {
+            problems.push(format!("pull_request filters by {}", filters.join(", ")));
+        }
+        if let Some(types) = config.get("types") {
+            let listed = |activity: &str| match types {
+                Value::String(listed) => listed == activity,
+                Value::Array(listed) => listed.iter().any(|listed| listed == activity),
+                Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => false,
+            };
+            let missing: Vec<_> = DEFAULT_TYPES
+                .into_iter()
+                .filter(|activity| !listed(activity))
+                .collect();
+            if !missing.is_empty() {
+                problems.push(format!("pull_request types omit {}", missing.join(", ")));
+            }
+        }
+        if problems.is_empty() {
+            Ok(())
+        } else {
+            Err(problems.join("; "))
+        }
+    }
+
     /// Whether the workflow runs on a schedule: `on` maps `schedule` to at least one entry. A `schedule` given only by
     /// name, as a string or in a list, sets no times and never runs.
     pub(crate) fn runs_on_schedule(&self) -> bool {
@@ -635,6 +687,51 @@ jobs:
         ] {
             assert!(!scheduled(yaml), "{yaml}");
         }
+    }
+
+    #[test]
+    fn runs_on_every_pull_request() {
+        let runs = |yaml: &str| {
+            serde_saphyr::from_str::<Workflow>(yaml)
+                .expect("workflow parses")
+                .runs_on_every_pull_request()
+        };
+        for yaml in [
+            "on: pull_request\n",
+            "on: [push, pull_request]\n",
+            "on:\n  push:\n    branches: [main]\n  pull_request:\n",
+            "on:\n  pull_request: {}\n",
+            "on:\n  pull_request:\n    types: [opened, reopened, synchronize, labeled]\n",
+        ] {
+            assert_eq!(runs(yaml), Ok(()), "{yaml}");
+        }
+        for yaml in [
+            "name: CI\n",
+            "on: push\n",
+            "on: [push, pull_request_target]\n",
+            "on:\n  push:\n",
+        ] {
+            assert_eq!(
+                runs(yaml),
+                Err("Doesn't run on pull_request".to_owned()),
+                "{yaml}"
+            );
+        }
+        assert_eq!(
+            runs("on:\n  pull_request:\n    branches: [main]\n    paths-ignore: ['**.md']\n"),
+            Err("pull_request filters by branches, paths-ignore".to_owned())
+        );
+        assert_eq!(
+            runs("on:\n  pull_request:\n    types: opened\n    paths: [src]\n"),
+            Err(
+                "pull_request filters by paths; pull_request types omit synchronize, reopened"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            runs("on:\n  pull_request:\n    types:\n"),
+            Err("pull_request types omit opened, synchronize, reopened".to_owned())
+        );
     }
 
     fn job(yaml: &str) -> WorkflowJob {

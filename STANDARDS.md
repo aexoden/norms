@@ -501,9 +501,10 @@ tests, such as Clippy, mypy, ESLint and the test suites, and 10 for the rest. A
 project whose jobs legitimately take longer raises the value for those jobs.
 Jobs on `ubuntu-slim` can't exceed its own 15-minute limit.
 
-`ci.yaml` never filters `pull_request` by `paths` or `branches`. The ruleset
-waits for its result, and a workflow that does not run leaves the pull request
-blocked.
+`ci.yaml` never filters `pull_request` by `paths` or `branches` (or their
+`-ignore` forms), nor limits its `types` to fewer than the default `opened`,
+`synchronize` and `reopened`. The ruleset waits for its result, and a workflow
+that does not run leaves the pull request blocked.
 
 ### Gate Job
 

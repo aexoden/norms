@@ -50,6 +50,7 @@ pass  ci-reuse  CI: REUSE compliance
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 pass  ci-gate-exists  CI: gate job ci-success
 pass  ci-gate-always  CI: the gate runs whatever the other jobs' results
 pass  ci-gate-needs  CI: the gate needs every other job
