@@ -120,6 +120,7 @@ pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-pub
 pass  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
 pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook
+pass  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check

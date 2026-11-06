@@ -478,6 +478,12 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
 
     report.should(
+        "rust-precommit-cargo-test",
+        "Rust pre-commit: cargo-test hook",
+        config.has_hook("cargo-test"),
+    );
+
+    report.should(
         "rust-precommit-cargo-deny",
         "Rust pre-commit: cargo-deny hook",
         config.has_hook("cargo-deny"),
