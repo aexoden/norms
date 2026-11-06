@@ -23,6 +23,12 @@ repos:
       - id: ruff-check
         alias: ruff-check-worker
         files: ^worker/
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.5.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [pre-commit]
+        args: [--strict, feat, fix, docs, chore, wip]
   - repo: local
     hooks:
       - id: eslint

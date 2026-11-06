@@ -35,6 +35,8 @@ warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-h
 warn  precommit-reuse  Pre-commit: reuse hook
 warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
+warn  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+      No conventional-pre-commit hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
 warn  renovate-exists  renovate.json: exists

@@ -36,6 +36,7 @@ pass  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-h
 pass  precommit-reuse  Pre-commit: reuse hook
 pass  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 pass  precommit-tombi  Pre-commit: tombi-format hook
+pass  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
 pass  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
 pass  renovate-exists  renovate.json: exists
 pass  renovate-valid  renovate.json: valid

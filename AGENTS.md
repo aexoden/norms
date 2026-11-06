@@ -160,9 +160,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   advisories check, beside stub `Cargo.toml` and `pyproject.toml` files.
   `precommit` has only a `.pre-commit-config.yaml`, which breaks the pre-commit
   standards: its `default_install_hook_types` lacks `pre-commit`, it runs only
-  some of the pre-commit-hooks set, and among remote and local hooks whose IDs
-  or aliases collide, some have aliases of their own and some can't be
-  selected alone.
+  some of the pre-commit-hooks set, its conventional-pre-commit hook runs in
+  the wrong stage with other commit types than the standard's, and among
+  remote and local hooks whose IDs or aliases collide, some have aliases of
+  their own and some can't be selected alone.
   `markdown` breaks the Markdown standards: its `.markdownlint-cli2.jsonc`
   names rules by alias and tag, turns some off and lets others only warn, and
   sets other options than the standard's; its markdownlint-cli2 hook has

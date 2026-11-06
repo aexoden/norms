@@ -3,12 +3,15 @@
 
 //! Common checks that apply to all projects reqgardless of language.
 
+use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
 use regex::Regex;
 
 use crate::checks::{python, rust};
-use crate::config::{DevboxConfig, GATE_JOB, PrecommitHook, SHARED_PRESET, Workflow, commands};
+use crate::config::{
+    DevboxConfig, GATE_JOB, PrecommitConfig, PrecommitHook, SHARED_PRESET, Workflow, commands,
+};
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
     ProjectContext,
@@ -567,6 +570,11 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         config.has_hook("tombi-format"),
     );
     report.should(
+        "precommit-conventional-pre-commit",
+        "Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)",
+        conventional_hook_in(config),
+    );
+    report.should(
         "precommit-zizmor",
         "Pre-commit: zizmor hook (pedantic)",
         if !config.has_hook("zizmor") {
@@ -577,6 +585,127 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
             Err("The zizmor hook doesn't pass --pedantic".to_owned())
         },
     );
+}
+
+//
+// Commit messages
+//
+
+/// The commit types STANDARDS.md recognizes.
+const COMMIT_TYPES: [&str; 11] = [
+    "feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore",
+];
+
+/// The repository of conventional-pre-commit, whose hook sets the `commit-msg` stage itself.
+const CONVENTIONAL_PRE_COMMIT_REPO: &str = "github.com/compilerla/conventional-pre-commit";
+
+/// The types conventional-pre-commit always allows, adding them to any list of types that names neither.
+const CONVENTIONAL_TYPES: [&str; 2] = ["feat", "fix"];
+
+/// The commit types a conventional-pre-commit hook allows, from the words of its command after the program: the
+/// positional arguments, or, if there are none, its defaults, which are the recognized types. Of its options, only
+/// `--scopes` takes a value, and argparse accepts it abbreviated to any prefix down to `--sc`.
+///
+/// pre-commit appends the commit message file, which argparse takes from the first run of positional arguments, so
+/// types followed by an option leave the arguments after it unrecognized, and the hook fails on every commit.
+fn conventional_commit_types<'a>(args: &[&'a str]) -> Result<BTreeSet<&'a str>, String> {
+    let mut types = BTreeSet::new();
+    let mut args = args.iter().copied();
+    let mut options = true;
+    while let Some(arg) = args.next() {
+        if options && arg.starts_with('-') {
+            if !types.is_empty() {
+                return Err(format!(
+                    "passes commit types before {arg}, so it fails on every commit"
+                ));
+            }
+            if arg == "--" {
+                options = false;
+            } else if arg.len() >= "--sc".len() && "--scopes".starts_with(arg) {
+                args.next();
+            }
+        } else {
+            types.insert(arg);
+        }
+    }
+    if types.is_empty() {
+        types.extend(COMMIT_TYPES);
+    } else if CONVENTIONAL_TYPES
+        .iter()
+        .all(|commit_type| !types.contains(commit_type))
+    {
+        types.extend(CONVENTIONAL_TYPES);
+    }
+    Ok(types)
+}
+
+/// Whether a conventional-pre-commit hook checks each commit message for the recognized types and no others. It must
+/// run in the `commit-msg` stage, which the hook's own repository sets for it unless the configuration lists other
+/// stages; a local hook, or one from another repository, lists it itself.
+fn conventional_hook_in(config: &PrecommitConfig) -> Result<(), String> {
+    let mut issues = Vec::new();
+
+    for (repo, hook) in config
+        .repos
+        .iter()
+        .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+        .filter(|(_, hook)| hook.id == "conventional-pre-commit")
+    {
+        let mut hook_issues = Vec::new();
+
+        let commit_msg = hook.stages.as_ref().map_or_else(
+            || repo.repo.contains(CONVENTIONAL_PRE_COMMIT_REPO),
+            |stages| stages.iter().any(|stage| stage == "commit-msg"),
+        );
+        if !commit_msg {
+            hook_issues.push("doesn't run in the commit-msg stage".to_owned());
+        }
+
+        let words = hook.command_words("conventional-pre-commit");
+        match words
+            .iter()
+            .position(|word| word.rsplit('/').next() == Some("conventional-pre-commit"))
+        {
+            None => hook_issues.push("doesn't run conventional-pre-commit".to_owned()),
+            Some(start) => {
+                match conventional_commit_types(words.get(start + 1..).unwrap_or_default()) {
+                    Err(issue) => hook_issues.push(issue),
+                    Ok(types) => {
+                        let missing: Vec<_> = COMMIT_TYPES
+                            .into_iter()
+                            .filter(|commit_type| !types.contains(commit_type))
+                            .collect();
+                        let extra: Vec<_> = types
+                            .iter()
+                            .copied()
+                            .filter(|commit_type| !COMMIT_TYPES.contains(commit_type))
+                            .collect();
+                        if !missing.is_empty() {
+                            hook_issues.push(format!("doesn't allow {}", missing.join(", ")));
+                        }
+                        if !extra.is_empty() {
+                            hook_issues.push(format!("also allows {}", extra.join(", ")));
+                        }
+                    }
+                }
+            }
+        }
+
+        if hook_issues.is_empty() {
+            return Ok(());
+        }
+        issues.push(format!(
+            "conventional-pre-commit {}",
+            hook_issues.join(" and ")
+        ));
+    }
+
+    if issues.is_empty() {
+        Err("No conventional-pre-commit hook".to_owned())
+    } else {
+        issues.dedup();
+        Err(issues.join("; "))
+    }
 }
 
 //
@@ -1139,6 +1268,95 @@ mod tests {
                     .to_owned()
             )
         );
+    }
+
+    fn conventional(repo: &str, hook: &str) -> Result<(), String> {
+        conventional_hook_in(
+            &serde_saphyr::from_str(&format!(
+                "repos:\n  - repo: {repo}\n    hooks:\n      - {hook}\n"
+            ))
+            .unwrap(),
+        )
+    }
+
+    const CONVENTIONAL_REPO: &str = "https://github.com/compilerla/conventional-pre-commit";
+
+    #[test]
+    fn conventional_hook_needs_commit_msg_and_the_recognized_types() {
+        for (repo, hook) in [
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, stages: [commit-msg], args: [feat, fix, perf, refactor, style, test, docs, \
+                 build, ci, revert, chore]}",
+            ),
+            // The hook's repository sets the stage, and its defaults are the recognized types.
+            (CONVENTIONAL_REPO, "{id: conventional-pre-commit}"),
+            // feat and fix are added to types that name neither.
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, args: [--st, --strict, --scopes, api, perf, refactor, style, test, docs, \
+                 build, ci, revert, chore]}",
+            ),
+            (
+                "local",
+                "{id: conventional-pre-commit, entry: .venv/bin/conventional-pre-commit --strict, language: system, \
+                 stages: [commit-msg, prepare-commit-msg]}",
+            ),
+        ] {
+            assert_eq!(conventional(repo, hook), Ok(()), "{hook}");
+        }
+        for (repo, hook, error) in [
+            (
+                CONVENTIONAL_REPO,
+                "{id: commitizen}",
+                "No conventional-pre-commit hook",
+            ),
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, stages: [pre-commit]}",
+                "conventional-pre-commit doesn't run in the commit-msg stage",
+            ),
+            (
+                "local",
+                "{id: conventional-pre-commit, entry: conventional-pre-commit, language: system}",
+                "conventional-pre-commit doesn't run in the commit-msg stage",
+            ),
+            (
+                "local",
+                "{id: conventional-pre-commit, entry: commitlint --edit, stages: [commit-msg]}",
+                "conventional-pre-commit doesn't run conventional-pre-commit",
+            ),
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, args: [--sc, chore, --, feat, fix, wip, --docs]}",
+                "conventional-pre-commit doesn't allow perf, refactor, style, test, docs, build, ci, revert, chore and \
+                 also allows --docs, wip",
+            ),
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, args: [feat, fix, --strict, perf, refactor, style, test, docs, build, \
+                 ci, revert, chore]}",
+                "conventional-pre-commit passes commit types before --strict, so it fails on every commit",
+            ),
+            // Only the hook's own repository sets the stage, and an empty list falls back to default_stages.
+            (
+                "https://github.com/example/mirror",
+                "{id: conventional-pre-commit}",
+                "conventional-pre-commit doesn't run in the commit-msg stage",
+            ),
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, stages: []}",
+                "conventional-pre-commit doesn't run in the commit-msg stage",
+            ),
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, stages: [commit-msg], args: [--scopes=api, docs]}",
+                "conventional-pre-commit doesn't allow perf, refactor, style, test, build, ci, revert, chore",
+            ),
+        ] {
+            assert_eq!(conventional(repo, hook), Err(error.to_owned()), "{hook}");
+        }
     }
 
     fn markdownlint(steps: &str) -> Result<(), String> {

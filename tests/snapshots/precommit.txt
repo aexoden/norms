@@ -28,6 +28,8 @@ warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-h
 pass  precommit-reuse  Pre-commit: reuse hook
 warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
+warn  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+      conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow perf, refactor, style, test, build, ci, revert and also allows wip
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
 warn  renovate-exists  renovate.json: exists
