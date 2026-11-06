@@ -633,8 +633,9 @@ const CONVENTIONAL_PRE_COMMIT_REPO: &str = "github.com/compilerla/conventional-p
 const CONVENTIONAL_TYPES: [&str; 2] = ["feat", "fix"];
 
 /// The commit types a conventional-pre-commit hook allows, from the words of its command after the program: the
-/// positional arguments, or, if there are none, its defaults, which are the recognized types. Of its options, only
-/// `--scopes` takes a value, and argparse accepts it abbreviated to any prefix down to `--sc`.
+/// positional arguments. Without any, it allows its own defaults, which the standard doesn't rely on, since a new
+/// release may change them. Of its options, only `--scopes` takes a value, and argparse accepts it abbreviated to any
+/// prefix down to `--sc`.
 ///
 /// pre-commit appends the commit message file, which argparse takes from the first run of positional arguments, so
 /// types followed by an option leave the arguments after it unrecognized, and the hook fails on every commit.
@@ -659,7 +660,10 @@ fn conventional_commit_types<'a>(args: &[&'a str]) -> Result<BTreeSet<&'a str>, 
         }
     }
     if types.is_empty() {
-        types.extend(COMMIT_TYPES);
+        return Err(
+            "passes no commit types, so it allows the hook's defaults, which a release may change"
+                .to_owned(),
+        );
     } else if CONVENTIONAL_TYPES
         .iter()
         .all(|commit_type| !types.contains(commit_type))
@@ -667,6 +671,27 @@ fn conventional_commit_types<'a>(args: &[&'a str]) -> Result<BTreeSet<&'a str>, 
         types.extend(CONVENTIONAL_TYPES);
     }
     Ok(types)
+}
+
+/// The module that `python -m` runs conventional-pre-commit as.
+const CONVENTIONAL_PRE_COMMIT_MODULE: &str = "conventional_pre_commit.hook";
+
+/// The arguments a command passes to conventional-pre-commit, if it runs it: as the module `python -m` runs, or as the
+/// program, by name or path.
+fn conventional_pre_commit_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
+    // The package's name may come first as the value of an option, as in `uvx --from conventional-pre-commit
+    // conventional-pre-commit` or `uv run --with conventional-pre-commit python -m ...`, so the module, or the last
+    // word naming the program, is the one run.
+    if let Some(start) = words
+        .windows(2)
+        .position(|pair| pair == ["-m", CONVENTIONAL_PRE_COMMIT_MODULE])
+    {
+        return words.get(start + 2..);
+    }
+    let start = words
+        .iter()
+        .rposition(|word| word.rsplit('/').next() == Some("conventional-pre-commit"))?;
+    words.get(start + 1..)
 }
 
 /// What is wrong with the commit types that conventional-pre-commit allows given the words after the program: nothing
@@ -718,12 +743,9 @@ fn conventional_hook_in(config: &PrecommitConfig) -> Result<(), String> {
         }
 
         let runs = hook.filter_map_commands("conventional-pre-commit", |words| {
-            let start = words
-                .iter()
-                .position(|word| word.rsplit('/').next() == Some("conventional-pre-commit"))?;
-            Some(conventional_types_issues(
-                words.get(start + 1..).unwrap_or_default(),
-            ))
+            Some(conventional_types_issues(conventional_pre_commit_args(
+                words,
+            )?))
         });
         if runs.is_empty() {
             hook_issues.push("doesn't run conventional-pre-commit".to_owned());
@@ -1335,6 +1357,20 @@ mod tests {
     const CONVENTIONAL_REPO: &str = "https://github.com/compilerla/conventional-pre-commit";
 
     #[test]
+    fn conventional_pre_commit_runs_as_the_last_program_word_or_module() {
+        for entry in [
+            "uv run --with conventional-pre-commit python -m conventional_pre_commit.hook",
+            "uvx --from conventional-pre-commit conventional-pre-commit",
+        ] {
+            let hook = format!(
+                "{{id: conventional-pre-commit, entry: {entry} feat fix perf refactor style test docs build ci revert \
+                 chore, language: system, stages: [commit-msg]}}"
+            );
+            assert_eq!(conventional("local", &hook), Ok(()), "{entry}");
+        }
+    }
+
+    #[test]
     fn conventional_hook_needs_commit_msg_and_the_recognized_types() {
         for (repo, hook) in [
             (
@@ -1342,8 +1378,17 @@ mod tests {
                 "{id: conventional-pre-commit, stages: [commit-msg], args: [feat, fix, perf, refactor, style, test, docs, \
                  build, ci, revert, chore]}",
             ),
-            // The hook's repository sets the stage, and its defaults are the recognized types.
-            (CONVENTIONAL_REPO, "{id: conventional-pre-commit}"),
+            // The hook's repository sets the stage.
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, \
+                 chore]}",
+            ),
+            (
+                "local",
+                "{id: conventional-pre-commit, entry: python -m conventional_pre_commit.hook feat fix perf refactor \
+                 style test docs build ci revert chore, language: python, stages: [commit-msg]}",
+            ),
             // feat and fix are added to types that name neither.
             (
                 CONVENTIONAL_REPO,
@@ -1353,7 +1398,8 @@ mod tests {
             (
                 "local",
                 "{id: conventional-pre-commit, entry: .venv/bin/conventional-pre-commit --strict, language: system, \
-                 stages: [commit-msg, prepare-commit-msg]}",
+                 stages: [commit-msg, prepare-commit-msg], args: [feat, fix, perf, refactor, style, test, docs, build, \
+                 ci, revert, chore]}",
             ),
         ] {
             assert_eq!(conventional(repo, hook), Ok(()), "{hook}");
@@ -1367,12 +1413,25 @@ mod tests {
             (
                 CONVENTIONAL_REPO,
                 "{id: conventional-pre-commit, stages: [pre-commit]}",
-                "conventional-pre-commit doesn't run in the commit-msg stage",
+                "conventional-pre-commit doesn't run in the commit-msg stage and passes no commit types, so it allows \
+                 the hook's defaults, which a release may change",
+            ),
+            (
+                CONVENTIONAL_REPO,
+                "{id: conventional-pre-commit, args: [--strict]}",
+                "conventional-pre-commit passes no commit types, so it allows the hook's defaults, which a release may \
+                 change",
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: conventional-pre-commit, language: system}",
-                "conventional-pre-commit doesn't run in the commit-msg stage",
+                "{id: conventional-pre-commit, entry: python -m conventional_pre_commit feat, stages: [commit-msg]}",
+                "conventional-pre-commit doesn't run conventional-pre-commit",
+            ),
+            (
+                "local",
+                "{id: conventional-pre-commit, entry: conventional-pre-commit feat, language: system}",
+                "conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow fix, perf, refactor, \
+                 style, test, docs, build, ci, revert, chore",
             ),
             (
                 "local",
@@ -1394,12 +1453,14 @@ mod tests {
             // Only the hook's own repository sets the stage, and an empty list falls back to default_stages.
             (
                 "https://github.com/example/mirror",
-                "{id: conventional-pre-commit}",
+                "{id: conventional-pre-commit, args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, \
+                 chore]}",
                 "conventional-pre-commit doesn't run in the commit-msg stage",
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, stages: []}",
+                "{id: conventional-pre-commit, stages: [], args: [feat, fix, perf, refactor, style, test, docs, build, \
+                 ci, revert, chore]}",
                 "conventional-pre-commit doesn't run in the commit-msg stage",
             ),
             (
