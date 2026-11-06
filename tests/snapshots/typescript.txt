@@ -104,13 +104,13 @@ pass  package-json-script-typecheck  [.] Scripts: has 'typecheck'
 pass  package-json-script-test  [.] Scripts: has 'test'
 pass  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook
-pass  typescript-precommit-eslint  Pre-commit: has ESLint hook
+pass  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
 pass  typescript-precommit-prettier  Pre-commit: has Prettier hook
 pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
 pass  typescript-precommit-vite-build  Pre-commit: has vite-build hook
 pass  typescript-precommit-vitest  Pre-commit: has vitest hook
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
-pass  typescript-ci-lint  TypeScript CI: lint check
+pass  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
 pass  typescript-ci-format  TypeScript CI: format check
 pass  typescript-ci-tsc  TypeScript CI: type check
 pass  typescript-ci-test  TypeScript CI: tests

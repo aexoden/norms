@@ -35,7 +35,7 @@ pass  ci-yaml-valid  CI: ci.yaml: valid
 warn  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
-      No timeout-minutes: mypy, pnpm-peer-dependencies, pytest, ruff-check, ruff-format, uv-lock
+      No timeout-minutes: eslint, mypy, pnpm-peer-dependencies, pytest, ruff-check, ruff-format, uv-lock
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
 warn  ci-reuse  CI: REUSE compliance
@@ -118,8 +118,8 @@ warn  package-json-scripts  [.] package.json: has scripts
 warn  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
       Consider adding a pnpm-lock hook to ensure lockfile is up to date
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook
-warn  typescript-precommit-eslint  Pre-commit: has ESLint hook
-      Consider adding an ESLint hook to pre-commit configuration
+warn  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
+      The ESLint hook doesn't pass --max-warnings 0
 warn  typescript-precommit-prettier  Pre-commit: has Prettier hook
       Consider adding a Prettier hook to pre-commit configuration
 warn  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
@@ -127,7 +127,8 @@ warn  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
 warn  typescript-precommit-vite-build  Pre-commit: has vite-build hook
 pass  typescript-precommit-vitest  Pre-commit: has vitest hook
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
-warn  typescript-ci-lint  TypeScript CI: lint check
+warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
+      CI runs the lint script rather than eslint with --max-warnings 0
 warn  typescript-ci-format  TypeScript CI: format check
 warn  typescript-ci-tsc  TypeScript CI: type check
 warn  typescript-ci-test  TypeScript CI: tests

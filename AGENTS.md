@@ -167,8 +167,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `uv-lock` hook and CI step run through uv's global options, and of the jobs
   that `uv run`, one syncs with `--frozen`, one syncs with `--locked` only
   afterwards, and the others sync or run with `--locked`; neither the `pytest`
-  hook nor the job running pytest passes `--cov`; and `pnpm peers check` runs
-  through `pnpm --dir . exec`.
+  hook nor the job running pytest passes `--cov`; `pnpm peers check` runs
+  through `pnpm --dir . exec`; and the `eslint` hook passes `--max-warnings 10`
+  while CI lints through the `lint` script.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

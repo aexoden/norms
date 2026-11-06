@@ -21,3 +21,8 @@ repos:
         entry: pnpm exec vitest run
         language: system
         pass_filenames: false
+      - id: eslint
+        name: eslint
+        entry: pnpm exec eslint . --max-warnings 10
+        language: system
+        pass_filenames: false

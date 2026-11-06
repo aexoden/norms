@@ -7,7 +7,9 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::config::{TsCompilerOptions, TsConfig, check_dev_engine, commands, program_args};
+use crate::config::{
+    PrecommitHook, TsCompilerOptions, TsConfig, Workflow, check_dev_engine, commands, program_args,
+};
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
@@ -521,19 +523,17 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // ESLint
-    if precommit.has_hook("eslint") {
-        report.should(
-            "typescript-precommit-eslint",
-            "Pre-commit: has ESLint hook",
-            Outcome::Pass,
-        );
-    } else {
-        report.should(
-            "typescript-precommit-eslint",
-            "Pre-commit: has ESLint hook",
-            Outcome::fail("Consider adding an ESLint hook to pre-commit configuration"),
-        );
-    }
+    report.should(
+        "typescript-precommit-eslint",
+        "Pre-commit: has ESLint hook (--max-warnings 0)",
+        if !precommit.has_hook("eslint") {
+            Outcome::fail("Consider adding an ESLint hook to pre-commit configuration")
+        } else if precommit.hooks("eslint").any(eslint_hook_strict) {
+            Outcome::Pass
+        } else {
+            Outcome::fail("The ESLint hook doesn't pass --max-warnings 0")
+        },
+    );
 
     // Prettier
     if precommit.has_hook("prettier") {
@@ -610,10 +610,11 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Lint step
-    let has_lint = workflow.runs_command("eslint")
-        || workflow.runs_command("pnpm lint")
-        || workflow.runs_command("pnpm run lint");
-    report.should("typescript-ci-lint", "TypeScript CI: lint check", has_lint);
+    report.should(
+        "typescript-ci-lint",
+        "TypeScript CI: lint check (--max-warnings 0)",
+        eslint_in_ci(workflow),
+    );
 
     // Format check
     let has_format = workflow.runs_command("prettier");
@@ -647,6 +648,46 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// Whether a command's words run `eslint`, and if so, whether with `--max-warnings 0`, which fails on warnings as well as
+/// errors.
+fn eslint_max_warnings_zero(words: &[&str]) -> Option<bool> {
+    let mut args = program_args(words, "eslint")?.iter();
+    let mut strict = false;
+    while let Some(&arg) = args.next() {
+        let value = if arg == "--max-warnings" {
+            args.next().copied()
+        } else {
+            arg.strip_prefix("--max-warnings=")
+        };
+        if let Some(value) = value {
+            // ESLint takes the last value given.
+            strict = value == "0";
+        }
+    }
+    Some(strict)
+}
+
+/// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args pre-commit appends to it. A hook without
+/// an entry, as a remote hook may leave it to the hook's repository, is taken to run `eslint`.
+fn eslint_hook_strict(hook: &PrecommitHook) -> bool {
+    eslint_max_warnings_zero(&hook.command_words("eslint")) == Some(true)
+}
+
+/// Check that some step runs `eslint` with `--max-warnings 0`. A step running the `lint` script doesn't count, since the
+/// flag would have to be found in the script of the right component.
+fn eslint_in_ci(workflow: &Workflow) -> Result<(), String> {
+    let runs = workflow.filter_map_commands(eslint_max_warnings_zero);
+    if runs.contains(&true) {
+        Ok(())
+    } else if !runs.is_empty() {
+        Err("ESLint runs without --max-warnings 0".to_owned())
+    } else if workflow.runs_command("pnpm lint") || workflow.runs_command("pnpm run lint") {
+        Err("CI runs the lint script rather than eslint with --max-warnings 0".to_owned())
+    } else {
+        Err("No step runs eslint".to_owned())
+    }
+}
+
 /// Whether a command's words check peer dependencies with `pnpm peers check`, which may follow pnpm options such as
 /// `--dir`, or a second `pnpm` run through `exec`.
 fn checks_peer_dependencies(words: &[&str]) -> bool {
@@ -670,6 +711,69 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn eslint_fails_on_warnings_with_max_warnings_zero() {
+        let strict = |line: &str| {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            eslint_max_warnings_zero(&words)
+        };
+        for line in [
+            "pnpm exec eslint . --max-warnings 0",
+            "node_modules/.bin/eslint --max-warnings=0 src",
+            "eslint --max-warnings 10 . --max-warnings 0",
+        ] {
+            assert_eq!(strict(line), Some(true), "{line}");
+        }
+        for line in [
+            "pnpm exec eslint .",
+            "eslint . --max-warnings 10",
+            "eslint . --max-warnings",
+            "eslint --max-warnings 0 . --max-warnings=5",
+        ] {
+            assert_eq!(strict(line), Some(false), "{line}");
+        }
+        assert_eq!(strict("pnpm lint --max-warnings 0"), None);
+
+        let hook = |entry: Option<&str>, args: &[&str]| PrecommitHook {
+            id: "eslint".to_owned(),
+            entry: entry.map(str::to_owned),
+            args: args.iter().map(|&arg| arg.to_owned()).collect(),
+            ..PrecommitHook::default()
+        };
+        assert!(eslint_hook_strict(&hook(
+            Some("pnpm exec eslint . --max-warnings 0"),
+            &[]
+        )));
+        assert!(eslint_hook_strict(&hook(
+            Some("pnpm exec eslint ."),
+            &["--max-warnings=0"]
+        )));
+        assert!(eslint_hook_strict(&hook(None, &["--max-warnings", "0"])));
+        assert!(!eslint_hook_strict(&hook(Some("pnpm exec eslint ."), &[])));
+        assert!(!eslint_hook_strict(&hook(None, &[])));
+
+        let workflow = |run: &str| -> Workflow {
+            serde_saphyr::from_str(&format!("jobs:\n  lint:\n    steps:\n      - run: {run}\n"))
+                .unwrap()
+        };
+        assert_eq!(
+            eslint_in_ci(&workflow("pnpm exec eslint . --max-warnings 0")),
+            Ok(())
+        );
+        assert_eq!(
+            eslint_in_ci(&workflow("pnpm exec eslint .")),
+            Err("ESLint runs without --max-warnings 0".to_owned())
+        );
+        assert_eq!(
+            eslint_in_ci(&workflow("pnpm run lint")),
+            Err("CI runs the lint script rather than eslint with --max-warnings 0".to_owned())
+        );
+        assert_eq!(
+            eslint_in_ci(&workflow("pnpm exec tsc -b")),
+            Err("No step runs eslint".to_owned())
+        );
+    }
 
     #[test]
     fn peer_dependencies_are_checked_by_pnpm_peers_check() {

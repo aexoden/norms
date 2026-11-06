@@ -44,3 +44,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: pnpm --dir . exec pnpm peers check
+
+  eslint:
+    name: Lint through the lint script
+    runs-on: ubuntu-latest
+    steps:
+      - run: pnpm run lint
