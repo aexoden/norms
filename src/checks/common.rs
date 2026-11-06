@@ -133,14 +133,16 @@ pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
         return;
     }
 
-    let releases = if let Some(library) = ctx.components().iter().find(|component| {
-        let component_ctx = ComponentContext::new(ctx, component);
-        match component.language {
-            Language::Python => python::is_library(&component_ctx),
-            Language::Rust => rust::is_library(&component_ctx),
+    let releases = if let Some(library) = ctx
+        .component_contexts()
+        .iter()
+        .find(|component_ctx| match component_ctx.component().language {
+            Language::Python => python::is_library(component_ctx),
+            Language::Rust => rust::is_library(component_ctx),
             Language::Cpp | Language::TypeScript => false,
-        }
-    }) {
+        })
+        .map(ComponentContext::component)
+    {
         format!(
             "the {} component at {} is a library",
             library.language,

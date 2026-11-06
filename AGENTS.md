@@ -51,7 +51,9 @@ prints a `Report`, exiting 1 if any check failed.
   the raw text, or `Ok`). Checks share parsed data through it rather than
   reading files themselves. It holds the repository-wide files and the detected
   components; each component's own files (`Cargo.toml`, `package.json`, ...)
-  are in a `ComponentContext` rooted at the component's directory.
+  are in a `ComponentContext` rooted at the component's directory, one per
+  component, which `ProjectContext::component_contexts` caches so that every
+  check shares them.
 - `config/`: serde models of only the fields checks inspect, with
   `#[serde(default)]` so missing keys don't fail parsing.
 - `checks/`: plain functions `fn(&ProjectContext, &mut Report)`, or

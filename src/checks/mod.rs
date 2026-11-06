@@ -44,10 +44,13 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
 
     // Language-specific checks
     for &language in ctx.languages() {
-        for component in ctx.components().iter().filter(|c| c.language == language) {
-            let component_ctx = ComponentContext::new(ctx, component);
-            report.with_component(component, |report| {
-                check_component(ctx, &component_ctx, language, report);
+        for component_ctx in ctx
+            .component_contexts()
+            .iter()
+            .filter(|c| c.component().language == language)
+        {
+            report.with_component(component_ctx.component(), |report| {
+                check_component(ctx, component_ctx, language, report);
             });
         }
 
@@ -265,6 +268,31 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    #[test]
+    fn component_contexts_are_shared() {
+        let project = TempProject::new("contexts", None);
+        for component in ["api", "web"] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+        }
+        fs::write(project.0.join("api/Cargo.toml"), "").unwrap();
+        fs::write(project.0.join("web/package.json"), "{}").unwrap();
+        let ctx = ProjectContext::new(project.0.clone());
+
+        let contexts = ctx.component_contexts();
+        assert!(std::ptr::eq(contexts, ctx.component_contexts()));
+        assert_eq!(
+            contexts
+                .iter()
+                .map(ComponentContext::component)
+                .collect::<Vec<_>>(),
+            ctx.components().iter().collect::<Vec<_>>()
+        );
+        assert!(std::ptr::eq(
+            contexts.first().unwrap().cargo(),
+            ctx.component_contexts().first().unwrap().cargo()
+        ));
     }
 
     #[test]

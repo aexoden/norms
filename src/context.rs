@@ -105,6 +105,7 @@ impl<T> ConfigStatus<T> {
 pub(crate) struct ProjectContext {
     path: PathBuf,
     detection: OnceLock<Detection>,
+    component_contexts: OnceLock<Vec<ComponentContext>>,
     languages: OnceLock<BTreeSet<Language>>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
@@ -126,6 +127,7 @@ impl ProjectContext {
         Self {
             path,
             detection: OnceLock::new(),
+            component_contexts: OnceLock::new(),
             languages: OnceLock::new(),
             cargo_config: OnceLock::new(),
             devbox: OnceLock::new(),
@@ -171,6 +173,17 @@ impl ProjectContext {
     /// Detected components (cached), in a stable order.
     pub(crate) fn components(&self) -> &[Component] {
         &self.detection().components
+    }
+
+    /// A context for each detected component (cached), in the order of [`components`](Self::components), so that
+    /// every check of a component shares the files parsed for it.
+    pub(crate) fn component_contexts(&self) -> &[ComponentContext] {
+        self.component_contexts.get_or_init(|| {
+            self.components()
+                .iter()
+                .map(|component| ComponentContext::new(self, component))
+                .collect()
+        })
     }
 
     /// The languages of the detected components (cached), in a stable order.
@@ -303,8 +316,7 @@ impl ProjectContext {
 pub(crate) struct ComponentContext {
     path: PathBuf,
     root: PathBuf,
-    /// The component's directory, relative to the root.
-    relative: PathBuf,
+    component: Component,
     license_files: Arc<LicenseFiles>,
     cargo: OnceLock<ConfigStatus<CargoToml>>,
     cargo_members: OnceLock<CargoWorkspaceMembers>,
@@ -325,7 +337,7 @@ impl ComponentContext {
         Self {
             path: project.path().join(&component.path),
             root: project.path().to_path_buf(),
-            relative: component.path.clone(),
+            component: component.clone(),
             license_files: Arc::clone(project.shared_license_files()),
             cargo: OnceLock::new(),
             cargo_members: OnceLock::new(),
@@ -339,6 +351,11 @@ impl ComponentContext {
             tsconfig: OnceLock::new(),
             typescript_referenced_configs: OnceLock::new(),
         }
+    }
+
+    /// The component this context is for.
+    pub(crate) const fn component(&self) -> &Component {
+        &self.component
     }
 
     /// The component's directory.
@@ -382,7 +399,7 @@ impl ComponentContext {
     /// no file at all, the path is the bare `rust-toolchain.toml`.
     pub(crate) fn rust_toolchain(&self) -> &(String, ConfigStatus<RustToolchain>) {
         self.rust_toolchain.get_or_init(|| {
-            for (depth, dir) in self.relative.ancestors().enumerate() {
+            for (depth, dir) in self.component.path.ancestors().enumerate() {
                 let dir = self.root.join(dir);
                 let up = "../".repeat(depth);
 

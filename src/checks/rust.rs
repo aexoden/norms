@@ -424,14 +424,11 @@ pub(crate) fn check_msrv_job(
 pub(crate) fn check_cargo_config(ctx: &ProjectContext, report: &mut Report) {
     check_cargo_config_file(ctx.cargo_config(), report);
 
-    for component in ctx
-        .components()
-        .iter()
-        .filter(|c| c.language == Language::Rust && !c.path.as_os_str().is_empty())
-    {
-        let component_ctx = ComponentContext::new(ctx, component);
+    for component_ctx in ctx.component_contexts().iter().filter(|c| {
+        c.component().language == Language::Rust && !c.component().path.as_os_str().is_empty()
+    }) {
         if !matches!(component_ctx.cargo_config(), ConfigStatus::NotFound) {
-            report.with_component(component, |report| {
+            report.with_component(component_ctx.component(), |report| {
                 check_cargo_config_file(component_ctx.cargo_config(), report);
             });
         }
