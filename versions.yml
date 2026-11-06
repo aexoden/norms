@@ -64,7 +64,7 @@ hook_tombi:
 
 # renovate: datasource=github-tags depName=zizmorcore/zizmor-pre-commit
 hook_zizmor:
-  default: "v1.31.1"
+  default: "v1.32.0"
   when: false
 
 # renovate: datasource=github-tags depName=compilerla/conventional-pre-commit
