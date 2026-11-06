@@ -317,6 +317,16 @@ impl Workflow {
             .flat_map(move |job| job.steps_using(action))
     }
 
+    /// The results of `f` for every command of every step's `run` script, split as [`commands`] splits a line, that it
+    /// gives one for.
+    pub(crate) fn filter_map_commands<T>(&self, mut f: impl FnMut(&[&str]) -> Option<T>) -> Vec<T> {
+        let mut results = Vec::new();
+        for line in self.run_lines() {
+            results.extend(commands(&line).filter_map(|words| f(&words)));
+        }
+        results
+    }
+
     /// Whether any step's `run` script contains `command`. Commands that reach a script only through an expression,
     /// such as `${{ matrix.command }}`, are not seen.
     pub(crate) fn runs_command(&self, command: &str) -> bool {

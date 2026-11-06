@@ -61,6 +61,19 @@ pub(crate) struct PrecommitHook {
     pub args: Vec<String>,
 }
 
+impl PrecommitHook {
+    /// The words of the command the hook runs: its entry, or `default_entry` if it sets none, as a remote hook may
+    /// leave it to the hook's repository, followed by the args pre-commit appends to it.
+    pub(crate) fn command_words<'a>(&'a self, default_entry: &'a str) -> Vec<&'a str> {
+        self.entry
+            .as_deref()
+            .unwrap_or(default_entry)
+            .split_whitespace()
+            .chain(self.args.iter().map(String::as_str))
+            .collect()
+    }
+}
+
 impl PrecommitConfig {
     /// Whether `default_stages` is exactly `[pre-commit]`, so that hooks without stages of their own run once per
     /// commit, and not again on its message.

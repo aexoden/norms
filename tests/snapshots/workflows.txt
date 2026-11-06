@@ -87,11 +87,15 @@ warn  python-ci-min-python  [.] Python CI: tests on the oldest supported Python 
 warn  python-precommit-uv-lock  Python pre-commit: uv-lock hook
 warn  python-precommit-ruff  Python pre-commit: Ruff hooks
 warn  python-precommit-mypy  Python pre-commit: Mypy hook
+warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
+      No pytest hook
 warn  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 warn  python-ci-ruff-format  Python CI: format check
 warn  python-ci-ruff-check  Python CI: lint check
 warn  python-ci-mypy  Python CI: type check
+warn  python-ci-pytest  Python CI: tests (with coverage)
+      No step runs pytest
 pass  python-audit-uv  Python audit: uv audit
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid

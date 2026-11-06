@@ -6,3 +6,8 @@ repos:
         entry: uv --directory . lock --check
         language: system
         pass_filenames: false
+      - id: pytest
+        name: pytest
+        entry: uv run pytest --cov-report=term-missing
+        language: system
+        pass_filenames: false

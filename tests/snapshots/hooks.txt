@@ -76,9 +76,13 @@ pass  python-precommit-ruff  Python pre-commit: Ruff hooks
 warn  python-precommit-ruff-check  Python pre-commit: ruff-check
 warn  python-precommit-ruff-format  Python pre-commit: ruff-format
 warn  python-precommit-mypy  Python pre-commit: Mypy hook
+warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
+      The pytest hook doesn't pass --cov
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 warn  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
       Jobs that uv run without uv sync --locked first: pytest, ruff-check
 pass  python-ci-ruff-format  Python CI: format check
 pass  python-ci-ruff-check  Python CI: lint check
 pass  python-ci-mypy  Python CI: type check
+warn  python-ci-pytest  Python CI: tests (with coverage)
+      No step runs pytest with --cov

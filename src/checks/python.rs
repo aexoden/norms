@@ -6,8 +6,8 @@
 use pep508_rs::pep440_rs::Version;
 
 use crate::config::{
-    PYTHON_VERSION, PyprojectToml, Workflow, check_python_version_exact, check_release_age_value,
-    commands, program_args,
+    PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow, check_python_version_exact,
+    check_release_age_value, commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
@@ -411,6 +411,18 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         "Python pre-commit: Mypy hook",
         config.has_hook("mypy"),
     );
+
+    report.should(
+        "python-precommit-pytest",
+        "Python pre-commit: pytest hook (with coverage)",
+        if !config.has_hook("pytest") {
+            Err("No pytest hook".to_owned())
+        } else if config.hooks("pytest").any(pytest_hook_covers) {
+            Ok(())
+        } else {
+            Err("The pytest hook doesn't pass --cov".to_owned())
+        },
+    );
 }
 
 //
@@ -454,6 +466,11 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "python-ci-mypy",
         "Python CI: type check",
         workflow.runs_command("mypy"),
+    );
+    report.should(
+        "python-ci-pytest",
+        "Python CI: tests (with coverage)",
+        pytest_in_ci(workflow),
     );
 }
 
@@ -521,10 +538,37 @@ fn jobs_running_unlocked(workflow: &Workflow) -> Vec<&str> {
         .collect()
 }
 
-/// Whether a script line runs pytest, directly, through `uv run` or as `python -m pytest`.
+/// Whether a command's words run pytest, directly, through `uv run` or as `python -m pytest`, and if so, whether they
+/// measure coverage with pytest-cov's `--cov`, with or without a source, and without the `--no-cov` that turns it off.
+fn pytest_coverage(words: &[&str]) -> Option<bool> {
+    let args = program_args(words, "pytest")?;
+    Some(
+        args.iter()
+            .any(|arg| *arg == "--cov" || arg.starts_with("--cov="))
+            && !args.contains(&"--no-cov"),
+    )
+}
+
+/// Whether a script line runs pytest.
 fn runs_pytest(line: &str) -> bool {
-    line.split_whitespace()
-        .any(|word| word == "pytest" || word.ends_with("/pytest"))
+    commands(line).any(|words| pytest_coverage(&words).is_some())
+}
+
+/// Whether a pytest hook measures coverage, from its entry and the args pre-commit appends to it.
+fn pytest_hook_covers(hook: &PrecommitHook) -> bool {
+    pytest_coverage(&hook.command_words("pytest")) == Some(true)
+}
+
+/// Check that some step runs pytest with coverage.
+fn pytest_in_ci(workflow: &Workflow) -> Result<(), String> {
+    let runs = workflow.filter_map_commands(pytest_coverage);
+    if runs.contains(&true) {
+        Ok(())
+    } else if runs.is_empty() {
+        Err("No step runs pytest".to_owned())
+    } else {
+        Err("No step runs pytest with --cov".to_owned())
+    }
 }
 
 /// Whether the Python version setup-uv installs, `python_version`, is `min`: the same major and minor version, and the
@@ -737,5 +781,66 @@ jobs:
         for line in ["uv run pytest-benchmark", "uv run mypy ."] {
             assert!(!runs_pytest(line), "{line}");
         }
+    }
+
+    #[test]
+    fn pytest_measures_coverage_with_cov() {
+        let coverage = |line: &str| {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            pytest_coverage(&words)
+        };
+        for line in [
+            "uv run pytest --cov=src/demo --cov-report=term-missing",
+            "python -m pytest -q --cov",
+            ".venv/bin/pytest --cov src/demo",
+        ] {
+            assert_eq!(coverage(line), Some(true), "{line}");
+        }
+        for line in [
+            "uv run pytest",
+            "uv run pytest --cov-report=term-missing",
+            "uv run pytest --cov=src/demo --no-cov",
+        ] {
+            assert_eq!(coverage(line), Some(false), "{line}");
+        }
+        assert_eq!(coverage("uv run --cov pytest-benchmark"), None);
+
+        let hook = |entry: &str, args: &[&str]| PrecommitHook {
+            id: "pytest".to_owned(),
+            entry: Some(entry.to_owned()),
+            args: args.iter().map(|&arg| arg.to_owned()).collect(),
+            ..PrecommitHook::default()
+        };
+        assert!(pytest_hook_covers(&hook(
+            "uv run pytest --cov=src/demo",
+            &[]
+        )));
+        assert!(pytest_hook_covers(&hook(
+            "uv run pytest",
+            &["--cov=src/demo"]
+        )));
+        assert!(!pytest_hook_covers(&hook("uv run pytest", &[])));
+        let remote = PrecommitHook {
+            args: vec!["--cov".to_owned()],
+            ..PrecommitHook::default()
+        };
+        assert!(pytest_hook_covers(&remote));
+
+        let workflow = |run: &str| -> Workflow {
+            serde_saphyr::from_str(&format!("jobs:\n  test:\n    steps:\n      - run: {run}\n"))
+                .unwrap()
+        };
+        assert_eq!(
+            pytest_in_ci(&workflow("uv run pytest && uv run pytest --cov")),
+            Ok(())
+        );
+        assert_eq!(
+            pytest_in_ci(&workflow("uv run pytest")),
+            Err("No step runs pytest with --cov".to_owned())
+        );
+        assert_eq!(
+            pytest_in_ci(&workflow("uv run mypy .")),
+            Err("No step runs pytest".to_owned())
+        );
     }
 }
