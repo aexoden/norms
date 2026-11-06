@@ -159,9 +159,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
   advisories check, beside stub `Cargo.toml` and `pyproject.toml` files.
   `precommit` has only a `.pre-commit-config.yaml`, which breaks the pre-commit
-  standards: its `default_install_hook_types` lacks `pre-commit`, and among
-  remote and local hooks whose IDs or aliases collide, some have aliases of
-  their own and some can't be selected alone.
+  standards: its `default_install_hook_types` lacks `pre-commit`, it runs only
+  some of the pre-commit-hooks set, and among remote and local hooks whose IDs
+  or aliases collide, some have aliases of their own and some can't be
+  selected alone.
   `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files: a
   `uv-lock` hook and CI step run through uv's global options, and of the jobs

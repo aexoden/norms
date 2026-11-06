@@ -178,6 +178,15 @@ impl PrecommitConfig {
         }
     }
 
+    /// The IDs in `hook_ids` that no hook has, in the order given.
+    pub(crate) fn missing_hooks<'a>(&self, hook_ids: &[&'a str]) -> Vec<&'a str> {
+        hook_ids
+            .iter()
+            .copied()
+            .filter(|hook_id| !self.has_hook(hook_id))
+            .collect()
+    }
+
     /// Check if any hook with the given ID exists across all repos.
     pub(crate) fn has_hook(&self, hook_id: &str) -> bool {
         self.hooks(hook_id).next().is_some()
@@ -307,6 +316,25 @@ mod tests {
                 "{hooks}"
             );
         }
+    }
+
+    #[test]
+    fn missing_hooks_listed_in_order() {
+        let config: PrecommitConfig = serde_saphyr::from_str(
+            "repos:\n  - repo: https://github.com/pre-commit/pre-commit-hooks\n    hooks: [{id: check-yaml}]\n  \
+             - repo: local\n    hooks: [{id: trailing-whitespace}]\n",
+        )
+        .unwrap();
+        assert_eq!(
+            config.missing_hooks(&[
+                "check-toml",
+                "check-yaml",
+                "trailing-whitespace",
+                "check-symlinks"
+            ]),
+            ["check-toml", "check-symlinks"]
+        );
+        assert_eq!(config.missing_hooks(&["check-yaml"]), [] as [&str; 0]);
     }
 
     #[test]

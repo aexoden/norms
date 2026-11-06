@@ -415,6 +415,19 @@ fn devbox_toolchains(config: &DevboxConfig) -> Result<(), String> {
 // Pre-commit
 //
 
+/// The hooks from pre-commit-hooks that every project runs.
+const PRE_COMMIT_HOOKS: [&str; 9] = [
+    "check-added-large-files",
+    "check-case-conflict",
+    "check-symlinks",
+    "check-toml",
+    "check-vcs-permalinks",
+    "check-yaml",
+    "detect-private-key",
+    "end-of-file-fixer",
+    "trailing-whitespace",
+];
+
 pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "precommit-config-exists",
@@ -440,6 +453,16 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "precommit-hook-ids-unique",
         "Pre-commit: each hook has a unique ID or alias",
         config.check_unique_hook_ids(),
+    );
+    let missing = config.missing_hooks(&PRE_COMMIT_HOOKS);
+    report.should(
+        "precommit-pre-commit-hooks",
+        "Pre-commit: the common hooks from pre-commit-hooks",
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("Missing: {}", missing.join(", ")))
+        },
     );
     report.should(
         "precommit-reuse",

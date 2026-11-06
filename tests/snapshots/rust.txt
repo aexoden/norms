@@ -28,6 +28,7 @@ pass  precommit-config-exists  .pre-commit-config.yaml
 pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
+pass  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
 pass  precommit-reuse  Pre-commit: reuse hook
 pass  precommit-tombi  Pre-commit: tombi-format hook
 pass  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
