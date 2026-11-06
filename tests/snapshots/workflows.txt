@@ -17,6 +17,8 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
+warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
 pass  precommit-config-exists  .pre-commit-config.yaml
 warn  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
       No default_install_hook_types, so pre-commit install installs only the pre-commit hook
@@ -26,6 +28,7 @@ pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
 warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
       Missing: check-added-large-files, check-case-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
 warn  precommit-reuse  Pre-commit: reuse hook
+warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       The zizmor hook doesn't pass --pedantic
@@ -48,6 +51,8 @@ pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
       concurrency doesn't set cancel-in-progress: true
 warn  ci-reuse  CI: REUSE compliance
+warn  ci-markdownlint  CI: Markdown linting (every file)
+      No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
 warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)
       A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false

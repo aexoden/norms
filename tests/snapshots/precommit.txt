@@ -15,6 +15,8 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
+warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
 pass  precommit-config-exists  .pre-commit-config.yaml
 warn  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
       default_install_hook_types lacks pre-commit
@@ -24,6 +26,7 @@ warn  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
 warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
       Missing: check-symlinks, check-vcs-permalinks, trailing-whitespace
 pass  precommit-reuse  Pre-commit: reuse hook
+warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 warn  precommit-tombi  Pre-commit: tombi-format hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook

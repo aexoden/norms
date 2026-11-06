@@ -17,6 +17,8 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
+warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
 pass  devbox-exists  devbox.json: exists
 pass  devbox-valid  devbox.json: valid
 pass  devbox-schema  devbox.json: has $schema

@@ -220,6 +220,13 @@ would break them.
 CI runs `DavidAnson/markdownlint-cli2-action` with `globs: '**/*.md'`, since the
 action otherwise checks only the files at the repository root.
 
+`norms verify` reads the `config` object as markdownlint does, following rule
+aliases and tags and the order of keys, and checks that every rule runs as an
+error and that the options above hold. A config that `extends` another file
+gets a warning instead, since norms doesn't read that file, and neither
+`overrides` nor a `.markdownlint.*` file, which would take its place, is
+followed.
+
 ## Licensing
 
 By default, projects should be under an MIT-style license unless another license

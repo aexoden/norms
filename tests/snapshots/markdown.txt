@@ -1,0 +1,55 @@
+exit: 1
+languages: (none)
+components: (none)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+pass  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+pass  markdownlint-cli2-valid  .markdownlint-cli2.jsonc: valid
+warn  markdownlint-cli2-rules  .markdownlint-cli2.jsonc: every default rule enabled
+      Turned off: MD001 (heading-increment), MD003 (heading-style), MD018 (no-missing-space-atx), MD019 (no-multiple-space-atx), MD020 (no-missing-space-closed-atx), MD021 (no-multiple-space-closed-atx), MD022 (blanks-around-headings), MD023 (heading-start-left), MD024 (no-duplicate-heading), MD025 (single-title), MD026 (no-trailing-punctuation), MD036 (no-emphasis-as-heading), MD043 (required-headings); Only warning: MD055 (table-pipe-style), MD056 (table-column-count), MD058 (blanks-around-tables), MD060 (table-column-style)
+warn  markdownlint-cli2-settings  .markdownlint-cli2.jsonc: dash lists, 80 columns, repeated headings under different parents
+      MD004 style is asterisk, not dash; MD013 line_length is 100, not 80; MD013 code_blocks isn't false; MD024 siblings_only isn't true
+pass  precommit-config-exists  .pre-commit-config.yaml
+pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
+pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
+warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
+      Missing: check-added-large-files, check-case-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
+warn  precommit-reuse  Pre-commit: reuse hook
+warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
+warn  precommit-tombi  Pre-commit: tombi-format hook
+warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+      No zizmor hook
+warn  renovate-exists  renovate.json: exists
+      File not found
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+pass  ci-yaml-valid  CI: ci.yaml: valid
+warn  audit-yaml-exists  CI: audit.yaml: exists
+      File not found
+pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+warn  ci-reuse  CI: REUSE compliance
+warn  ci-markdownlint  CI: Markdown linting (every file)
+      markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root
+warn  ci-tombi  CI: TOML formatting
+warn  ci-zizmor  CI: zizmor (pedantic)
+      No step runs zizmor or uses zizmorcore/zizmor-action
+warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+      No step runs pre-commit run
+pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
+warn  ci-gate-exists  CI: gate job ci-success
+      No ci-success job
+pass  components-search  Components: every directory searched

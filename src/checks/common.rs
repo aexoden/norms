@@ -9,7 +9,10 @@ use regex::Regex;
 
 use crate::checks::{python, rust};
 use crate::config::{DevboxConfig, GATE_JOB, PrecommitHook, SHARED_PRESET, Workflow, commands};
-use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, ProjectContext};
+use crate::context::{
+    AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
+    ProjectContext,
+};
 use crate::models::Language;
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
@@ -412,6 +415,90 @@ fn devbox_toolchains(config: &DevboxConfig) -> Result<(), String> {
 }
 
 //
+// Markdown
+//
+
+/// Check `.markdownlint-cli2.jsonc`, the markdownlint configuration that the hook and the CI action share.
+pub(crate) fn check_markdownlint(ctx: &ProjectContext, report: &mut Report) {
+    let Some(config) = report.recommend_parsed(
+        "markdownlint-cli2",
+        MARKDOWNLINT_CLI2_CONFIG,
+        ctx.markdownlint_cli2(),
+    ) else {
+        return;
+    };
+
+    report.should(
+        "markdownlint-cli2-rules",
+        format!("{MARKDOWNLINT_CLI2_CONFIG}: every default rule enabled"),
+        config.check_rules(),
+    );
+    report.should(
+        "markdownlint-cli2-settings",
+        format!("{MARKDOWNLINT_CLI2_CONFIG}: dash lists, 80 columns, repeated headings under different parents"),
+        config.check_settings(),
+    );
+}
+
+/// The globs that lint every Markdown file in the project, rather than only those at its root.
+const MARKDOWN_GLOBS: [&str; 2] = ["**/*.md", "**/*.{md,markdown}"];
+
+/// Whether `workflow` runs markdownlint-cli2 on every Markdown file: a `DavidAnson/markdownlint-cli2-action` step whose
+/// `globs` include `**/*.md`, since the action otherwise lints only the files at the root, or a script running
+/// `markdownlint-cli2` with that glob, quoted so that the shell leaves it to markdownlint-cli2.
+fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), String> {
+    let mut runs = false;
+
+    for step in workflow.steps_using("DavidAnson/markdownlint-cli2-action") {
+        runs = true;
+        let separator = step.input("separator");
+        let separator = separator.as_deref().unwrap_or("\n");
+        if step.input("globs").is_some_and(|globs| {
+            globs
+                .split(separator)
+                .any(|glob| MARKDOWN_GLOBS.contains(&glob.trim()))
+        }) {
+            return Ok(());
+        }
+    }
+
+    let quoted = |word: &str| {
+        ['"', '\''].into_iter().any(|quote| {
+            word.strip_prefix(quote)
+                .and_then(|word| word.strip_suffix(quote))
+                .is_some_and(|glob| MARKDOWN_GLOBS.contains(&glob))
+        })
+    };
+    for args in workflow.filter_map_commands(|words| {
+        let start = words.iter().position(|word| {
+            let name = word.rsplit('/').next().unwrap_or(word);
+            name == "markdownlint-cli2" || name.starts_with("markdownlint-cli2@")
+        })?;
+        Some(
+            words
+                .get(start + 1..)
+                .unwrap_or_default()
+                .iter()
+                .any(|word| quoted(word)),
+        )
+    }) {
+        runs = true;
+        if args {
+            return Ok(());
+        }
+    }
+
+    if runs {
+        Err(
+            "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root"
+                .to_owned(),
+        )
+    } else {
+        Err("No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2".to_owned())
+    }
+}
+
+//
 // Pre-commit
 //
 
@@ -468,6 +555,11 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "precommit-reuse",
         "Pre-commit: reuse hook",
         config.has_hook("reuse"),
+    );
+    report.should(
+        "precommit-markdownlint",
+        "Pre-commit: markdownlint-cli2 hook",
+        config.has_hook("markdownlint-cli2"),
     );
     report.should(
         "precommit-tombi",
@@ -767,6 +859,11 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         workflow.uses_action("fsfe/reuse-action") || workflow.runs_matching(&REUSE_LINT),
     );
     report.should(
+        "ci-markdownlint",
+        "CI: Markdown linting (every file)",
+        markdownlint_in_ci(workflow),
+    );
+    report.should(
         "ci-tombi",
         "CI: TOML formatting",
         workflow.runs_matching(&TOMBI_FORMAT_CHECK),
@@ -1042,6 +1139,58 @@ mod tests {
                     .to_owned()
             )
         );
+    }
+
+    fn markdownlint(steps: &str) -> Result<(), String> {
+        markdownlint_in_ci(
+            &serde_saphyr::from_str(&format!("jobs:\n  markdownlint:\n    steps:\n{steps}"))
+                .unwrap(),
+        )
+    }
+
+    #[test]
+    fn markdownlint_must_lint_every_file() {
+        const ACTION: &str = "      - uses: DavidAnson/markdownlint-cli2-action@0000000000000000000000000000000000000000\n";
+        for steps in [
+            format!("{ACTION}        with:\n          globs: '**/*.md'\n"),
+            format!(
+                "{ACTION}        with:\n          globs: |\n            **/*.md\n            !vendor\n"
+            ),
+            format!(
+                "{ACTION}        with:\n          globs: 'README.md;**/*.{{md,markdown}}'\n          separator: ';'\n"
+            ),
+            "      - run: npx markdownlint-cli2 '**/*.md'\n".to_owned(),
+            "      - run: pnpm exec markdownlint-cli2@0.24.0 \"**/*.md\" --fix\n".to_owned(),
+            // A step that lints only the root files doesn't hide one that lints them all.
+            format!("{ACTION}      - run: markdownlint-cli2 '**/*.md'\n"),
+        ] {
+            assert_eq!(markdownlint(&steps), Ok(()), "{steps}");
+        }
+        for (steps, error) in [
+            (
+                "      - run: echo\n".to_owned(),
+                "No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2",
+            ),
+            (
+                ACTION.to_owned(),
+                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+            ),
+            (
+                format!("{ACTION}        with:\n          globs: '*.md'\n"),
+                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+            ),
+            (
+                format!("{ACTION}        with:\n          globs: '**/*.md,docs'\n"),
+                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+            ),
+            // Unquoted, the shell expands the glob itself.
+            (
+                "      - run: markdownlint-cli2 **/*.md\n".to_owned(),
+                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+            ),
+        ] {
+            assert_eq!(markdownlint(&steps), Err(error.to_owned()), "{steps}");
+        }
     }
 
     #[test]

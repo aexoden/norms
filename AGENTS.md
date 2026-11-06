@@ -163,6 +163,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   some of the pre-commit-hooks set, and among remote and local hooks whose IDs
   or aliases collide, some have aliases of their own and some can't be
   selected alone.
+  `markdown` breaks the Markdown standards: its `.markdownlint-cli2.jsonc`
+  names rules by alias and tag, turns some off and lets others only warn, and
+  sets other options than the standard's; its markdownlint-cli2 hook has
+  another ID, and its CI action lints only the root's files.
   `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files: a
   `uv-lock` hook and CI step run through uv's global options, and of the jobs

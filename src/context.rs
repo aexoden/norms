@@ -32,13 +32,16 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
-    CargoConfig, CargoToml, DevboxConfig, NormsConfig, PYTHON_VERSION, PackageJson, PnpmWorkspace,
-    PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain,
-    TsConfig, Workflow, parse_python_version,
+    CargoConfig, CargoToml, DevboxConfig, MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION,
+    PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig,
+    ReuseToml, RustToolchain, TsConfig, Workflow, parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
 use crate::models::{Component, Language};
+
+/// The file name of markdownlint-cli2's configuration, at the root of the project.
+pub(crate) const MARKDOWNLINT_CLI2_CONFIG: &str = ".markdownlint-cli2.jsonc";
 
 /// The file name of the CI workflow in `.github/workflows/`.
 pub(crate) const CI_WORKFLOW: &str = "ci.yaml";
@@ -106,6 +109,7 @@ pub(crate) struct ProjectContext {
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     devbox: OnceLock<ConfigStatus<DevboxConfig>>,
     license_files: OnceLock<Arc<LicenseFiles>>,
+    markdownlint_cli2: OnceLock<ConfigStatus<MarkdownlintCli2Config>>,
     norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
     reuse_toml: OnceLock<ConfigStatus<ReuseToml>>,
@@ -126,6 +130,7 @@ impl ProjectContext {
             cargo_config: OnceLock::new(),
             devbox: OnceLock::new(),
             license_files: OnceLock::new(),
+            markdownlint_cli2: OnceLock::new(),
             norms: OnceLock::new(),
             renovate: OnceLock::new(),
             reuse_toml: OnceLock::new(),
@@ -202,6 +207,13 @@ impl ProjectContext {
     fn shared_license_files(&self) -> &Arc<LicenseFiles> {
         self.license_files
             .get_or_init(|| Arc::new(LicenseFiles::read(&self.path)))
+    }
+
+    /// Parsed `.markdownlint-cli2.jsonc` (cached).
+    pub(crate) fn markdownlint_cli2(&self) -> &ConfigStatus<MarkdownlintCli2Config> {
+        self.markdownlint_cli2.get_or_init(|| {
+            parse_json5_file::<MarkdownlintCli2Config>(&self.path.join(MARKDOWNLINT_CLI2_CONFIG))
+        })
     }
 
     /// Parsed `norms.toml` (cached).

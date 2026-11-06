@@ -1,0 +1,12 @@
+{
+    "config": {
+        "default": true,
+        "ul-style": { "style": "asterisk" },
+        "line-length": { "line_length": 100, "tables": false },
+        "MD024": { "siblings_only": true },
+        // The tag replaces MD024's options, and turns off every heading rule.
+        "headings": false,
+        "MD041": true,
+        "table": "warning"
+    }
+}

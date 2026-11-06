@@ -24,12 +24,17 @@ pass  editorconfig-indent-style  .editorconfig: indent_style=space
 pass  editorconfig-indent-size  .editorconfig: indent_size=4
 pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
 pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
+pass  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+pass  markdownlint-cli2-valid  .markdownlint-cli2.jsonc: valid
+pass  markdownlint-cli2-rules  .markdownlint-cli2.jsonc: every default rule enabled
+pass  markdownlint-cli2-settings  .markdownlint-cli2.jsonc: dash lists, 80 columns, repeated headings under different parents
 pass  precommit-config-exists  .pre-commit-config.yaml
 pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
 pass  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
 pass  precommit-reuse  Pre-commit: reuse hook
+pass  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 pass  precommit-tombi  Pre-commit: tombi-format hook
 pass  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
 pass  renovate-exists  renovate.json: exists
@@ -47,6 +52,7 @@ pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 pass  ci-reuse  CI: REUSE compliance
+pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
