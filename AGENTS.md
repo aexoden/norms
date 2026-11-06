@@ -121,8 +121,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   pnpm package to fold, two TypeScript components, a Python one, and markers
   under `node_modules/`, a hidden directory and an excluded `vendor/` to
   skip; its `norms.toml` also excludes a missing directory. `unpinned` has
-  applications whose manifests break the pinning standards, beside a Python
-  library that isn't checked for them, and release ages other than 3 days.
+  applications whose manifests break the pinning standards (one also pins pnpm
+  through Corepack's `packageManager`), beside a Python library that isn't
+  checked for them, and release ages other than 3 days.
   `reuse` breaks the licensing standards: two license texts whose root copies
   are misnamed or differ, a `REUSE.toml` of the wrong version, hooks and CI
   that don't run `reuse lint` on the whole project, and a Rust, Python and

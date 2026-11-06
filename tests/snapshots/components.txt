@@ -88,6 +88,7 @@ warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js 
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
+pass  package-json-no-corepack-package-manager  [apps/admin] package.json: no Corepack packageManager field
 warn  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 warn  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
@@ -116,6 +117,7 @@ warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
+pass  package-json-no-corepack-package-manager  [apps/web] package.json: no Corepack packageManager field
 warn  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 warn  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists

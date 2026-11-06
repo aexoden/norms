@@ -120,6 +120,7 @@ warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devE
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
+pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
 warn  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 warn  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists

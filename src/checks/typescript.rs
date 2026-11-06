@@ -72,6 +72,11 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         "package.json: pins pnpm in devEngines",
         check_dev_engine(config, "packageManager", "pnpm"),
     );
+    report.should(
+        "package-json-no-corepack-package-manager",
+        "package.json: no Corepack packageManager field",
+        config.check_no_package_manager(),
+    );
 }
 
 //

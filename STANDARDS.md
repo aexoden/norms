@@ -1090,7 +1090,10 @@ versions automatically:
 }
 ```
 
-It defines these scripts:
+Corepack's `packageManager` field is not set. Corepack and some CI actions read
+it, so it would be a second pnpm pin that can drift from `devEngines`.
+
+`package.json` defines these scripts:
 
 | Script      | Command                |
 |-------------|------------------------|

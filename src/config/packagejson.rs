@@ -30,6 +30,12 @@ pub(crate) struct PackageJson {
     /// (see [`PackageJson::dev_engine`]).
     pub dev_engines: Value,
 
+    /// Corepack's package manager declaration (such as `"pnpm@12.7.0"`),
+    /// which the standards replace with `devEngines.packageManager`. Kept
+    /// unparsed, so that a value of any type is reported rather than failing
+    /// to parse.
+    pub package_manager: Option<Value>,
+
     /// npm scripts.
     pub scripts: Option<HashMap<String, String>>,
 
@@ -182,6 +188,18 @@ impl PackageJson {
                     .map_err(|e| format!("devEngines.{field} has an invalid entry: {e}"))
             })
             .collect()
+    }
+
+    /// Check that Corepack's `packageManager` field isn't set, so that
+    /// `devEngines.packageManager` is the only pnpm pin. Corepack and some CI
+    /// setup actions read the field, and a second pin can drift from the
+    /// first.
+    pub(crate) fn check_no_package_manager(&self) -> Result<(), String> {
+        self.package_manager.as_ref().map_or(Ok(()), |value| {
+            Err(format!(
+                "Sets Corepack's packageManager ({value}); pin pnpm only in devEngines.packageManager"
+            ))
+        })
     }
 
     /// Whether `type` is set to `"module"` (ESM).
@@ -370,6 +388,29 @@ mod tests {
             check_dev_engine(&config, "packageManager", "pnpm"),
             Err("devEngines.packageManager doesn't name pnpm".to_owned())
         );
+    }
+
+    #[test]
+    fn rejects_corepacks_package_manager() {
+        for json in ["{}", r#"{ "packageManager": null }"#] {
+            assert_eq!(parse(json).check_no_package_manager(), Ok(()), "{json}");
+        }
+
+        for (json, value) in [
+            (r#"{ "packageManager": "pnpm@12.7.0" }"#, r#""pnpm@12.7.0""#),
+            (
+                r#"{ "packageManager": { "name": "pnpm" } }"#,
+                r#"{"name":"pnpm"}"#,
+            ),
+        ] {
+            assert_eq!(
+                parse(json).check_no_package_manager(),
+                Err(format!(
+                    "Sets Corepack's packageManager ({value}); pin pnpm only in devEngines.packageManager"
+                )),
+                "{json}"
+            );
+        }
     }
 
     #[test]
