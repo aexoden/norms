@@ -213,11 +213,6 @@ impl PrecommitConfig {
             .flat_map(|r| &r.hooks)
             .filter(move |h| h.id == hook_id)
     }
-
-    /// Check if any repo URL contains the given substring.
-    pub(crate) fn has_repo_containing(&self, substring: &str) -> bool {
-        self.repos.iter().any(|r| r.repo.contains(substring))
-    }
 }
 
 #[cfg(test)]

@@ -90,7 +90,8 @@ fail  mypy-configured  [py] mypy: configured
 warn  python-ci-min-python  [py] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 warn  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-warn  python-precommit-ruff  Python pre-commit: Ruff hooks
+warn  python-precommit-ruff-check  Python pre-commit: ruff-check
+warn  python-precommit-ruff-format  Python pre-commit: ruff-format
 warn  python-precommit-mypy  Python pre-commit: Mypy hook
 warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       No pytest hook

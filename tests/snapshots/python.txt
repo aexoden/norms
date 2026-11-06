@@ -95,7 +95,6 @@ pass  ruff-lint-copyright  [.] Ruff lint: copyright notice regex
 pass  mypy-configured  [.] mypy: configured
 pass  mypy-strict  [.] mypy: strict mode
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-pass  python-precommit-ruff  Python pre-commit: Ruff hooks
 pass  python-precommit-ruff-check  Python pre-commit: ruff-check
 pass  python-precommit-ruff-format  Python pre-commit: ruff-format
 pass  python-precommit-mypy  Python pre-commit: Mypy hook

@@ -385,26 +385,16 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         config.has_hook("uv-lock"),
     );
 
-    // Ruff hooks
-    let has_ruff = config.has_repo_containing("ruff") || config.has_repo_containing("local");
     report.should(
-        "python-precommit-ruff",
-        "Python pre-commit: Ruff hooks",
-        has_ruff,
+        "python-precommit-ruff-check",
+        "Python pre-commit: ruff-check",
+        config.has_hook("ruff-check"),
     );
-
-    if has_ruff {
-        report.should(
-            "python-precommit-ruff-check",
-            "Python pre-commit: ruff-check",
-            config.has_hook("ruff-check"),
-        );
-        report.should(
-            "python-precommit-ruff-format",
-            "Python pre-commit: ruff-format",
-            config.has_hook("ruff-format"),
-        );
-    }
+    report.should(
+        "python-precommit-ruff-format",
+        "Python pre-commit: ruff-format",
+        config.has_hook("ruff-format"),
+    );
 
     // Mypy hook
     report.should(
