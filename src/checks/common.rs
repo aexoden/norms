@@ -1023,8 +1023,23 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 }
 
 /// Check `ci.yaml`'s gate job, `ci-success`, the one check branch protection requires: it runs even when other jobs
-/// fail, needs every other job, and fails unless each of them succeeded.
+/// fail, needs every other job, and fails unless each of them succeeded. Whether or not there is a gate, no job may set
+/// `continue-on-error`, which lets the workflow pass when it fails.
 fn check_gate(workflow: &Workflow, report: &mut Report) {
+    let continuing = workflow.jobs_continuing_on_error();
+    report.should(
+        "ci-gate-continue-on-error",
+        "CI: no job, the gate included, sets continue-on-error",
+        if continuing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "continue-on-error lets the workflow pass when these jobs fail: {}",
+                continuing.join(", ")
+            ))
+        },
+    );
+
     let Some(gate) = workflow.jobs.get(GATE_JOB) else {
         report.should(
             "ci-gate-exists",

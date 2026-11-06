@@ -547,6 +547,8 @@ ci-success:
 - `if: always()` is essential. Without it, the gate is skipped when a job fails,
   and a skipped job satisfies a required check.
 - Any result other than success fails the gate, including a skipped job.
+- No job in the workflow, the gate included, sets `continue-on-error`: a failed
+  job that sets it lets the workflow pass, so it can't block a pull request.
 - The name itself isn't important, but that's the field that appears in the
   GitHub UI for the check, not the job ID.
 
@@ -554,7 +556,8 @@ ci-success:
 every other job, and fails on each result other than success: some step that
 exits with an error, without `continue-on-error`, has a condition holding for
 it, such as `contains(needs.*.result, 'skipped')`, alone or joined to others by
-`||`.
+`||`. It also checks that no job sets `continue-on-error` to `true` or an
+expression.
 
 ### Hardening
 

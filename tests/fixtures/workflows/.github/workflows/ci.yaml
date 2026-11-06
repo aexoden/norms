@@ -11,6 +11,7 @@ jobs:
   zizmor-run:
     name: Run zizmor
     runs-on: ubuntu-latest
+    continue-on-error: false
     steps:
       - name: Run zizmor without a persona
         run: uvx zizmor .
@@ -18,6 +19,7 @@ jobs:
   zizmor-action:
     name: Run zizmor-action
     runs-on: ubuntu-slim
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 10
     steps:
       - name: Run zizmor-action in its default mode
@@ -29,6 +31,7 @@ jobs:
     name: CI success
     needs: zizmor-run
     runs-on: ubuntu-slim
+    continue-on-error: true
     timeout-minutes: 10
     steps:
       - name: Fail if a job failed

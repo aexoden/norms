@@ -54,6 +54,7 @@ warn  ci-zizmor  CI: zizmor (pedantic)
 warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
+pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
 warn  ci-gate-exists  CI: gate job ci-success
       No ci-success job
 pass  components-search  Components: every directory searched

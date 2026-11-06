@@ -62,6 +62,8 @@ warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       pull_request filters by branches, paths-ignore
+warn  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
+      continue-on-error lets the workflow pass when these jobs fail: ci-success, zizmor-action
 pass  ci-gate-exists  CI: gate job ci-success
 warn  ci-gate-always  CI: the gate runs whatever the other jobs' results
       ci-success doesn't set if: always(), so it's skipped when a job fails, which passes a required check

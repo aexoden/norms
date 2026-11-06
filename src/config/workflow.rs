@@ -40,6 +40,9 @@ pub(crate) struct WorkflowJob {
     /// The condition under which the job runs: an expression, with or without `${{ }}`.
     #[serde(rename = "if")]
     pub condition: Option<Value>,
+    /// Whether the workflow carries on, and can succeed, when the job fails: a boolean, or an expression giving one.
+    #[serde(rename = "continue-on-error")]
+    pub continue_on_error: Option<Value>,
     /// The ID of the job this one waits for, or a list of them.
     pub needs: Option<Value>,
     pub steps: Vec<WorkflowStep>,
@@ -272,6 +275,22 @@ impl Workflow {
             return false;
         };
         matches!(on.get("schedule"), Some(Value::Array(entries)) if !entries.is_empty())
+    }
+
+    /// The IDs of the jobs that set `continue-on-error` to anything but `false`: `true`, or an expression, which may
+    /// give `true`. Such a job's failure doesn't fail the workflow, so a gate needing it, or the gate itself, can't be
+    /// relied on to block a pull request.
+    pub(crate) fn jobs_continuing_on_error(&self) -> Vec<&str> {
+        self.jobs
+            .iter()
+            .filter(|(_, job)| {
+                !matches!(
+                    job.continue_on_error,
+                    None | Some(Value::Null | Value::Bool(false))
+                )
+            })
+            .map(|(id, _)| id.as_str())
+            .collect()
     }
 
     /// The IDs of the jobs that don't set `timeout-minutes`. A job calling a reusable workflow can't set it, so it
@@ -629,6 +648,27 @@ jobs:
         assert_eq!(step.input("empty"), None);
         assert_eq!(step.input("list"), None);
         assert_eq!(step.input("missing"), None);
+    }
+
+    #[test]
+    fn finds_jobs_continuing_on_error() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  plain:
+    steps: []
+  off:
+    continue-on-error: false
+  empty:
+    continue-on-error:
+  on:
+    continue-on-error: true
+  expression:
+    continue-on-error: ${{ matrix.experimental }}
+",
+        )
+        .expect("workflow parses");
+        assert_eq!(workflow.jobs_continuing_on_error(), ["expression", "on"]);
     }
 
     #[test]
