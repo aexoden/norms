@@ -90,6 +90,10 @@ prints a `Report`, exiting 1 if any check failed.
   `ComponentContext::cargo_members` caches. They aren't components: their
   results belong to the workspace's component and name the member's manifest
   (`crates/cli/Cargo.toml: ...`).
+- `git.rs`: reads the project's release tags, for the changelog check, by
+  running `git` with the variables that select a repository cleared. Only a
+  project at the top of its repository has any, so the fixtures don't see
+  norms' own tags.
 
 CI's `template` job runs `norms verify` on each render and fails if it reports
 a failure; warnings don't change its exit code.

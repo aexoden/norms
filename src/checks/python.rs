@@ -11,6 +11,13 @@ use crate::config::{
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
+/// Whether the component is a library: its `pyproject.toml` parses and describes a package that installs no command.
+pub(crate) fn is_library(ctx: &ComponentContext) -> bool {
+    ctx.pyproject()
+        .as_ref_ok()
+        .is_some_and(PyprojectToml::is_library)
+}
+
 //
 // Project configuration
 //

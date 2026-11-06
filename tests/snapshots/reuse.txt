@@ -15,7 +15,7 @@ pass  reuse-toml-valid  REUSE.toml: valid
 fail  reuse-toml-version  REUSE.toml: version 1
       version is 2, not 1
 warn  changelog-exists  CHANGELOG.md
-      Not found: CHANGELOG.md
+      Not found: CHANGELOG.md, which the project needs because the Python component at py is a library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
 fail  gitattributes-exists  .gitattributes: exists

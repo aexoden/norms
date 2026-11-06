@@ -169,6 +169,12 @@ the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format and follow
 Projects that are deployed directly from `main` without versioned releases do
 not need a changelog.
 
+`norms verify` expects a changelog in a project that has a Rust or Python
+library component, since libraries are published, or a release tag (`vX.Y.Z`,
+which it reads with `git` when the project is at the top of its repository),
+and doesn't check for one elsewhere. A shallow clone, such as CI's default
+checkout, has no tags, so there only the libraries count.
+
 ### Agent Guidance
 
 Projects may include an `AGENTS.md` describing the project's commands and

@@ -38,6 +38,14 @@ fn is_application(ctx: &ComponentContext, config: &CargoToml) -> bool {
             .any(|(path, member)| builds_binary(&ctx.path().join(path), member))
 }
 
+/// Whether the component is a library: its `Cargo.toml` parses, and neither its package nor any member of its
+/// workspace builds a binary.
+pub(crate) fn is_library(ctx: &ComponentContext) -> bool {
+    ctx.cargo()
+        .as_ref_ok()
+        .is_some_and(|config| !is_application(ctx, config))
+}
+
 /// The label of a workspace member's manifest, by its path from the component.
 fn member_manifest(path: &Path) -> String {
     let parts: Vec<_> = path.iter().map(|part| part.to_string_lossy()).collect();

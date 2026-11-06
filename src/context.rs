@@ -113,6 +113,7 @@ pub(crate) struct ProjectContext {
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
     workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
+    release_tags: OnceLock<Vec<String>>,
 }
 
 impl ProjectContext {
@@ -132,12 +133,19 @@ impl ProjectContext {
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
             workflows: OnceLock::new(),
+            release_tags: OnceLock::new(),
         }
     }
 
     /// The root path of the project.
     pub(crate) fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// The project's release tags (cached): its git tags named `vX.Y.Z`. See [`crate::git::release_tags`].
+    pub(crate) fn release_tags(&self) -> &[String] {
+        self.release_tags
+            .get_or_init(|| crate::git::release_tags(&self.path))
     }
 
     /// The search for the project's components (cached).

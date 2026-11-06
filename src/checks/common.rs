@@ -7,8 +7,10 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
+use crate::checks::{python, rust};
 use crate::config::{DevboxConfig, GATE_JOB, PrecommitHook, SHARED_PRESET, Workflow, commands};
-use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
+use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, ProjectContext};
+use crate::models::Language;
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
 //
@@ -117,11 +119,38 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// Check for `CHANGELOG.md`, which a project needs if it publishes versioned releases: if it has a Rust or Python
+/// library component, or a release tag. An application deployed without releases needs none, so it isn't checked.
 pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
+    if ctx.path().join("CHANGELOG.md").exists() {
+        report.should("changelog-exists", "CHANGELOG.md", Outcome::Pass);
+        return;
+    }
+
+    let releases = if let Some(library) = ctx.components().iter().find(|component| {
+        let component_ctx = ComponentContext::new(ctx, component);
+        match component.language {
+            Language::Python => python::is_library(&component_ctx),
+            Language::Rust => rust::is_library(&component_ctx),
+            Language::Cpp | Language::TypeScript => false,
+        }
+    }) {
+        format!(
+            "the {} component at {} is a library",
+            library.language,
+            library.display_path()
+        )
+    } else if let Some(tag) = ctx.release_tags().first() {
+        format!("it has release tags, such as {tag}")
+    } else {
+        return;
+    };
     report.should(
         "changelog-exists",
         "CHANGELOG.md",
-        file_exists(&ctx.path().join("CHANGELOG.md")),
+        Outcome::fail(format!(
+            "Not found: CHANGELOG.md, which the project needs because {releases}"
+        )),
     );
 }
 

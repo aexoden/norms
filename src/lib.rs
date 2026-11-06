@@ -7,6 +7,7 @@ pub mod cli;
 mod config;
 mod context;
 mod detection;
+mod git;
 mod licenses;
 mod models;
 mod report;

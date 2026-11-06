@@ -9,8 +9,6 @@ fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
 warn  reuse-toml-exists  REUSE.toml: exists
       File not found
-warn  changelog-exists  CHANGELOG.md
-      Not found: CHANGELOG.md
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
 fail  gitattributes-exists  .gitattributes: exists

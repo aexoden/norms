@@ -106,6 +106,18 @@ impl PyprojectToml {
         Ok((requires, specifiers))
     }
 
+    /// Whether the project is a library: a package, with a `[project]` table and without `[tool.uv] package = false`,
+    /// that installs no command.
+    pub(crate) fn is_library(&self) -> bool {
+        let unpackaged = self
+            .tool
+            .as_ref()
+            .and_then(|tool| tool.uv.as_ref())
+            .and_then(|uv| uv.package.as_ref())
+            .is_some_and(|package| package.as_bool() == Some(false));
+        self.project.is_some() && !unpackaged && !self.is_application()
+    }
+
     /// Whether the project is an application rather than a library: whether it installs a command, through a
     /// non-empty `[project.scripts]` or `[project.gui-scripts]`.
     pub(crate) fn is_application(&self) -> bool {
@@ -469,6 +481,9 @@ pub(crate) struct UvConfig {
     /// The newest release uv may resolve: a duration back from now, or a fixed date. Kept unparsed, so that a
     /// malformed value fails only the check reading it.
     pub exclude_newer: Option<toml::Value>,
+    /// Whether uv builds and installs the project as a package. Kept unparsed, so that a malformed value fails only
+    /// the check reading it.
+    pub package: Option<toml::Value>,
     /// Where packages come from, when not from the default index. Kept unparsed, so that a malformed entry fails
     /// only the checks reading it.
     pub sources: Option<toml::Value>,
@@ -491,6 +506,17 @@ mod tests {
 
     fn parse(pyproject: &str) -> PyprojectToml {
         toml::from_str(pyproject).unwrap()
+    }
+
+    #[test]
+    fn libraries_are_packages_without_commands() {
+        assert!(parse("[project]\nname = 'lib'\n").is_library());
+        assert!(
+            !parse("[project]\nname = 'app'\n\n[project.scripts]\napp = 'app:main'\n").is_library()
+        );
+        assert!(!parse("[tool.ruff]\nline-length = 120\n").is_library());
+        assert!(!parse("[project]\nname = 'service'\n\n[tool.uv]\npackage = false\n").is_library());
+        assert!(parse("[project]\nname = 'lib'\n\n[tool.uv]\npackage = true\n").is_library());
     }
 
     /// Check a `pyproject.toml` whose classifiers list the 3.x `minors`, among other Python classifiers.
