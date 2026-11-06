@@ -51,6 +51,10 @@ pass  ci-reuse  CI: REUSE compliance
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-gate-exists  CI: gate job ci-success
+pass  ci-gate-always  CI: the gate runs whatever the other jobs' results
+pass  ci-gate-needs  CI: the gate needs every other job
+pass  ci-gate-results  CI: the gate fails unless every job succeeded
 pass  components-search  Components: every directory searched
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid

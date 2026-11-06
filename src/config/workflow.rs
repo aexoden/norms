@@ -6,9 +6,20 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
+use github_actions_expressions::call::{Call, Function};
+use github_actions_expressions::context::Context;
+use github_actions_expressions::literal::Literal;
+use github_actions_expressions::op::{BinExpr, BinOp};
+use github_actions_expressions::{Expr, SpannedExpr};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
+
+/// The ID of `ci.yaml`'s gate job, which succeeds only if every other job did.
+pub(crate) const GATE_JOB: &str = "ci-success";
+
+/// The results a needed job can have other than `success`, each of which must fail the gate.
+const UNSUCCESSFUL_RESULTS: [&str; 3] = ["failure", "cancelled", "skipped"];
 
 /// Top-level workflow structure.
 #[derive(Debug, Deserialize, Default)]
@@ -26,6 +37,11 @@ pub(crate) struct Workflow {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct WorkflowJob {
+    /// The condition under which the job runs: an expression, with or without `${{ }}`.
+    #[serde(rename = "if")]
+    pub condition: Option<Value>,
+    /// The ID of the job this one waits for, or a list of them.
+    pub needs: Option<Value>,
     pub steps: Vec<WorkflowStep>,
     /// The reusable workflow the job calls instead of running steps.
     pub uses: Option<String>,
@@ -38,6 +54,12 @@ pub(crate) struct WorkflowJob {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct WorkflowStep {
+    /// The condition under which the step runs: an expression, with or without `${{ }}`.
+    #[serde(rename = "if")]
+    pub condition: Option<Value>,
+    /// Whether the job carries on, and can succeed, when the step fails: a boolean, or an expression giving one.
+    #[serde(rename = "continue-on-error")]
+    pub continue_on_error: Option<Value>,
     pub uses: Option<String>,
     pub run: Option<String>,
     /// The action's inputs, kept as YAML wrote them rather than as strings, so that a list or mapping where a string
@@ -57,9 +79,96 @@ impl WorkflowStep {
             Value::Null | Value::Array(_) | Value::Object(_) => None,
         }
     }
+
+    /// Whether the step's script exits with an error: one of its commands is `exit` with a status other than 0, or
+    /// `false`.
+    fn exits_with_error(&self) -> bool {
+        self.run.as_deref().is_some_and(|run| {
+            join_continued_lines(run).iter().any(|line| {
+                commands(line).any(|words| {
+                    // A comment ends the command, and a command may follow a keyword such as `then`.
+                    let end = words
+                        .iter()
+                        .position(|word| word.starts_with('#'))
+                        .unwrap_or(words.len());
+                    let words = words.get(..end).unwrap_or_default();
+                    let start = words
+                        .iter()
+                        .position(|word| !matches!(*word, "then" | "else" | "do" | "{"))
+                        .unwrap_or(words.len());
+                    match words.get(start..).unwrap_or_default() {
+                        ["false"] => true,
+                        ["exit", status] => *status != "0",
+                        _ => false,
+                    }
+                })
+            })
+        })
+    }
+
+    /// Whether the step can fail its job: it doesn't set `continue-on-error`, or sets it to `false`. An expression may
+    /// give `true`, so it counts as letting the job carry on.
+    const fn can_fail_job(&self) -> bool {
+        matches!(
+            self.continue_on_error,
+            None | Some(Value::Null | Value::Bool(false))
+        )
+    }
 }
 
 impl WorkflowJob {
+    /// The IDs of the jobs this job needs, or why `needs` isn't a job ID or a list of them.
+    pub(crate) fn needed_jobs(&self) -> Result<Vec<&str>, String> {
+        match &self.needs {
+            None | Some(Value::Null) => Ok(Vec::new()),
+            Some(Value::String(id)) => Ok(vec![id.as_str()]),
+            Some(Value::Array(ids)) => ids
+                .iter()
+                .map(|id| {
+                    id.as_str()
+                        .ok_or_else(|| format!("needs lists {id}, which isn't a job ID"))
+                })
+                .collect(),
+            Some(needs) => Err(format!("needs is {needs}, not a job ID or a list of them")),
+        }
+    }
+
+    /// Whether the job runs whatever the results of the jobs it needs: its `if` is `always()`. Without it, the job is
+    /// skipped when one of them fails, and a skipped job satisfies a required check.
+    pub(crate) fn runs_always(&self) -> bool {
+        parse_condition(self.condition.as_ref()).is_some_and(|condition| {
+            matches!(
+                condition.inner,
+                Expr::Call(Call {
+                    func: Function::Always,
+                    ..
+                })
+            )
+        })
+    }
+
+    /// The results other than `success`, of `failure`, `cancelled` and `skipped`, that the job doesn't fail on when a
+    /// job it needs has them. A step fails the job on a result if it exits with an error, and its `if` holds whenever a
+    /// needed job has that result: it is `contains(needs.*.result, '<result>')`, alone or among alternatives joined by
+    /// `||`.
+    pub(crate) fn results_not_failing(&self) -> Vec<&'static str> {
+        let failing: Vec<String> = self
+            .steps
+            .iter()
+            .filter(|step| step.can_fail_job() && step.exits_with_error())
+            .filter_map(|step| parse_condition(step.condition.as_ref()))
+            .flat_map(|condition| needs_results_checked(&condition))
+            .collect();
+        UNSUCCESSFUL_RESULTS
+            .into_iter()
+            .filter(|result| {
+                !failing
+                    .iter()
+                    .any(|failing| failing.eq_ignore_ascii_case(result))
+            })
+            .collect()
+    }
+
     /// Every command line of the job's `run` scripts, with lines continued by a trailing backslash joined into one.
     pub(crate) fn run_lines(&self) -> impl Iterator<Item = String> {
         self.steps
@@ -171,6 +280,76 @@ impl Workflow {
     /// Whether any step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
     pub(crate) fn uses_action(&self, action: &str) -> bool {
         self.steps_using(action).next().is_some()
+    }
+}
+
+/// An `if` condition's expression, with any `${{ }}` around it removed, parsed. A condition that isn't a string, or
+/// doesn't parse, is none.
+fn parse_condition(condition: Option<&Value>) -> Option<SpannedExpr<'_>> {
+    let Some(Value::String(condition)) = condition else {
+        return None;
+    };
+    let condition = condition.trim();
+    let condition = condition
+        .strip_prefix("${{")
+        .and_then(|condition| condition.strip_suffix("}}"))
+        .unwrap_or(condition);
+    Expr::parse(condition).ok()
+}
+
+/// The results that `condition` holds for when a needed job has one: the `<result>` of each
+/// `contains(needs.*.result, '<result>')` in it, alone or among alternatives joined by `||`.
+fn needs_results_checked(condition: &SpannedExpr<'_>) -> Vec<String> {
+    match &condition.inner {
+        Expr::BinExpr(BinExpr {
+            lhs,
+            op: BinOp::Or,
+            rhs,
+        }) => {
+            let mut results = needs_results_checked(lhs);
+            results.extend(needs_results_checked(rhs));
+            results
+        }
+        Expr::Call(Call {
+            func: Function::Contains,
+            args,
+        }) => match args.as_slice() {
+            [
+                SpannedExpr {
+                    inner: Expr::Context(context),
+                    ..
+                },
+                SpannedExpr {
+                    inner: Expr::Literal(Literal::String(result)),
+                    ..
+                },
+            ] if is_needs_results(context) => {
+                vec![result.to_string()]
+            }
+            _ => Vec::new(),
+        },
+        Expr::Literal(_)
+        | Expr::Star
+        | Expr::Call(_)
+        | Expr::Identifier(_)
+        | Expr::Index(_)
+        | Expr::Context(_)
+        | Expr::BinExpr(_)
+        | Expr::UnExpr { .. } => Vec::new(),
+    }
+}
+
+/// Whether `context` is exactly `needs.*.result`, the results of all the jobs a job needs. An index such as
+/// `needs[0]` or `needs['*']` looks up a single entry of `needs`, which no job ID matches.
+fn is_needs_results(context: &Context<'_>) -> bool {
+    let identifier = |part: &SpannedExpr<'_>, name: &str| matches!(&part.inner, Expr::Identifier(identifier) if identifier.as_str().eq_ignore_ascii_case(name));
+    match context.parts.as_slice() {
+        [needs, star, result] => {
+            identifier(needs, "needs")
+                && matches!(star.inner, Expr::Star)
+                && identifier(result, "result")
+        }
+        _ => false,
     }
 }
 
@@ -456,6 +635,115 @@ jobs:
         ] {
             assert!(!scheduled(yaml), "{yaml}");
         }
+    }
+
+    fn job(yaml: &str) -> WorkflowJob {
+        serde_saphyr::from_str(yaml).expect("job parses")
+    }
+
+    #[test]
+    fn reads_needed_jobs() {
+        assert_eq!(job("needs: lint\n").needed_jobs(), Ok(vec!["lint"]));
+        assert_eq!(
+            job("needs: [lint, test]\n").needed_jobs(),
+            Ok(vec!["lint", "test"])
+        );
+        assert_eq!(job("steps: []\n").needed_jobs(), Ok(Vec::new()));
+        assert_eq!(job("needs:\n").needed_jobs(), Ok(Vec::new()));
+        assert_eq!(
+            job("needs: [lint, [test]]\n").needed_jobs(),
+            Err("needs lists [\"test\"], which isn't a job ID".to_owned())
+        );
+        assert_eq!(
+            job("needs:\n  lint: true\n").needed_jobs(),
+            Err("needs is {\"lint\":true}, not a job ID or a list of them".to_owned())
+        );
+    }
+
+    #[test]
+    fn runs_always_only_with_always() {
+        for condition in [
+            "always()",
+            "${{ always() }}",
+            "  ALWAYS( ) ",
+            "${{always()}}",
+        ] {
+            assert!(
+                job(&format!("if: {condition:?}\n")).runs_always(),
+                "{condition}"
+            );
+        }
+        for yaml in [
+            "steps: []\n",
+            "if: true\n",
+            "if: '!cancelled()'\n",
+            "if: success()\n",
+            "if: always() && github.event_name == 'push'\n",
+            "if: [always()]\n",
+            "if: always(\n",
+        ] {
+            assert!(!job(yaml).runs_always(), "{yaml}");
+        }
+    }
+
+    #[test]
+    fn finds_results_the_gate_does_not_fail_on() {
+        let gate = |steps: &str| job(&format!("steps:\n{steps}")).results_not_failing();
+        assert_eq!(
+            gate(
+                "  - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')\n    run: exit 1\n"
+            ),
+            Vec::<&str>::new()
+        );
+        // Split across steps, in other cases and spellings.
+        assert_eq!(
+            gate(concat!(
+                "  - if: ${{ Contains(needs.*.result, 'FAILURE') }}\n    run: echo failed && exit 2\n",
+                "  - if: contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')\n",
+                "    run: |\n      echo not all jobs succeeded\n      false\n",
+            )),
+            Vec::<&str>::new()
+        );
+        // A step that doesn't exit with an error, or whose condition doesn't hold for the result alone.
+        assert_eq!(
+            gate(concat!(
+                "  - if: contains(needs.*.result, 'failure')\n    run: echo failed\n",
+                "  - if: contains(needs.*.result, 'cancelled')\n    run: exit 0\n",
+                "  - if: contains(needs.*.result, 'skipped') && github.event_name == 'push'\n    run: exit 1\n",
+                "  - if: contains(needs.lint.result, 'skipped')\n    run: exit 1\n",
+            )),
+            ["failure", "cancelled", "skipped"]
+        );
+        // Indexes into needs, or a step that lets the job carry on when it fails.
+        assert_eq!(
+            gate(concat!(
+                "  - if: contains(needs[0].result, 'failure') || contains(needs['*'].result, 'cancelled')\n",
+                "    run: exit 1\n",
+                "  - if: contains(needs.*.result, 'skipped')\n    run: exit 1\n    continue-on-error: true\n",
+                "  - if: contains(needs.*.result, 'skipped')\n    run: exit 1\n",
+                "    continue-on-error: ${{ github.event_name == 'push' }}\n",
+            )),
+            ["failure", "cancelled", "skipped"]
+        );
+        // Commands after a shell keyword or before a comment.
+        assert_eq!(
+            gate(concat!(
+                "  - if: contains(needs.*.result, 'failure')\n",
+                "    run: if [ -n \"$A\" ]; then exit 1; fi\n",
+                "  - if: contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')\n",
+                "    run: exit 1  # not every job succeeded\n",
+                "    continue-on-error: false\n",
+            )),
+            Vec::<&str>::new()
+        );
+        assert_eq!(
+            gate("  - run: exit 1\n  - if: contains(needs.*.result, 'failure')\n    run: exit 1\n"),
+            ["cancelled", "skipped"]
+        );
+        assert_eq!(
+            job("steps: []\n").results_not_failing(),
+            ["failure", "cancelled", "skipped"]
+        );
     }
 
     #[test]

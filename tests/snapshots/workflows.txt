@@ -51,6 +51,13 @@ warn  ci-zizmor  CI: zizmor (pedantic)
       A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
 warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
+pass  ci-gate-exists  CI: gate job ci-success
+warn  ci-gate-always  CI: the gate runs whatever the other jobs' results
+      ci-success doesn't set if: always(), so it's skipped when a job fails, which passes a required check
+warn  ci-gate-needs  CI: the gate needs every other job
+      ci-success doesn't need zizmor-action
+warn  ci-gate-results  CI: the gate fails unless every job succeeded
+      No step of ci-success exits with an error when a job's result is cancelled or skipped, as one with if: contains(needs.*.result, '<result>') does
 pass  components-search  Components: every directory searched
 pass  pyproject-exists  [.] pyproject.toml: exists
 pass  pyproject-valid  [.] pyproject.toml: valid

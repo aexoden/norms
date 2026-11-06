@@ -533,6 +533,12 @@ ci-success:
 - The name itself isn't important, but that's the field that appears in the
   GitHub UI for the check, not the job ID.
 
+`norms verify` checks that `ci-success` exists, runs `if: always()`, needs
+every other job, and fails on each result other than success: some step that
+exits with an error, without `continue-on-error`, has a condition holding for
+it, such as `contains(needs.*.result, 'skipped')`, alone or joined to others by
+`||`.
+
 ### Hardening
 
 - Pin every action to a full commit SHA, with the version in a trailing comment

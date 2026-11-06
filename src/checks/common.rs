@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::config::{DevboxConfig, PrecommitHook, SHARED_PRESET, Workflow, commands};
+use crate::config::{DevboxConfig, GATE_JOB, PrecommitHook, SHARED_PRESET, Workflow, commands};
 use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
@@ -724,6 +724,71 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         "ci-pre-commit",
         "CI: remaining pre-commit hooks (pinned, --all-files)",
         pre_commit_in_ci(workflow),
+    );
+
+    check_gate(workflow, report);
+}
+
+/// Check `ci.yaml`'s gate job, `ci-success`, the one check branch protection requires: it runs even when other jobs
+/// fail, needs every other job, and fails unless each of them succeeded.
+fn check_gate(workflow: &Workflow, report: &mut Report) {
+    let Some(gate) = workflow.jobs.get(GATE_JOB) else {
+        report.should(
+            "ci-gate-exists",
+            format!("CI: gate job {GATE_JOB}"),
+            Outcome::fail(format!("No {GATE_JOB} job")),
+        );
+        return;
+    };
+    report.should(
+        "ci-gate-exists",
+        format!("CI: gate job {GATE_JOB}"),
+        Outcome::Pass,
+    );
+
+    report.should(
+        "ci-gate-always",
+        "CI: the gate runs whatever the other jobs' results",
+        if gate.runs_always() {
+            Ok(())
+        } else {
+            Err(format!(
+                "{GATE_JOB} doesn't set if: always(), so it's skipped when a job fails, which passes a required check"
+            ))
+        },
+    );
+
+    report.should(
+        "ci-gate-needs",
+        "CI: the gate needs every other job",
+        gate.needed_jobs().and_then(|needed| {
+            let missing: Vec<_> = workflow
+                .jobs
+                .keys()
+                .map(String::as_str)
+                .filter(|id| *id != GATE_JOB && !needed.contains(id))
+                .collect();
+            if missing.is_empty() {
+                Ok(())
+            } else {
+                Err(format!("{GATE_JOB} doesn't need {}", missing.join(", ")))
+            }
+        }),
+    );
+
+    let not_failing = gate.results_not_failing();
+    report.should(
+        "ci-gate-results",
+        "CI: the gate fails unless every job succeeded",
+        if not_failing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "No step of {GATE_JOB} exits with an error when a job's result is {}, as one with \
+                 if: contains(needs.*.result, '<result>') does",
+                not_failing.join(" or ")
+            ))
+        },
     );
 }
 

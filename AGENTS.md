@@ -149,8 +149,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `workflows` breaks the Actions standards: a zizmor hook and CI steps that
   don't run its pedantic persona or don't fail on findings; a job without
   `timeout-minutes`, beside a call to a reusable workflow, which can't set one;
-  workflows whose `concurrency` is missing or doesn't cancel; and an
-  unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
+  workflows whose `concurrency` is missing or doesn't cancel; a gate job
+  without `if: always()` that misses a job and doesn't fail on every result;
+  and an unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
   advisories check, beside stub `Cargo.toml` and `pyproject.toml` files.
   `precommit` has only a `.pre-commit-config.yaml`, which breaks the pre-commit
   standards: its `default_install_hook_types` lacks `pre-commit`, and among
