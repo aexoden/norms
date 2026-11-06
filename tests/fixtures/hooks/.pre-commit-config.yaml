@@ -11,3 +11,13 @@ repos:
         entry: uv run pytest --cov-report=term-missing
         language: system
         pass_filenames: false
+      - id: pnpm-peer-dependencies
+        name: pnpm peer dependencies
+        entry: pnpm --dir . exec pnpm peers check
+        language: system
+        pass_filenames: false
+      - id: vitest
+        name: vitest
+        entry: pnpm exec vitest run
+        language: system
+        pass_filenames: false

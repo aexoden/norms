@@ -38,3 +38,9 @@ jobs:
     steps:
       - run: uv run pytest
       - run: uv sync --locked
+
+  pnpm-peer-dependencies:
+    name: Check peer dependencies through exec
+    runs-on: ubuntu-latest
+    steps:
+      - run: pnpm --dir . exec pnpm peers check

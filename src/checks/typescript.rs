@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::config::{TsCompilerOptions, TsConfig, check_dev_engine};
+use crate::config::{TsCompilerOptions, TsConfig, check_dev_engine, commands, program_args};
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
 
@@ -513,6 +513,13 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 
+    // Peer dependencies
+    report.should(
+        "typescript-precommit-pnpm-peer-dependencies",
+        "Pre-commit: has pnpm-peer-dependencies hook",
+        precommit.has_hook("pnpm-peer-dependencies"),
+    );
+
     // ESLint
     if precommit.has_hook("eslint") {
         report.should(
@@ -566,6 +573,13 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         "Pre-commit: has vite-build hook",
         precommit.has_hook("vite-build"),
     );
+
+    // Tests
+    report.should(
+        "typescript-precommit-vitest",
+        "Pre-commit: has vitest hook",
+        precommit.has_hook("vitest"),
+    );
 }
 
 //
@@ -585,6 +599,15 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
         return;
     };
+
+    // Peer dependencies
+    report.should(
+        "typescript-ci-pnpm-peer-dependencies",
+        "TypeScript CI: peer dependencies",
+        workflow
+            .run_lines()
+            .any(|line| commands(&line).any(|words| checks_peer_dependencies(&words))),
+    );
 
     // Lint step
     let has_lint = workflow.runs_command("eslint")
@@ -624,6 +647,13 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// Whether a command's words check peer dependencies with `pnpm peers check`, which may follow pnpm options such as
+/// `--dir`, or a second `pnpm` run through `exec`.
+fn checks_peer_dependencies(words: &[&str]) -> bool {
+    program_args(words, "pnpm")
+        .is_some_and(|rest| rest.windows(2).any(|pair| pair == ["peers", "check"]))
+}
+
 /// Check that `audit.yaml` runs `pnpm audit`.
 pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(workflow) = ctx.audit_workflow() else {
@@ -640,6 +670,28 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn peer_dependencies_are_checked_by_pnpm_peers_check() {
+        let checks = |line: &str| {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            checks_peer_dependencies(&words)
+        };
+        for line in [
+            "pnpm peers check",
+            "pnpm --dir frontend exec pnpm peers check",
+            "corepack pnpm peers check --json",
+        ] {
+            assert!(checks(line), "{line}");
+        }
+        for line in [
+            "pnpm peers",
+            "peers check",
+            "pnpm install --frozen-lockfile",
+        ] {
+            assert!(!checks(line), "{line}");
+        }
+    }
 
     #[test]
     fn vite_build_runs_vite_or_the_build_script() {
