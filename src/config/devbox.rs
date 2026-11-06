@@ -18,6 +18,10 @@ pub(crate) struct DevboxConfig {
     #[serde(default, deserialize_with = "deserialize_packages")]
     pub packages: Vec<String>,
 
+    /// Environment variables set in the Devbox shell. Their values are kept as JSON, so one that isn't a string
+    /// doesn't make the whole file invalid.
+    pub env: Option<serde_json::Map<String, serde_json::Value>>,
+
     /// Shell configuration.
     pub shell: Option<DevboxShell>,
 }

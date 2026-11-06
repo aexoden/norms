@@ -21,6 +21,7 @@ pass  devbox-exists  devbox.json: exists
 pass  devbox-valid  devbox.json: valid
 pass  devbox-schema  devbox.json: has $schema
 pass  devbox-packages  devbox.json: has packages
+pass  devbox-no-toolchains  devbox.json: installs no language toolchains
 pass  devbox-lock-exists  devbox.lock
 fail  precommit-config-exists  .pre-commit-config.yaml
       Not found: .pre-commit-config.yaml

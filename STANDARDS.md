@@ -124,8 +124,9 @@ When Devbox is used:
 
 - `devbox.json` includes a `$schema` reference and `devbox.lock` is committed.
 - Packages are limited to the services and the tools needed to manage them (for
-  example, `postgresql` and `sqlx-cli`). Language toolchains are not installed
-  through Devbox.
+  example, `postgresql` and `sqlx-cli`). Language toolchains and their managers
+  are not installed through Devbox, nor is Corepack enabled with
+  `DEVBOX_COREPACK_ENABLED`.
 - Service setup steps (initializing and creating databases, for example) are
   provided as Devbox scripts and documented in the README.
 - Pre-commit hooks and CI steps invoke tools directly. Only steps that need a

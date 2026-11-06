@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::config::{PrecommitHook, SHARED_PRESET, Workflow, commands};
+use crate::config::{DevboxConfig, PrecommitHook, SHARED_PRESET, Workflow, commands};
 use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists, matches_regex};
 
@@ -284,12 +284,102 @@ pub(crate) fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
         !config.packages.is_empty(),
     );
 
+    report.should(
+        "devbox-no-toolchains",
+        "devbox.json: installs no language toolchains",
+        devbox_toolchains(config),
+    );
+
     // Check for devbox.lock
     report.should(
         "devbox-lock-exists",
         "devbox.lock",
         file_exists(&ctx.path().join("devbox.lock")),
     );
+}
+
+/// A Nix package or flake name that is a toolchain, including versioned attributes such as `nodejs_22`, or its
+/// version or package manager, for a language norms checks: Rust (rustup, rustc, cargo, clippy, rustfmt, and the
+/// rust-overlay and fenix flakes), Python (`python*`, `pypy*`, uv, pip, pipx, Poetry, PDM, Hatch, Rye, pyenv, Conda) or
+/// TypeScript (`nodejs*`, pnpm, Yarn, npm, Corepack, Bun, Deno).
+static DEVBOX_TOOLCHAIN: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(concat!(
+        r"^(?:rustup|rustc|cargo|clippy|rustfmt|rust-bin|rust-overlay|fenix",
+        r"|python3?[0-9]*(?:-?full|-?minimal)?|pypy[0-9]*|uv|pip|pipx|poetry|pdm|hatch|rye|pyenv|conda|micromamba",
+        r"|nodejs(?:-slim)?(?:_[0-9]+|_latest|-[0-9]+_x)?|pnpm(?:_[0-9]+|_latest)?|yarn(?:-berry(?:_[0-9]+)?)?|npm",
+        r"|corepack(?:_[0-9]+|_latest)?|bun|deno)$",
+    ))
+    .unwrap()
+});
+
+/// The names under which a Devbox package reference may name a toolchain, lowercased so that mixed-case attributes
+/// such as `python313Full` match: the first and last parts of its attribute path (`rust-bin.stable.latest.default`,
+/// `python312Packages.pip`), taken after a flake reference's `#` and without any `@version`, plus the repository of a
+/// `github:` flake (`github:nix-community/fenix#stable.toolchain`, `github:astral-sh/uv`) or a `runx:` package
+/// (`runx:astral-sh/uv`).
+fn devbox_package_names(package: &str) -> Vec<String> {
+    let mut names = Vec::new();
+
+    if let Some(repo) = package.strip_prefix("runx:") {
+        let repo = repo.split_once('@').map_or(repo, |(repo, _)| repo);
+        names.extend(repo.rsplit('/').next());
+    } else {
+        // A flake reference without an attribute (`github:astral-sh/uv`) installs the flake's default package.
+        let (flake, attr) = match package.split_once('#') {
+            Some((flake, attr)) => (Some(flake), Some(attr)),
+            None if package.contains(':') => (Some(package), None),
+            None => (None, Some(package)),
+        };
+        if let Some(path) = flake.and_then(|flake| flake.strip_prefix("github:")) {
+            names.extend(path.split('/').nth(1));
+        }
+        if let Some(attr) = attr {
+            let attr = attr.split_once('@').map_or(attr, |(attr, _)| attr);
+            names.extend(attr.split('.').next());
+            names.extend(attr.rsplit('.').next());
+        }
+    }
+
+    names.iter().map(|name| name.to_ascii_lowercase()).collect()
+}
+
+/// Whether `devbox.json` installs no language toolchains, as packages or by enabling Corepack, which Devbox's
+/// Node.js plugin does when `DEVBOX_COREPACK_ENABLED` is set to anything.
+fn devbox_toolchains(config: &DevboxConfig) -> Result<(), String> {
+    let mut problems = Vec::new();
+
+    let toolchains: Vec<&str> = config
+        .packages
+        .iter()
+        .filter(|package| {
+            devbox_package_names(package)
+                .iter()
+                .any(|name| DEVBOX_TOOLCHAIN.is_match(name))
+        })
+        .map(String::as_str)
+        .collect();
+    if !toolchains.is_empty() {
+        problems.push(format!("installs {}", toolchains.join(", ")));
+    }
+
+    if config
+        .env
+        .as_ref()
+        .and_then(|env| env.get("DEVBOX_COREPACK_ENABLED"))
+        .is_some_and(|value| !value.is_null() && value.as_str() != Some(""))
+    {
+        problems.push("enables Corepack (DEVBOX_COREPACK_ENABLED)".to_owned());
+    }
+
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "devbox.json {}; install toolchains and their managers outside Devbox",
+            problems.join(" and ")
+        ))
+    }
 }
 
 //
@@ -848,5 +938,144 @@ mod tests {
         ] {
             assert!(!TOMBI_FORMAT_CHECK.is_match(run), "{run}");
         }
+    }
+
+    fn devbox(json: &str) -> Result<(), String> {
+        devbox_toolchains(&json5::from_str(json).unwrap())
+    }
+
+    fn is_devbox_toolchain(package: &str) -> bool {
+        devbox_package_names(package)
+            .iter()
+            .any(|name| DEVBOX_TOOLCHAIN.is_match(name))
+    }
+
+    #[test]
+    fn devbox_package_names_parsed() {
+        for (package, names) in [
+            ("postgresql", vec!["postgresql", "postgresql"]),
+            ("nodejs@22.11.0", vec!["nodejs", "nodejs"]),
+            (
+                "github:NixOS/nixpkgs/5233fd2#nodejs_22",
+                vec!["nixpkgs", "nodejs_22", "nodejs_22"],
+            ),
+            ("nixpkgs#uv@latest", vec!["uv", "uv"]),
+            ("python312Packages.pip", vec!["python312packages", "pip"]),
+            ("runx:astral-sh/uv@0.9.0", vec!["uv"]),
+            ("runx:astral-sh/uv", vec!["uv"]),
+            ("python3Full", vec!["python3full", "python3full"]),
+            ("github:astral-sh/uv", vec!["uv"]),
+            ("github:NixOS/nixpkgs/nixos-24.05", vec!["nixpkgs"]),
+            ("path:./flakes/db", vec![]),
+            (
+                "github:oxalica/rust-overlay#rust-bin.stable.latest.default",
+                vec!["rust-overlay", "rust-bin", "default"],
+            ),
+        ] {
+            assert_eq!(devbox_package_names(package), names, "{package}");
+        }
+    }
+
+    #[test]
+    fn devbox_toolchain_packages() {
+        for package in [
+            "rustup",
+            "rustc@1.91",
+            "cargo",
+            "clippy",
+            "rustfmt",
+            "github:oxalica/rust-overlay#rust-bin.stable.latest.default",
+            "github:nix-community/fenix#stable.toolchain",
+            "python3",
+            "python312",
+            "python313Full",
+            "python3Minimal",
+            "pypy3",
+            "uv@0.9",
+            "pip",
+            "pipx",
+            "poetry",
+            "pdm",
+            "hatch",
+            "rye",
+            "pyenv",
+            "conda",
+            "micromamba",
+            "nodejs",
+            "nodejs@24",
+            "nodejs_22",
+            "nodejs_latest",
+            "nodejs-slim",
+            "nodejs-slim_24",
+            "nodejs-slim_latest",
+            "nodejs-18_x",
+            "pnpm@12",
+            "pnpm_10",
+            "pnpm_latest",
+            "yarn",
+            "yarn-berry",
+            "yarn-berry_4",
+            "npm",
+            "corepack",
+            "corepack_22",
+            "corepack_latest",
+            "bun",
+            "deno",
+            "nixpkgs#pnpm",
+            "python312Packages.poetry",
+            "github:astral-sh/uv",
+            "runx:astral-sh/uv",
+        ] {
+            assert!(is_devbox_toolchain(package), "{package}");
+        }
+        for package in [
+            "postgresql@17",
+            "postgresql_16",
+            "sqlx-cli@0.8",
+            "cargo-deny",
+            "cargo-watch",
+            "pre-commit",
+            "redis",
+            "python312Packages.psycopg",
+            "nodePackages.prettier",
+            "rust-analyzer",
+            "uvicorn",
+            "deno-lint",
+            "github:NixOS/nixpkgs",
+            "github:NixOS/nixpkgs/nixos-24.05#postgresql",
+            "path:./flakes/db#db",
+        ] {
+            assert!(!is_devbox_toolchain(package), "{package}");
+        }
+    }
+
+    #[test]
+    fn devbox_toolchains_reported() {
+        assert_eq!(
+            devbox(r#"{"packages": ["postgresql@17", "sqlx-cli@0.8"]}"#),
+            Ok(())
+        );
+        assert_eq!(
+            devbox(r#"{"packages": {"redis": "latest"}, "env": {"DEVBOX_COREPACK_ENABLED": ""}}"#),
+            Ok(())
+        );
+        assert_eq!(devbox(r#"{"packages": ["redis"], "env": null}"#), Ok(()));
+        assert_eq!(
+            devbox(
+                r#"{"packages": ["redis"], "env": {"PORT": 6379, "DEVBOX_COREPACK_ENABLED": null}}"#
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            devbox(r#"{"packages": ["postgresql@17", "nodejs@24", "pnpm@11.22.0"]}"#),
+            Err("devbox.json installs nodejs@24, pnpm@11.22.0; install toolchains and their managers outside Devbox".to_owned())
+        );
+        assert_eq!(
+            devbox(r#"{"packages": {"uv": {"version": "latest"}}, "env": {"DEVBOX_COREPACK_ENABLED": "true"}}"#),
+            Err(
+                "devbox.json installs uv and enables Corepack (DEVBOX_COREPACK_ENABLED); install toolchains and their managers outside Devbox"
+                    .to_owned()
+            )
+        );
     }
 }
