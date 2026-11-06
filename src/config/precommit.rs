@@ -62,14 +62,28 @@ pub(crate) struct PrecommitHook {
 }
 
 impl PrecommitHook {
-    /// The words of the command the hook runs: its entry, or `default_entry` if it sets none, as a remote hook may
-    /// leave it to the hook's repository, followed by the args pre-commit appends to it.
-    pub(crate) fn command_words<'a>(&'a self, default_entry: &'a str) -> Vec<&'a str> {
-        self.entry
-            .as_deref()
-            .unwrap_or(default_entry)
-            .split_whitespace()
-            .chain(self.args.iter().map(String::as_str))
+    /// The command the hook runs, as its words, in a list of one, or of none if the entry has unbalanced quotes.
+    /// pre-commit splits the hook's entry, or `default_entry` if it sets none, as a remote hook may leave it to the
+    /// hook's repository, with Python's `shlex`, and appends the args. The `shlex` crate splits it the same way, except
+    /// that it reads a word starting with `#` as a comment ending the entry, which YAML has usually removed already.
+    pub(crate) fn commands(&self, default_entry: &str) -> Vec<Vec<String>> {
+        let Some(mut words) = shlex::split(self.entry.as_deref().unwrap_or(default_entry)) else {
+            return Vec::new();
+        };
+        words.extend(self.args.iter().cloned());
+        vec![words]
+    }
+
+    /// The results of `f` for each command the hook runs, as [`commands`](Self::commands) gives them, that it gives one
+    /// for.
+    pub(crate) fn filter_map_commands<T>(
+        &self,
+        default_entry: &str,
+        mut f: impl FnMut(&[&str]) -> Option<T>,
+    ) -> Vec<T> {
+        self.commands(default_entry)
+            .iter()
+            .filter_map(|command| f(&command.iter().map(String::as_str).collect::<Vec<_>>()))
             .collect()
     }
 }
@@ -315,6 +329,46 @@ mod tests {
                 )),
                 "{hooks}"
             );
+        }
+    }
+
+    fn hook_commands(entry: Option<&str>, args: &[&str]) -> Vec<Vec<String>> {
+        PrecommitHook {
+            entry: entry.map(str::to_owned),
+            args: args.iter().map(|arg| (*arg).to_owned()).collect(),
+            ..PrecommitHook::default()
+        }
+        .commands("default")
+    }
+
+    #[test]
+    fn entries_split_as_pre_commit_splits_them() {
+        for (entry, args, expected) in [
+            (None, &["--fix"][..], vec![vec!["default", "--fix"]]),
+            (
+                Some("pnpm exec eslint . --max-warnings 0"),
+                &[],
+                vec![vec!["pnpm", "exec", "eslint", ".", "--max-warnings", "0"]],
+            ),
+            (
+                Some("python -c 'import sys; sys.exit(0)'"),
+                &["a"],
+                vec![vec!["python", "-c", "import sys; sys.exit(0)", "a"]],
+            ),
+            (
+                Some("bash -c 'cd web && eslint .'"),
+                &["--max-warnings", "0"],
+                vec![vec![
+                    "bash",
+                    "-c",
+                    "cd web && eslint .",
+                    "--max-warnings",
+                    "0",
+                ]],
+            ),
+            (Some("eslint 'unbalanced"), &[], vec![]),
+        ] {
+            assert_eq!(hook_commands(entry, args), expected, "{entry:?}");
         }
     }
 

@@ -557,7 +557,8 @@ fn runs_pytest(line: &str) -> bool {
 
 /// Whether a pytest hook measures coverage, from its entry and the args pre-commit appends to it.
 fn pytest_hook_covers(hook: &PrecommitHook) -> bool {
-    pytest_coverage(&hook.command_words("pytest")) == Some(true)
+    hook.filter_map_commands("pytest", pytest_coverage)
+        .contains(&true)
 }
 
 /// Check that some step runs pytest with coverage.

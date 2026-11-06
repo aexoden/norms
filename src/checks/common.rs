@@ -648,6 +648,32 @@ fn conventional_commit_types<'a>(args: &[&'a str]) -> Result<BTreeSet<&'a str>, 
     Ok(types)
 }
 
+/// What is wrong with the commit types that conventional-pre-commit allows given the words after the program: nothing
+/// if they are exactly the recognized ones.
+fn conventional_types_issues(args: &[&str]) -> Vec<String> {
+    let types = match conventional_commit_types(args) {
+        Err(issue) => return vec![issue],
+        Ok(types) => types,
+    };
+    let missing: Vec<_> = COMMIT_TYPES
+        .into_iter()
+        .filter(|commit_type| !types.contains(commit_type))
+        .collect();
+    let extra: Vec<_> = types
+        .iter()
+        .copied()
+        .filter(|commit_type| !COMMIT_TYPES.contains(commit_type))
+        .collect();
+    let mut issues = Vec::new();
+    if !missing.is_empty() {
+        issues.push(format!("doesn't allow {}", missing.join(", ")));
+    }
+    if !extra.is_empty() {
+        issues.push(format!("also allows {}", extra.join(", ")));
+    }
+    issues
+}
+
 /// Whether a conventional-pre-commit hook checks each commit message for the recognized types and no others. It must
 /// run in the `commit-msg` stage, which the hook's own repository sets for it unless the configuration lists other
 /// stages; a local hook, or one from another repository, lists it itself.
@@ -670,34 +696,18 @@ fn conventional_hook_in(config: &PrecommitConfig) -> Result<(), String> {
             hook_issues.push("doesn't run in the commit-msg stage".to_owned());
         }
 
-        let words = hook.command_words("conventional-pre-commit");
-        match words
-            .iter()
-            .position(|word| word.rsplit('/').next() == Some("conventional-pre-commit"))
-        {
-            None => hook_issues.push("doesn't run conventional-pre-commit".to_owned()),
-            Some(start) => {
-                match conventional_commit_types(words.get(start + 1..).unwrap_or_default()) {
-                    Err(issue) => hook_issues.push(issue),
-                    Ok(types) => {
-                        let missing: Vec<_> = COMMIT_TYPES
-                            .into_iter()
-                            .filter(|commit_type| !types.contains(commit_type))
-                            .collect();
-                        let extra: Vec<_> = types
-                            .iter()
-                            .copied()
-                            .filter(|commit_type| !COMMIT_TYPES.contains(commit_type))
-                            .collect();
-                        if !missing.is_empty() {
-                            hook_issues.push(format!("doesn't allow {}", missing.join(", ")));
-                        }
-                        if !extra.is_empty() {
-                            hook_issues.push(format!("also allows {}", extra.join(", ")));
-                        }
-                    }
-                }
-            }
+        let runs = hook.filter_map_commands("conventional-pre-commit", |words| {
+            let start = words
+                .iter()
+                .position(|word| word.rsplit('/').next() == Some("conventional-pre-commit"))?;
+            Some(conventional_types_issues(
+                words.get(start + 1..).unwrap_or_default(),
+            ))
+        });
+        if runs.is_empty() {
+            hook_issues.push("doesn't run conventional-pre-commit".to_owned());
+        } else if !runs.iter().any(Vec::is_empty) {
+            hook_issues.extend(runs.into_iter().flatten());
         }
 
         if hook_issues.is_empty() {
@@ -821,16 +831,14 @@ fn zizmor_args_strict<'a>(args: impl IntoIterator<Item = &'a str>) -> bool {
     false
 }
 
-/// Whether a zizmor hook runs a persona at least as strict as pedantic, from its args or, for a local hook, its entry,
-/// to which pre-commit appends the args.
+/// Whether a zizmor hook runs a persona at least as strict as pedantic, from its entry and the args pre-commit appends
+/// to it. A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
 fn zizmor_hook_strict(hook: &PrecommitHook) -> bool {
-    let entry = hook.entry.as_deref().unwrap_or_default().split_whitespace();
-    zizmor_args_strict(
-        entry
-            .skip_while(|word| !is_zizmor_command(word))
-            .skip(1)
-            .chain(hook.args.iter().map(String::as_str)),
-    )
+    hook.filter_map_commands("zizmor", |words| {
+        let start = words.iter().position(|word| is_zizmor_command(word))?;
+        Some(zizmor_args_strict(words.iter().skip(start + 1).copied()))
+    })
+    .contains(&true)
 }
 
 /// Whether a word of a shell command invokes zizmor: `zizmor`, a path to it, or a versioned `zizmor@x.y.z` as uvx

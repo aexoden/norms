@@ -670,7 +670,8 @@ fn eslint_max_warnings_zero(words: &[&str]) -> Option<bool> {
 /// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args pre-commit appends to it. A hook without
 /// an entry, as a remote hook may leave it to the hook's repository, is taken to run `eslint`.
 fn eslint_hook_strict(hook: &PrecommitHook) -> bool {
-    eslint_max_warnings_zero(&hook.command_words("eslint")) == Some(true)
+    hook.filter_map_commands("eslint", eslint_max_warnings_zero)
+        .contains(&true)
 }
 
 /// Check that some step runs `eslint` with `--max-warnings 0`. A step running the `lint` script doesn't count, since the
@@ -752,6 +753,10 @@ mod tests {
         assert!(eslint_hook_strict(&hook(None, &["--max-warnings", "0"])));
         assert!(!eslint_hook_strict(&hook(Some("pnpm exec eslint ."), &[])));
         assert!(!eslint_hook_strict(&hook(None, &[])));
+        assert!(!eslint_hook_strict(&hook(
+            Some("pnpm exec eslint '--max-warnings 0'"),
+            &[]
+        )));
 
         let workflow = |run: &str| -> Workflow {
             serde_saphyr::from_str(&format!("jobs:\n  lint:\n    steps:\n      - run: {run}\n"))
