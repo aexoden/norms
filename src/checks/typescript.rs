@@ -503,85 +503,46 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    // pnpm-lock
-    if precommit.has_hook("pnpm-lock") {
-        report.should(
-            "typescript-precommit-pnpm-lock",
-            "Pre-commit: has pnpm-lock hook",
-            Outcome::Pass,
-        );
-    } else {
-        report.should(
-            "typescript-precommit-pnpm-lock",
-            "Pre-commit: has pnpm-lock hook",
-            Outcome::fail("Consider adding a pnpm-lock hook to ensure lockfile is up to date"),
-        );
-    }
-
-    // Peer dependencies
+    report.should(
+        "typescript-precommit-pnpm-lock",
+        "Pre-commit: has pnpm-lock hook",
+        precommit.check_commit_hook("pnpm-lock"),
+    );
     report.should(
         "typescript-precommit-pnpm-peer-dependencies",
         "Pre-commit: has pnpm-peer-dependencies hook",
-        precommit.has_hook("pnpm-peer-dependencies"),
+        precommit.check_commit_hook("pnpm-peer-dependencies"),
     );
-
-    // ESLint
     report.should(
         "typescript-precommit-eslint",
         "Pre-commit: has ESLint hook (--max-warnings 0)",
-        if !precommit.has_hook("eslint") {
-            Outcome::fail("Consider adding an ESLint hook to pre-commit configuration")
-        } else if precommit.hooks("eslint").any(eslint_hook_strict) {
-            Outcome::Pass
-        } else {
-            Outcome::fail("The ESLint hook doesn't pass --max-warnings 0")
-        },
+        precommit.commit_hooks("eslint").and_then(|hooks| {
+            if hooks.into_iter().any(eslint_hook_strict) {
+                Ok(())
+            } else {
+                Err("The ESLint hook doesn't pass --max-warnings 0".to_owned())
+            }
+        }),
     );
-
-    // Prettier
-    if precommit.has_hook("prettier") {
-        report.should(
-            "typescript-precommit-prettier",
-            "Pre-commit: has Prettier hook",
-            Outcome::Pass,
-        );
-    } else {
-        report.should(
-            "typescript-precommit-prettier",
-            "Pre-commit: has Prettier hook",
-            Outcome::fail("Consider adding a Prettier hook to pre-commit configuration"),
-        );
-    }
-
-    // Type check
-    if precommit.has_hook("tsc") {
-        report.should(
-            "typescript-precommit-tsc",
-            "Pre-commit: has TypeScript type check hook",
-            Outcome::Pass,
-        );
-    } else {
-        report.should(
-            "typescript-precommit-tsc",
-            "Pre-commit: has TypeScript type check hook",
-            Outcome::fail(
-                "Consider adding a TypeScript type check hook to pre-commit configuration",
-            ),
-        );
-    }
-
-    // Build
+    report.should(
+        "typescript-precommit-prettier",
+        "Pre-commit: has Prettier hook",
+        precommit.check_commit_hook("prettier"),
+    );
+    report.should(
+        "typescript-precommit-tsc",
+        "Pre-commit: has TypeScript type check hook",
+        precommit.check_commit_hook("tsc"),
+    );
     report.should(
         "typescript-precommit-vite-build",
         "Pre-commit: has vite-build hook",
-        precommit.has_hook("vite-build"),
+        precommit.check_commit_hook("vite-build"),
     );
-
-    // Tests
     report.should(
         "typescript-precommit-vitest",
         "Pre-commit: has vitest hook",
-        precommit.has_hook("vitest"),
+        precommit.check_commit_hook("vitest"),
     );
 }
 

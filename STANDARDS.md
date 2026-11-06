@@ -645,6 +645,10 @@ Every project uses these hooks:
   containing a URL are exempt). CI applies the same subject rules to pull
   request titles.
 
+`norms verify` checks that every hook it checks, the language hooks included,
+runs in the `pre-commit` stage (the `conventional-pre-commit` hook in
+`commit-msg`).
+
 ### Language Hooks
 
 Language hooks are `local` hooks with `language: system` and `pass_filenames:

@@ -527,6 +527,32 @@ const PRE_COMMIT_HOOKS: [&str; 9] = [
     "trailing-whitespace",
 ];
 
+/// Whether each hook of the pre-commit-hooks set runs before each commit.
+fn pre_commit_hooks_in(config: &PrecommitConfig) -> Result<(), String> {
+    let mut missing = Vec::new();
+    let mut issues = Vec::new();
+    for id in PRE_COMMIT_HOOKS {
+        if !config
+            .repos
+            .iter()
+            .flat_map(|repo| &repo.hooks)
+            .any(|hook| hook.id == id)
+        {
+            missing.push(id);
+        } else if let Err(issue) = config.check_commit_hook(id) {
+            issues.push(issue);
+        }
+    }
+    if !missing.is_empty() {
+        issues.insert(0, format!("Missing: {}", missing.join(", ")));
+    }
+    if issues.is_empty() {
+        Ok(())
+    } else {
+        Err(issues.join("; "))
+    }
+}
+
 pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "precommit-config-exists",
@@ -553,30 +579,25 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "Pre-commit: each hook has a unique ID or alias",
         config.check_unique_hook_ids(),
     );
-    let missing = config.missing_hooks(&PRE_COMMIT_HOOKS);
     report.should(
         "precommit-pre-commit-hooks",
         "Pre-commit: the common hooks from pre-commit-hooks",
-        if missing.is_empty() {
-            Ok(())
-        } else {
-            Err(format!("Missing: {}", missing.join(", ")))
-        },
+        pre_commit_hooks_in(config),
     );
     report.should(
         "precommit-reuse",
         "Pre-commit: reuse hook",
-        config.has_hook("reuse"),
+        config.check_commit_hook("reuse"),
     );
     report.should(
         "precommit-markdownlint",
         "Pre-commit: markdownlint-cli2 hook",
-        config.has_hook("markdownlint-cli2"),
+        config.check_commit_hook("markdownlint-cli2"),
     );
     report.should(
         "precommit-tombi",
         "Pre-commit: tombi-format hook",
-        config.has_hook("tombi-format"),
+        config.check_commit_hook("tombi-format"),
     );
     report.should(
         "precommit-conventional-pre-commit",
@@ -586,13 +607,13 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "precommit-zizmor",
         "Pre-commit: zizmor hook (pedantic)",
-        if !config.has_hook("zizmor") {
-            Err("No zizmor hook".to_owned())
-        } else if config.hooks("zizmor").any(zizmor_hook_strict) {
-            Ok(())
-        } else {
-            Err("The zizmor hook doesn't pass --pedantic".to_owned())
-        },
+        config.commit_hooks("zizmor").and_then(|hooks| {
+            if hooks.into_iter().any(zizmor_hook_strict) {
+                Ok(())
+            } else {
+                Err("The zizmor hook doesn't pass --pedantic".to_owned())
+            }
+        }),
     );
 }
 

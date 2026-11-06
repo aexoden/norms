@@ -192,26 +192,49 @@ impl PrecommitConfig {
         }
     }
 
-    /// The IDs in `hook_ids` that no hook has, in the order given.
-    pub(crate) fn missing_hooks<'a>(&self, hook_ids: &[&'a str]) -> Vec<&'a str> {
-        hook_ids
-            .iter()
-            .copied()
-            .filter(|hook_id| !self.has_hook(hook_id))
-            .collect()
+    /// Whether `hook` runs before each commit: the stages it lists include `pre-commit`, or, if it lists none or an
+    /// empty list, `default_stages` does. Without either, pre-commit runs it in every stage its repository gives it,
+    /// which for the hooks checked before commits includes `pre-commit`. A malformed `default_stages` is left to
+    /// [`check_default_stages`](Self::check_default_stages). pre-commit still accepts `commit`, the stage's old name.
+    fn runs_at_commit(&self, hook: &PrecommitHook) -> bool {
+        const NAMES: [&str; 2] = ["pre-commit", "commit"];
+        match (&hook.stages, &self.default_stages) {
+            (Some(stages), _) if !stages.is_empty() => {
+                stages.iter().any(|stage| NAMES.contains(&stage.as_str()))
+            }
+            (_, Some(Value::Array(stages))) => stages
+                .iter()
+                .any(|stage| stage.as_str().is_some_and(|stage| NAMES.contains(&stage))),
+            (_, _) => true,
+        }
     }
 
-    /// Check if any hook with the given ID exists across all repos.
-    pub(crate) fn has_hook(&self, hook_id: &str) -> bool {
-        self.hooks(hook_id).next().is_some()
+    /// The hooks with ID `id` that run before each commit, or, if there are none, why not.
+    pub(crate) fn commit_hooks(&self, id: &str) -> Result<Vec<&PrecommitHook>, String> {
+        let hooks: Vec<_> = self
+            .repos
+            .iter()
+            .flat_map(|repo| &repo.hooks)
+            .filter(|hook| hook.id == id)
+            .collect();
+        if hooks.is_empty() {
+            return Err(format!("No {id} hook"));
+        }
+
+        let hooks: Vec<_> = hooks
+            .into_iter()
+            .filter(|hook| self.runs_at_commit(hook))
+            .collect();
+        if hooks.is_empty() {
+            Err(format!("The {id} hook doesn't run in the pre-commit stage"))
+        } else {
+            Ok(hooks)
+        }
     }
 
-    /// Every hook with the given ID, across all repos.
-    pub(crate) fn hooks<'a>(&'a self, hook_id: &'a str) -> impl Iterator<Item = &'a PrecommitHook> {
-        self.repos
-            .iter()
-            .flat_map(|r| &r.hooks)
-            .filter(move |h| h.id == hook_id)
+    /// Whether a hook with ID `id` runs before each commit. See [`commit_hooks`](Self::commit_hooks).
+    pub(crate) fn check_commit_hook(&self, id: &str) -> Result<(), String> {
+        self.commit_hooks(id).map(|_| ())
     }
 }
 
@@ -367,23 +390,63 @@ mod tests {
         }
     }
 
+    fn commit_hook(yaml: &str) -> Result<(), String> {
+        serde_saphyr::from_str::<PrecommitConfig>(yaml)
+            .unwrap()
+            .check_commit_hook("markdownlint-cli2")
+    }
+
     #[test]
-    fn missing_hooks_listed_in_order() {
-        let config: PrecommitConfig = serde_saphyr::from_str(
-            "repos:\n  - repo: https://github.com/pre-commit/pre-commit-hooks\n    hooks: [{id: check-yaml}]\n  \
-             - repo: local\n    hooks: [{id: trailing-whitespace}]\n",
-        )
-        .unwrap();
+    fn commit_hooks_are_found_by_id() {
         assert_eq!(
-            config.missing_hooks(&[
-                "check-toml",
-                "check-yaml",
-                "trailing-whitespace",
-                "check-symlinks"
-            ]),
-            ["check-toml", "check-symlinks"]
+            commit_hook(
+                "repos:\n  - repo: local\n    hooks: [{id: markdownlint-cli2, entry: markdownlint}]\n"
+            ),
+            Ok(())
         );
-        assert_eq!(config.missing_hooks(&["check-yaml"]), [] as [&str; 0]);
+        assert_eq!(
+            commit_hook("repos: []\n"),
+            Err("No markdownlint-cli2 hook".to_owned())
+        );
+    }
+
+    #[test]
+    fn commit_hooks_run_in_the_pre_commit_stage() {
+        let hook = |stages: &str, default_stages: &str| {
+            commit_hook(&format!(
+                "{default_stages}repos:\n  - repo: local\n    hooks: [{{id: markdownlint-cli2{stages}}}]\n"
+            ))
+        };
+        for (stages, default_stages) in [
+            ("", ""),
+            ("", "default_stages: [pre-commit]\n"),
+            ("", "default_stages: pre-commit\n"),
+            (
+                ", stages: [pre-commit, pre-push]",
+                "default_stages: [pre-push]\n",
+            ),
+            // An empty list is no list, and commit is the stage's old name.
+            (", stages: []", "default_stages: [pre-commit]\n"),
+            (", stages: [commit]", ""),
+            ("", "default_stages: [commit]\n"),
+        ] {
+            assert_eq!(
+                hook(stages, default_stages),
+                Ok(()),
+                "{stages} {default_stages}"
+            );
+        }
+        for (stages, default_stages) in [
+            (", stages: [pre-push]", ""),
+            (", stages: []", "default_stages: [pre-push]\n"),
+            ("", "default_stages: [pre-push, manual]\n"),
+        ] {
+            assert_eq!(
+                hook(stages, default_stages),
+                Err("The markdownlint-cli2 hook doesn't run in the pre-commit stage".to_owned()),
+                "{stages} {default_stages}"
+            );
+        }
     }
 
     #[test]

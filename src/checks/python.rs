@@ -382,37 +382,37 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "python-precommit-uv-lock",
         "Python pre-commit: uv-lock hook",
-        config.has_hook("uv-lock"),
+        config.check_commit_hook("uv-lock"),
     );
 
     report.should(
         "python-precommit-ruff-check",
         "Python pre-commit: ruff-check",
-        config.has_hook("ruff-check"),
+        config.check_commit_hook("ruff-check"),
     );
     report.should(
         "python-precommit-ruff-format",
         "Python pre-commit: ruff-format",
-        config.has_hook("ruff-format"),
+        config.check_commit_hook("ruff-format"),
     );
 
     // Mypy hook
     report.should(
         "python-precommit-mypy",
         "Python pre-commit: Mypy hook",
-        config.has_hook("mypy"),
+        config.check_commit_hook("mypy"),
     );
 
     report.should(
         "python-precommit-pytest",
         "Python pre-commit: pytest hook (with coverage)",
-        if !config.has_hook("pytest") {
-            Err("No pytest hook".to_owned())
-        } else if config.hooks("pytest").any(pytest_hook_covers) {
-            Ok(())
-        } else {
-            Err("The pytest hook doesn't pass --cov".to_owned())
-        },
+        config.commit_hooks("pytest").and_then(|hooks| {
+            if hooks.into_iter().any(pytest_hook_covers) {
+                Ok(())
+            } else {
+                Err("The pytest hook doesn't pass --cov".to_owned())
+            }
+        }),
     );
 }
 
