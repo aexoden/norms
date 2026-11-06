@@ -464,7 +464,11 @@ mod tests {
             fs::create_dir_all(project.0.join(component)).unwrap();
             fs::write(project.0.join(component).join(file), manifest).unwrap();
         }
-        assert!(find(&project.verify(), "changelog-exists").is_empty());
+        let unpublished = project.verify();
+        assert!(matches!(
+            find(&unpublished, "changelog-exists").as_slice(),
+            [r] if r.status == Status::Pass
+        ));
 
         fs::write(
             project.0.join("crates/core/Cargo.toml"),
@@ -478,6 +482,21 @@ mod tests {
             [r] if r.status == Status::Warn
                 && r.message == "Not found: CHANGELOG.md, which the project needs because the Rust component at crates \
                                  is a published library"
+        ));
+    }
+
+    #[test]
+    fn changelog_waivers_in_applications_are_unneeded() {
+        let results = TempProject::new(
+            "changelog-waiver",
+            Some("[[waivers]]\ncheck = \"changelog-exists\"\nreason = \"Deployed from main.\"\n"),
+        )
+        .verify();
+
+        let needed = find(&results, "norms-toml-waiver-needed");
+        assert!(matches!(
+            needed.as_slice(),
+            [r] if r.status == Status::Warn && r.message == "The check passes without it"
         ));
     }
 

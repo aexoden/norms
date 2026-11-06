@@ -9,6 +9,7 @@ pass  license-copies  LICENSE: root copies match LICENSES/
 pass  reuse-toml-exists  REUSE.toml: exists
 pass  reuse-toml-valid  REUSE.toml: valid
 pass  reuse-toml-version  REUSE.toml: version 1
+pass  changelog-exists  CHANGELOG.md (not needed: no published library or release tag)
 pass  gitignore-exists  .gitignore
 pass  gitattributes-exists  .gitattributes: exists
 pass  gitattributes-valid  .gitattributes: valid

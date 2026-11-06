@@ -126,7 +126,8 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
 }
 
 /// Check for `CHANGELOG.md`, which a project needs if it publishes versioned releases: if it has a Rust or Python
-/// library component that may be published, or a release tag. An application deployed without releases needs none, so it isn't checked.
+/// library component that may be published, or a release tag. An application deployed without releases needs none,
+/// so for it the check passes.
 pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     if ctx.path().join("CHANGELOG.md").exists() {
         report.should("changelog-exists", "CHANGELOG.md", Outcome::Pass);
@@ -151,6 +152,12 @@ pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     } else if let Some(tag) = ctx.release_tags().first() {
         format!("it has release tags, such as {tag}")
     } else {
+        // Recorded as passing, so that a waiver for it is reported as unneeded rather than as naming no check.
+        report.should(
+            "changelog-exists",
+            "CHANGELOG.md (not needed: no published library or release tag)",
+            Outcome::Pass,
+        );
         return;
     };
     report.should(

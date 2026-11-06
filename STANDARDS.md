@@ -172,7 +172,7 @@ not need a changelog.
 `norms verify` expects a changelog in a project that has a Rust or Python
 library component, since libraries are published, or a release tag (`vX.Y.Z`,
 which it reads with `git` when the project is at the top of its repository),
-and doesn't check for one elsewhere. A library that is never published doesn't
+and doesn't require one elsewhere. A library that is never published doesn't
 count: a Rust one whose packages all set `publish = false` (or inherit it from
 `[workspace.package]`), or a Python one with the `Private :: Do Not Upload`
 classifier. A shallow clone, such as CI's default checkout, has no tags, so
