@@ -89,6 +89,13 @@ pub(crate) struct WorkflowJob {
     pub env: Option<Value>,
     /// The defaults of the job's steps, over the workflow's, such as `run.working-directory`, kept as YAML wrote them.
     pub defaults: Option<Value>,
+    /// The runner the job runs on: a label, a list of them, a group, or an expression giving one.
+    #[serde(rename = "runs-on")]
+    pub runs_on: Option<Value>,
+    /// The container the job's steps run in, kept as YAML wrote it.
+    pub container: Option<Value>,
+    /// The service containers the job starts, kept as YAML wrote them.
+    pub services: Option<Value>,
     /// The ID of the job this one waits for, or a list of them.
     pub needs: Option<Value>,
     pub steps: Vec<WorkflowStep>,

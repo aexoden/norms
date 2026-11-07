@@ -58,6 +58,7 @@ warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
       Doesn't run on push
+pass  ci-ubuntu-slim  CI: jobs that install nothing run on ubuntu-slim
 pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
 warn  ci-gate-exists  CI: gate job ci-success
       No ci-success job

@@ -20,7 +20,7 @@ jobs:
 
   zizmor-action:
     name: Run zizmor-action
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     continue-on-error: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 10
     steps:
@@ -32,7 +32,7 @@ jobs:
   ci-success:
     name: CI success
     needs: zizmor-run
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     continue-on-error: true
     timeout-minutes: 10
     steps:

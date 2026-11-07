@@ -10,11 +10,12 @@ use std::sync::LazyLock;
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 use regex::Regex;
+use serde_json::Value;
 
 use crate::checks::{python, rust};
 use crate::config::{
     AttributeState, DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook,
-    SHARED_PRESET, Workflow, WorkflowJob, attribute, commands,
+    SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -1405,7 +1406,85 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
         workflow.runs_on_push_to(&["main", "dev"]),
     );
 
+    check_slim_runner(workflow, report);
     check_gate(workflow, report);
+}
+
+/// The actions of the jobs that install nothing, each of which is the whole job apart from checking out the
+/// repository: markdownlint's and zizmor's, and Tombi's setup action, which downloads a prebuilt binary.
+const LIGHT_ACTIONS: [&str; 3] = [
+    "DavidAnson/markdownlint-cli2-action",
+    "tombi-toml/setup-tombi",
+    "zizmorcore/zizmor-action",
+];
+
+/// The runner of the jobs that install nothing, which starts faster.
+const SLIM_RUNNER: &str = "ubuntu-slim";
+
+/// Whether `job` installs nothing, so that it belongs on [`SLIM_RUNNER`]: it is the gate job, or it uses one of
+/// [`LIGHT_ACTIONS`] and otherwise only checks out the repository or runs `tombi`, with nothing else on the script line.
+/// A job that runs in a container or starts services, which need Docker, or picks its runner with an expression, as an
+/// OS matrix does, has its runner chosen for it.
+fn is_light_job(id: &str, job: &WorkflowJob) -> bool {
+    let runner_chosen = job.container.is_some()
+        || job.services.is_some()
+        || job
+            .runs_on
+            .as_ref()
+            .and_then(Value::as_str)
+            .is_some_and(|runner| runner.contains("${{"));
+    if runner_chosen {
+        return false;
+    }
+    if id == GATE_JOB {
+        return true;
+    }
+    let light = |step: &WorkflowStep| LIGHT_ACTIONS.iter().any(|action| step.uses_action(action));
+    job.steps.iter().any(light)
+        && job.steps.iter().all(|step| match (&step.uses, &step.run) {
+            (Some(_), _) => light(step) || step.uses_action("actions/checkout"),
+            (None, Some(_)) => step.run_lines().iter().all(|line| {
+                commands(line).all(|words| {
+                    words
+                        .first()
+                        .is_none_or(|word| *word == "tombi" || word.starts_with('#'))
+                })
+            }),
+            (None, None) => true,
+        })
+}
+
+/// Whether `job` runs on [`SLIM_RUNNER`]: its `runs-on` is that label, alone or as a list of one.
+fn runs_on_slim(job: &WorkflowJob) -> bool {
+    match &job.runs_on {
+        Some(Value::String(runner)) => runner == SLIM_RUNNER,
+        Some(Value::Array(runners)) => {
+            matches!(runners.as_slice(), [runner] if runner == SLIM_RUNNER)
+        }
+        _ => false,
+    }
+}
+
+/// Check that the jobs of `ci.yaml`, `workflow`, that install nothing run on [`SLIM_RUNNER`].
+fn check_slim_runner(workflow: &Workflow, report: &mut Report) {
+    let elsewhere: Vec<&str> = workflow
+        .jobs
+        .iter()
+        .filter(|(id, job)| is_light_job(id, job) && !runs_on_slim(job))
+        .map(|(id, _)| id.as_str())
+        .collect();
+    report.should(
+        "ci-ubuntu-slim",
+        format!("CI: jobs that install nothing run on {SLIM_RUNNER}"),
+        if elsewhere.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "These jobs install nothing, but don't run on {SLIM_RUNNER}: {}",
+                elsewhere.join(", ")
+            ))
+        },
+    );
 }
 
 /// Check `ci.yaml`'s gate job, `ci-success`, the one check branch protection requires: it runs even when other jobs
@@ -1687,6 +1766,62 @@ jobs:
                 "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: pre-commit run -a\n        working-directory: .\n"
             ),
             Some(Err(_))
+        ));
+    }
+
+    #[test]
+    fn slim_runner_as_a_label_or_list_of_one() {
+        let slim = |yaml: &str| runs_on_slim(&serde_saphyr::from_str(yaml).unwrap());
+        assert!(slim("runs-on: ubuntu-slim\n"));
+        assert!(slim("runs-on: [ubuntu-slim]\n"));
+        assert!(!slim("runs-on: ubuntu-latest\n"));
+        assert!(!slim("runs-on: [ubuntu-slim, self-hosted]\n"));
+        assert!(!slim("steps: []\n"));
+    }
+
+    #[test]
+    fn light_jobs_install_nothing() {
+        let light = |id: &str, yaml: &str| is_light_job(id, &serde_saphyr::from_str(yaml).unwrap());
+        assert!(light(GATE_JOB, "steps:\n  - run: exit 1\n"));
+        assert!(light(
+            "markdownlint",
+            "steps:\n  - uses: actions/checkout@v6\n  - uses: DavidAnson/markdownlint-cli2-action@v23\n"
+        ));
+        assert!(light(
+            "tombi",
+            "steps:\n  - uses: actions/checkout@v6\n  - uses: tombi-toml/setup-tombi@v1\n  - run: tombi format --check\n"
+        ));
+        assert!(light(
+            "zizmor",
+            "steps:\n  - uses: zizmorcore/zizmor-action@v0\n"
+        ));
+
+        assert!(light(
+            "tombi",
+            "steps:\n  - uses: tombi-toml/setup-tombi@v1\n  - run: |\n      # Check formatting\n      tombi format --check\n"
+        ));
+
+        assert!(!light("lint", "steps:\n  - uses: actions/checkout@v6\n"));
+        assert!(!light(
+            "markdownlint",
+            "services: {db: {image: postgres}}\nsteps:\n  - uses: DavidAnson/markdownlint-cli2-action@v23\n"
+        ));
+        assert!(!light(
+            "zizmor",
+            "runs-on: ${{ matrix.os }}\nsteps:\n  - uses: zizmorcore/zizmor-action@v0\n"
+        ));
+        assert!(!light(
+            GATE_JOB,
+            "container: node:24\nsteps:\n  - run: exit 1\n"
+        ));
+        assert!(!light("zizmor", "steps:\n  - run: uvx zizmor .\n"));
+        assert!(!light(
+            "tombi",
+            "steps:\n  - uses: tombi-toml/setup-tombi@v1\n  - run: tombi format --check && cargo fmt --check\n"
+        ));
+        assert!(!light(
+            "markdownlint",
+            "steps:\n  - uses: actions/setup-node@v6\n  - uses: DavidAnson/markdownlint-cli2-action@v23\n"
         ));
     }
 
