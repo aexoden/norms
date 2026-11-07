@@ -58,6 +58,8 @@ warn  clippy-lints  [.] crates/missing/Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  clippy-lints  [.] crates/own/Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  clippy-toml-exists  [.] clippy.toml: exists
+      File not found
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-config-exists  .cargo/config.toml: exists

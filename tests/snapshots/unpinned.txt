@@ -106,6 +106,8 @@ warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  clippy-toml-exists  [.] clippy.toml: exists
+      File not found
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)

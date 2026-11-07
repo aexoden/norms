@@ -76,6 +76,8 @@ warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
 warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  clippy-toml-exists  [.] clippy.toml: exists
+      File not found
 warn  deny-toml-exists  [.] Rust: deny.toml
       Not found: deny.toml
 warn  cargo-config-exists  .cargo/config.toml: exists

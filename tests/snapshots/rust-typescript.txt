@@ -79,6 +79,10 @@ pass  rust-toolchain-toml-channel  [.] rust-toolchain.toml: exact channel
 pass  rust-toolchain-toml-components  [.] rust-toolchain.toml: clippy and rustfmt components
 pass  clippy-lints  [.] Cargo.toml: Clippy lints configured
 pass  clippy-pedantic  [.] Cargo.toml: Clippy pedantic enabled
+pass  clippy-toml-exists  [.] clippy.toml: exists
+pass  clippy-toml-valid  [.] clippy.toml: valid
+pass  clippy-toml-allow-in-tests  [.] clippy.toml: unwrap, expect and panic allowed in tests
+pass  clippy-toml-absolute-paths  [.] clippy.toml: absolute paths limited to 3 segments
 pass  deny-toml-exists  [.] Rust: deny.toml
 pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
 pass  cargo-config-exists  .cargo/config.toml: exists

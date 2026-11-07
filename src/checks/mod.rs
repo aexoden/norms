@@ -119,6 +119,7 @@ fn check_component(
             rust::check_rust_toolchain(ctx, report);
             rust::check_rust_version(ctx, report);
             rust::check_clippy_lints(ctx, report);
+            rust::check_clippy_toml(ctx, report);
             rust::check_cargo_deny(ctx, report);
             rust::check_cargo_lock(ctx, report);
             rust::check_msrv_job(project, ctx, report);
@@ -383,6 +384,129 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    #[test]
+    fn components_use_the_nearest_clippy_config() {
+        let conforming = "absolute-paths-max-segments = 3\nallow-expect-in-tests = true\n\
+                          allow-panic-in-tests = true\nallow-unwrap-in-tests = true\n";
+        let project = TempProject::new("clippy-toml", None);
+        for component in ["both", "nested/app"] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
+        }
+        fs::write(project.0.join("both/.clippy.toml"), conforming).unwrap();
+        fs::write(project.0.join("both/clippy.toml"), "[broken\n").unwrap();
+        fs::write(
+            project.0.join("clippy.toml"),
+            "allow-panic-in-tests = true\n",
+        )
+        .unwrap();
+        let clippy = |results: &[CheckResult]| -> Vec<(Option<String>, String, Status)> {
+            results
+                .iter()
+                .filter(|r| r.id.starts_with("clippy-toml-"))
+                .map(|r| (r.component.clone(), r.name.clone(), r.status))
+                .collect()
+        };
+
+        let both = |name: &str| (Some("both".to_owned()), format!(".clippy.toml: {name}"));
+        let nested = |name: &str| {
+            (
+                Some("nested/app".to_owned()),
+                format!("../../clippy.toml: {name}"),
+            )
+        };
+        let expected: Vec<_> = [
+            (both("exists"), Status::Pass),
+            (both("valid"), Status::Pass),
+            (
+                both("unwrap, expect and panic allowed in tests"),
+                Status::Pass,
+            ),
+            (both("absolute paths limited to 3 segments"), Status::Pass),
+            (nested("exists"), Status::Pass),
+            (nested("valid"), Status::Pass),
+            (
+                nested("unwrap, expect and panic allowed in tests"),
+                Status::Warn,
+            ),
+            (nested("absolute paths limited to 3 segments"), Status::Warn),
+        ]
+        .into_iter()
+        .map(|((component, name), status)| (component, name, status))
+        .collect();
+        assert_eq!(clippy(&project.verify()), expected);
+
+        fs::remove_file(project.0.join("clippy.toml")).unwrap();
+        let missing: Vec<_> = clippy(&project.verify())
+            .into_iter()
+            .filter(|(component, ..)| component.as_deref() == Some("nested/app"))
+            .collect();
+        assert_eq!(
+            missing,
+            [(
+                Some("nested/app".to_owned()),
+                "clippy.toml: exists".to_owned(),
+                Status::Warn
+            )]
+        );
+    }
+
+    #[test]
+    fn workspace_members_use_their_own_clippy_configs() {
+        let conforming = "absolute-paths-max-segments = 3\nallow-expect-in-tests = true\n\
+                          allow-panic-in-tests = true\nallow-unwrap-in-tests = true\n";
+        let project = TempProject::new("member-clippy-toml", None);
+        for member in ["ws/crates/a", "ws/crates/b", "ws/tools/x"] {
+            fs::create_dir_all(project.0.join(member)).unwrap();
+            fs::write(
+                project.0.join(member).join("Cargo.toml"),
+                "[package]\nname = \"member\"\n",
+            )
+            .unwrap();
+        }
+        fs::write(
+            project.0.join("ws/Cargo.toml"),
+            "[workspace]\nmembers = [\"crates/*\", \"tools/x\"]\n",
+        )
+        .unwrap();
+        fs::write(project.0.join("clippy.toml"), conforming).unwrap();
+        fs::write(
+            project.0.join("ws/crates/clippy.toml"),
+            "allow-panic-in-tests = true\n",
+        )
+        .unwrap();
+        fs::write(project.0.join("ws/crates/b/.clippy.toml"), conforming).unwrap();
+
+        let clippy: Vec<_> = project
+            .verify()
+            .into_iter()
+            .filter(|r| r.id.starts_with("clippy-toml-"))
+            .map(|r| (r.name, r.status))
+            .collect();
+        let expected: Vec<_> = [
+            ("../clippy.toml", Status::Pass),
+            ("crates/b/.clippy.toml", Status::Pass),
+            ("crates/clippy.toml", Status::Warn),
+        ]
+        .into_iter()
+        .flat_map(|(label, status)| {
+            [
+                (format!("{label}: exists"), Status::Pass),
+                (format!("{label}: valid"), Status::Pass),
+                (
+                    format!("{label}: unwrap, expect and panic allowed in tests"),
+                    status,
+                ),
+                (
+                    format!("{label}: absolute paths limited to 3 segments"),
+                    status,
+                ),
+            ]
+        })
+        .collect();
+        assert_eq!(clippy, expected);
     }
 
     #[test]

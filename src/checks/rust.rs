@@ -8,7 +8,9 @@ use std::path::Path;
 
 use semver::Comparator;
 
-use crate::config::{CargoConfig, CargoToml, CargoWorkspace, Workflow, WorkflowStep, commands};
+use crate::config::{
+    CargoConfig, CargoToml, CargoWorkspace, ClippyToml, Workflow, WorkflowStep, commands,
+};
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
@@ -273,6 +275,30 @@ fn check_package_lints(
         "clippy-pedantic",
         format!("{label}: Clippy pedantic enabled"),
         lints.contains_key("pedantic"),
+    );
+}
+
+/// Check the Clippy configurations that apply to the component: the one its package uses, and any that members of its
+/// workspace use instead. Each must let tests use `unwrap`, `expect` and `panic`, and limit absolute paths to three
+/// segments.
+pub(crate) fn check_clippy_toml(ctx: &ComponentContext, report: &mut Report) {
+    for (label, status) in std::iter::once(ctx.clippy_toml()).chain(ctx.member_clippy_tomls()) {
+        if let Some(config) = report.recommend_parsed("clippy-toml", label, status) {
+            check_clippy_toml_settings(label, config, report);
+        }
+    }
+}
+
+fn check_clippy_toml_settings(label: &str, config: &ClippyToml, report: &mut Report) {
+    report.should(
+        "clippy-toml-allow-in-tests",
+        format!("{label}: unwrap, expect and panic allowed in tests"),
+        config.check_allowed_in_tests(),
+    );
+    report.should(
+        "clippy-toml-absolute-paths",
+        format!("{label}: absolute paths limited to 3 segments"),
+        config.check_absolute_paths_max_segments(),
     );
 }
 

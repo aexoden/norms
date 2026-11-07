@@ -32,9 +32,10 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
-    CargoConfig, CargoToml, DevboxConfig, GIT_ARCHIVAL, MarkdownlintCli2Config, NormsConfig,
-    PYTHON_VERSION, PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml,
-    RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow, parse_python_version,
+    CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DevboxConfig, GIT_ARCHIVAL,
+    MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION, PackageJson, PnpmWorkspace,
+    PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain,
+    TsConfig, Workflow, parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -331,6 +332,8 @@ pub(crate) struct ComponentContext {
     cargo_members: OnceLock<CargoWorkspaceMembers>,
     cargo_config: OnceLock<ConfigStatus<CargoConfig>>,
     rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
+    clippy_toml: OnceLock<(String, ConfigStatus<ClippyToml>)>,
+    member_clippy_tomls: OnceLock<Vec<(String, ConfigStatus<ClippyToml>)>>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     python_version: OnceLock<ConfigStatus<Version>>,
     git_archival: OnceLock<ConfigStatus<String>>,
@@ -353,6 +356,8 @@ impl ComponentContext {
             cargo_members: OnceLock::new(),
             cargo_config: OnceLock::new(),
             rust_toolchain: OnceLock::new(),
+            clippy_toml: OnceLock::new(),
+            member_clippy_tomls: OnceLock::new(),
             pyproject: OnceLock::new(),
             python_version: OnceLock::new(),
             git_archival: OnceLock::new(),
@@ -431,6 +436,59 @@ impl ComponentContext {
             }
 
             (RUST_TOOLCHAIN.to_owned(), ConfigStatus::NotFound)
+        })
+    }
+
+    /// The Clippy configuration that applies to the component's package (cached): the nearest `.clippy.toml` or
+    /// `clippy.toml` in the component's directory or a parent, up to the project root, with its path relative to the
+    /// component. If there is neither, the path is the bare `clippy.toml`.
+    pub(crate) fn clippy_toml(&self) -> &(String, ConfigStatus<ClippyToml>) {
+        self.clippy_toml.get_or_init(|| {
+            let Some(found) = nearest_clippy_toml(&self.root, &self.component.path) else {
+                let [_, name] = CLIPPY_TOML;
+                return (name.to_owned(), ConfigStatus::NotFound);
+            };
+            let depth = self
+                .component
+                .path
+                .ancestors()
+                .position(|dir| found.parent() == Some(dir))
+                .unwrap_or_default();
+            let name = found.file_name().unwrap_or_default().to_string_lossy();
+            (
+                format!("{}{name}", "../".repeat(depth)),
+                parse_toml_file::<ClippyToml>(&self.root.join(&found)),
+            )
+        })
+    }
+
+    /// The Clippy configurations that apply to members of the component's Cargo workspace instead of the component's
+    /// own (cached), with their paths relative to the component. Clippy looks for its configuration from each
+    /// package's own directory, so a file in a member's directory, or in a directory between it and the component,
+    /// applies to that member. Each is listed once, however many members it applies to.
+    pub(crate) fn member_clippy_tomls(&self) -> &[(String, ConfigStatus<ClippyToml>)] {
+        self.member_clippy_tomls.get_or_init(|| {
+            let own = nearest_clippy_toml(&self.root, &self.component.path);
+            let found: BTreeSet<PathBuf> = self
+                .cargo_members()
+                .members
+                .keys()
+                .filter_map(|member| {
+                    nearest_clippy_toml(&self.root, &self.component.path.join(member))
+                })
+                .filter(|found| Some(found) != own.as_ref())
+                .collect();
+            found
+                .into_iter()
+                .filter_map(|found| {
+                    let label = found.strip_prefix(&self.component.path).ok()?;
+                    let label: Vec<_> = label.iter().map(|part| part.to_string_lossy()).collect();
+                    Some((
+                        label.join("/"),
+                        parse_toml_file::<ClippyToml>(&self.root.join(&found)),
+                    ))
+                })
+                .collect()
         })
     }
 
@@ -548,6 +606,18 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
             error: format!("Could not read file: {e}"),
         },
     }
+}
+
+/// The nearest Clippy configuration file to `dir`, both relative to the project root `root`: the first `.clippy.toml`
+/// or `clippy.toml` in `dir` or a parent, up to the root, as Clippy finds it from a package's directory. Clippy prefers
+/// `.clippy.toml` when a directory has both.
+fn nearest_clippy_toml(root: &Path, dir: &Path) -> Option<PathBuf> {
+    dir.ancestors().find_map(|dir| {
+        CLIPPY_TOML
+            .into_iter()
+            .map(|name| dir.join(name))
+            .find(|path| root.join(path).is_file())
+    })
 }
 
 /// Parse a TOML file into the given type.
