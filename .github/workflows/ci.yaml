@@ -155,18 +155,16 @@ jobs:
         with:
           persist-credentials: false
 
-      # norms has no Python of its own, so it uses the versions the template pins.
+      # norms has no Python of its own, so it uses the pre-commit version the template pins.
       - name: Read the template's tool versions
         id: versions
         run: |
           echo "pre-commit=$(yq '.pre_commit_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
-          echo "uv=$(yq '.uv_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: false
-          version: ${{ steps.versions.outputs.uv }}
 
       # The other hooks have jobs of their own.
       - name: Run the hooks that have no job of their own
@@ -273,8 +271,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        with:
-          version: ${{ steps.versions.outputs.uv }}
 
       # The rendered project's package.json selects the pnpm and Node.js versions it uses.
       - name: Install pnpm
