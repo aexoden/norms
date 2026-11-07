@@ -319,8 +319,8 @@ impl MarkdownlintCli2Config {
     }
 
     /// Whether the standard's rule options hold, after markdownlint's defaults for those left out: MD004 requires
-    /// dashes, MD013 wraps at 80 columns and exempts tables and code blocks, and MD024 allows repeated headings under
-    /// different parents.
+    /// dashes, MD013 wraps at 80 columns, headings included, and exempts tables and code blocks, and MD024 allows
+    /// repeated headings under different parents.
     pub(crate) fn check_settings(&self) -> Result<(), String> {
         self.check_not_extended()?;
         let mut issues = Vec::new();
@@ -354,6 +354,21 @@ impl MarkdownlintCli2Config {
             if md013.option(option).is_none_or(truthy) {
                 issues.push(format!("MD013 {option} isn't false"));
             }
+        }
+        // Left out or null, headings have the line length, 80 once that holds.
+        if let Some(length) = md013
+            .option("heading_line_length")
+            .filter(|value| !value.is_null())
+            && number(length).is_none_or(|length| (length - 80.0).abs() > f64::EPSILON)
+        {
+            issues.push(format!("MD013 heading_line_length is {length}, not 80"));
+        }
+        // Left out, headings are checked; otherwise any false value exempts them.
+        if md013
+            .option("headings")
+            .is_some_and(|headings| !truthy(headings))
+        {
+            issues.push("MD013 headings isn't true".to_owned());
         }
 
         if !self
@@ -412,6 +427,8 @@ mod tests {
             // markdownlint lints with dashes when the style isn't one it knows.
             r#""MD004": { style: "Dash" }, "MD013": { tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
             r#""MD004": { style: true }, "MD013": { tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
+            r#""MD004": { style: "dash" }, "MD013": { heading_line_length: "80", headings: 1, tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
+            r#""MD004": { style: "dash" }, "MD013": { heading_line_length: null, tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
             // The later key replaces the earlier one's options.
             r#""MD004": { style: "plus" }, ul: { style: "dash" }, "MD013": { line_length: 100, tables: false, code_blocks: false }, "MD013": { tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
         ] {
@@ -430,6 +447,15 @@ mod tests {
             (
                 r#""MD004": { style: "dash" }, "MD013": { line_length: 80, tables: false, code_blocks: false }, "MD024": { siblings_only: true }, headings: true"#,
                 "MD024 siblings_only isn't true",
+            ),
+            (
+                r#""MD004": { style: "dash" }, "MD013": { heading_line_length: 100, headings: false, tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
+                "MD013 heading_line_length is 100, not 80; MD013 headings isn't true",
+            ),
+            // Unlike a missing value, null is false.
+            (
+                r#""MD004": { style: "dash" }, "MD013": { headings: null, tables: false, code_blocks: false }, "MD024": { siblings_only: true }"#,
+                "MD013 headings isn't true",
             ),
             (
                 r#""MD004": { style: "dash" }, "MD013": { line_length: 80, tables: true }, "MD024": { siblings_only: false }"#,

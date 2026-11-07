@@ -218,7 +218,8 @@ columns and allows repeated headings under different parents:
 ```
 
 Tables and code blocks are exempt from the line length, since wrapping them
-would break them.
+would break them. Headings aren't, and keep the default limit, the same 80
+columns.
 
 CI runs `DavidAnson/markdownlint-cli2-action` with `globs: '**/*.md'`, since the
 action otherwise checks only the files at the repository root.
