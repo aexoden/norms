@@ -50,6 +50,8 @@ warn  uv-lock-exists  [app] Python: uv.lock
 pass  pyproject-dependencies-exact  [app] pyproject.toml: dependencies pinned exactly (application)
 warn  uv-exclude-newer  [app] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [app] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
 warn  python-dependency-groups  [app] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [app] Ruff: configured
@@ -80,6 +82,8 @@ warn  uv-lock-exists  [bad-pin] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [bad-pin] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [bad-pin] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
 warn  python-dependency-groups  [bad-pin] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [bad-pin] Ruff: configured
@@ -110,6 +114,8 @@ warn  uv-lock-exists  [capped] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [capped] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [capped] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
 warn  python-dependency-groups  [capped] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [capped] Ruff: configured
@@ -142,6 +148,8 @@ warn  uv-lock-exists  [lib] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [lib] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [lib] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
 warn  python-dependency-groups  [lib] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [lib] Ruff: configured
@@ -173,6 +181,8 @@ warn  uv-lock-exists  [parent-pin/open] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [parent-pin/open] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [parent-pin/open] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
 warn  python-dependency-groups  [parent-pin/open] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [parent-pin/open] Ruff: configured

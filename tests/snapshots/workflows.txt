@@ -98,6 +98,8 @@ warn  uv-lock-exists  [.] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [.] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
 warn  python-dependency-groups  [.] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [.] Ruff: configured

@@ -283,6 +283,39 @@ impl PyprojectToml {
         }
     }
 
+    /// `[tool.uv] required-version`, parsed as uv parses it, or why it can't be.
+    pub(crate) fn uv_required_version(&self) -> Result<VersionSpecifiers, String> {
+        let Some(required) = self
+            .tool
+            .as_ref()
+            .and_then(|tool| tool.uv.as_ref())
+            .and_then(|uv| uv.required_version.as_ref())
+        else {
+            return Err("[tool.uv] sets no required-version".to_owned());
+        };
+        let Some(required) = required.as_str() else {
+            return Err("[tool.uv] required-version isn't a string".to_owned());
+        };
+        // uv reads a bare version as that exact version.
+        VersionSpecifiers::from_str(required).or_else(|error| {
+            Version::from_str(required.trim())
+                .map(|version| VersionSpecifier::equals_version(version).into())
+                .map_err(|_not_a_version| format!("Invalid [tool.uv] required-version: {error}"))
+        })
+    }
+
+    /// Check that `[tool.uv] required-version` sets only the oldest uv the project needs, as a single `>=`, so that
+    /// newer releases of uv keep working.
+    pub(crate) fn check_uv_required_version(&self) -> Result<(), String> {
+        let specifiers = self.uv_required_version()?;
+        match &*specifiers {
+            [specifier] if *specifier.operator() == Operator::GreaterThanEqual => Ok(()),
+            _ => Err(format!(
+                "[tool.uv] required-version ({specifiers}) isn't a single >= minimum"
+            )),
+        }
+    }
+
     /// Check that `[tool.uv] cache-keys` makes uv reinstall the project when `pyproject.toml` changes and when HEAD or
     /// the tags move, so that the installed version stays current. Other keys may be listed too.
     pub(crate) fn check_uv_cache_keys(&self) -> Result<(), String> {
@@ -708,6 +741,8 @@ pub(crate) struct UvConfig {
     /// Where packages come from, when not from the default index. Kept unparsed, so that a malformed entry fails
     /// only the checks reading it.
     pub sources: Option<toml::Value>,
+    /// The uv versions the project accepts. Kept unparsed, so that a malformed value fails only the checks reading it.
+    pub required_version: Option<toml::Value>,
     /// What uv's cached build of the project depends on, so that a change to any of them reinstalls it. Kept
     /// unparsed, so that a malformed entry fails only the check reading it.
     pub cache_keys: Option<toml::Value>,
@@ -885,6 +920,43 @@ cache-keys = [{ git = { commit = true } }]
         assert!(parse("[project]\nname = 'lib'\n").has_version());
         assert!(!parse("[project]\nname = 'svc'\n\n[tool.uv]\npackage = false\n").has_version());
         assert!(!parse("[tool.uv.workspace]\nmembers = ['packages/*']\n").has_version());
+    }
+
+    #[test]
+    fn uv_required_version_is_a_minimum() {
+        let required = |value: &str| parse(&format!("[tool.uv]\nrequired-version = {value}\n"));
+        assert_eq!(required("'>=0.9.5'").check_uv_required_version(), Ok(()));
+        assert_eq!(required("'>= 0.9'").check_uv_required_version(), Ok(()));
+        for (value, written) in [
+            ("'==0.9.5'", "==0.9.5"),
+            ("'>=0.9, <0.10'", ">=0.9, <0.10"),
+            ("'~=0.9.5'", "~=0.9.5"),
+        ] {
+            assert_eq!(
+                required(value).check_uv_required_version(),
+                Err(format!(
+                    "[tool.uv] required-version ({written}) isn't a single >= minimum"
+                ))
+            );
+        }
+        assert_eq!(
+            parse("").check_uv_required_version(),
+            Err("[tool.uv] sets no required-version".to_owned())
+        );
+        assert_eq!(
+            required("0.9").check_uv_required_version(),
+            Err("[tool.uv] required-version isn't a string".to_owned())
+        );
+        assert_eq!(
+            required("'0.9.5'").check_uv_required_version(),
+            Err("[tool.uv] required-version (==0.9.5) isn't a single >= minimum".to_owned())
+        );
+        assert!(
+            required("'0.9.5,'")
+                .check_uv_required_version()
+                .unwrap_err()
+                .starts_with("Invalid [tool.uv] required-version: ")
+        );
     }
 
     #[test]

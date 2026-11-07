@@ -12,3 +12,4 @@ raw-options = { search_parent_directories = true }
 
 [tool.uv]
 cache-keys = [{ git = { commit = true } }]
+required-version = ">=0.10.0"

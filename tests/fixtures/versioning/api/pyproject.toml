@@ -11,3 +11,4 @@ source = "vcs"
 
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+required-version = ">=0.9.0"

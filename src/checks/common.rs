@@ -1023,6 +1023,11 @@ static EXACT_UV_VERSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+$").unwrap()
 });
 
+/// Whether `version`, a setup-uv step's `version` input, is an exact uv version.
+pub(crate) fn is_exact_uv_version(version: &str) -> bool {
+    EXACT_UV_VERSION.is_match(version)
+}
+
 /// Whether a job runs uv itself, such as `uv sync` or `uv run`, rather than only running tools through `uvx`: some
 /// command's first word is `uv` or a path to it. A later word naming uv, as in `pip install uv` or `rm -rf ~/.cache/uv`,
 /// doesn't run it.
@@ -1049,7 +1054,7 @@ fn setup_uv_exact(workflow: &Workflow) -> Option<Result<(), String>> {
         }
         used = true;
         match step.input("version") {
-            Some(version) if EXACT_UV_VERSION.is_match(&version) => {}
+            Some(version) if is_exact_uv_version(&version) => {}
             Some(version) => inexact.push(format!("{job} ({version})")),
             None if step.input("version-file").is_some() => {
                 inexact.push(format!("{job} (version-file, not version)"));

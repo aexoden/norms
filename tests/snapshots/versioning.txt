@@ -68,6 +68,8 @@ warn  uv-lock-exists  [api] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [api] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+pass  uv-required-version  [api] uv: required-version sets the oldest uv needed (>=)
+pass  uv-required-version-ci  [api] uv: CI's pinned uv satisfies required-version
 warn  python-dependency-groups  [api] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [api] Ruff: configured
@@ -91,6 +93,9 @@ warn  uv-lock-exists  [service] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [service] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+warn  uv-required-version  [service] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] required-version (==0.9.5) isn't a single >= minimum
+pass  uv-required-version-ci  [service] uv: CI's pinned uv satisfies required-version
 warn  python-dependency-groups  [service] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [service] Ruff: configured
@@ -125,6 +130,9 @@ warn  uv-lock-exists  [tool] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [tool] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
+pass  uv-required-version  [tool] uv: required-version sets the oldest uv needed (>=)
+warn  uv-required-version-ci  [tool] uv: CI's pinned uv satisfies required-version
+      required-version (>=0.10.0) rejects the uv pinned in ci.yaml: pytest (0.9.5)
 warn  python-dependency-groups  [tool] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [tool] Ruff: configured

@@ -791,7 +791,9 @@ project/
   `requires-python`: they list each minor version it allows, from its lower
   bound up to the version in `.python-version`.
 - `[tool.uv] required-version` sets the minimum uv version the project needs,
-  and the CI setup step pins the exact uv version.
+  as a single `>=` (for example, `>=0.9.5`), so that newer releases of uv keep
+  working. The CI setup step pins the exact uv version, which `required-version`
+  allows.
 - A library's CI also runs its tests on the oldest Python it supports, in a
   `pytest-min-python` job whose `astral-sh/setup-uv` step sets that version as
   `python-version`.

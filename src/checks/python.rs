@@ -5,6 +5,7 @@
 
 use pep508_rs::pep440_rs::Version;
 
+use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
     GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow,
     check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
@@ -221,6 +222,65 @@ pub(crate) fn check_git_archival(
                 Err(format!(
                     "No line marks {} export-subst",
                     ctx.component().path.join(GIT_ARCHIVAL).display()
+                ))
+            },
+        );
+    }
+}
+
+/// Check that `[tool.uv] required-version` sets the oldest uv the component needs, and that every exact uv version a
+/// workflow's setup-uv step pins satisfies it. workflow-setup-uv-version reports the steps pinning no exact version.
+pub(crate) fn check_uv_required_version(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    report: &mut Report,
+) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+
+    report.should(
+        "uv-required-version",
+        "uv: required-version sets the oldest uv needed (>=)",
+        config.check_uv_required_version(),
+    );
+
+    let Ok(required) = config.uv_required_version() else {
+        return;
+    };
+    let mut pinned = false;
+    let mut rejected = Vec::new();
+    for (name, workflow) in project
+        .workflows()
+        .iter()
+        .filter_map(|(name, status)| Some((name, status.as_ref_ok()?)))
+    {
+        for (job, step) in workflow.job_steps_using(SETUP_UV) {
+            let Some(version) = step.input("version") else {
+                continue;
+            };
+            let Some(parsed) = is_exact_uv_version(&version)
+                .then(|| version.parse::<Version>().ok())
+                .flatten()
+            else {
+                continue;
+            };
+            pinned = true;
+            if !required.contains(&parsed) {
+                rejected.push(format!("{name}: {job} ({version})"));
+            }
+        }
+    }
+    if pinned {
+        report.should(
+            "uv-required-version-ci",
+            "uv: CI's pinned uv satisfies required-version",
+            if rejected.is_empty() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "required-version ({required}) rejects the uv pinned in {}",
+                    rejected.join(", ")
                 ))
             },
         );
@@ -707,7 +767,7 @@ fn is_min_python(python_version: &str, min: &Version) -> bool {
 /// version as setup-uv's `python-version` input and runs pytest.
 fn min_python_tested(config: &PyprojectToml, workflow: &Workflow) -> Result<(), String> {
     let versions: Vec<_> = workflow
-        .steps_using_in_jobs_running("astral-sh/setup-uv", runs_pytest)
+        .steps_using_in_jobs_running(SETUP_UV, runs_pytest)
         .filter_map(|step| step.input("python-version"))
         .collect();
     if versions.is_empty() {

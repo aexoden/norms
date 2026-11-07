@@ -105,6 +105,7 @@ fn check_component(
             python::check_uv_lock(ctx, report);
             python::check_dependencies_exact(ctx, report);
             python::check_uv_exclude_newer(ctx, report);
+            python::check_uv_required_version(project, ctx, report);
             python::check_dependency_groups(ctx, report);
             python::check_ruff(ctx, report);
             python::check_ruff_lint(ctx, report);
