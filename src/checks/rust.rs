@@ -306,11 +306,22 @@ fn check_clippy_toml_settings(label: &str, config: &ClippyToml, report: &mut Rep
 // Dependency auditing
 //
 
+/// Check the component's `deny.toml`: that it allows multiple versions of a crate, and that every ignored advisory
+/// gives a reason.
 pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = report.recommend_parsed("deny-toml", "deny.toml", ctx.deny_toml()) else {
+        return;
+    };
+
     report.should(
-        "deny-toml-exists",
-        "Rust: deny.toml",
-        file_exists(&ctx.path().join("deny.toml")),
+        "deny-toml-multiple-versions",
+        "deny.toml: multiple versions allowed (bans)",
+        config.check_multiple_versions(),
+    );
+    report.should(
+        "deny-toml-ignore-reasons",
+        "deny.toml: every ignored advisory has a reason",
+        config.check_ignore_reasons(),
     );
 }
 
@@ -855,6 +866,53 @@ jobs:
         assert_eq!(
             declared_msrvs(&ctx, config),
             BTreeSet::from(["1.85", "1.88"])
+        );
+    }
+
+    #[test]
+    fn deny_toml_allows_multiple_versions_and_explains_ignores() {
+        let results = |deny: &str| {
+            let dir = tempfile::tempdir().unwrap();
+            fs::write(dir.path().join("deny.toml"), deny).unwrap();
+            let component = Component {
+                language: Language::Rust,
+                path: PathBuf::new(),
+            };
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_cargo_deny(&ComponentContext::new(&project, &component), &mut report);
+            report
+                .results
+                .iter()
+                .map(|r| (r.id.clone(), r.status))
+                .collect::<Vec<_>>()
+        };
+        let ids = [
+            "deny-toml-exists",
+            "deny-toml-valid",
+            "deny-toml-multiple-versions",
+            "deny-toml-ignore-reasons",
+        ];
+        let with = |statuses: [Status; 4]| {
+            ids.iter()
+                .map(|id| (*id).to_owned())
+                .zip(statuses)
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            results("[bans]\nmultiple-versions = \"allow\"\n"),
+            with([Status::Pass; 4])
+        );
+        assert_eq!(
+            results(
+                "[advisories]\nignore = [\"RUSTSEC-2024-0001\"]\n\n[bans]\nmultiple-versions = \"allow\"\n"
+            ),
+            with([Status::Pass, Status::Pass, Status::Pass, Status::Warn])
+        );
+        assert_eq!(
+            results("[bans]\nmultiple-versions = \"deny\"\n"),
+            with([Status::Pass, Status::Pass, Status::Warn, Status::Pass])
         );
     }
 

@@ -4,6 +4,7 @@
 mod cargo;
 mod cargoconfig;
 mod clippy;
+mod deny;
 mod devbox;
 mod gitattributes;
 mod markdownlint;
@@ -24,6 +25,7 @@ mod workflow;
 pub(crate) use cargo::{CargoDependency, CargoToml, CargoWorkspace};
 pub(crate) use cargoconfig::CargoConfig;
 pub(crate) use clippy::{CLIPPY_TOML, ClippyToml};
+pub(crate) use deny::DenyToml;
 pub(crate) use devbox::DevboxConfig;
 pub(crate) use gitattributes::{GIT_ARCHIVAL, sets_attribute};
 pub(crate) use markdownlint::MarkdownlintCli2Config;

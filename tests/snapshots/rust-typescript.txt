@@ -83,7 +83,10 @@ pass  clippy-toml-exists  [.] clippy.toml: exists
 pass  clippy-toml-valid  [.] clippy.toml: valid
 pass  clippy-toml-allow-in-tests  [.] clippy.toml: unwrap, expect and panic allowed in tests
 pass  clippy-toml-absolute-paths  [.] clippy.toml: absolute paths limited to 3 segments
-pass  deny-toml-exists  [.] Rust: deny.toml
+pass  deny-toml-exists  [.] deny.toml: exists
+pass  deny-toml-valid  [.] deny.toml: valid
+pass  deny-toml-multiple-versions  [.] deny.toml: multiple versions allowed (bans)
+pass  deny-toml-ignore-reasons  [.] deny.toml: every ignored advisory has a reason
 pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
 pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid

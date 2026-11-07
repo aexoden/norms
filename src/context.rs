@@ -32,7 +32,7 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
-    CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DevboxConfig, GIT_ARCHIVAL,
+    CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DenyToml, DevboxConfig, GIT_ARCHIVAL,
     MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION, PackageJson, PnpmWorkspace,
     PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain,
     TsConfig, Workflow, parse_python_version,
@@ -334,6 +334,7 @@ pub(crate) struct ComponentContext {
     rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
     clippy_toml: OnceLock<(String, ConfigStatus<ClippyToml>)>,
     member_clippy_tomls: OnceLock<Vec<(String, ConfigStatus<ClippyToml>)>>,
+    deny_toml: OnceLock<ConfigStatus<DenyToml>>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     python_version: OnceLock<ConfigStatus<Version>>,
     git_archival: OnceLock<ConfigStatus<String>>,
@@ -358,6 +359,7 @@ impl ComponentContext {
             rust_toolchain: OnceLock::new(),
             clippy_toml: OnceLock::new(),
             member_clippy_tomls: OnceLock::new(),
+            deny_toml: OnceLock::new(),
             pyproject: OnceLock::new(),
             python_version: OnceLock::new(),
             git_archival: OnceLock::new(),
@@ -490,6 +492,12 @@ impl ComponentContext {
                 })
                 .collect()
         })
+    }
+
+    /// Parsed `deny.toml` in the component's own directory (cached).
+    pub(crate) fn deny_toml(&self) -> &ConfigStatus<DenyToml> {
+        self.deny_toml
+            .get_or_init(|| parse_toml_file::<DenyToml>(&self.path.join("deny.toml")))
     }
 
     /// Parsed `pyproject.toml` (cached).

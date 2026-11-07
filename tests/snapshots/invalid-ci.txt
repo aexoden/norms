@@ -64,7 +64,7 @@ warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  clippy-toml-exists  [.] clippy.toml: exists
       File not found
-warn  deny-toml-exists  [.] Rust: deny.toml
-      Not found: deny.toml
+warn  deny-toml-exists  [.] deny.toml: exists
+      File not found
 warn  cargo-config-exists  .cargo/config.toml: exists
       File not found

@@ -134,7 +134,10 @@ pass  clippy-toml-exists  [rust] clippy.toml: exists
 pass  clippy-toml-valid  [rust] clippy.toml: valid
 pass  clippy-toml-allow-in-tests  [rust] clippy.toml: unwrap, expect and panic allowed in tests
 pass  clippy-toml-absolute-paths  [rust] clippy.toml: absolute paths limited to 3 segments
-pass  deny-toml-exists  [rust] Rust: deny.toml
+pass  deny-toml-exists  [rust] deny.toml: exists
+pass  deny-toml-valid  [rust] deny.toml: valid
+pass  deny-toml-multiple-versions  [rust] deny.toml: multiple versions allowed (bans)
+pass  deny-toml-ignore-reasons  [rust] deny.toml: every ignored advisory has a reason
 pass  rust-ci-msrv  [rust] Rust CI: MSRV checked (library)
 pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid
