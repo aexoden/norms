@@ -85,6 +85,9 @@ prints a `Report`, exiting 1 if any check failed.
   `norms.toml` excludes, never descends into symlinked
   directories, and counts a symlinked marker only if it resolves inside the
   root. A marker nested in a component of the same language is folded into it.
+  A second walk, which skips only what `.gitignore` excludes, finds
+  markdownlint's configuration files, for the check that
+  `.markdownlint-cli2.jsonc` is the only one.
   C++ is detected but has no checks yet.
 - `cargo_workspace.rs`: a Rust component that is a Cargo workspace has its
   members found by Cargo's rules (`members` globs with the `glob` crate,

@@ -225,10 +225,11 @@ action otherwise checks only the files at the repository root.
 
 `norms verify` reads the `config` object as markdownlint does, following rule
 aliases and tags and the order of keys, and checks that every rule runs as an
-error and that the options above hold. A config that `extends` another file
-gets a warning instead, since norms doesn't read that file, and neither
-`overrides` nor a `.markdownlint.*` file, which would take its place, is
-followed.
+error and that the options above hold. A config that `extends` another file or
+sets `overrides` gets a warning instead, since norms doesn't read them, and so
+does a project with any other markdownlint configuration file outside the
+directories `ignores` matches: a `.markdownlint.*` file beside it would take the
+place of its `config`, and one in a subdirectory changes the rules there.
 
 ## Licensing
 

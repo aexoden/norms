@@ -118,6 +118,7 @@ pub(crate) struct ProjectContext {
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
     workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
+    markdownlint_configs: OnceLock<Vec<PathBuf>>,
     release_tags: OnceLock<Vec<String>>,
 }
 
@@ -140,6 +141,7 @@ impl ProjectContext {
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
             workflows: OnceLock::new(),
+            markdownlint_configs: OnceLock::new(),
             release_tags: OnceLock::new(),
         }
     }
@@ -227,6 +229,13 @@ impl ProjectContext {
         self.markdownlint_cli2.get_or_init(|| {
             parse_json5_file::<MarkdownlintCli2Config>(&self.path.join(MARKDOWNLINT_CLI2_CONFIG))
         })
+    }
+
+    /// The project's markdownlint configuration files (cached), by their paths relative to the root. See
+    /// [`crate::detection::find_markdownlint_configs`].
+    pub(crate) fn markdownlint_configs(&self) -> &[PathBuf] {
+        self.markdownlint_configs
+            .get_or_init(|| crate::detection::find_markdownlint_configs(&self.path))
     }
 
     /// Parsed `norms.toml` (cached).

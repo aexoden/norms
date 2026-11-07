@@ -23,6 +23,55 @@ const MARKERS: &[(Language, &str)] = &[
 /// exclude them.
 const SKIPPED_DIRS: &[&str] = &[".venv", "node_modules", "target"];
 
+/// The configuration files of markdownlint-cli2, and of markdownlint, which it reads in any directory of the files it
+/// lints.
+const MARKDOWNLINT_CONFIGS: &[&str] = &[
+    ".markdownlint-cli2.jsonc",
+    ".markdownlint-cli2.yaml",
+    ".markdownlint-cli2.cjs",
+    ".markdownlint-cli2.mjs",
+    ".markdownlint.jsonc",
+    ".markdownlint.json",
+    ".markdownlint.yaml",
+    ".markdownlint.yml",
+    ".markdownlint.cjs",
+    ".markdownlint.mjs",
+];
+
+/// Find the project's markdownlint configuration files, by their paths relative to the root, in a stable order.
+///
+/// markdownlint-cli2 lints hidden directories too, and doesn't skip build output or installed dependencies, so the
+/// search covers every directory the project commits: only what its own `.gitignore` files exclude, and `.git`, are
+/// skipped. Like component detection, it doesn't descend into symlinked directories. A directory that can't be read is
+/// left out.
+pub(crate) fn find_markdownlint_configs(root: &Path) -> Vec<PathBuf> {
+    let walker = WalkBuilder::new(root)
+        .hidden(false)
+        .ignore(false)
+        .parents(false)
+        .git_global(false)
+        .git_exclude(false)
+        .require_git(false)
+        .follow_links(false)
+        .filter_entry(|entry| !(entry.depth() > 0 && entry.file_name() == ".git"))
+        .build();
+
+    let mut configs: Vec<PathBuf> = walker
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            MARKDOWNLINT_CONFIGS
+                .iter()
+                .any(|&name| entry.file_name() == name)
+                && entry
+                    .file_type()
+                    .is_some_and(|file_type| !file_type.is_dir())
+        })
+        .filter_map(|entry| Some(entry.path().strip_prefix(root).ok()?.to_path_buf()))
+        .collect();
+    configs.sort();
+    configs
+}
+
 /// The result of searching a project for its components.
 #[derive(Debug, Default)]
 pub(crate) struct Detection {
@@ -221,6 +270,38 @@ mod tests {
         assert_eq!(
             detect(dir.path(), &[]),
             ["Rust:frontend/wasm", "TypeScript:frontend"]
+        );
+    }
+
+    #[test]
+    fn finds_markdownlint_configs_in_every_committed_directory() {
+        let dir = project(&[
+            ".markdownlint-cli2.jsonc",
+            ".markdownlint.yaml",
+            "docs/.markdownlint-cli2.yaml",
+            "docs/api/.markdownlint.jsonc",
+            "docs/markdownlint.json",
+            ".github/.markdownlint.json",
+            "node_modules/pkg/.markdownlint.json",
+            "build/.markdownlint.json",
+            ".git/.markdownlint.json",
+        ]);
+        fs::write(dir.path().join(".gitignore"), "/build/\n").unwrap();
+
+        let found: Vec<_> = find_markdownlint_configs(dir.path())
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            found,
+            [
+                ".github/.markdownlint.json",
+                ".markdownlint-cli2.jsonc",
+                ".markdownlint.yaml",
+                "docs/.markdownlint-cli2.yaml",
+                "docs/api/.markdownlint.jsonc",
+                "node_modules/pkg/.markdownlint.json"
+            ]
         );
     }
 

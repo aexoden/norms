@@ -6,11 +6,13 @@
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
+use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 use regex::Regex;
 
 use crate::checks::{python, rust};
 use crate::config::{
-    DevboxConfig, GATE_JOB, PrecommitConfig, PrecommitHook, SHARED_PRESET, Workflow, commands,
+    DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook, SHARED_PRESET,
+    Workflow, commands,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -440,16 +442,59 @@ pub(crate) fn check_markdownlint(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
+    let unread = other_markdownlint_configs(ctx, config);
     report.should(
         "markdownlint-cli2-rules",
         format!("{MARKDOWNLINT_CLI2_CONFIG}: every default rule enabled"),
-        config.check_rules(),
+        unread.clone().and_then(|()| config.check_rules()),
     );
     report.should(
         "markdownlint-cli2-settings",
         format!("{MARKDOWNLINT_CLI2_CONFIG}: dash lists, 80 columns, repeated headings under different parents"),
-        config.check_settings(),
+        unread.and_then(|()| config.check_settings()),
     );
+}
+
+/// Whether `.markdownlint-cli2.jsonc` is the project's only markdownlint configuration. markdownlint-cli2 would use
+/// any other: a `.markdownlint.*` file beside it in place of its `config`, and the files in a subdirectory for the
+/// files there. Those in directories whose Markdown files its `ignores` patterns match apply to no file it lints, so
+/// they don't count.
+fn other_markdownlint_configs(
+    ctx: &ProjectContext,
+    config: &MarkdownlintCli2Config,
+) -> Result<(), String> {
+    let mut ignores = GlobSetBuilder::new();
+    for pattern in config.ignores() {
+        if let Ok(glob) = GlobBuilder::new(pattern.trim_start_matches("./"))
+            .literal_separator(true)
+            .build()
+        {
+            ignores.add(glob);
+        }
+    }
+    let ignores = ignores.build().unwrap_or_else(|_| GlobSet::empty());
+    let others: Vec<_> = ctx
+        .markdownlint_configs()
+        .iter()
+        .filter(|path| path.as_os_str() != MARKDOWNLINT_CLI2_CONFIG)
+        // A config applies to the Markdown files of its directory, whether or not `ignores` matches the config itself, so
+        // it counts unless a Markdown file beside it would be ignored.
+        .filter(|path| !ignores.is_match(path.with_file_name("file.md")))
+        .map(|path| {
+            path.iter()
+                .map(|part| part.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("/")
+        })
+        .collect();
+    if others.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "Other markdownlint configuration that norms doesn't read: {}",
+            others.join(", ")
+        ))
+    }
 }
 
 /// The globs that lint every Markdown file in the project, rather than only those at its root.

@@ -3,9 +3,8 @@
 
 //! Type-safe model for `.markdownlint-cli2.jsonc`, and the rule configuration markdownlint derives from it.
 //!
-//! Only the file's `config` object is read: a config that `extends` another file is reported as such. The file's
-//! `overrides`, and a `.markdownlint.*` file beside it,
-//! which markdownlint-cli2 would use instead, aren't followed.
+//! Only the file's `config` object is read: a config that `extends` another file, or `overrides` that change it for
+//! some files, are reported as such, and so are the other markdownlint configuration files the project holds.
 
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -151,6 +150,10 @@ pub(crate) struct MarkdownlintCli2Config {
     /// markdownlint's rule configuration, in the order written, since a later key naming a rule overrides an earlier
     /// one.
     pub config: Option<IndexMap<String, Value>>,
+    /// Configurations that apply to some files instead of `config`, which norms doesn't read.
+    pub overrides: Option<Value>,
+    /// Glob patterns of files that markdownlint-cli2 doesn't lint, kept as written.
+    pub ignores: Option<Value>,
 }
 
 /// The styles MD004 knows; it requires dashes for any other.
@@ -245,10 +248,29 @@ impl MarkdownlintCli2Config {
             .as_ref()
             .and_then(|config| config.get("extends"))
         {
+            None | Some(Value::Null) => {}
+            Some(extends) => {
+                return Err(format!(
+                    "config extends {extends}, which norms doesn't read"
+                ));
+            }
+        }
+        match &self.overrides {
             None | Some(Value::Null) => Ok(()),
-            Some(extends) => Err(format!(
-                "config extends {extends}, which norms doesn't read"
-            )),
+            Some(Value::Array(overrides)) if overrides.is_empty() => Ok(()),
+            Some(_) => Err(
+                "overrides change the configuration for some files, which norms doesn't read"
+                    .to_owned(),
+            ),
+        }
+    }
+
+    /// The glob patterns of `ignores`, the files markdownlint-cli2 doesn't lint. Entries that aren't strings are left
+    /// out.
+    pub(crate) fn ignores(&self) -> Vec<&str> {
+        match &self.ignores {
+            Some(Value::Array(ignores)) => ignores.iter().filter_map(Value::as_str).collect(),
+            _ => Vec::new(),
         }
     }
 
@@ -475,6 +497,22 @@ mod tests {
     fn extended_config_is_reported() {
         let config = with(&format!(r#"extends: "base.jsonc", {STANDARD_ENTRIES}"#));
         let error = Err(r#"config extends "base.jsonc", which norms doesn't read"#.to_owned());
+        let overridden: MarkdownlintCli2Config = json5::from_str(&format!(
+            r#"{{ "config": {{ {STANDARD_ENTRIES} }}, "overrides": [{{ "files": ["docs/**"], "config": {{ "MD013": false }} }}] }}"#
+        ))
+        .unwrap();
+        let overrides = Err(
+            "overrides change the configuration for some files, which norms doesn't read"
+                .to_owned(),
+        );
+        assert_eq!(overridden.check_rules(), overrides);
+        assert_eq!(overridden.check_settings(), overrides);
+        let empty: MarkdownlintCli2Config = json5::from_str(&format!(
+            r#"{{ "config": {{ {STANDARD_ENTRIES} }}, "overrides": [], "ignores": ["vendor/**", 3] }}"#
+        ))
+        .unwrap();
+        assert_eq!(empty.check_rules(), Ok(()));
+        assert_eq!(empty.ignores(), ["vendor/**"]);
         assert_eq!(config.check_rules(), error);
         assert_eq!(config.check_settings(), error);
         assert_eq!(

@@ -19,6 +19,7 @@ clap = { version = "=4.6.7", features = ["derive"] }
 colored = "=3.1.1"
 github-actions-expressions = "=1.32.0"
 glob = "=0.3.4"
+globset = "=0.4.21"
 ignore = "=0.4.34"
 indexmap = { version = "=2.14.2", features = ["serde"] }
 jiff = { version = "=0.2.39", default-features = false, features = ["std"] }

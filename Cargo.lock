@@ -620,6 +620,7 @@ dependencies = [
  "colored",
  "github-actions-expressions",
  "glob",
+ "globset",
  "ignore",
  "indexmap",
  "jiff",

@@ -500,6 +500,62 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn other_markdownlint_configs_are_reported() {
+        let project = TempProject::new("markdownlint-configs", None);
+        let config = r#"{
+            "config": {
+                "MD004": { "style": "dash" },
+                "MD013": { "tables": false, "code_blocks": false },
+                "MD024": { "siblings_only": true }
+            },
+            "ignores": ["{vendor,third_party}/**", "**/*.json"]
+        }"#;
+        fs::write(project.0.join(".markdownlint-cli2.jsonc"), config).unwrap();
+        for dir in ["vendor/lib", "third_party", "docs", ".github"] {
+            fs::create_dir_all(project.0.join(dir)).unwrap();
+        }
+        fs::write(project.0.join("vendor/lib/.markdownlint.json"), "{}").unwrap();
+        fs::write(project.0.join("third_party/.markdownlint.json"), "{}").unwrap();
+        let statuses = |results: &[CheckResult]| -> Vec<(String, Status, String)> {
+            results
+                .iter()
+                .filter(|r| {
+                    ["markdownlint-cli2-rules", "markdownlint-cli2-settings"]
+                        .contains(&r.id.as_str())
+                })
+                .map(|r| (r.id.clone(), r.status, r.message.clone()))
+                .collect()
+        };
+        assert!(
+            statuses(&project.verify())
+                .iter()
+                .all(|(_, status, _)| *status == Status::Pass)
+        );
+
+        fs::write(project.0.join(".markdownlint.yaml"), "MD013: false\n").unwrap();
+        fs::write(project.0.join("docs/.markdownlint-cli2.jsonc"), "{}").unwrap();
+        // Ignoring a config file doesn't stop it applying to the other files of its directory.
+        fs::write(project.0.join(".github/.markdownlint.json"), "{}").unwrap();
+        let message = "Other markdownlint configuration that norms doesn't read: .github/.markdownlint.json, \
+                       .markdownlint.yaml, docs/.markdownlint-cli2.jsonc";
+        assert_eq!(
+            statuses(&project.verify()),
+            [
+                (
+                    "markdownlint-cli2-rules".to_owned(),
+                    Status::Warn,
+                    message.to_owned()
+                ),
+                (
+                    "markdownlint-cli2-settings".to_owned(),
+                    Status::Warn,
+                    message.to_owned()
+                ),
+            ]
+        );
+    }
+
     /// Runs the checks against this repository, which exercises the common and Rust checks. Apart from the one result
     /// per waiver, excluded directory or workflow, no check here records more than one result for each component, so
     /// an ID repeated within a component means two checks share it.
