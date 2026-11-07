@@ -317,6 +317,46 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
         },
     );
 
+    // Checks of unused code and unsafe imports and switches
+    for (id, option, value) in [
+        (
+            "tsconfig-no-unchecked-side-effect-imports",
+            "noUncheckedSideEffectImports",
+            opts.no_unchecked_side_effect_imports,
+        ),
+        (
+            "tsconfig-no-fallthrough-cases-in-switch",
+            "noFallthroughCasesInSwitch",
+            opts.no_fallthrough_cases_in_switch,
+        ),
+        (
+            "tsconfig-no-unused-locals",
+            "noUnusedLocals",
+            opts.no_unused_locals,
+        ),
+        (
+            "tsconfig-no-unused-parameters",
+            "noUnusedParameters",
+            opts.no_unused_parameters,
+        ),
+    ] {
+        report.should(
+            id,
+            format!("{label}: {option} enabled"),
+            match value {
+                Some(true) => Ok(()),
+                Some(false) => Err(format!("{option} is false")),
+                None => Err(format!("Missing {option}")),
+            },
+        );
+    }
+
+    report.should(
+        "tsconfig-module-detection",
+        format!("{label}: moduleDetection is force"),
+        check_module_detection(opts.module_detection.as_deref()),
+    );
+
     // isolatedModules (important for bundler compatibility)
     report.should(
         "tsconfig-isolated-modules",
@@ -327,6 +367,16 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
             Outcome::fail("Consider enabling isolatedModules for bundler compatibility")
         },
     );
+}
+
+/// Check that `moduleDetection` is `force`, so that every file is a module. TypeScript reads the value
+/// case-insensitively.
+fn check_module_detection(value: Option<&str>) -> Result<(), String> {
+    match value {
+        Some(value) if value.eq_ignore_ascii_case("force") => Ok(()),
+        Some(value) => Err(format!("moduleDetection is {value:?}, not \"force\"")),
+        None => Err("Missing moduleDetection".to_owned()),
+    }
 }
 
 //
@@ -693,6 +743,21 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn module_detection_is_force_in_any_case() {
+        for value in ["force", "Force"] {
+            assert_eq!(check_module_detection(Some(value)), Ok(()), "{value}");
+        }
+        assert_eq!(
+            check_module_detection(Some("auto")),
+            Err("moduleDetection is \"auto\", not \"force\"".to_owned())
+        );
+        assert_eq!(
+            check_module_detection(None),
+            Err("Missing moduleDetection".to_owned())
+        );
+    }
 
     #[test]
     fn eslint_fails_on_warnings_with_max_warnings_zero() {

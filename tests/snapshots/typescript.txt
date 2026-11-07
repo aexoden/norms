@@ -90,6 +90,11 @@ pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.app.json: noUncheckedIn
 pass  tsconfig-module  [.] tsconfig.app.json: module setting configured
 pass  tsconfig-target  [.] tsconfig.app.json: target configured
 pass  tsconfig-verbatim-module-syntax  [.] tsconfig.app.json: verbatimModuleSyntax enabled
+pass  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.app.json: noUncheckedSideEffectImports enabled
+pass  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.app.json: noFallthroughCasesInSwitch enabled
+pass  tsconfig-no-unused-locals  [.] tsconfig.app.json: noUnusedLocals enabled
+pass  tsconfig-no-unused-parameters  [.] tsconfig.app.json: noUnusedParameters enabled
+pass  tsconfig-module-detection  [.] tsconfig.app.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [.] tsconfig.app.json: isolatedModules enabled
 pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
@@ -98,6 +103,11 @@ pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.node.json: noUncheckedI
 pass  tsconfig-module  [.] tsconfig.node.json: module setting configured
 pass  tsconfig-target  [.] tsconfig.node.json: target configured
 pass  tsconfig-verbatim-module-syntax  [.] tsconfig.node.json: verbatimModuleSyntax enabled
+pass  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.node.json: noUncheckedSideEffectImports enabled
+pass  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.node.json: noFallthroughCasesInSwitch enabled
+pass  tsconfig-no-unused-locals  [.] tsconfig.node.json: noUnusedLocals enabled
+pass  tsconfig-no-unused-parameters  [.] tsconfig.node.json: noUnusedParameters enabled
+pass  tsconfig-module-detection  [.] tsconfig.node.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [.] tsconfig.node.json: isolatedModules enabled
 pass  eslint-config-exists  [.] ESLint: configured
 pass  eslint-dependency  [.] ESLint: in dependencies

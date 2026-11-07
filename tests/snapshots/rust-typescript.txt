@@ -128,6 +128,11 @@ pass  tsconfig-no-unchecked-indexed-access  [frontend] tsconfig.app.json: noUnch
 pass  tsconfig-module  [frontend] tsconfig.app.json: module setting configured
 pass  tsconfig-target  [frontend] tsconfig.app.json: target configured
 pass  tsconfig-verbatim-module-syntax  [frontend] tsconfig.app.json: verbatimModuleSyntax enabled
+pass  tsconfig-no-unchecked-side-effect-imports  [frontend] tsconfig.app.json: noUncheckedSideEffectImports enabled
+pass  tsconfig-no-fallthrough-cases-in-switch  [frontend] tsconfig.app.json: noFallthroughCasesInSwitch enabled
+pass  tsconfig-no-unused-locals  [frontend] tsconfig.app.json: noUnusedLocals enabled
+pass  tsconfig-no-unused-parameters  [frontend] tsconfig.app.json: noUnusedParameters enabled
+pass  tsconfig-module-detection  [frontend] tsconfig.app.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [frontend] tsconfig.app.json: isolatedModules enabled
 pass  tsconfig-reference-exists  [frontend] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [frontend] tsconfig.node.json: valid
@@ -136,6 +141,11 @@ pass  tsconfig-no-unchecked-indexed-access  [frontend] tsconfig.node.json: noUnc
 pass  tsconfig-module  [frontend] tsconfig.node.json: module setting configured
 pass  tsconfig-target  [frontend] tsconfig.node.json: target configured
 pass  tsconfig-verbatim-module-syntax  [frontend] tsconfig.node.json: verbatimModuleSyntax enabled
+pass  tsconfig-no-unchecked-side-effect-imports  [frontend] tsconfig.node.json: noUncheckedSideEffectImports enabled
+pass  tsconfig-no-fallthrough-cases-in-switch  [frontend] tsconfig.node.json: noFallthroughCasesInSwitch enabled
+pass  tsconfig-no-unused-locals  [frontend] tsconfig.node.json: noUnusedLocals enabled
+pass  tsconfig-no-unused-parameters  [frontend] tsconfig.node.json: noUnusedParameters enabled
+pass  tsconfig-module-detection  [frontend] tsconfig.node.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [frontend] tsconfig.node.json: isolatedModules enabled
 pass  eslint-config-exists  [frontend] ESLint: configured
 pass  eslint-dependency  [frontend] ESLint: in dependencies

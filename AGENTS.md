@@ -196,7 +196,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   through `pnpm --dir . exec`; and the `eslint` hook passes `--max-warnings 10`
   while CI lints through the `lint` script, which runs plain `eslint .`.
   `typescript-config` breaks the TypeScript configuration standards: its
-  `package.json` sets `private` to the string `"true"`.
+  `package.json` sets `private` to the string `"true"`, and its two
+  referenced tsconfigs lack, turn off or set to another value some of the
+  required compiler options, one spelling `moduleDetection` in another case,
+  which TypeScript accepts.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

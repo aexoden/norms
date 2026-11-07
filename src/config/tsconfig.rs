@@ -36,7 +36,7 @@ pub(crate) struct TsReference {
 }
 
 impl TsConfig {
-    /// Whether htis is a solution-style tsconfig (uses project references).
+    /// Whether this is a solution-style tsconfig (uses project references).
     ///
     /// Solution-style configs have a non-empty `references` array and typically no `compilerOptions`, delegating all
     /// compilation to the referenced sub-projects.
@@ -56,6 +56,11 @@ impl TsConfig {
 pub(crate) struct TsCompilerOptions {
     pub strict: Option<bool>,
     pub no_unchecked_indexed_access: Option<bool>,
+    pub no_unchecked_side_effect_imports: Option<bool>,
+    pub no_fallthrough_cases_in_switch: Option<bool>,
+    pub no_unused_locals: Option<bool>,
+    pub no_unused_parameters: Option<bool>,
+    pub module_detection: Option<String>,
     pub module: Option<String>,
     pub target: Option<String>,
     pub module_resolution: Option<String>,

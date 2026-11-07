@@ -41,8 +41,40 @@ warn  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 warn  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
       File not found
-fail  tsconfig-exists  [.] tsconfig.json: exists
-      File not found
+pass  tsconfig-exists  [.] tsconfig.json: exists
+pass  tsconfig-valid  [.] tsconfig.json: valid
+pass  tsconfig-project-references  [.] tsconfig.json: uses project references
+pass  tsconfig-references-non-empty  [.] tsconfig.json: references non-empty
+pass  tsconfig-reference-exists  [.] tsconfig.app.json: exists
+pass  tsconfig-reference-valid  [.] tsconfig.app.json: valid
+pass  tsconfig-strict  [.] tsconfig.app.json: strict mode enabled
+pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.app.json: noUncheckedIndexedAccess enabled
+pass  tsconfig-module  [.] tsconfig.app.json: module setting configured
+pass  tsconfig-target  [.] tsconfig.app.json: target configured
+pass  tsconfig-verbatim-module-syntax  [.] tsconfig.app.json: verbatimModuleSyntax enabled
+warn  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.app.json: noUncheckedSideEffectImports enabled
+      Missing noUncheckedSideEffectImports
+pass  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.app.json: noFallthroughCasesInSwitch enabled
+pass  tsconfig-no-unused-locals  [.] tsconfig.app.json: noUnusedLocals enabled
+warn  tsconfig-no-unused-parameters  [.] tsconfig.app.json: noUnusedParameters enabled
+      noUnusedParameters is false
+warn  tsconfig-module-detection  [.] tsconfig.app.json: moduleDetection is force
+      moduleDetection is "auto", not "force"
+pass  tsconfig-isolated-modules  [.] tsconfig.app.json: isolatedModules enabled
+pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
+pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
+pass  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
+pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.node.json: noUncheckedIndexedAccess enabled
+pass  tsconfig-module  [.] tsconfig.node.json: module setting configured
+pass  tsconfig-target  [.] tsconfig.node.json: target configured
+pass  tsconfig-verbatim-module-syntax  [.] tsconfig.node.json: verbatimModuleSyntax enabled
+pass  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.node.json: noUncheckedSideEffectImports enabled
+warn  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.node.json: noFallthroughCasesInSwitch enabled
+      Missing noFallthroughCasesInSwitch
+pass  tsconfig-no-unused-locals  [.] tsconfig.node.json: noUnusedLocals enabled
+pass  tsconfig-no-unused-parameters  [.] tsconfig.node.json: noUnusedParameters enabled
+pass  tsconfig-module-detection  [.] tsconfig.node.json: moduleDetection is force
+pass  tsconfig-isolated-modules  [.] tsconfig.node.json: isolatedModules enabled
 fail  eslint-config-exists  [.] ESLint: configured
       Not found: eslint.config.ts
 pass  eslint-dependency  [.] ESLint: in dependencies
