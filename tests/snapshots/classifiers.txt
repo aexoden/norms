@@ -33,6 +33,14 @@ pass  python-version-exists  [app] Python: .python-version
 pass  python-version-exact  [app] Python: .python-version pins an exact version
 pass  pyproject-requires-python-pin  [app] pyproject.toml: requires-python agrees with .python-version
 pass  pyproject-python-classifiers  [app] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [app] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [app] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [app] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [app] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [app] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [app] Python: uv.lock
@@ -54,6 +62,14 @@ pass  pyproject-project  [bad-pin] pyproject.toml: has [project] section
 pass  python-version-exists  [bad-pin] Python: .python-version
 warn  python-version-exact  [bad-pin] Python: .python-version pins an exact version
       Not a plain version, cpython@3.15: expected version to start with a number, but no leading ASCII digits were found
+warn  pyproject-version-dynamic  [bad-pin] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [bad-pin] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [bad-pin] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [bad-pin] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [bad-pin] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [bad-pin] Python: uv.lock
@@ -74,6 +90,14 @@ pass  pyproject-project  [capped] pyproject.toml: has [project] section
 warn  python-version-exists  [capped] Python: .python-version
       Not found: .python-version
 pass  pyproject-python-classifiers  [capped] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [capped] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [capped] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [capped] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [capped] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [capped] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [capped] Python: uv.lock
@@ -96,6 +120,14 @@ pass  python-version-exact  [lib] Python: .python-version pins an exact version
 pass  pyproject-requires-python-pin  [lib] pyproject.toml: requires-python agrees with .python-version
 warn  pyproject-python-classifiers  [lib] pyproject.toml: Python classifiers match requires-python
       Expected classifiers for Python 3.12, 3.14, 3.15, from requires-python (>=3.12, !=3.13.*) up to 3.15.2 in .python-version: missing 3.15; unexpected 3.11
+warn  pyproject-version-dynamic  [lib] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [lib] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [lib] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [lib] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [lib] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [lib] Python: uv.lock
@@ -117,6 +149,14 @@ warn  python-version-exists  [parent-pin/open] Python: .python-version
       Not found: .python-version
 warn  pyproject-python-classifiers  [parent-pin/open] pyproject.toml: Python classifiers match requires-python
       No .python-version to give the newest supported Python, and requires-python (>=3.12) has no upper bound within Python 3
+warn  pyproject-version-dynamic  [parent-pin/open] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [parent-pin/open] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [parent-pin/open] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [parent-pin/open] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [parent-pin/open] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [parent-pin/open] Python: uv.lock

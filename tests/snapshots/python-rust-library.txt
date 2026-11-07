@@ -73,6 +73,10 @@ pass  python-version-exists  [.] Python: .python-version
 pass  python-version-exact  [.] Python: .python-version pins an exact version
 pass  pyproject-requires-python-pin  [.] pyproject.toml: requires-python agrees with .python-version
 pass  pyproject-python-classifiers  [.] pyproject.toml: Python classifiers match requires-python
+pass  pyproject-version-dynamic  [.] pyproject.toml: version is dynamic
+pass  pyproject-build-system  [.] pyproject.toml: builds with hatchling and hatch-vcs
+pass  pyproject-hatch-version  [.] pyproject.toml: version from git tags (hatch-vcs)
+pass  uv-cache-keys  [.] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
 pass  python-src-layout  [.] Python: src/ directory
 pass  python-src-packages  [.] Python: src/ contains packages
 pass  uv-lock-exists  [.] Python: uv.lock

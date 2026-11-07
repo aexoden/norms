@@ -99,6 +99,7 @@ fn check_component(
             python::check_python_version(ctx, report);
             python::check_requires_python_pin(ctx, report);
             python::check_python_classifiers(ctx, report);
+            python::check_versioning(ctx, report);
             python::check_src_layout(ctx, report);
             python::check_uv_lock(ctx, report);
             python::check_dependencies_exact(ctx, report);

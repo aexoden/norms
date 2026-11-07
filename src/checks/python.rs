@@ -106,6 +106,38 @@ pub(crate) fn check_python_classifiers(ctx: &ComponentContext, report: &mut Repo
     );
 }
 
+/// Check that a packaged component takes its version from git tags through hatch-vcs, and that uv reinstalls it when
+/// they move. A component without a `[project]` table, or with `[tool.uv] package = false`, has no version to take.
+pub(crate) fn check_versioning(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+    if !config.has_version() {
+        return;
+    }
+
+    report.should(
+        "pyproject-version-dynamic",
+        "pyproject.toml: version is dynamic",
+        config.check_version_dynamic(),
+    );
+    report.should(
+        "pyproject-build-system",
+        "pyproject.toml: builds with hatchling and hatch-vcs",
+        config.check_build_system(),
+    );
+    report.should(
+        "pyproject-hatch-version",
+        "pyproject.toml: version from git tags (hatch-vcs)",
+        config.check_hatch_version(!ctx.component().path.as_os_str().is_empty()),
+    );
+    report.should(
+        "uv-cache-keys",
+        "uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)",
+        config.check_uv_cache_keys(),
+    );
+}
+
 //
 // Project layout
 //

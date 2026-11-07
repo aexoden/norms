@@ -822,6 +822,11 @@ source = "vcs"
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 ```
 
+A Python component in a subdirectory of the repository also sets `raw-options
+= { search_parent_directories = true }` in `[tool.hatch.version]`, so that
+hatch-vcs finds the repository above it. A project with `[tool.uv] package =
+false` isn't built, so it has no version and needs none of this.
+
 `.git_archival.txt`, marked `export-subst` in `.gitattributes`, lets source
 archives without git history report their version. Code reads the version at
 runtime with `importlib.metadata.version()`, in `__about__.py`.

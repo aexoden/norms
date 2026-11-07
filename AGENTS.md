@@ -175,6 +175,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   names rules by alias and tag, turns some off and lets others only warn, and
   sets other options than the standard's; its markdownlint-cli2 hook has
   another ID, and its CI action lints only the root's files.
+  `versioning` has Python components in subdirectories, checked against the
+  versioning standards: one that conforms but lacks the `raw-options` a
+  component below the root needs, one with a static version and another build
+  backend, and one uv doesn't build (`package = false`), which isn't checked.
   `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files: a
   `uv-lock` hook and CI step run through uv's global options, and of the jobs

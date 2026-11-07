@@ -76,6 +76,14 @@ warn  python-version-exists  [py] Python: .python-version
       Not found: .python-version
 warn  pyproject-python-classifiers  [py] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
+warn  pyproject-version-dynamic  [py] pyproject.toml: version is dynamic
+      [project] sets a static version
+warn  pyproject-build-system  [py] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [py] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [py] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [py] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [py] Python: uv.lock

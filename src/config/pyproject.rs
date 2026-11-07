@@ -25,6 +25,7 @@ use super::python_version::PYTHON_VERSION;
 pub(crate) struct PyprojectToml {
     pub project: Option<ProjectSection>,
     pub tool: Option<ToolSection>,
+    pub build_system: Option<BuildSystem>,
     /// Each group's requirements and `include-group` tables. Kept unparsed, so that a malformed group fails only the
     /// checks reading it.
     pub dependency_groups: Option<BTreeMap<String, toml::Value>>,
@@ -41,6 +42,9 @@ const PRIVATE_CLASSIFIER: &str = "Private :: Do Not Upload";
 #[serde(default, rename_all = "kebab-case")]
 pub(crate) struct ProjectSection {
     pub name: Option<String>,
+    /// A static version, which the standards replace with one from git tags. Kept unparsed, as only its presence
+    /// matters.
+    pub version: Option<toml::Value>,
     pub description: Option<String>,
     pub requires_python: Option<String>,
     pub license: Option<toml::Value>,
@@ -62,7 +66,35 @@ pub(crate) struct ToolSection {
     pub ruff: Option<RuffConfig>,
     pub mypy: Option<MypyConfig>,
     pub uv: Option<UvConfig>,
+    pub hatch: Option<HatchConfig>,
 }
+
+/// The `[build-system]` table. Its fields are kept unparsed, so that a malformed one fails only the check reading it.
+#[derive(Debug, Deserialize, Default)]
+#[serde(default, rename_all = "kebab-case")]
+pub(crate) struct BuildSystem {
+    /// The requirements of the build backend.
+    pub requires: Option<toml::Value>,
+    /// The module path of the build backend.
+    pub build_backend: Option<toml::Value>,
+}
+
+/// The `[tool.hatch]` table.
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+pub(crate) struct HatchConfig {
+    /// `[tool.hatch.version]`, where the version comes from. Kept unparsed, so that a malformed value fails only the
+    /// check reading it.
+    pub version: Option<toml::Value>,
+}
+
+/// The `[tool.uv] cache-keys` entry that makes uv reinstall the project when `pyproject.toml` changes, which any list
+/// of cache keys must repeat, since it replaces uv's default list.
+const PYPROJECT_CACHE_KEY: &str = "{ file = \"pyproject.toml\" }";
+
+/// The `[tool.uv] cache-keys` entry that makes uv reinstall the project when HEAD or the tags move, so that the version
+/// hatch-vcs derives stays current.
+const GIT_CACHE_KEY: &str = "{ git = { commit = true, tags = true } }";
 
 impl PyprojectToml {
     /// The oldest Python release that `requires-python` allows, read as uv reads it: as release versions only, without
@@ -113,13 +145,183 @@ impl PyprojectToml {
     /// Whether the project is a library: a package, with a `[project]` table and without `[tool.uv] package = false`,
     /// that installs no command.
     pub(crate) fn is_library(&self) -> bool {
-        let unpackaged = self
-            .tool
+        self.project.is_some() && !self.is_unpackaged() && !self.is_application()
+    }
+
+    /// Whether uv is told not to build and install the project as a package, with `[tool.uv] package = false`.
+    pub(crate) fn is_unpackaged(&self) -> bool {
+        self.tool
             .as_ref()
             .and_then(|tool| tool.uv.as_ref())
             .and_then(|uv| uv.package.as_ref())
-            .is_some_and(|package| package.as_bool() == Some(false));
-        self.project.is_some() && !unpackaged && !self.is_application()
+            .is_some_and(|package| package.as_bool() == Some(false))
+    }
+
+    /// Whether the project has a version for the build backend to give it: it has a `[project]` table, unlike a
+    /// virtual workspace root, and isn't marked `[tool.uv] package = false`.
+    pub(crate) fn has_version(&self) -> bool {
+        self.project.is_some() && !self.is_unpackaged()
+    }
+
+    /// Check that the project leaves its version to the build backend: `version` is listed in `[project] dynamic`
+    /// rather than set in `[project]`.
+    pub(crate) fn check_version_dynamic(&self) -> Result<(), String> {
+        let project = self.project.as_ref();
+        if project.is_some_and(|p| p.version.is_some()) {
+            return Err("[project] sets a static version".to_owned());
+        }
+        let dynamic = project
+            .and_then(|p| p.dynamic.as_ref())
+            .and_then(toml::Value::as_array);
+        if dynamic
+            .into_iter()
+            .flatten()
+            .any(|field| field.as_str() == Some("version"))
+        {
+            Ok(())
+        } else {
+            Err("project.dynamic doesn't list version".to_owned())
+        }
+    }
+
+    /// Check that the project builds with hatchling and hatch-vcs: `[build-system]` requires both, at any version, and
+    /// names `hatchling.build` as its backend.
+    pub(crate) fn check_build_system(&self) -> Result<(), String> {
+        let Some(build) = &self.build_system else {
+            return Err("No [build-system] table".to_owned());
+        };
+        let mut issues = Vec::new();
+        let names: Vec<PackageName> = match build.requires.as_ref().map(toml::Value::as_array) {
+            None => Vec::new(),
+            Some(None) => {
+                issues.push("build-system.requires isn't a list".to_owned());
+                Vec::new()
+            }
+            Some(Some(requires)) => requires
+                .iter()
+                .filter_map(|entry| {
+                    let parsed = entry.as_str().map(Requirement::<VerbatimUrl>::from_str);
+                    match parsed {
+                        Some(Ok(requirement)) => Some(requirement.name),
+                        Some(Err(error)) => {
+                            issues.push(format!(
+                                "build-system.requires has an invalid requirement {entry}: {}",
+                                error.message
+                            ));
+                            None
+                        }
+                        None => {
+                            issues.push(format!(
+                                "build-system.requires has {entry}, not a requirement"
+                            ));
+                            None
+                        }
+                    }
+                })
+                .collect(),
+        };
+        let missing: Vec<&str> = ["hatch-vcs", "hatchling"]
+            .into_iter()
+            .filter(|name| !names.iter().any(|known| known.as_ref() == *name))
+            .collect();
+        if !missing.is_empty() {
+            issues.push(format!(
+                "build-system.requires lacks {}",
+                missing.join(" and ")
+            ));
+        }
+        match build.build_backend.as_ref().map(toml::Value::as_str) {
+            Some(Some("hatchling.build")) => {}
+            Some(Some(backend)) => {
+                issues.push(format!(
+                    "build-system.build-backend is {backend}, not hatchling.build"
+                ));
+            }
+            Some(None) => issues.push("build-system.build-backend isn't a string".to_owned()),
+            None => issues.push("build-system.build-backend isn't set".to_owned()),
+        }
+        if issues.is_empty() {
+            Ok(())
+        } else {
+            Err(issues.join("; "))
+        }
+    }
+
+    /// Check that hatch takes the version from git: `[tool.hatch.version] source = "vcs"`. A project below the root of
+    /// its repository also needs `raw-options = { search_parent_directories = true }`, without which hatch-vcs looks
+    /// for the repository only in the project's own directory.
+    pub(crate) fn check_hatch_version(&self, in_subdirectory: bool) -> Result<(), String> {
+        let Some(version) = self
+            .tool
+            .as_ref()
+            .and_then(|tool| tool.hatch.as_ref())
+            .and_then(|hatch| hatch.version.as_ref())
+        else {
+            return Err("No [tool.hatch.version] table".to_owned());
+        };
+        let mut issues = Vec::new();
+        if version.get("source").and_then(toml::Value::as_str) != Some("vcs") {
+            issues.push("[tool.hatch.version] source isn't \"vcs\"".to_owned());
+        }
+        if in_subdirectory
+            && version
+                .get("raw-options")
+                .and_then(|options| options.get("search_parent_directories"))
+                .and_then(toml::Value::as_bool)
+                != Some(true)
+        {
+            issues.push(
+                "[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
+                 below the repository root needs"
+                    .to_owned(),
+            );
+        }
+        if issues.is_empty() {
+            Ok(())
+        } else {
+            Err(issues.join("; "))
+        }
+    }
+
+    /// Check that `[tool.uv] cache-keys` makes uv reinstall the project when `pyproject.toml` changes and when HEAD or
+    /// the tags move, so that the installed version stays current. Other keys may be listed too.
+    pub(crate) fn check_uv_cache_keys(&self) -> Result<(), String> {
+        let Some(keys) = self
+            .tool
+            .as_ref()
+            .and_then(|tool| tool.uv.as_ref())
+            .and_then(|uv| uv.cache_keys.as_ref())
+        else {
+            return Err("[tool.uv] sets no cache-keys".to_owned());
+        };
+        let Some(keys) = keys.as_array() else {
+            return Err("[tool.uv] cache-keys isn't a list".to_owned());
+        };
+        let pyproject = keys
+            .iter()
+            .any(|key| key.get("file").and_then(toml::Value::as_str) == Some("pyproject.toml"));
+        let git = keys.iter().any(|key| {
+            let git = key.get("git");
+            let flag = |name| {
+                git.and_then(|git| git.get(name))
+                    .and_then(toml::Value::as_bool)
+                    == Some(true)
+            };
+            flag("commit") && flag("tags")
+        });
+        let missing: Vec<&str> = [(pyproject, PYPROJECT_CACHE_KEY), (git, GIT_CACHE_KEY)]
+            .into_iter()
+            .filter(|(present, _)| !present)
+            .map(|(_, key)| key)
+            .collect();
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "[tool.uv] cache-keys lacks {}",
+                missing.join(" and ")
+            ))
+        }
     }
 
     /// Whether the project is published: it isn't marked `Private :: Do Not Upload`, the classifier that the Python
@@ -506,6 +708,9 @@ pub(crate) struct UvConfig {
     /// Where packages come from, when not from the default index. Kept unparsed, so that a malformed entry fails
     /// only the checks reading it.
     pub sources: Option<toml::Value>,
+    /// What uv's cached build of the project depends on, so that a change to any of them reinstalls it. Kept
+    /// unparsed, so that a malformed entry fails only the check reading it.
+    pub cache_keys: Option<toml::Value>,
 }
 
 //
@@ -536,6 +741,150 @@ mod tests {
         assert!(!parse("[tool.ruff]\nline-length = 120\n").is_library());
         assert!(!parse("[project]\nname = 'service'\n\n[tool.uv]\npackage = false\n").is_library());
         assert!(parse("[project]\nname = 'lib'\n\n[tool.uv]\npackage = true\n").is_library());
+    }
+
+    #[test]
+    fn versions_come_from_git_through_hatch_vcs() {
+        let conforming = parse(
+            r#"
+[project]
+dynamic = ["version"]
+
+[build-system]
+requires = ["hatch-vcs>=0.4", "Hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "README.md" }, { git = { commit = true, tags = true } }]
+"#,
+        );
+        assert_eq!(conforming.check_version_dynamic(), Ok(()));
+        assert_eq!(conforming.check_build_system(), Ok(()));
+        assert_eq!(conforming.check_hatch_version(false), Ok(()));
+        assert_eq!(conforming.check_uv_cache_keys(), Ok(()));
+        assert_eq!(
+            conforming.check_hatch_version(true),
+            Err("[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
+                 below the repository root needs"
+                .to_owned())
+        );
+        let nested = parse(
+            "[tool.hatch.version]\nsource = 'vcs'\nraw-options = { search_parent_directories = true }\n",
+        );
+        assert_eq!(nested.check_hatch_version(true), Ok(()));
+
+        let drifted = parse(
+            r#"
+[project]
+version = "1.0.0"
+dynamic = ["readme"]
+
+[build-system]
+requires = ["setuptools", "hatchling"]
+build-backend = "setuptools.build_meta"
+
+[tool.hatch.version]
+path = "src/demo/__about__.py"
+
+[tool.uv]
+cache-keys = [{ git = { commit = true } }]
+"#,
+        );
+        assert_eq!(
+            drifted.check_version_dynamic(),
+            Err("[project] sets a static version".to_owned())
+        );
+        assert_eq!(
+            parse("[project]\ndynamic = ['readme']\n").check_version_dynamic(),
+            Err("project.dynamic doesn't list version".to_owned())
+        );
+        assert_eq!(
+            drifted.check_build_system(),
+            Err("build-system.requires lacks hatch-vcs; build-system.build-backend is setuptools.build_meta, not \
+                 hatchling.build"
+                .to_owned())
+        );
+        assert_eq!(
+            drifted.check_hatch_version(false),
+            Err("[tool.hatch.version] source isn't \"vcs\"".to_owned())
+        );
+        assert_eq!(
+            drifted.check_uv_cache_keys(),
+            Err(format!(
+                "[tool.uv] cache-keys lacks {PYPROJECT_CACHE_KEY} and {GIT_CACHE_KEY}"
+            ))
+        );
+
+        let empty = parse("");
+        assert_eq!(
+            empty.check_build_system(),
+            Err("No [build-system] table".to_owned())
+        );
+        assert_eq!(
+            empty.check_hatch_version(false),
+            Err("No [tool.hatch.version] table".to_owned())
+        );
+        assert_eq!(
+            empty.check_uv_cache_keys(),
+            Err("[tool.uv] sets no cache-keys".to_owned())
+        );
+        assert_eq!(
+            parse("[build-system]\nrequires = 'hatchling'\nbuild-backend = 1\n").check_build_system(),
+            Err("build-system.requires isn't a list; build-system.requires lacks hatch-vcs and hatchling; \
+                 build-system.build-backend isn't a string"
+                .to_owned())
+        );
+        assert_eq!(
+            parse("[tool.uv]\ncache-keys = 'pyproject.toml'\n").check_uv_cache_keys(),
+            Err("[tool.uv] cache-keys isn't a list".to_owned())
+        );
+        assert!(parse("[tool.uv]\npackage = false\n").is_unpackaged());
+        assert!(!parse("[tool.uv]\npackage = true\n").is_unpackaged());
+    }
+
+    #[test]
+    fn versioning_issues_are_named() {
+        assert_eq!(
+            parse("[build-system]\nrequires = ['hatch-vcs', 'hatchling']\n").check_build_system(),
+            Err("build-system.build-backend isn't set".to_owned())
+        );
+        let requires = parse(
+            "[build-system]\nrequires = ['hatch-vcs >= 0.4,', 1, 'hatchling']\nbuild-backend = 'hatchling.build'\n",
+        )
+        .check_build_system()
+        .unwrap_err();
+        assert!(
+            requires.starts_with(
+                "build-system.requires has an invalid requirement \"hatch-vcs >= 0.4,\": "
+            ),
+            "{requires}"
+        );
+        assert!(
+            requires.ends_with(
+                "; build-system.requires has 1, not a requirement; build-system.requires lacks hatch-vcs"
+            ),
+            "{requires}"
+        );
+        assert_eq!(
+            parse("[tool.hatch.version]\nsource = 'vcs'\nraw-options = { search_parent_directories = false }\n")
+                .check_hatch_version(true),
+            Err("[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
+                 below the repository root needs"
+                .to_owned())
+        );
+        assert_eq!(
+            parse(
+                "[tool.uv]\ncache-keys = [{ file = 'pyproject.toml' }, { git = { tags = true } }]\n"
+            )
+            .check_uv_cache_keys(),
+            Err(format!("[tool.uv] cache-keys lacks {GIT_CACHE_KEY}"))
+        );
+        assert!(parse("[project]\nname = 'lib'\n").has_version());
+        assert!(!parse("[project]\nname = 'svc'\n\n[tool.uv]\npackage = false\n").has_version());
+        assert!(!parse("[tool.uv.workspace]\nmembers = ['packages/*']\n").has_version());
     }
 
     #[test]

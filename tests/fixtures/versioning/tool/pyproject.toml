@@ -1,0 +1,14 @@
+[project]
+name = "tool"
+version = "1.0.0"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { search_parent_directories = true }
+
+[tool.uv]
+cache-keys = [{ git = { commit = true } }]

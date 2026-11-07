@@ -34,6 +34,14 @@ pass  python-version-exact  [app-other] Python: .python-version pins an exact ve
 warn  pyproject-requires-python-pin  [app-other] pyproject.toml: requires-python agrees with .python-version
       An application's requires-python (==3.15.1) isn't ==3.15.2, the version in .python-version
 pass  pyproject-python-classifiers  [app-other] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [app-other] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [app-other] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [app-other] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [app-other] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [app-other] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [app-other] Python: uv.lock
@@ -57,6 +65,14 @@ pass  python-version-exact  [app-range] Python: .python-version pins an exact ve
 warn  pyproject-requires-python-pin  [app-range] pyproject.toml: requires-python agrees with .python-version
       An application's requires-python (>=3.15) isn't ==3.15.2, the version in .python-version
 pass  pyproject-python-classifiers  [app-range] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [app-range] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [app-range] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [app-range] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [app-range] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [app-range] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [app-range] Python: uv.lock
@@ -80,6 +96,14 @@ pass  python-version-exact  [lib-below] Python: .python-version pins an exact ve
 warn  pyproject-requires-python-pin  [lib-below] pyproject.toml: requires-python agrees with .python-version
       requires-python (>=3.12, <3.15) doesn't allow 3.15.2, the version in .python-version
 pass  pyproject-python-classifiers  [lib-below] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [lib-below] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [lib-below] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [lib-below] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [lib-below] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [lib-below] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [lib-below] Python: uv.lock
@@ -101,6 +125,14 @@ pass  python-version-exists  [minor] Python: .python-version
 warn  python-version-exact  [minor] Python: .python-version pins an exact version
       Not an exact x.y.z release: 3.15
 pass  pyproject-python-classifiers  [minor] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [minor] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [minor] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [minor] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [minor] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
 warn  python-src-layout  [minor] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [minor] Python: uv.lock

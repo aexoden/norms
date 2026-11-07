@@ -1,0 +1,103 @@
+exit: 1
+languages: python
+components: python (api), python (service), python (tool)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+warn  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md, which the project needs because the Python component at api is a published library
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [api] pyproject.toml: exists
+pass  pyproject-valid  [api] pyproject.toml: valid
+pass  pyproject-project  [api] pyproject.toml: has [project] section
+warn  python-version-exists  [api] Python: .python-version
+      Not found: .python-version
+warn  pyproject-python-classifiers  [api] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
+pass  pyproject-version-dynamic  [api] pyproject.toml: version is dynamic
+pass  pyproject-build-system  [api] pyproject.toml: builds with hatchling and hatch-vcs
+warn  pyproject-hatch-version  [api] pyproject.toml: version from git tags (hatch-vcs)
+      [tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project below the repository root needs
+pass  uv-cache-keys  [api] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+warn  python-src-layout  [api] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [api] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [api] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [api] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [api] Ruff: configured
+      Missing [tool.ruff] in pyrpoject.toml
+warn  ruff-lint-configured  [api] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [api] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [service] pyproject.toml: exists
+pass  pyproject-valid  [service] pyproject.toml: valid
+pass  pyproject-project  [service] pyproject.toml: has [project] section
+warn  python-version-exists  [service] Python: .python-version
+      Not found: .python-version
+warn  pyproject-python-classifiers  [service] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
+warn  python-src-layout  [service] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [service] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [service] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [service] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [service] Ruff: configured
+      Missing [tool.ruff] in pyrpoject.toml
+warn  ruff-lint-configured  [service] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [service] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  pyproject-exists  [tool] pyproject.toml: exists
+pass  pyproject-valid  [tool] pyproject.toml: valid
+pass  pyproject-project  [tool] pyproject.toml: has [project] section
+warn  python-version-exists  [tool] Python: .python-version
+      Not found: .python-version
+warn  pyproject-python-classifiers  [tool] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
+warn  pyproject-version-dynamic  [tool] pyproject.toml: version is dynamic
+      [project] sets a static version
+warn  pyproject-build-system  [tool] pyproject.toml: builds with hatchling and hatch-vcs
+      build-system.requires lacks hatch-vcs and hatchling; build-system.build-backend is setuptools.build_meta, not hatchling.build
+pass  pyproject-hatch-version  [tool] pyproject.toml: version from git tags (hatch-vcs)
+warn  uv-cache-keys  [tool] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] cache-keys lacks { file = "pyproject.toml" } and { git = { commit = true, tags = true } }
+warn  python-src-layout  [tool] Python: src/ directory
+      Consider using a src/ layout
+warn  uv-lock-exists  [tool] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [tool] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  python-dependency-groups  [tool] Python: has dependency-groups
+      Consider using dependency-groups for dev dependencies
+fail  ruff-configured  [tool] Ruff: configured
+      Missing [tool.ruff] in pyrpoject.toml
+warn  ruff-lint-configured  [tool] Ruff lint: configured
+      Consider configuring [tool.ruff.lint]
+fail  mypy-configured  [tool] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
