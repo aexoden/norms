@@ -62,6 +62,13 @@ pub(crate) struct PrecommitHook {
 }
 
 impl PrecommitHook {
+    /// The hook's alias, if it has one other than its ID.
+    pub(crate) fn alias(&self) -> Option<&str> {
+        self.alias
+            .as_deref()
+            .filter(|alias| !alias.is_empty() && *alias != self.id)
+    }
+
     /// The command the hook runs, as its words, in a list of one, or of none if the entry has unbalanced quotes.
     /// pre-commit splits the hook's entry, or `default_entry` if it sets none, as a remote hook may leave it to the
     /// hook's repository, with Python's `shlex`, and appends the args. The `shlex` crate splits it the same way, except
@@ -150,13 +157,7 @@ impl PrecommitConfig {
     pub(crate) fn check_unique_hook_ids(&self) -> Result<(), String> {
         fn names(hook: &PrecommitHook) -> Vec<&str> {
             let mut names = vec![hook.id.as_str()];
-            if let Some(alias) = hook
-                .alias
-                .as_deref()
-                .filter(|alias| !alias.is_empty() && *alias != hook.id)
-            {
-                names.push(alias);
-            }
+            names.extend(hook.alias());
             names
         }
 
@@ -207,6 +208,14 @@ impl PrecommitConfig {
                 .any(|stage| stage.as_str().is_some_and(|stage| NAMES.contains(&stage))),
             (_, _) => true,
         }
+    }
+
+    /// Every hook that runs before each commit, as [`runs_at_commit`](Self::runs_at_commit) decides.
+    pub(crate) fn hooks_at_commit(&self) -> impl Iterator<Item = &PrecommitHook> {
+        self.repos
+            .iter()
+            .flat_map(|repo| &repo.hooks)
+            .filter(|hook| self.runs_at_commit(hook))
     }
 
     /// The hooks with ID `id` that run before each commit, or, if there are none, why not.

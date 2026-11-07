@@ -450,6 +450,8 @@ the [common hooks](#common-hooks) from pre-commit-hooks, with `pre-commit run
 --all-files --show-diff-on-failure` at a pinned pre-commit version, installed
 through `astral-sh/setup-uv` and run with `uvx`. Its `SKIP` lists every hook
 that has its own job, so a hook added later runs in this job until it gets one.
+A hook's job has the hook's ID, or for the `markdownlint-cli2` and
+`tombi-format` hooks, is the `markdownlint` or `tombi` job.
 The `commit-msg` hooks don't run in it.
 
 Libraries also check the oldest versions they support, which the hooks don't,

@@ -3,6 +3,7 @@
 
 //! Common checks that apply to all projects reqgardless of language.
 
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::LazyLock;
@@ -948,6 +949,158 @@ fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), String> {
     }
 }
 
+/// The options of `pre-commit run` that take a value, which isn't a hook ID.
+const PRE_COMMIT_RUN_VALUE_OPTIONS: [&str; 20] = [
+    "--checkout-type",
+    "--color",
+    "--commit-msg-filename",
+    "--commit-object-name",
+    "--config",
+    "--from-ref",
+    "--hook-stage",
+    "--is-squash-merge",
+    "--local-branch",
+    "--origin",
+    "--prepare-commit-message-source",
+    "--remote-branch",
+    "--remote-name",
+    "--remote-url",
+    "--rewrite-command",
+    "--source",
+    "--to-ref",
+    "-c",
+    "-o",
+    "-s",
+];
+
+/// The words before pre-commit in a command, as its words, that runs `pre-commit run` for every hook, however
+/// pre-commit is invoked, or `None` if the command doesn't run it or names the one hook it runs. Option values aren't
+/// hook IDs, and the words after `--files` are files.
+fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
+    let start = words
+        .windows(2)
+        .position(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))?;
+    let mut args = words.iter().skip(start + 2);
+    while let Some(arg) = args.next() {
+        if *arg == "--files" || arg.starts_with('#') {
+            break;
+        }
+        if !arg.starts_with('-') {
+            return None;
+        }
+        if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
+            args.next();
+        }
+    }
+    words.get(..start)
+}
+
+/// The value a word of a shell command assigns to `SKIP`, as `SKIP=<value>` does, without quotes around it.
+fn skip_assignment(word: &str) -> Option<&str> {
+    word.strip_prefix("SKIP=")
+        .map(|value| value.trim_matches(['"', '\'']))
+}
+
+/// The hooks whose jobs in `ci.yaml` may have other IDs than theirs: the job each of them gets in the standards.
+const HOOK_JOBS: [(&str, &str); 2] = [
+    ("markdownlint-cli2", "markdownlint"),
+    ("tombi-format", "tombi"),
+];
+
+/// The hooks of `config` that run before commits and have a job of their own in `workflow`, other than `job_id`, as
+/// each one's alias or ID, that `skip`, a comma-separated list of hook IDs and aliases as pre-commit reads `SKIP`,
+/// doesn't list. A hook has a job if a job has its ID or alias as its own ID, or is the job [`HOOK_JOBS`] gives it.
+fn hooks_not_skipped<'a>(
+    config: &'a PrecommitConfig,
+    workflow: &Workflow,
+    job_id: &str,
+    skip: &str,
+) -> Vec<&'a str> {
+    let skipped: BTreeSet<&str> = skip
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .collect();
+    let has_job = |name: &str| {
+        let mapped = HOOK_JOBS
+            .iter()
+            .find(|(hook, _)| *hook == name)
+            .map(|(_, mapped)| *mapped);
+        std::iter::once(name)
+            .chain(mapped)
+            .any(|job| job != job_id && workflow.jobs.contains_key(job))
+    };
+    let mut missing: Vec<&str> = Vec::new();
+    for hook in config.hooks_at_commit() {
+        let names: Vec<&str> = std::iter::once(hook.id.as_str())
+            .chain(hook.alias())
+            .collect();
+        let label = hook.alias().unwrap_or(&hook.id);
+        if names.iter().any(|name| has_job(name))
+            && !names.iter().any(|name| skipped.contains(name))
+            && !missing.contains(&label)
+        {
+            missing.push(label);
+        }
+    }
+    missing
+}
+
+/// Check that each command of `workflow` that runs `pre-commit run` for every hook at the repository's root, where
+/// `config` applies, lists in its `SKIP` every hook of `config` that runs before commits and has a job of its own, or
+/// `None` if no command runs it. `SKIP` is read from the command's own `SKIP=` prefix, or else an earlier command of
+/// the step that sets it (`SKIP=...` or `export SKIP=...`), or else the step's, job's or workflow's `env`.
+fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Result<(), String>> {
+    let mut found = false;
+    let mut issues = Vec::new();
+    for (job_id, job) in &workflow.jobs {
+        for step in job
+            .steps
+            .iter()
+            .filter(|step| workflow.runs_at_root(job, step))
+        {
+            let mut shell_skip: Option<String> = None;
+            for line in step.run_lines() {
+                for words in commands(&line) {
+                    let Some(prefix) = pre_commit_run_all(&words) else {
+                        let assignment = match words.as_slice() {
+                            ["export", word] | [word] => skip_assignment(word),
+                            _ => None,
+                        };
+                        if let Some(value) = assignment {
+                            shell_skip = Some(value.to_owned());
+                        }
+                        continue;
+                    };
+                    found = true;
+                    let skip = prefix
+                        .iter()
+                        .find_map(|word| skip_assignment(word))
+                        .map(str::to_owned)
+                        .or_else(|| shell_skip.clone())
+                        .or_else(|| workflow.env(job, step, "SKIP").map(Cow::into_owned))
+                        .unwrap_or_default();
+                    let missing = hooks_not_skipped(config, workflow, job_id, &skip);
+                    let issue = format!(
+                        "SKIP in {job_id} doesn't list these hooks, which have jobs of their own: {}",
+                        missing.join(", ")
+                    );
+                    if !missing.is_empty() && !issues.contains(&issue) {
+                        issues.push(issue);
+                    }
+                }
+            }
+        }
+    }
+    found.then(|| {
+        if issues.is_empty() {
+            Ok(())
+        } else {
+            Err(issues.join("; "))
+        }
+    })
+}
+
 //
 // zizmor
 //
@@ -1203,10 +1356,13 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         }
     }
 
-    let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
-        return;
-    };
+    if let ConfigStatus::Ok(workflow) = ctx.ci_workflow() {
+        check_ci_workflow(ctx, workflow, report);
+    }
+}
 
+/// Check `ci.yaml`, `workflow`: the common hooks' jobs, its triggers and its gate job.
+fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Report) {
     report.should(
         "ci-reuse",
         "CI: REUSE compliance",
@@ -1228,6 +1384,15 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         "CI: remaining pre-commit hooks (pinned, --all-files)",
         pre_commit_in_ci(workflow),
     );
+    if let ConfigStatus::Ok(config) = ctx.precommit()
+        && let Some(skip) = pre_commit_skip(config, workflow)
+    {
+        report.should(
+            "ci-pre-commit-skip",
+            "CI: the pre-commit job's SKIP lists every hook with a job of its own",
+            skip,
+        );
+    }
 
     report.should(
         "ci-yaml-pull-request",
@@ -1358,6 +1523,171 @@ mod tests {
             diff_driver_set("*.rs text diff=rust\n", root, "rust", &["rs"]),
             Ok(())
         );
+    }
+
+    fn skip(precommit: &str, workflow: &str) -> Option<Result<(), String>> {
+        pre_commit_skip(
+            &serde_saphyr::from_str(precommit).unwrap(),
+            &serde_saphyr::from_str(workflow).unwrap(),
+        )
+    }
+
+    #[test]
+    fn pre_commit_skips_the_hooks_with_jobs() {
+        let precommit = "\
+default_stages: [pre-commit]
+repos:
+  - repo: local
+    hooks:
+      - {id: clippy}
+      - {id: cargo-test}
+      - {id: ruff-check, alias: ruff-check-api}
+      - {id: markdownlint-cli2}
+      - {id: tombi-format}
+      - {id: check-yaml}
+      - {id: conventional-pre-commit, stages: [commit-msg]}
+";
+        let workflow = |skip: &str| {
+            format!(
+                "\
+env:
+  SKIP: other
+jobs:
+  pre-commit:
+    env:
+      SKIP: {skip}
+    steps:
+      - uses: astral-sh/setup-uv@v7
+      - run: uvx pre-commit@4.3.0 run --all-files
+  clippy: {{}}
+  cargo-test: {{}}
+  ruff-check-api: {{}}
+  markdownlint: {{}}
+  tombi: {{}}
+  conventional-pre-commit: {{}}
+"
+            )
+        };
+        assert_eq!(
+            skip(
+                precommit,
+                &workflow("\"cargo-test, clippy,ruff-check,markdownlint-cli2,tombi-format\"")
+            ),
+            Some(Ok(()))
+        );
+        assert_eq!(
+            skip(
+                precommit,
+                &workflow("cargo-test,markdownlint,tombi-format")
+            ),
+            Some(Err(
+                "SKIP in pre-commit doesn't list these hooks, which have jobs of their own: clippy, \
+                 ruff-check-api, markdownlint-cli2"
+                    .to_owned()
+            ))
+        );
+        // The step's own SKIP replaces the job's, and the workflow's applies when neither sets one.
+        assert_eq!(
+            skip(
+                "repos: [{repo: local, hooks: [{id: clippy}]}]\n",
+                "jobs:\n  clippy: {}\n  hooks:\n    env: {SKIP: clippy}\n    steps:\n      - run: pre-commit run -a\n        env: {SKIP: other}\n"
+            ),
+            Some(Err(
+                "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy"
+                    .to_owned()
+            ))
+        );
+        assert_eq!(
+            skip(
+                "repos: [{repo: local, hooks: [{id: clippy}]}]\n",
+                "env: {SKIP: clippy}\njobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n"
+            ),
+            Some(Ok(()))
+        );
+        // A hook named like the job running pre-commit has no job of its own.
+        assert_eq!(
+            skip(
+                "repos: [{repo: local, hooks: [{id: lint}]}]\n",
+                "jobs:\n  lint:\n    steps:\n      - run: uvx pre-commit run --all-files\n"
+            ),
+            Some(Ok(()))
+        );
+        assert_eq!(
+            skip(
+                precommit,
+                "jobs:\n  clippy:\n    steps:\n      - run: cargo clippy\n"
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn pre_commit_skip_is_read_from_the_script() {
+        let clippy =
+            "repos: [{repo: local, hooks: [{id: clippy}, {id: cargo-test}, {id: clippy}]}]\n";
+        let script = |env: &str, run: &str| {
+            format!(
+                "jobs:\n  clippy: {{}}\n  cargo-test: {{}}\n  hooks:\n    {env}steps:\n      - run: {run:?}\n"
+            )
+        };
+        // pre-commit run naming one hook needn't skip any, so it isn't checked; the hook's ID follows the values of
+        // options.
+        for run in [
+            "uvx pre-commit@4.3.0 run clippy --all-files",
+            "pre-commit run --hook-stage pre-push clippy",
+        ] {
+            assert_eq!(skip(clippy, &script("", run)), None, "{run}");
+        }
+        // SKIP set in the script, as a prefix or by an earlier command, comes before env.
+        for run in [
+            "SKIP=clippy,cargo-test uvx pre-commit@4.3.0 run --all-files",
+            "export SKIP='clippy,cargo-test'\npre-commit run -a",
+            "SKIP=clippy,cargo-test; pre-commit run --files a.rs",
+        ] {
+            assert_eq!(
+                skip(clippy, &script("env: {SKIP: other}\n    ", run)),
+                Some(Ok(())),
+                "{run}"
+            );
+        }
+        // Each hook is named once, and an env given by an expression, which can't be read, sets no SKIP.
+        assert_eq!(
+            skip(
+                clippy,
+                &script("env: ${{ fromJSON(vars.ENV) }}\n    ", "pre-commit run -a")
+            ),
+            Some(Err(
+                "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
+                    .to_owned()
+            ))
+        );
+        // A job with the hook's own ID counts, as well as the job the standards give it.
+        assert_eq!(
+            skip(
+                "repos: [{repo: local, hooks: [{id: tombi-format}]}]\n",
+                "jobs:\n  tombi-format: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n"
+            ),
+            Some(Err(
+                "SKIP in hooks doesn't list these hooks, which have jobs of their own: tombi-format"
+                    .to_owned()
+            ))
+        );
+
+        // pre-commit run in another directory runs another configuration.
+        for elsewhere in [
+            "jobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n        working-directory: ${{ runner.temp }}/project\n",
+            "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: pre-commit run -a\n",
+            "defaults: {run: {working-directory: frontend}}\njobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n",
+        ] {
+            assert_eq!(skip(clippy, elsewhere), None, "{elsewhere}");
+        }
+        assert!(matches!(
+            skip(
+                clippy,
+                "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: pre-commit run -a\n        working-directory: .\n"
+            ),
+            Some(Err(_))
+        ));
     }
 
     fn pre_commit(run: &str) -> Result<(), String> {

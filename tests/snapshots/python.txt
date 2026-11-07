@@ -61,6 +61,7 @@ pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
 pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error

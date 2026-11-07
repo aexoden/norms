@@ -19,6 +19,17 @@ use serde_json::Value;
 /// The ID of `ci.yaml`'s gate job, which succeeds only if every other job did.
 pub(crate) const GATE_JOB: &str = "ci-success";
 
+/// A value from a mapping such as `with` or `env` as the step receives it: a string, whether the YAML wrote it as one or
+/// as a boolean or number. A null or collection is no value.
+fn value_text(value: &Value) -> Option<Cow<'_, str>> {
+    match value {
+        Value::String(value) => Some(Cow::Borrowed(value)),
+        Value::Bool(value) => Some(Cow::Owned(value.to_string())),
+        Value::Number(value) => Some(Cow::Owned(value.to_string())),
+        Value::Null | Value::Array(_) | Value::Object(_) => None,
+    }
+}
+
 /// The patterns of a push trigger's `branches` or `branches-ignore`, a list of them or a single one, each as whether
 /// it is negated with `!` and the glob the rest compiles to.
 fn branch_patterns(patterns: &Value) -> Result<Vec<(bool, GlobMatcher)>, String> {
@@ -56,6 +67,10 @@ pub(crate) struct Workflow {
     pub on: Option<Value>,
     /// A group name, or a mapping with `group` and `cancel-in-progress`.
     pub concurrency: Option<Value>,
+    /// The environment variables every job's steps get: a mapping, or an expression giving one, kept as YAML wrote it.
+    pub env: Option<Value>,
+    /// The defaults of every job's steps, such as `run.working-directory`, kept as YAML wrote them.
+    pub defaults: Option<Value>,
     pub jobs: BTreeMap<String, WorkflowJob>,
 }
 
@@ -69,6 +84,11 @@ pub(crate) struct WorkflowJob {
     /// Whether the workflow carries on, and can succeed, when the job fails: a boolean, or an expression giving one.
     #[serde(rename = "continue-on-error")]
     pub continue_on_error: Option<Value>,
+    /// The environment variables the job's steps get, over the workflow's: a mapping, or an expression giving one, kept
+    /// as YAML wrote it.
+    pub env: Option<Value>,
+    /// The defaults of the job's steps, over the workflow's, such as `run.working-directory`, kept as YAML wrote them.
+    pub defaults: Option<Value>,
     /// The ID of the job this one waits for, or a list of them.
     pub needs: Option<Value>,
     pub steps: Vec<WorkflowStep>,
@@ -89,6 +109,12 @@ pub(crate) struct WorkflowStep {
     /// Whether the job carries on, and can succeed, when the step fails: a boolean, or an expression giving one.
     #[serde(rename = "continue-on-error")]
     pub continue_on_error: Option<Value>,
+    /// The environment variables the step gets, over its job's and the workflow's: a mapping, or an expression giving
+    /// one, kept as YAML wrote it.
+    pub env: Option<Value>,
+    /// The directory the step's script runs in, over its job's and the workflow's defaults.
+    #[serde(rename = "working-directory")]
+    pub working_directory: Option<Value>,
     pub uses: Option<String>,
     pub run: Option<String>,
     /// The action's inputs, kept as YAML wrote them rather than as strings, so that a list or mapping where a string
@@ -101,12 +127,16 @@ impl WorkflowStep {
     /// The value of the action input `name` as the action receives it: a string, whether the YAML wrote it as one or
     /// as a boolean or number. A null or collection is no value.
     pub(crate) fn input(&self, name: &str) -> Option<Cow<'_, str>> {
-        match self.with.get(name)? {
-            Value::String(value) => Some(Cow::Borrowed(value)),
-            Value::Bool(value) => Some(Cow::Owned(value.to_string())),
-            Value::Number(value) => Some(Cow::Owned(value.to_string())),
-            Value::Null | Value::Array(_) | Value::Object(_) => None,
-        }
+        value_text(self.with.get(name)?)
+    }
+
+    /// The step's script as lines, with each line that ends in a backslash joined to the next, or none if it runs no
+    /// script.
+    pub(crate) fn run_lines(&self) -> Vec<String> {
+        self.run
+            .as_deref()
+            .map(join_continued_lines)
+            .unwrap_or_default()
     }
 
     /// Whether the step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
@@ -297,6 +327,39 @@ impl Workflow {
         } else {
             Err(problems.join("; "))
         }
+    }
+
+    /// The value of the environment variable `name` that `step` of `job` gets from the workflow: the step's own, or else
+    /// its job's, or else the workflow's. An `env` given by an expression sets nothing that can be read.
+    pub(crate) fn env<'a>(
+        &'a self,
+        job: &'a WorkflowJob,
+        step: &'a WorkflowStep,
+        name: &str,
+    ) -> Option<Cow<'a, str>> {
+        [&step.env, &job.env, &self.env]
+            .into_iter()
+            .find_map(|env| env.as_ref()?.as_object()?.get(name))
+            .and_then(value_text)
+    }
+
+    /// Whether the script of `step` of `job` runs at the root of the repository: neither the step nor the job's or
+    /// workflow's `defaults.run` sets a `working-directory` other than `.`.
+    pub(crate) fn runs_at_root(&self, job: &WorkflowJob, step: &WorkflowStep) -> bool {
+        let default = |defaults: Option<&Value>| {
+            defaults
+                .and_then(|defaults| defaults.get("run"))
+                .and_then(|run| run.get("working-directory"))
+                .cloned()
+        };
+        let directory = step
+            .working_directory
+            .clone()
+            .or_else(|| default(job.defaults.as_ref()))
+            .or_else(|| default(self.defaults.as_ref()));
+        directory
+            .as_ref()
+            .is_none_or(|directory| matches!(directory.as_str(), Some("." | "./")))
     }
 
     /// Whether the workflow runs on pushes to each of `branches`: `on` names `push`, and any branch filters it sets let

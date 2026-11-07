@@ -6,6 +6,15 @@ on:
 permissions: {}
 
 jobs:
+  pre-commit:
+    name: Run the remaining hooks, skipping only some of those with jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - env:
+          SKIP: uv-lock,pnpm-peer-dependencies,vitest
+        run: uvx pre-commit@4.3.0 run --all-files
+
   uv-lock:
     name: Check uv.lock with lock's older --locked flag
     runs-on: ubuntu-latest

@@ -54,8 +54,9 @@ warn  ci-markdownlint  CI: Markdown linting (every file)
 warn  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)
       No step runs zizmor or uses zizmorcore/zizmor-action
-warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
-      No step runs pre-commit run
+pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+warn  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
+      SKIP in pre-commit doesn't list these hooks, which have jobs of their own: pytest, eslint
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
       Doesn't run on push
