@@ -1,3 +1,5 @@
 *       text=auto eol=lf
 
+*.py    text diff=python
+
 /api/.git_archival.txt  export-subst

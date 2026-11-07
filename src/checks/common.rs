@@ -4,6 +4,7 @@
 //! Common checks that apply to all projects reqgardless of language.
 
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::sync::LazyLock;
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
@@ -11,8 +12,8 @@ use regex::Regex;
 
 use crate::checks::{python, rust};
 use crate::config::{
-    DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook, SHARED_PRESET,
-    Workflow, WorkflowJob, commands,
+    AttributeState, DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook,
+    SHARED_PRESET, Workflow, WorkflowJob, attribute, commands,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -252,6 +253,58 @@ pub(crate) fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
         ".gitattributes: binary markers",
         matches_regex(content, r"(?m)^\*\.[a-zA-Z0-9]+\s+binary"),
     );
+
+    for (language, id, driver, extensions) in DIFF_DRIVERS {
+        if !ctx.languages().contains(&language) {
+            continue;
+        }
+        report.should(
+            id,
+            format!(".gitattributes: {language} files use diff={driver}"),
+            diff_driver_set(content, ctx.path(), driver, extensions),
+        );
+    }
+}
+
+/// The languages with a diff driver built into git, each with its check's ID, the driver, and the extensions of the
+/// files it applies to.
+const DIFF_DRIVERS: [(Language, &str, &str, &[&str]); 2] = [
+    (
+        Language::Python,
+        "gitattributes-diff-python",
+        "python",
+        &["py", "pyi"],
+    ),
+    (Language::Rust, "gitattributes-diff-rust", "rust", &["rs"]),
+];
+
+/// Check that the root `.gitattributes`, whose text is `content`, sets `diff=<driver>` on files with each of
+/// `extensions`, as the line `*.<extension> diff=<driver>` does. It is tested on a file of that extension at the root
+/// and on one in a subdirectory, which a pattern such as `*.py` matches wherever the file is.
+fn diff_driver_set(
+    content: &str,
+    root: &Path,
+    driver: &str,
+    extensions: &[&str],
+) -> Result<(), String> {
+    let missing: Vec<String> = extensions
+        .iter()
+        .filter(|extension| {
+            let file = format!("example.{extension}");
+            [
+                root.join(&file),
+                root.join("src").join("module").join(&file),
+            ]
+            .iter()
+            .any(|path| attribute(content, root, path, "diff") != AttributeState::Value(driver))
+        })
+        .map(|extension| format!("*.{extension}"))
+        .collect();
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("diff={driver} isn't set on {}", missing.join(", ")))
+    }
 }
 
 //
@@ -1266,6 +1319,41 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn diff_drivers_cover_each_extension() {
+        let root = Path::new("/project");
+        let python = |content: &str| diff_driver_set(content, root, "python", &["py", "pyi"]);
+        assert_eq!(
+            python("*.py    text diff=python\n*.pyi   text diff=python\n"),
+            Ok(())
+        );
+        assert_eq!(python("*.py* diff=python\n"), Ok(()));
+        assert_eq!(
+            python("*.py diff=python\n"),
+            Err("diff=python isn't set on *.pyi".to_owned())
+        );
+        assert_eq!(
+            python("*.py diff\n*.pyi diff=rust\n"),
+            Err("diff=python isn't set on *.py, *.pyi".to_owned())
+        );
+        assert_eq!(
+            python("/src/*.py diff=python\n*.pyi diff=python\n"),
+            Err("diff=python isn't set on *.py".to_owned())
+        );
+        assert_eq!(
+            python("/*.py diff=python\n*.pyi diff=python\n"),
+            Err("diff=python isn't set on *.py".to_owned())
+        );
+        assert_eq!(
+            python("*.py* diff=python\n*.pyi binary\n"),
+            Err("diff=python isn't set on *.pyi".to_owned())
+        );
+        assert_eq!(
+            diff_driver_set("*.rs text diff=rust\n", root, "rust", &["rs"]),
+            Ok(())
+        );
+    }
 
     fn pre_commit(run: &str) -> Result<(), String> {
         let yaml = format!("jobs:\n  hooks:\n    steps:\n      - run: {run:?}\n");

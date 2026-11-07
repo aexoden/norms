@@ -16,6 +16,8 @@ pass  gitattributes-valid  .gitattributes: valid
 pass  gitattributes-text-auto  .gitattributes: text=auto
 pass  gitattributes-eol-lf  .gitattributes: eol=lf
 pass  gitattributes-binary  .gitattributes: binary markers
+pass  gitattributes-diff-python  .gitattributes: Python files use diff=python
+pass  gitattributes-diff-rust  .gitattributes: Rust files use diff=rust
 pass  editorconfig-exists  .editorconfig: exists
 pass  editorconfig-valid  .editorconfig: valid
 pass  editorconfig-root  .editorconfig: root=true

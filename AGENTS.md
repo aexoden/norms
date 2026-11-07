@@ -187,6 +187,7 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   exactly, that pin no version in a job running `uv`, and that pin none in a
   job only running `uvx`, which needn't, and the components' `required-version`
   is a minimum the pin satisfies, an exact version, or a minimum above the pin.
+  Its `.gitattributes` sets `diff=python` on `*.py` but not on `*.pyi`.
   `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files: a
   `uv-lock` hook and CI step run through uv's global options, and of the jobs

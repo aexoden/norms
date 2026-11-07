@@ -27,7 +27,7 @@ pub(crate) use cargoconfig::CargoConfig;
 pub(crate) use clippy::{CLIPPY_TOML, ClippyToml};
 pub(crate) use deny::DenyToml;
 pub(crate) use devbox::DevboxConfig;
-pub(crate) use gitattributes::{GIT_ARCHIVAL, sets_attribute};
+pub(crate) use gitattributes::{AttributeState, GIT_ARCHIVAL, attribute, sets_attribute};
 pub(crate) use markdownlint::MarkdownlintCli2Config;
 pub(crate) use norms::{NormsConfig, Waiver};
 pub(crate) use packagejson::{PackageJson, check_dev_engine};
