@@ -4,6 +4,7 @@
 mod cargo;
 mod cargoconfig;
 mod devbox;
+mod gitattributes;
 mod markdownlint;
 mod norms;
 mod packagejson;
@@ -22,6 +23,7 @@ mod workflow;
 pub(crate) use cargo::{CargoDependency, CargoToml, CargoWorkspace};
 pub(crate) use cargoconfig::CargoConfig;
 pub(crate) use devbox::DevboxConfig;
+pub(crate) use gitattributes::{GIT_ARCHIVAL, sets_attribute};
 pub(crate) use markdownlint::MarkdownlintCli2Config;
 pub(crate) use norms::{NormsConfig, Waiver};
 pub(crate) use packagejson::{PackageJson, check_dev_engine};

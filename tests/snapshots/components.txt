@@ -49,6 +49,8 @@ warn  pyproject-hatch-version  [tools] pyproject.toml: version from git tags (ha
       No [tool.hatch.version] table
 warn  uv-cache-keys  [tools] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [tools] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [tools] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [tools] Python: uv.lock

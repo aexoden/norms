@@ -6,8 +6,8 @@
 use pep508_rs::pep440_rs::Version;
 
 use crate::config::{
-    PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow, check_python_version_exact,
-    check_release_age_value, commands, program_args,
+    GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow,
+    check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Outcome, Report, file_exists};
@@ -136,6 +136,95 @@ pub(crate) fn check_versioning(ctx: &ComponentContext, report: &mut Report) {
         "uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)",
         config.check_uv_cache_keys(),
     );
+}
+
+/// The keys of `.git_archival.txt` that hatch-vcs reads the version from, each with the placeholder git fills in: the
+/// commit, and the description from the nearest tag, lightweight tags included.
+const GIT_ARCHIVAL_KEYS: [(&str, &str); 2] = [
+    ("node", "$Format:%H$"),
+    (
+        "describe-name",
+        "$Format:%(describe:tags=true,match=*[0-9]*)$",
+    ),
+];
+
+/// Check `.git_archival.txt`'s `node` and `describe-name` lines. An older form with only `ref-names` reports a version
+/// only when the archived commit is itself tagged. A value that is a placeholder must be the standard one, but one
+/// that isn't was filled in by `git archive`, as in an extracted source archive, so it can't be checked.
+fn check_git_archival_content(content: &str) -> Result<(), String> {
+    let mut missing = Vec::new();
+    let mut other = Vec::new();
+    for (key, placeholder) in GIT_ARCHIVAL_KEYS {
+        let value = content.lines().find_map(|line| {
+            line.strip_prefix(key)
+                .and_then(|rest| rest.strip_prefix(':'))
+                .map(str::trim)
+        });
+        match value {
+            None => missing.push(key),
+            Some(value) if value.starts_with("$Format:") && value != placeholder => {
+                other.push(format!("{key} is {value}, not {placeholder}"));
+            }
+            Some(_) => {}
+        }
+    }
+    if !missing.is_empty() {
+        other.insert(
+            0,
+            format!("{GIT_ARCHIVAL} has no {} line", missing.join(" or ")),
+        );
+    }
+    if other.is_empty() {
+        Ok(())
+    } else {
+        Err(other.join("; "))
+    }
+}
+
+/// Check that a packaged component has a `.git_archival.txt`, so that source archives report their version, and that
+/// the repository's `.gitattributes` marks it `export-subst`, so that git fills it in.
+pub(crate) fn check_git_archival(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    report: &mut Report,
+) {
+    if !ctx
+        .pyproject()
+        .as_ref_ok()
+        .is_some_and(PyprojectToml::has_version)
+    {
+        return;
+    }
+
+    report.should(
+        "python-git-archival",
+        "Python: .git_archival.txt (node and describe-name)",
+        match ctx.git_archival() {
+            ConfigStatus::Ok(content) => check_git_archival_content(content),
+            ConfigStatus::NotFound => Err(format!("Not found: {GIT_ARCHIVAL}")),
+            ConfigStatus::ParseError { error, .. } => Err(error.clone()),
+        },
+    );
+
+    // gitattributes-exists reports a missing or unreadable file, and python-git-archival a missing archival file. Only
+    // the root .gitattributes is read, where the standards put the attribute.
+    if let (ConfigStatus::Ok(gitattributes), ConfigStatus::Ok(_)) =
+        (project.gitattributes(), ctx.git_archival())
+    {
+        let path = ctx.path().join(GIT_ARCHIVAL);
+        report.should(
+            "gitattributes-git-archival",
+            ".gitattributes: .git_archival.txt marked export-subst",
+            if sets_attribute(gitattributes, project.path(), &path, "export-subst") {
+                Ok(())
+            } else {
+                Err(format!(
+                    "No line marks {} export-subst",
+                    ctx.component().path.join(GIT_ARCHIVAL).display()
+                ))
+            },
+        );
+    }
 }
 
 //
@@ -673,6 +762,37 @@ pub(crate) fn check_min_python_job(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn git_archival_has_node_and_describe_name() {
+        let standard = "node: $Format:%H$\nnode-date: $Format:%cI$\n\
+                        describe-name: $Format:%(describe:tags=true,match=*[0-9]*)$\n";
+        assert_eq!(check_git_archival_content(standard), Ok(()));
+        // As git archive fills it in.
+        assert_eq!(
+            check_git_archival_content(
+                "node: 4b772c14d2b5a3e8f0c1d6e7a8b9c0d1e2f3a4b5\nnode-date: 2026-11-06T12:00:00+00:00\n\
+                 describe-name: v0.1.0-12-g4b772c1\n"
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            check_git_archival_content("node: $Format:%H$\nref-names: $Format:%D$\n"),
+            Err(".git_archival.txt has no describe-name line".to_owned())
+        );
+        assert_eq!(
+            check_git_archival_content("node-date: $Format:%cI$\n"),
+            Err(".git_archival.txt has no node or describe-name line".to_owned())
+        );
+        assert_eq!(
+            check_git_archival_content("node: $Format:%h$\ndescribe-name:$Format:%(describe)$\n"),
+            Err(
+                "node is $Format:%h$, not $Format:%H$; describe-name is $Format:%(describe)$, not \
+                 $Format:%(describe:tags=true,match=*[0-9]*)$"
+                    .to_owned()
+            )
+        );
+    }
 
     #[test]
     fn uv_subcommands_follow_global_options() {

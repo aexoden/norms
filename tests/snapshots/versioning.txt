@@ -13,8 +13,12 @@ warn  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md, which the project needs because the Python component at api is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
-fail  gitattributes-exists  .gitattributes: exists
-      File not found
+pass  gitattributes-exists  .gitattributes: exists
+pass  gitattributes-valid  .gitattributes: valid
+pass  gitattributes-text-auto  .gitattributes: text=auto
+pass  gitattributes-eol-lf  .gitattributes: eol=lf
+warn  gitattributes-binary  .gitattributes: binary markers
+      Pattern not found: (?m)^\*\.[a-zA-Z0-9]+\s+binary
 fail  editorconfig-exists  .editorconfig: exists
       File not found
 warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
@@ -38,6 +42,8 @@ pass  pyproject-build-system  [api] pyproject.toml: builds with hatchling and ha
 warn  pyproject-hatch-version  [api] pyproject.toml: version from git tags (hatch-vcs)
       [tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project below the repository root needs
 pass  uv-cache-keys  [api] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+pass  python-git-archival  [api] Python: .git_archival.txt (node and describe-name)
+pass  gitattributes-git-archival  [api] .gitattributes: .git_archival.txt marked export-subst
 warn  python-src-layout  [api] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [api] Python: uv.lock
@@ -87,6 +93,10 @@ warn  pyproject-build-system  [tool] pyproject.toml: builds with hatchling and h
 pass  pyproject-hatch-version  [tool] pyproject.toml: version from git tags (hatch-vcs)
 warn  uv-cache-keys  [tool] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] cache-keys lacks { file = "pyproject.toml" } and { git = { commit = true, tags = true } }
+warn  python-git-archival  [tool] Python: .git_archival.txt (node and describe-name)
+      .git_archival.txt has no describe-name line
+warn  gitattributes-git-archival  [tool] .gitattributes: .git_archival.txt marked export-subst
+      No line marks tool/.git_archival.txt export-subst
 warn  python-src-layout  [tool] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [tool] Python: uv.lock

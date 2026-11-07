@@ -828,8 +828,19 @@ hatch-vcs finds the repository above it. A project with `[tool.uv] package =
 false` isn't built, so it has no version and needs none of this.
 
 `.git_archival.txt`, marked `export-subst` in `.gitattributes`, lets source
-archives without git history report their version. Code reads the version at
-runtime with `importlib.metadata.version()`, in `__about__.py`.
+archives without git history report their version. It sits beside
+`pyproject.toml` and holds the placeholders git fills in when it creates an
+archive, including the commit and the description from the nearest tag,
+lightweight tags included:
+
+```txt
+node: $Format:%H$
+node-date: $Format:%cI$
+describe-name: $Format:%(describe:tags=true,match=*[0-9]*)$
+```
+
+Code reads the version at runtime with `importlib.metadata.version()`, in
+`__about__.py`.
 
 #### Formatting and Linting
 

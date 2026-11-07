@@ -77,6 +77,8 @@ pass  pyproject-version-dynamic  [.] pyproject.toml: version is dynamic
 pass  pyproject-build-system  [.] pyproject.toml: builds with hatchling and hatch-vcs
 pass  pyproject-hatch-version  [.] pyproject.toml: version from git tags (hatch-vcs)
 pass  uv-cache-keys  [.] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+pass  python-git-archival  [.] Python: .git_archival.txt (node and describe-name)
+pass  gitattributes-git-archival  [.] .gitattributes: .git_archival.txt marked export-subst
 pass  python-src-layout  [.] Python: src/ directory
 pass  python-src-packages  [.] Python: src/ contains packages
 pass  uv-lock-exists  [.] Python: uv.lock

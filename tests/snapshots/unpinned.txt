@@ -41,6 +41,8 @@ warn  pyproject-hatch-version  [python-app] pyproject.toml: version from git tag
       No [tool.hatch.version] table
 warn  uv-cache-keys  [python-app] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [python-app] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [python-app] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [python-app] Python: uv.lock
@@ -72,6 +74,8 @@ warn  pyproject-hatch-version  [python-lib] pyproject.toml: version from git tag
       No [tool.hatch.version] table
 warn  uv-cache-keys  [python-lib] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [python-lib] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [python-lib] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [python-lib] Python: uv.lock

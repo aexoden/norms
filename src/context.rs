@@ -32,9 +32,9 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
-    CargoConfig, CargoToml, DevboxConfig, MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION,
-    PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig,
-    ReuseToml, RustToolchain, TsConfig, Workflow, parse_python_version,
+    CargoConfig, CargoToml, DevboxConfig, GIT_ARCHIVAL, MarkdownlintCli2Config, NormsConfig,
+    PYTHON_VERSION, PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml,
+    RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow, parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -333,6 +333,7 @@ pub(crate) struct ComponentContext {
     rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     python_version: OnceLock<ConfigStatus<Version>>,
+    git_archival: OnceLock<ConfigStatus<String>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
     prettier: OnceLock<ConfigStatus<PrettierConfig>>,
@@ -354,6 +355,7 @@ impl ComponentContext {
             rust_toolchain: OnceLock::new(),
             pyproject: OnceLock::new(),
             python_version: OnceLock::new(),
+            git_archival: OnceLock::new(),
             package_json: OnceLock::new(),
             pnpm_workspace: OnceLock::new(),
             prettier: OnceLock::new(),
@@ -450,6 +452,13 @@ impl ComponentContext {
                 ConfigStatus::ParseError { raw, error } => ConfigStatus::ParseError { raw, error },
                 ConfigStatus::NotFound => ConfigStatus::NotFound,
             })
+    }
+
+    /// The text of `.git_archival.txt` in the component's own directory (cached), beside `pyproject.toml`, where
+    /// hatch-vcs reads it.
+    pub(crate) fn git_archival(&self) -> &ConfigStatus<String> {
+        self.git_archival
+            .get_or_init(|| read_text_file(&self.path.join(GIT_ARCHIVAL)))
     }
 
     /// Parsed `package.json` (cached).

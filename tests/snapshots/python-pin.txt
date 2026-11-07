@@ -42,6 +42,8 @@ warn  pyproject-hatch-version  [app-other] pyproject.toml: version from git tags
       No [tool.hatch.version] table
 warn  uv-cache-keys  [app-other] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [app-other] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [app-other] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [app-other] Python: uv.lock
@@ -73,6 +75,8 @@ warn  pyproject-hatch-version  [app-range] pyproject.toml: version from git tags
       No [tool.hatch.version] table
 warn  uv-cache-keys  [app-range] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [app-range] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [app-range] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [app-range] Python: uv.lock
@@ -104,6 +108,8 @@ warn  pyproject-hatch-version  [lib-below] pyproject.toml: version from git tags
       No [tool.hatch.version] table
 warn  uv-cache-keys  [lib-below] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [lib-below] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [lib-below] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [lib-below] Python: uv.lock
@@ -133,6 +139,8 @@ warn  pyproject-hatch-version  [minor] pyproject.toml: version from git tags (ha
       No [tool.hatch.version] table
 warn  uv-cache-keys  [minor] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
+warn  python-git-archival  [minor] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
 warn  python-src-layout  [minor] Python: src/ directory
       Consider using a src/ layout
 warn  uv-lock-exists  [minor] Python: uv.lock
