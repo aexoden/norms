@@ -178,7 +178,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `markdown` breaks the Markdown standards: its `.markdownlint-cli2.jsonc`
   names rules by alias and tag, turns some off and lets others only warn, and
   sets other options than the standard's; its markdownlint-cli2 hook has
-  another ID, and its CI action lints only the root's files.
+  another ID, and its CI action lints only the root's files. Its `CLAUDE.md`
+  names `AGENTS.md` beside it, but only in prose and a code span, which don't
+  import it.
   `versioning` has Python components in subdirectories, checked against the
   versioning standards: one that conforms but lacks the `raw-options` a
   component below the root needs, one with a static version and another build

@@ -118,6 +118,7 @@ pub(crate) struct ProjectContext {
     precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
     editorconfig: OnceLock<ConfigStatus<String>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
+    claude_md: OnceLock<ConfigStatus<String>>,
     workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
     markdownlint_configs: OnceLock<Vec<PathBuf>>,
     release_tags: OnceLock<Vec<String>>,
@@ -141,6 +142,7 @@ impl ProjectContext {
             precommit: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
+            claude_md: OnceLock::new(),
             workflows: OnceLock::new(),
             markdownlint_configs: OnceLock::new(),
             release_tags: OnceLock::new(),
@@ -274,6 +276,12 @@ impl ProjectContext {
     pub(crate) fn gitattributes(&self) -> &ConfigStatus<String> {
         self.gitattributes
             .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
+    }
+
+    /// Raw `CLAUDE.md` content (cached).
+    pub(crate) fn claude_md(&self) -> &ConfigStatus<String> {
+        self.claude_md
+            .get_or_init(|| read_text_file(&self.path.join("CLAUDE.md")))
     }
 
     /// Parsed workflow files in `.github/workflows/` (cached), keyed by file name.

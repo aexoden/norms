@@ -32,6 +32,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_readme(ctx, report);
     common::check_licenses(ctx, report);
     common::check_changelog(ctx, report);
+    common::check_agent_guidance(ctx, report);
     common::check_gitignore(ctx, report);
     common::check_gitattributes(ctx, report);
     common::check_editorconfig(ctx, report);

@@ -130,6 +130,57 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// An import of `AGENTS.md` in `CLAUDE.md`: `@AGENTS.md` (or `@./AGENTS.md`) as a word of its own. In a code span, as
+/// in `` `@AGENTS.md` ``, it isn't an import.
+static AGENTS_IMPORT: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"(?:^|\s)@(?:\./)?AGENTS\.md(?:\s|$)").unwrap()
+});
+
+/// Whether `content`, the text of a `CLAUDE.md`, imports `AGENTS.md`: a line outside fenced code blocks, which Claude
+/// Code doesn't read imports from, has [`AGENTS_IMPORT`]. Indented code blocks, code spans with other text inside them
+/// and HTML comments, which Claude Code also skips, aren't recognized.
+fn imports_agents(content: &str) -> bool {
+    let mut fenced = false;
+    content.lines().any(|line| {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            fenced = !fenced;
+            return false;
+        }
+        !fenced && AGENTS_IMPORT.is_match(line)
+    })
+}
+
+/// Whether `a` and `b` are the same file, as a symlink and its target are.
+fn same_file(a: &Path, b: &Path) -> bool {
+    matches!((a.canonicalize(), b.canonicalize()), (Ok(a), Ok(b)) if a == b)
+}
+
+/// Check that the root `CLAUDE.md` beside an `AGENTS.md` imports it rather than repeating it, or is a symlink to it,
+/// which Claude Code also accepts. A `.claude/CLAUDE.md` isn't read.
+pub(crate) fn check_agent_guidance(ctx: &ProjectContext, report: &mut Report) {
+    let agents = ctx.path().join("AGENTS.md");
+    if !agents.is_file() {
+        return;
+    }
+    let outcome = match ctx.claude_md() {
+        ConfigStatus::NotFound => return,
+        ConfigStatus::ParseError { error, .. } => Err(error.clone()),
+        ConfigStatus::Ok(_) if same_file(&ctx.path().join("CLAUDE.md"), &agents) => Ok(()),
+        ConfigStatus::Ok(content) if imports_agents(content) => Ok(()),
+        ConfigStatus::Ok(_) => Err(
+            "AGENTS.md isn't imported: add @AGENTS.md on a line of its own, outside code"
+                .to_owned(),
+        ),
+    };
+    report.should(
+        "claude-md-imports-agents",
+        "CLAUDE.md: imports AGENTS.md",
+        outcome,
+    );
+}
+
 /// Check for `CHANGELOG.md`, which a project needs if it publishes versioned releases: if it has a Rust or Python
 /// library component that may be published, or a release tag. An application deployed without releases needs none,
 /// so for it the check passes.
@@ -1568,6 +1619,46 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn claude_md_imports_agents_md() {
+        for content in [
+            "@AGENTS.md\n",
+            "# CLAUDE.md\n\n@./AGENTS.md\n",
+            "See @AGENTS.md for the commands.\n",
+        ] {
+            assert!(imports_agents(content), "{content}");
+        }
+        for content in [
+            "",
+            "See AGENTS.md.\n",
+            "Import it with `@AGENTS.md`.\n",
+            "@AGENTS.md.bak\n",
+            "@docs/AGENTS.md\n",
+            "To share it, add:\n\n```markdown\n@AGENTS.md\n```\n",
+            "~~~\n@AGENTS.md\n~~~\n",
+        ] {
+            assert!(!imports_agents(content), "{content}");
+        }
+        assert!(imports_agents("```sh\ncargo test\n```\n\n@AGENTS.md\r\n"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn claude_md_may_link_to_agents_md() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let agents = dir.path().join("AGENTS.md");
+        let claude = dir.path().join("CLAUDE.md");
+        let other = dir.path().join("OTHER.md");
+        std::fs::write(&agents, "# AGENTS.md\n").unwrap();
+        std::fs::write(&other, "# AGENTS.md\n").unwrap();
+        symlink("AGENTS.md", &claude).unwrap();
+        assert!(same_file(&claude, &agents));
+        assert!(!same_file(&other, &agents));
+        assert!(!same_file(&dir.path().join("MISSING.md"), &agents));
+    }
 
     #[test]
     fn diff_drivers_cover_each_extension() {
