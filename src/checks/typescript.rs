@@ -56,6 +56,13 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         );
     }
 
+    // Every TypeScript component is an application, which npm mustn't publish.
+    report.should(
+        "package-json-private",
+        "package.json: private (application)",
+        config.check_private(),
+    );
+
     // Version pinning. Every TypeScript component is an application.
     report.should(
         "package-json-dependencies-exact",

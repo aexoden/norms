@@ -25,6 +25,10 @@ pub(crate) struct PackageJson {
     #[serde(rename = "type")]
     pub module_type: Option<String>,
 
+    /// Whether npm refuses to publish the package. Kept unparsed, so that a value of the wrong type, such as
+    /// `"true"`, is reported rather than failing to parse.
+    pub private: Option<Value>,
+
     /// The tools needed to develop the package, such as Node.js and pnpm. Kept
     /// unparsed, so that a malformed entry fails only the check reading it
     /// (see [`PackageJson::dev_engine`]).
@@ -200,6 +204,16 @@ impl PackageJson {
                 "Sets Corepack's packageManager ({value}); pin pnpm only in devEngines.packageManager"
             ))
         })
+    }
+
+    /// Check that `private` is `true`, so that npm refuses to publish the application by mistake. npm checks for
+    /// exactly `true`, so a string such as `"true"` doesn't count.
+    pub(crate) fn check_private(&self) -> Result<(), String> {
+        match &self.private {
+            Some(Value::Bool(true)) => Ok(()),
+            Some(value) => Err(format!("private is {value}, not true")),
+            None => Err("Missing \"private\": true".to_owned()),
+        }
     }
 
     /// Whether `type` is set to `"module"` (ESM).
@@ -408,6 +422,28 @@ mod tests {
                 Err(format!(
                     "Sets Corepack's packageManager ({value}); pin pnpm only in devEngines.packageManager"
                 )),
+                "{json}"
+            );
+        }
+    }
+
+    #[test]
+    fn requires_private_true() {
+        assert_eq!(parse(r#"{ "private": true }"#).check_private(), Ok(()));
+        for json in ["{}", r#"{ "private": null }"#] {
+            assert_eq!(
+                parse(json).check_private(),
+                Err("Missing \"private\": true".to_owned()),
+                "{json}"
+            );
+        }
+        for (json, value) in [
+            (r#"{ "private": false }"#, "false"),
+            (r#"{ "private": "true" }"#, r#""true""#),
+        ] {
+            assert_eq!(
+                parse(json).check_private(),
+                Err(format!("private is {value}, not true")),
                 "{json}"
             );
         }

@@ -165,6 +165,8 @@ warn  package-json-license-texts  [web] package.json: license has its texts in L
       Not a valid SPDX expression (invalid character(s)): MIT/Apache-2.0
 warn  package-json-esm  [web] package.json: uses ESM (type: module)
       Consider setting "type": "module" for ESM support
+warn  package-json-private  [web] package.json: private (application)
+      Missing "private": true
 pass  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
 warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime

@@ -1,0 +1,60 @@
+exit: 1
+languages: typescript
+components: typescript (.)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+warn  reuse-toml-exists  REUSE.toml: exists
+      File not found
+pass  changelog-exists  CHANGELOG.md (not needed: no published library or release tag)
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml
+      Not found: .pre-commit-config.yaml
+warn  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  package-json-exists  [.] package.json: exists
+pass  package-json-valid  [.] package.json: valid
+pass  package-json-name  [.] package.json: has name
+pass  package-json-esm  [.] package.json: uses ESM (type: module)
+warn  package-json-private  [.] package.json: private (application)
+      private is "true", not true
+pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
+warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
+      Missing devEngines.runtime
+warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
+      Missing devEngines.packageManager
+pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
+warn  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+warn  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
+      File not found
+fail  tsconfig-exists  [.] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [.] ESLint: configured
+      Not found: eslint.config.ts
+pass  eslint-dependency  [.] ESLint: in dependencies
+pass  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
+fail  prettier-config-exists  [.] .prettierrc: exists
+      File not found
+warn  prettier-ignore-exists  [.] Prettier: .prettierignore exists
+      Consider adding .prettierignore
+pass  prettier-dependency  [.] Prettier: in dependencies
+pass  package-json-scripts  [.] package.json: has scripts
+pass  package-json-script-build  [.] Scripts: has 'build'
+pass  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
+pass  package-json-script-format  [.] Scripts: has 'format'
+pass  package-json-script-typecheck  [.] Scripts: has 'typecheck'
+pass  package-json-script-test  [.] Scripts: has 'test'

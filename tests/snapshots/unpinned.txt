@@ -120,6 +120,7 @@ pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
 pass  package-json-name  [web] package.json: has name
 pass  package-json-esm  [web] package.json: uses ESM (type: module)
+pass  package-json-private  [web] package.json: private (application)
 warn  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
       Not pinned with x.y.z: dependencies.react ("^19.2.0"), devDependencies.vite ("~8.3")
 warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines

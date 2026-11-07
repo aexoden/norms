@@ -118,6 +118,8 @@ pass  package-json-valid  [.] package.json: valid
 pass  package-json-name  [.] package.json: has name
 warn  package-json-esm  [.] package.json: uses ESM (type: module)
       Consider setting "type": "module" for ESM support
+warn  package-json-private  [.] package.json: private (application)
+      Missing "private": true
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
 warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
