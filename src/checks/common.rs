@@ -1234,6 +1234,11 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         "CI: ci.yaml: runs on every pull request",
         workflow.runs_on_every_pull_request(),
     );
+    report.should(
+        "ci-yaml-push",
+        "CI: ci.yaml: runs on pushes to main and dev",
+        workflow.runs_on_push_to(&["main", "dev"]),
+    );
 
     check_gate(workflow, report);
 }

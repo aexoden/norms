@@ -11,12 +11,38 @@ use github_actions_expressions::context::Context;
 use github_actions_expressions::literal::Literal;
 use github_actions_expressions::op::{BinExpr, BinOp};
 use github_actions_expressions::{Expr, SpannedExpr};
+use globset::{GlobBuilder, GlobMatcher};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 
 /// The ID of `ci.yaml`'s gate job, which succeeds only if every other job did.
 pub(crate) const GATE_JOB: &str = "ci-success";
+
+/// The patterns of a push trigger's `branches` or `branches-ignore`, a list of them or a single one, each as whether
+/// it is negated with `!` and the glob the rest compiles to.
+fn branch_patterns(patterns: &Value) -> Result<Vec<(bool, GlobMatcher)>, String> {
+    let patterns = match patterns {
+        Value::String(pattern) => vec![pattern.as_str()],
+        Value::Array(patterns) => patterns.iter().filter_map(Value::as_str).collect(),
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => {
+            return Err("push's branch filter isn't a list of patterns".to_owned());
+        }
+    };
+    patterns
+        .into_iter()
+        .map(|pattern| {
+            let (negated, glob) = pattern
+                .strip_prefix('!')
+                .map_or((false, pattern), |rest| (true, rest));
+            GlobBuilder::new(glob)
+                .literal_separator(true)
+                .build()
+                .map(|glob| (negated, glob.compile_matcher()))
+                .map_err(|error| format!("push's branch pattern {pattern} is invalid: {error}"))
+        })
+        .collect()
+}
 
 /// The results a needed job can have other than `success`, each of which must fail the gate.
 const UNSUCCESSFUL_RESULTS: [&str; 3] = ["failure", "cancelled", "skipped"];
@@ -270,6 +296,70 @@ impl Workflow {
             Ok(())
         } else {
             Err(problems.join("; "))
+        }
+    }
+
+    /// Whether the workflow runs on pushes to each of `branches`: `on` names `push`, and any branch filters it sets let
+    /// each branch through. A `branches` list runs a branch whose last matching pattern isn't negated with `!`, and
+    /// `branches-ignore` runs one that no pattern matches, a leading `!` there being dropped. Patterns are matched as
+    /// globset's globs, in which `*` stops at `/` and `**` doesn't, as in GitHub's. They differ from GitHub's in rarer
+    /// syntax, which isn't read as GitHub reads it: GitHub's `?` and `+` repeat the character before them, its `**/`
+    /// needs a `/`, where globset's also matches none, and it has no `{a,b}` alternation. A `push` filtered only by
+    /// `tags` or `tags-ignore` runs on no branch.
+    pub(crate) fn runs_on_push_to(&self, branches: &[&str]) -> Result<(), String> {
+        let not_run = || Err("Doesn't run on push".to_owned());
+        let config = match &self.on {
+            Some(Value::String(event)) if event == "push" => return Ok(()),
+            Some(Value::Array(events)) if events.iter().any(|event| event == "push") => {
+                return Ok(());
+            }
+            Some(Value::Object(events)) => match events.get("push") {
+                Some(config) => config,
+                None => return not_run(),
+            },
+            _ => return not_run(),
+        };
+        let Value::Object(config) = config else {
+            return Ok(());
+        };
+
+        let included = config.get("branches");
+        let ignored = config.get("branches-ignore");
+        let runs: Box<dyn Fn(&str) -> bool> = match (included, ignored) {
+            (Some(_), Some(_)) => {
+                return Err(
+                    "push sets both branches and branches-ignore, which GitHub rejects".to_owned(),
+                );
+            }
+            (Some(patterns), None) => {
+                let patterns = branch_patterns(patterns)?;
+                Box::new(move |branch| {
+                    patterns
+                        .iter()
+                        .rev()
+                        .find(|(_, glob)| glob.is_match(branch))
+                        .is_some_and(|(negated, _)| !negated)
+                })
+            }
+            (None, Some(patterns)) => {
+                let patterns = branch_patterns(patterns)?;
+                Box::new(move |branch| !patterns.iter().any(|(_, glob)| glob.is_match(branch)))
+            }
+            (None, None) if config.contains_key("tags") || config.contains_key("tags-ignore") => {
+                return Err("push is filtered only by tags, so it runs on no branch".to_owned());
+            }
+            (None, None) => return Ok(()),
+        };
+
+        let missing: Vec<_> = branches
+            .iter()
+            .copied()
+            .filter(|branch| !runs(branch))
+            .collect();
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("push doesn't run on {}", missing.join(", ")))
         }
     }
 
@@ -796,6 +886,7 @@ jobs:
             "on: push\n",
             "on: [push, pull_request_target]\n",
             "on:\n  push:\n",
+            "on:\n  push: ~\n",
         ] {
             assert_eq!(
                 runs(yaml),
@@ -818,6 +909,80 @@ jobs:
             runs("on:\n  pull_request:\n    types:\n"),
             Err("pull_request types omit opened, synchronize, reopened".to_owned())
         );
+    }
+
+    #[test]
+    fn runs_on_push_to_main_and_dev() {
+        let runs = |yaml: &str| {
+            serde_saphyr::from_str::<Workflow>(yaml)
+                .expect("workflow parses")
+                .runs_on_push_to(&["main", "dev"])
+        };
+        for yaml in [
+            "on: push\n",
+            "on: [push, pull_request]\n",
+            "on:\n  push:\n",
+            "on:\n  push:\n    branches: [dev, main]\n",
+            "on:\n  push:\n    branches: ['**']\n",
+            "on:\n  push:\n    branches: ['*', '!release/*']\n",
+            "on:\n  push:\n    branches: ['!dev', '*']\n",
+            "on:\n  push:\n    branches: [main, dev]\n    tags: ['v*']\n",
+            "on:\n  push:\n    branches-ignore: ['renovate/**']\n",
+            "on:\n  push:\n    paths: [src]\n",
+        ] {
+            assert_eq!(runs(yaml), Ok(()), "{yaml}");
+        }
+        for (yaml, error) in [
+            ("on: pull_request\n", "Doesn't run on push"),
+            ("name: CI\n", "Doesn't run on push"),
+            ("on:\n  pull_request:\n", "Doesn't run on push"),
+            (
+                "on:\n  push:\n    branches: [main]\n",
+                "push doesn't run on dev",
+            ),
+            (
+                "on:\n  push:\n    branches: main\n",
+                "push doesn't run on dev",
+            ),
+            (
+                "on:\n  push:\n    branches: ['*/**']\n",
+                "push doesn't run on main, dev",
+            ),
+            (
+                "on:\n  push:\n    branches: []\n",
+                "push doesn't run on main, dev",
+            ),
+            (
+                "on:\n  push:\n    branches: ['!main', '!dev']\n",
+                "push doesn't run on main, dev",
+            ),
+            (
+                "on:\n  push:\n    branches-ignore: dev\n",
+                "push doesn't run on dev",
+            ),
+            (
+                "on:\n  push:\n    branches: ['*', '!dev']\n",
+                "push doesn't run on dev",
+            ),
+            (
+                "on:\n  push:\n    branches-ignore: [d*]\n",
+                "push doesn't run on dev",
+            ),
+            (
+                "on:\n  push:\n    tags: ['v*']\n",
+                "push is filtered only by tags, so it runs on no branch",
+            ),
+            (
+                "on:\n  push:\n    branches: [main]\n    branches-ignore: [dev]\n",
+                "push sets both branches and branches-ignore, which GitHub rejects",
+            ),
+            (
+                "on:\n  push:\n    branches: {main: true}\n",
+                "push's branch filter isn't a list of patterns",
+            ),
+        ] {
+            assert_eq!(runs(yaml), Err(error.to_owned()), "{yaml}");
+        }
     }
 
     fn job(yaml: &str) -> WorkflowJob {

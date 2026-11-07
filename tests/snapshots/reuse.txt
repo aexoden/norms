@@ -63,6 +63,7 @@ warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       Doesn't run on pull_request
+pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
 pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
 warn  ci-gate-exists  CI: gate job ci-success
       No ci-success job
