@@ -205,6 +205,12 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `tests/versions.rs` fails if an action entry doesn't match the actions
   manager's pattern, lacks a full tag, or isn't pinned identically in
   `.github/workflows/`, so every template action must also be used there.
+  A unit test in `src/config/markdownlint.rs` fails when
+  `hook_markdownlint_cli2` changes: compare its `RULES` table with the rules of
+  the markdownlint the new release depends on, then update
+  `RULES_MARKDOWNLINT_CLI2` there. Nothing catches an update of
+  `action_markdownlint_cli2` alone, whose markdownlint may differ, so review
+  the rules for that too.
 - Template paths use Jinja names for conditional files and per-language
   directories (`{{ rust_dir }}`, `{{ python_dir }}`, `{{ typescript_dir }}`),
   since any language can be primary (at the root) or secondary (in a

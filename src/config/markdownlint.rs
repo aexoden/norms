@@ -16,7 +16,9 @@ struct Rule {
     tags: &'static [&'static str],
 }
 
-/// markdownlint's rules, as of markdownlint 0.42, in its order.
+/// markdownlint's rules, as of markdownlint 0.42, in its order. A test fails when the template's `versions.yml` pins a
+/// markdownlint-cli2 other than the release that depends on markdownlint 0.42, so that the rules are compared again on
+/// each update.
 const RULES: &[Rule] = &[
     rule(&["MD001", "heading-increment"], &["headings"]),
     rule(&["MD003", "heading-style"], &["headings"]),
@@ -417,6 +419,33 @@ mod tests {
         let config = config(STANDARD);
         assert_eq!(config.check_rules(), Ok(()));
         assert_eq!(config.check_settings(), Ok(()));
+    }
+
+    /// The markdownlint-cli2 release that depends on the markdownlint whose rules [`RULES`] lists.
+    const RULES_MARKDOWNLINT_CLI2: &str = "v0.24.0";
+
+    /// The version of markdownlint-cli2 that the template's `versions.yml` pins its hook to.
+    fn pinned_markdownlint_cli2() -> String {
+        let versions: Value = serde_saphyr::from_str(
+            &std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/versions.yml")).unwrap(),
+        )
+        .unwrap();
+        versions
+            .get("hook_markdownlint_cli2")
+            .and_then(|entry| entry.get("default"))
+            .and_then(Value::as_str)
+            .unwrap()
+            .to_owned()
+    }
+
+    #[test]
+    fn rules_match_the_pinned_markdownlint_cli2() {
+        assert_eq!(
+            pinned_markdownlint_cli2(),
+            RULES_MARKDOWNLINT_CLI2,
+            "versions.yml pins another markdownlint-cli2: compare RULES with the rules of the markdownlint it depends on, \
+             then update RULES_MARKDOWNLINT_CLI2"
+        );
     }
 
     #[test]
