@@ -151,6 +151,10 @@ pass  tsconfig-no-unused-parameters  [frontend] tsconfig.node.json: noUnusedPara
 pass  tsconfig-module-detection  [frontend] tsconfig.node.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [frontend] tsconfig.node.json: isolatedModules enabled
 pass  eslint-config-exists  [frontend] ESLint: configured
+pass  eslint-strict-type-checked  [frontend] ESLint: includes typescript-eslint's strictTypeChecked
+pass  eslint-stylistic-type-checked  [frontend] ESLint: includes typescript-eslint's stylisticTypeChecked
+pass  eslint-project-service  [frontend] ESLint: projectService enabled for type-aware rules
+pass  eslint-config-prettier  [frontend] ESLint: eslint-config-prettier turns off rules Prettier covers
 pass  eslint-dependency  [frontend] ESLint: in dependencies
 pass  eslint-typescript-eslint  [frontend] ESLint: typescript-eslint configured
 pass  prettier-config-exists  [frontend] .prettierrc: exists

@@ -201,7 +201,11 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   required compiler options, one spelling `moduleDetection` in another case,
   which TypeScript accepts. Its `pnpm-workspace.yaml` lists `allowBuilds` as
   a sequence, keeps the older `onlyBuiltDependencies`, and lets unlisted
-  dependencies' build scripts through.
+  dependencies' build scripts through. Its `eslint.config.ts` includes
+  typescript-eslint's `recommendedTypeChecked` and an `Only` variant of
+  `stylisticTypeChecked` rather than the standard's configs, comments out
+  `strictTypeChecked`, sets `project` rather than `projectService`, and takes
+  Prettier's config from `eslint-plugin-prettier`.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

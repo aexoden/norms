@@ -338,6 +338,7 @@ pub(crate) struct ComponentContext {
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     python_version: OnceLock<ConfigStatus<Version>>,
     git_archival: OnceLock<ConfigStatus<String>>,
+    eslint_config: OnceLock<ConfigStatus<String>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
     prettier: OnceLock<ConfigStatus<PrettierConfig>>,
@@ -363,6 +364,7 @@ impl ComponentContext {
             pyproject: OnceLock::new(),
             python_version: OnceLock::new(),
             git_archival: OnceLock::new(),
+            eslint_config: OnceLock::new(),
             package_json: OnceLock::new(),
             pnpm_workspace: OnceLock::new(),
             prettier: OnceLock::new(),
@@ -525,6 +527,12 @@ impl ComponentContext {
     pub(crate) fn git_archival(&self) -> &ConfigStatus<String> {
         self.git_archival
             .get_or_init(|| read_text_file(&self.path.join(GIT_ARCHIVAL)))
+    }
+
+    /// The text of `eslint.config.ts` (cached), which is code rather than data, so checks match its text.
+    pub(crate) fn eslint_config(&self) -> &ConfigStatus<String> {
+        self.eslint_config
+            .get_or_init(|| read_text_file(&self.path.join("eslint.config.ts")))
     }
 
     /// Parsed `package.json` (cached).

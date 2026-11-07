@@ -398,6 +398,89 @@ fn check_module_detection(value: Option<&str>) -> Result<(), String> {
 // Linting
 //
 
+/// typescript-eslint's `strictTypeChecked` config, as `eslint.config.ts` includes it, such as
+/// `tseslint.configs.strictTypeChecked`. The variant ending in `Only`, which leaves out the rules of the configs it
+/// builds on, doesn't count.
+static STRICT_TYPE_CHECKED: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"\bstrictTypeChecked\b").unwrap()
+});
+
+/// typescript-eslint's `stylisticTypeChecked` config, as for [`STRICT_TYPE_CHECKED`].
+static STYLISTIC_TYPE_CHECKED: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"\bstylisticTypeChecked\b").unwrap()
+});
+
+/// `projectService` enabled in the parser options, as `true` or an object of its options.
+static PROJECT_SERVICE: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"\bprojectService\s*:\s*(?:true\b|\{)").unwrap()
+});
+
+/// An import of `eslint-config-prettier`, or of its `flat` entry point.
+static CONFIG_PRETTIER_IMPORT: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r#"\bfrom\s*["']eslint-config-prettier(?:/flat)?["']"#).unwrap()
+});
+
+/// The text of `eslint.config.ts` without its comments, so that a commented-out config, or one named in a note, doesn't
+/// count. Strings are kept whole, so that a `//` in a URL doesn't start a comment; each comment becomes a space, or the
+/// line breaks it spans. Regular expression literals aren't recognized, which a configuration rarely has.
+fn eslint_config_code(text: &str) -> String {
+    let mut code = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '/' if chars.peek() == Some(&'/') => {
+                while chars.next_if(|&next| next != '\n').is_some() {}
+                code.push(' ');
+            }
+            '/' if chars.peek() == Some(&'*') => {
+                chars.next();
+                let mut previous = ' ';
+                for next in chars.by_ref() {
+                    if previous == '*' && next == '/' {
+                        break;
+                    }
+                    if next == '\n' {
+                        code.push('\n');
+                    }
+                    previous = next;
+                }
+                code.push(' ');
+            }
+            '"' | '\'' | '`' => {
+                code.push(c);
+                while let Some(next) = chars.next() {
+                    code.push(next);
+                    if next == '\\' {
+                        if let Some(escaped) = chars.next() {
+                            code.push(escaped);
+                        }
+                    } else if next == c {
+                        break;
+                    }
+                }
+            }
+            _ => code.push(c),
+        }
+    }
+    code
+}
+
+/// Check that `eslint.config.ts` imports `eslint-config-prettier`, which is also a dependency, if the
+/// dependencies are known.
+fn check_config_prettier(code: &str, in_dependencies: Option<bool>) -> Result<(), String> {
+    if !CONFIG_PRETTIER_IMPORT.is_match(code) {
+        Err("eslint.config.ts doesn't import eslint-config-prettier".to_owned())
+    } else if in_dependencies == Some(false) {
+        Err("eslint-config-prettier isn't in dependencies".to_owned())
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
     let ts_root = ctx.path();
     let eslint_config = ts_root.join("eslint.config.ts");
@@ -407,6 +490,50 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
         "ESLint: configured",
         file_exists(&eslint_config),
     );
+
+    if let ConfigStatus::Ok(text) = ctx.eslint_config() {
+        let code = eslint_config_code(text);
+        for (id, name, pattern, message) in [
+            (
+                "eslint-strict-type-checked",
+                "ESLint: includes typescript-eslint's strictTypeChecked",
+                &STRICT_TYPE_CHECKED,
+                "Doesn't include strictTypeChecked",
+            ),
+            (
+                "eslint-stylistic-type-checked",
+                "ESLint: includes typescript-eslint's stylisticTypeChecked",
+                &STYLISTIC_TYPE_CHECKED,
+                "Doesn't include stylisticTypeChecked",
+            ),
+            (
+                "eslint-project-service",
+                "ESLint: projectService enabled for type-aware rules",
+                &PROJECT_SERVICE,
+                "Doesn't enable projectService in the parser options",
+            ),
+        ] {
+            report.should(
+                id,
+                name,
+                if pattern.is_match(&code) {
+                    Ok(())
+                } else {
+                    Err(message.to_owned())
+                },
+            );
+        }
+        report.should(
+            "eslint-config-prettier",
+            "ESLint: eslint-config-prettier turns off rules Prettier covers",
+            check_config_prettier(
+                &code,
+                ctx.package_json()
+                    .as_ref_ok()
+                    .map(|pkg| pkg.has_dep("eslint-config-prettier")),
+            ),
+        );
+    }
 
     // Check for ESLint in dependencies
     if let Some(pkg) = ctx.package_json().as_ref_ok() {
@@ -849,6 +976,82 @@ mod tests {
             eslint_in_ci(&workflow("pnpm exec tsc -b")),
             Err("No step runs eslint".to_owned())
         );
+    }
+
+    #[test]
+    fn eslint_config_includes_the_typed_configs() {
+        let code = eslint_config_code(
+            "export default defineConfig(\n    ...tseslint.configs.strictTypeChecked,\n    \
+             tseslint.configs.stylisticTypeCheckedOnly,\n    // tseslint.configs.stylisticTypeChecked,\n);\n",
+        );
+        assert!(STRICT_TYPE_CHECKED.is_match(&code));
+        assert!(!STYLISTIC_TYPE_CHECKED.is_match(&code));
+        assert!(!STRICT_TYPE_CHECKED.is_match("tseslint.configs.strictTypeCheckedOnly"));
+
+        for text in [
+            "parserOptions: { projectService: true }",
+            "projectService:true,",
+            "projectService: {\n    allowDefaultProject: [\"*.js\"],\n}",
+        ] {
+            assert!(PROJECT_SERVICE.is_match(text), "{text}");
+        }
+        for text in [
+            "parserOptions: { project: true }",
+            "projectService: false",
+            "// projectService: true",
+            "project: true, // not projectService: true yet",
+            "/* projectService: true,\n */ project: true",
+        ] {
+            assert!(
+                !PROJECT_SERVICE.is_match(&eslint_config_code(text)),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn eslint_config_code_drops_comments_but_not_strings() {
+        assert_eq!(
+            eslint_config_code("a, // b\nc, /* d\ne */ f, /**/g"),
+            "a,  \nc, \n  f,  g"
+        );
+        for text in [
+            "url: \"https://example.com\", x",
+            "glob: '**/*.js', x",
+            "s: `a /* b */ c`, x",
+            "q: \"a \\\" // b\", x",
+        ] {
+            assert_eq!(eslint_config_code(text), text, "{text}");
+        }
+        assert_eq!(eslint_config_code("/* never closed"), " ");
+    }
+
+    #[test]
+    fn eslint_config_imports_eslint_config_prettier() {
+        for code in [
+            "import prettier from \"eslint-config-prettier\";",
+            "import prettier from 'eslint-config-prettier/flat';",
+        ] {
+            assert_eq!(check_config_prettier(code, Some(true)), Ok(()), "{code}");
+            assert_eq!(check_config_prettier(code, None), Ok(()), "{code}");
+        }
+        assert_eq!(
+            check_config_prettier(
+                "import prettier from \"eslint-config-prettier\";",
+                Some(false)
+            ),
+            Err("eslint-config-prettier isn't in dependencies".to_owned())
+        );
+        for code in [
+            "import prettier from \"eslint-plugin-prettier/recommended\";",
+            "import prettier from \"eslint-config-prettier-extended\";",
+        ] {
+            assert_eq!(
+                check_config_prettier(code, Some(true)),
+                Err("eslint.config.ts doesn't import eslint-config-prettier".to_owned()),
+                "{code}"
+            );
+        }
     }
 
     #[test]

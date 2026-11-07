@@ -82,8 +82,15 @@ pass  tsconfig-no-unused-locals  [.] tsconfig.node.json: noUnusedLocals enabled
 pass  tsconfig-no-unused-parameters  [.] tsconfig.node.json: noUnusedParameters enabled
 pass  tsconfig-module-detection  [.] tsconfig.node.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [.] tsconfig.node.json: isolatedModules enabled
-fail  eslint-config-exists  [.] ESLint: configured
-      Not found: eslint.config.ts
+pass  eslint-config-exists  [.] ESLint: configured
+warn  eslint-strict-type-checked  [.] ESLint: includes typescript-eslint's strictTypeChecked
+      Doesn't include strictTypeChecked
+warn  eslint-stylistic-type-checked  [.] ESLint: includes typescript-eslint's stylisticTypeChecked
+      Doesn't include stylisticTypeChecked
+warn  eslint-project-service  [.] ESLint: projectService enabled for type-aware rules
+      Doesn't enable projectService in the parser options
+warn  eslint-config-prettier  [.] ESLint: eslint-config-prettier turns off rules Prettier covers
+      eslint.config.ts doesn't import eslint-config-prettier
 pass  eslint-dependency  [.] ESLint: in dependencies
 pass  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
 fail  prettier-config-exists  [.] .prettierrc: exists
