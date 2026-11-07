@@ -68,3 +68,4 @@ warn  deny-toml-exists  [.] deny.toml: exists
       File not found
 warn  cargo-config-exists  .cargo/config.toml: exists
       File not found
+pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false

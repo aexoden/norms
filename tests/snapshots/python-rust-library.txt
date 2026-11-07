@@ -152,4 +152,5 @@ pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check
 pass  rust-ci-test  Rust CI: test
 pass  rust-ci-cargo-deny  Rust CI: cargo deny
+pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  rust-audit-cargo-deny  Rust audit: cargo deny advisories

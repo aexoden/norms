@@ -164,7 +164,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `if: always()` that misses a job and doesn't fail on every result, and that,
   like another job, sets `continue-on-error`; and an
   unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
-  advisories check, beside stub `Cargo.toml` and `pyproject.toml` files.
+  advisories check; and a `release.yaml` job that only checks formatting but
+  leaves setup-rust-toolchain's cache on, beside jobs that build or turn it
+  off, and stub `Cargo.toml` and `pyproject.toml` files.
   `precommit` has only a `.pre-commit-config.yaml`, which breaks the pre-commit
   standards: its `default_install_hook_types` lacks `pre-commit`, it runs only
   some of the pre-commit-hooks set, its `reuse` hook runs in the wrong stage,

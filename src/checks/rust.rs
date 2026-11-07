@@ -9,7 +9,8 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CargoConfig, CargoToml, CargoWorkspace, ClippyToml, Workflow, WorkflowStep, commands,
+    CargoConfig, CargoToml, CargoWorkspace, ClippyToml, Workflow, WorkflowJob, WorkflowStep,
+    commands,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -567,6 +568,105 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// The actions that build no Rust code.
+const NON_BUILDING_ACTIONS: [&str; 5] = [
+    "actions/checkout",
+    "actions-rust-lang/rustfmt",
+    "actions-rust-lang/setup-rust-toolchain",
+    "EmbarkStudios/cargo-deny-action",
+    "taiki-e/install-action",
+];
+
+/// The Cargo subcommands that build no Rust code.
+const NON_BUILDING_CARGO_SUBCOMMANDS: [&str; 9] = [
+    "deny",
+    "fetch",
+    "fmt",
+    "generate-lockfile",
+    "metadata",
+    "tree",
+    "update",
+    "version",
+    "--version",
+];
+
+/// Whether a command, as its words, builds no Rust code: it is empty or a comment, runs `rustfmt`, runs `rustup` other
+/// than `rustup run`, which runs any command, or runs one of the Cargo subcommands that don't build. Any other command
+/// may build.
+fn builds_nothing(words: &[&str]) -> bool {
+    match words.first() {
+        Some(word) if word.starts_with('#') => true,
+        None | Some(&"rustfmt") => true,
+        Some(&"rustup") => words.get(1) != Some(&"run"),
+        Some(&"cargo") => cargo_subcommand(words)
+            .is_some_and(|(subcommand, _)| NON_BUILDING_CARGO_SUBCOMMANDS.contains(&subcommand)),
+        Some(_) => false,
+    }
+}
+
+/// Whether a job builds no Rust code, so that caching its build is wasted: each of its steps uses one of the actions
+/// that build nothing, and every command of its scripts builds nothing. A job running an unrecognized action or
+/// command may build, so it is never counted.
+fn job_builds_nothing(job: &WorkflowJob) -> bool {
+    job.steps.iter().all(|step| {
+        step.uses.is_none()
+            || NON_BUILDING_ACTIONS
+                .iter()
+                .any(|action| step.uses_action(action))
+    }) && job
+        .run_lines()
+        .all(|line| commands(&line).all(|words| builds_nothing(&words)))
+}
+
+/// The jobs of `workflow`, by ID, that build no Rust code but cache it: a setup-rust-toolchain step in them doesn't
+/// set `cache: false`.
+fn jobs_caching_nothing(workflow: &Workflow) -> Vec<&str> {
+    workflow
+        .jobs
+        .iter()
+        .filter(|(_, job)| {
+            job_builds_nothing(job)
+                && job
+                    .steps_using("actions-rust-lang/setup-rust-toolchain")
+                    .any(|step| step.input("cache").as_deref() != Some("false"))
+        })
+        .map(|(id, _)| id.as_str())
+        .collect()
+}
+
+/// Check that the jobs of every workflow that build no Rust code, such as formatting, turn off setup-rust-toolchain's
+/// cache with `cache: false`.
+pub(crate) fn check_toolchain_cache(ctx: &ProjectContext, report: &mut Report) {
+    let mut parsed = false;
+    let mut caching = Vec::new();
+    for (name, status) in ctx.workflows() {
+        if let ConfigStatus::Ok(workflow) = status {
+            parsed = true;
+            caching.extend(
+                jobs_caching_nothing(workflow)
+                    .into_iter()
+                    .map(|job| format!("{name}: {job}")),
+            );
+        }
+    }
+    if !parsed {
+        return;
+    }
+
+    report.should(
+        "rust-ci-toolchain-cache",
+        "Rust CI: jobs that build nothing set cache: false",
+        if caching.is_empty() {
+            Outcome::Pass
+        } else {
+            Outcome::fail(format!(
+                "These jobs build nothing, but setup-rust-toolchain caches their build: {}",
+                caching.join(", ")
+            ))
+        },
+    );
+}
+
 /// The Cargo subcommand a command's words run, after any `+toolchain`, and the arguments that follow it.
 fn cargo_subcommand<'a>(words: &[&'a str]) -> Option<(&'a str, Vec<&'a str>)> {
     let mut words = words
@@ -1001,6 +1101,62 @@ jobs:
         ] {
             assert!(!checks_cargo_lock(line), "{line}");
         }
+    }
+
+    #[test]
+    fn jobs_building_nothing_disable_the_cache() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  rustfmt:
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - uses: actions-rust-lang/rustfmt@v1
+  lock:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - run: |
+          # Fails if the lock file is stale.
+          cargo +1.99.1 update --workspace --locked && cargo tree
+  uncached:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: \"false\"
+      - run: cargo fmt --check
+  deny:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check bans; rustup show
+  test:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - run: cargo fmt --check && cargo test
+  rustup-run:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - run: rustup run stable cargo build
+  hooks:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - run: uvx pre-commit run --all-files
+  build-action:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - uses: ./.github/actions/build
+  no-toolchain:
+    steps:
+      - run: cargo fmt --check
+  reusable:
+    uses: ./.github/workflows/rust.yaml
+",
+        )
+        .unwrap();
+        assert_eq!(jobs_caching_nothing(&workflow), ["deny", "lock", "rustfmt"]);
     }
 
     #[test]

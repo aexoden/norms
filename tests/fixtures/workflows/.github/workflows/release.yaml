@@ -21,3 +21,38 @@ jobs:
     name: Publish
     needs: [build]
     uses: ./.github/workflows/publish.yaml
+
+  rustfmt:
+    name: Check Rust code formatting
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    steps:
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Check Rust code formatting
+        run: cargo fmt --all --check
+
+  cargo-lock:
+    name: Check that Cargo.lock is up to date
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    steps:
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+
+      - name: Check that Cargo.lock is up to date
+        run: cargo update --workspace --locked
+
+  cargo-test:
+    name: Run Rust tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Run Rust tests
+        run: cargo test --workspace --all-features

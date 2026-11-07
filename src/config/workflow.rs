@@ -83,6 +83,13 @@ impl WorkflowStep {
         }
     }
 
+    /// Whether the step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
+    pub(crate) fn uses_action(&self, action: &str) -> bool {
+        self.uses
+            .as_deref()
+            .is_some_and(|uses| is_action(uses, action))
+    }
+
     /// Whether the step's script exits with an error: one of its commands is `exit` with a status other than 0, or
     /// `false`.
     fn exits_with_error(&self) -> bool {
@@ -185,11 +192,9 @@ impl WorkflowJob {
         &'a self,
         action: &'a str,
     ) -> impl Iterator<Item = &'a WorkflowStep> {
-        self.steps.iter().filter(move |step| {
-            step.uses
-                .as_deref()
-                .is_some_and(|uses| is_action(uses, action))
-        })
+        self.steps
+            .iter()
+            .filter(move |step| step.uses_action(action))
     }
 }
 

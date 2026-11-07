@@ -157,6 +157,7 @@ warn  rust-ci-rustfmt  Rust CI: format check
 warn  rust-ci-clippy  Rust CI: clippy check
 warn  rust-ci-test  Rust CI: test
 warn  rust-ci-cargo-deny  Rust CI: cargo deny
+pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
 pass  package-json-name  [web] package.json: has name

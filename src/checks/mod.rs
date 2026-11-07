@@ -67,6 +67,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 rust::check_cargo_config(ctx, report);
                 rust::check_precommit_hooks(ctx, report);
                 rust::check_ci(ctx, report);
+                rust::check_toolchain_cache(ctx, report);
                 rust::check_audit(ctx, report);
             }
             Language::TypeScript => {

@@ -162,4 +162,6 @@ warn  rust-ci-rustfmt  Rust CI: format check
 warn  rust-ci-clippy  Rust CI: clippy check
 warn  rust-ci-test  Rust CI: test
 warn  rust-ci-cargo-deny  Rust CI: cargo deny
+warn  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
+      These jobs build nothing, but setup-rust-toolchain caches their build: release.yaml: rustfmt
 warn  rust-audit-cargo-deny  Rust audit: cargo deny advisories
