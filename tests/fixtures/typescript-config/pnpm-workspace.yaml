@@ -1,0 +1,7 @@
+allowBuilds:
+  - esbuild
+dangerouslyAllowAllBuilds: true
+minimumReleaseAge: 4320
+onlyBuiltDependencies:
+  - esbuild
+strictDepBuilds: false

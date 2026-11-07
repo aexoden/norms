@@ -117,6 +117,9 @@ pass  pnpm-lock-exists  [frontend] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [frontend] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [frontend] pnpm-workspace.yaml: valid
 pass  pnpm-workspace-minimum-release-age  [frontend] pnpm: release age of 3 days (minimumReleaseAge)
+pass  pnpm-workspace-allow-builds  [frontend] pnpm: lists the dependencies allowed to build (allowBuilds)
+pass  pnpm-workspace-no-legacy-build-settings  [frontend] pnpm: no build settings replaced by allowBuilds
+pass  pnpm-workspace-builds-restricted  [frontend] pnpm: builds limited to allowBuilds
 pass  tsconfig-exists  [frontend] tsconfig.json: exists
 pass  tsconfig-valid  [frontend] tsconfig.json: valid
 pass  tsconfig-project-references  [frontend] tsconfig.json: uses project references

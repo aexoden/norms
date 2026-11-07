@@ -199,7 +199,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `package.json` sets `private` to the string `"true"`, and its two
   referenced tsconfigs lack, turn off or set to another value some of the
   required compiler options, one spelling `moduleDetection` in another case,
-  which TypeScript accepts.
+  which TypeScript accepts. Its `pnpm-workspace.yaml` lists `allowBuilds` as
+  a sequence, keeps the older `onlyBuiltDependencies`, and lets unlisted
+  dependencies' build scripts through.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

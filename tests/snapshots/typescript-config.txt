@@ -39,8 +39,15 @@ warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in d
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
 warn  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
-warn  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
-      File not found
+pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
+pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
+pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minimumReleaseAge)
+warn  pnpm-workspace-allow-builds  [.] pnpm: lists the dependencies allowed to build (allowBuilds)
+      allowBuilds ["esbuild"] isn't a map of package names to true or false
+warn  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no build settings replaced by allowBuilds
+      Sets onlyBuiltDependencies, which pnpm 11 replaced with allowBuilds
+warn  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to allowBuilds
+      dangerouslyAllowAllBuilds is true; strictDepBuilds is false
 pass  tsconfig-exists  [.] tsconfig.json: exists
 pass  tsconfig-valid  [.] tsconfig.json: valid
 pass  tsconfig-project-references  [.] tsconfig.json: uses project references

@@ -1177,6 +1177,11 @@ allowBuilds:
 minimumReleaseAge: 4320
 ```
 
+pnpm fails the install when an unlisted dependency has build scripts, so
+neither `dangerouslyAllowAllBuilds: true` nor `strictDepBuilds: false` is set.
+The settings `allowBuilds` replaced in pnpm 11, such as
+`onlyBuiltDependencies`, are ignored by pnpm and aren't used.
+
 #### Compiler Options
 
 `tsconfig.json` is solution-style, referencing a config for the application

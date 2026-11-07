@@ -135,6 +135,10 @@ pass  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [web] pnpm-workspace.yaml: valid
 warn  pnpm-workspace-minimum-release-age  [web] pnpm: release age of 3 days (minimumReleaseAge)
       1440 minutes isn't 3 days (4320)
+warn  pnpm-workspace-allow-builds  [web] pnpm: lists the dependencies allowed to build (allowBuilds)
+      Missing allowBuilds
+pass  pnpm-workspace-no-legacy-build-settings  [web] pnpm: no build settings replaced by allowBuilds
+pass  pnpm-workspace-builds-restricted  [web] pnpm: builds limited to allowBuilds
 fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [web] ESLint: configured

@@ -137,6 +137,21 @@ pub(crate) fn check_pnpm_workspace(ctx: &ComponentContext, report: &mut Report) 
         "pnpm: release age of 3 days (minimumReleaseAge)",
         config.check_minimum_release_age(),
     );
+    report.should(
+        "pnpm-workspace-allow-builds",
+        "pnpm: lists the dependencies allowed to build (allowBuilds)",
+        config.check_allow_builds(),
+    );
+    report.should(
+        "pnpm-workspace-no-legacy-build-settings",
+        "pnpm: no build settings replaced by allowBuilds",
+        config.check_no_legacy_build_settings(),
+    );
+    report.should(
+        "pnpm-workspace-builds-restricted",
+        "pnpm: builds limited to allowBuilds",
+        config.check_builds_restricted(),
+    );
 }
 
 //

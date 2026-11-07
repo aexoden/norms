@@ -79,6 +79,9 @@ pass  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
 pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minimumReleaseAge)
+pass  pnpm-workspace-allow-builds  [.] pnpm: lists the dependencies allowed to build (allowBuilds)
+pass  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no build settings replaced by allowBuilds
+pass  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to allowBuilds
 pass  tsconfig-exists  [.] tsconfig.json: exists
 pass  tsconfig-valid  [.] tsconfig.json: valid
 pass  tsconfig-project-references  [.] tsconfig.json: uses project references
