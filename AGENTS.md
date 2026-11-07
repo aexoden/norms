@@ -180,7 +180,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   component below the root needs, one with a static version and another build
   backend, whose `.git_archival.txt` has the older `ref-names` form and isn't
   marked `export-subst`, and one uv doesn't build (`package = false`), which
-  isn't checked.
+  isn't checked. Its `ci.yaml` has setup-uv steps that pin uv exactly, that
+  pin no version in a job running `uv`, and that pin none in a job only running
+  `uvx`, which needn't.
   `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files: a
   `uv-lock` hook and CI step run through uv's global options, and of the jobs

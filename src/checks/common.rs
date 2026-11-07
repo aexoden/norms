@@ -12,7 +12,7 @@ use regex::Regex;
 use crate::checks::{python, rust};
 use crate::config::{
     DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook, SHARED_PRESET,
-    Workflow, commands,
+    Workflow, WorkflowJob, commands,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -1014,6 +1014,61 @@ static REUSE_LINT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?m)\breuse\s+lint(?:$|[^\w-])").unwrap()
 });
 
+/// The action that installs uv.
+pub(crate) const SETUP_UV: &str = "astral-sh/setup-uv";
+
+/// An exact uv version, such as `0.9.5`.
+static EXACT_UV_VERSION: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+$").unwrap()
+});
+
+/// Whether a job runs uv itself, such as `uv sync` or `uv run`, rather than only running tools through `uvx`: some
+/// command's first word is `uv` or a path to it. A later word naming uv, as in `pip install uv` or `rm -rf ~/.cache/uv`,
+/// doesn't run it.
+fn job_runs_uv(job: &WorkflowJob) -> bool {
+    job.run_lines().any(|line| {
+        commands(&line).any(|words| {
+            words
+                .first()
+                .is_some_and(|word| word.rsplit('/').next() == Some("uv"))
+        })
+    })
+}
+
+/// Check that every setup-uv step in a job that runs uv itself pins an exact uv version with its `version` input, or
+/// `None` if there is no such step. Without the input, setup-uv installs the newest uv that `required-version` allows,
+/// so the version CI runs changes with every uv release. A job that only runs tools through `uvx`, such as the
+/// pre-commit job, doesn't install the project, so its uv needn't match.
+fn setup_uv_exact(workflow: &Workflow) -> Option<Result<(), String>> {
+    let mut used = false;
+    let mut inexact = Vec::new();
+    for (job, step) in workflow.job_steps_using(SETUP_UV) {
+        if !workflow.jobs.get(job).is_some_and(job_runs_uv) {
+            continue;
+        }
+        used = true;
+        match step.input("version") {
+            Some(version) if EXACT_UV_VERSION.is_match(&version) => {}
+            Some(version) => inexact.push(format!("{job} ({version})")),
+            None if step.input("version-file").is_some() => {
+                inexact.push(format!("{job} (version-file, not version)"));
+            }
+            None => inexact.push(format!("{job} (no version)")),
+        }
+    }
+    used.then(|| {
+        if inexact.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "setup-uv doesn't pin an exact uv version in: {}",
+                inexact.join(", ")
+            ))
+        }
+    })
+}
+
 /// `tombi format --check` in a CI script, which fails on unformatted files instead of rewriting them.
 static TOMBI_FORMAT_CHECK: LazyLock<Regex> = LazyLock::new(|| {
     #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
@@ -1081,6 +1136,13 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
             format!("CI: {name}: concurrency cancels superseded runs"),
             workflow.cancels_superseded_runs(),
         );
+        if let Some(exact) = setup_uv_exact(workflow) {
+            report.should(
+                "workflow-setup-uv-version",
+                format!("CI: {name}: setup-uv pins an exact uv version in jobs running uv"),
+                exact,
+            );
+        }
     }
 
     let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
@@ -1287,6 +1349,95 @@ mod tests {
         ] {
             assert!(!REUSE_LINT.is_match(run), "{run}");
         }
+    }
+
+    #[test]
+    fn setup_uv_pins_an_exact_version() {
+        let workflow = |yaml: &str| -> Workflow { serde_saphyr::from_str(yaml).unwrap() };
+        assert_eq!(
+            setup_uv_exact(&workflow(
+                "jobs:\n  test:\n    steps:\n      - run: uv sync\n"
+            )),
+            None
+        );
+        // Jobs that only run tools through uvx needn't pin uv.
+        assert_eq!(
+            setup_uv_exact(&workflow(
+                "
+jobs:
+  pre-commit:
+    steps:
+      - uses: astral-sh/setup-uv@abc # v7.1.0
+        with:
+          enable-cache: false
+      - run: rm -rf ~/.cache/uv && pip install uv
+      - run: uvx pre-commit@4.3.0 run --all-files
+"
+            )),
+            None
+        );
+        assert_eq!(
+            setup_uv_exact(&workflow(
+                "
+jobs:
+  pre-commit:
+    steps:
+      - uses: astral-sh/setup-uv@abc # v7.1.0
+      - run: uvx pre-commit@4.3.0 run --all-files
+  pytest:
+    steps:
+      - uses: astral-sh/setup-uv@abc
+        with:
+          version: 0.9.5
+          python-version: \"3.12\"
+      - run: uv run --locked pytest
+"
+            )),
+            Some(Ok(()))
+        );
+        assert_eq!(
+            setup_uv_exact(&workflow(
+                "
+jobs:
+  audit:
+    steps:
+      - uses: astral-sh/setup-uv@v7
+      - run: uv audit --locked
+  lint:
+    steps:
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: \">=0.9\"
+      - run: uv --directory api run ruff check
+  test:
+    steps:
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: \"0.9\"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: \"0.9.5\"
+      - run: cd api && uv sync --locked
+  matrix:
+    steps:
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ matrix.uv }}
+      - run: uv lock --check
+  file:
+    steps:
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version-file: uv.toml
+      - run: ~/.local/bin/uv run mypy .
+"
+            )),
+            Some(Err(
+                "setup-uv doesn't pin an exact uv version in: audit (no version), file (version-file, not version), \
+                 lint (>=0.9), matrix (${{ matrix.uv }}), test (0.9)"
+                    .to_owned()
+            ))
+        );
     }
 
     #[test]

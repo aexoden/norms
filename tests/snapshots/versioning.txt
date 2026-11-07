@@ -27,8 +27,26 @@ fail  precommit-config-exists  .pre-commit-config.yaml
       Not found: .pre-commit-config.yaml
 warn  renovate-exists  renovate.json: exists
       File not found
-fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
-      Not found: workflows
+pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
+pass  ci-yaml-exists  CI: ci.yaml: exists
+pass  ci-yaml-valid  CI: ci.yaml: valid
+warn  audit-yaml-exists  CI: audit.yaml: exists
+      File not found
+pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+warn  workflow-setup-uv-version  CI: ci.yaml: setup-uv pins an exact uv version in jobs running uv
+      setup-uv doesn't pin an exact uv version in: uv-lock (no version)
+warn  ci-reuse  CI: REUSE compliance
+warn  ci-markdownlint  CI: Markdown linting (every file)
+      No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
+warn  ci-tombi  CI: TOML formatting
+warn  ci-zizmor  CI: zizmor (pedantic)
+      No step runs zizmor or uses zizmorcore/zizmor-action
+pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
+pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
+warn  ci-gate-exists  CI: gate job ci-success
+      No ci-success job
 pass  components-search  Components: every directory searched
 pass  pyproject-exists  [api] pyproject.toml: exists
 pass  pyproject-valid  [api] pyproject.toml: valid
@@ -58,6 +76,8 @@ warn  ruff-lint-configured  [api] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [api] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  python-ci-min-python  [api] Python CI: tests on the oldest supported Python (library)
+      No job sets setup-uv's python-version input and runs pytest
 pass  pyproject-exists  [service] pyproject.toml: exists
 pass  pyproject-valid  [service] pyproject.toml: valid
 pass  pyproject-project  [service] pyproject.toml: has [project] section
@@ -79,6 +99,8 @@ warn  ruff-lint-configured  [service] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [service] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  python-ci-min-python  [service] Python CI: tests on the oldest supported Python (library)
+      No job sets setup-uv's python-version input and runs pytest
 pass  pyproject-exists  [tool] pyproject.toml: exists
 pass  pyproject-valid  [tool] pyproject.toml: valid
 pass  pyproject-project  [tool] pyproject.toml: has [project] section
@@ -111,3 +133,11 @@ warn  ruff-lint-configured  [tool] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [tool] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  python-ci-min-python  [tool] Python CI: tests on the oldest supported Python (library)
+      No job sets setup-uv's python-version input and runs pytest
+pass  python-ci-uv-lock  Python CI: uv.lock up to date
+pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
+warn  python-ci-ruff-format  Python CI: format check
+warn  python-ci-ruff-check  Python CI: lint check
+warn  python-ci-mypy  Python CI: type check
+pass  python-ci-pytest  Python CI: tests (with coverage)

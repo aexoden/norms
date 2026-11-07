@@ -323,6 +323,16 @@ impl Workflow {
             .flat_map(move |job| job.steps_using(action))
     }
 
+    /// Every step that uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref, with the ID of its job.
+    pub(crate) fn job_steps_using<'a>(
+        &'a self,
+        action: &'a str,
+    ) -> impl Iterator<Item = (&'a str, &'a WorkflowStep)> {
+        self.jobs
+            .iter()
+            .flat_map(move |(id, job)| job.steps_using(action).map(move |step| (id.as_str(), step)))
+    }
+
     /// Every step that uses the action `action`, in each job with a script line for which `runs` holds: for example,
     /// the steps installing the toolchain a job runs a command with.
     pub(crate) fn steps_using_in_jobs_running<'a>(

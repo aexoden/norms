@@ -494,8 +494,13 @@ results that never arrive.
 
 Install toolchains with each language's standard setup action (for example,
 `astral-sh/setup-uv` or `actions-rust-lang/setup-rust-toolchain`), using the
-versions pinned in the repository. Use Devbox only in jobs that need a local
-service.
+versions pinned in the repository. An `astral-sh/setup-uv` step in a job that
+runs `uv` itself, such as `uv sync` or `uv audit`, sets `version` to an exact uv
+version: without it, the action installs the newest uv that `required-version`
+allows. A job that only runs tools through `uvx`, such as the `pre-commit` job,
+doesn't install the project, so its uv needn't be pinned, as long as every
+hook that runs `uv` has a job of its own and so is in its `SKIP`. Use Devbox
+only in jobs that need a local service.
 
 Split checks into parallel jobs where feasible. Use an operating system matrix
 when platform differences could plausibly cause problems, such as file system

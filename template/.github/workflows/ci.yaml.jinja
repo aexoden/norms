@@ -109,7 +109,6 @@ jobs:
         uses: astral-sh/setup-uv@{{ action_setup_uv }}
         with:
           enable-cache: false
-          version: "{{ uv_version }}"
 
       - name: Run the hooks that have no job of their own
         env:
