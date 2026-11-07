@@ -59,7 +59,7 @@ hook_markdownlint_cli2:
 
 # renovate: datasource=github-tags depName=tombi-toml/tombi-pre-commit
 hook_tombi:
-  default: "v1.9.9"
+  default: "v1.10.0"
   when: false
 
 # renovate: datasource=github-tags depName=zizmorcore/zizmor-pre-commit
