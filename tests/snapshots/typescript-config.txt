@@ -7,7 +7,7 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
 pass  changelog-exists  CHANGELOG.md (not needed: no published library or release tag)
 fail  gitignore-exists  .gitignore
@@ -16,11 +16,11 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
-warn  renovate-exists  renovate.json: exists
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
@@ -37,7 +37,7 @@ warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEng
 warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
-warn  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
+fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
@@ -95,8 +95,8 @@ pass  eslint-dependency  [.] ESLint: in dependencies
 pass  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
 fail  prettier-config-exists  [.] .prettierrc: exists
       File not found
-warn  prettier-ignore-exists  [.] Prettier: .prettierignore exists
-      Consider adding .prettierignore
+fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
+      Not found: .prettierignore
 pass  prettier-dependency  [.] Prettier: in dependencies
 pass  package-json-scripts  [.] package.json: has scripts
 pass  package-json-script-build  [.] Scripts: has 'build'

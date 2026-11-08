@@ -31,11 +31,11 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
     );
 
     if let Some(license) = &config.license {
-        report.should(
+        report.check(
             "package-json-license-texts",
             "package.json: license has its texts in LICENSES/",
             license.as_str().map_or_else(
-                || Err("Not an SPDX expression string".to_owned()),
+                || Err(Issue::warn("Not an SPDX expression string")),
                 |expression| ctx.license_files().check_expression(expression),
             ),
         );
@@ -100,7 +100,7 @@ pub(crate) fn check_pnpm(ctx: &ComponentContext, report: &mut Report) {
     let typescript_root = ctx.path();
 
     // Lock file
-    report.should(
+    report.must(
         "pnpm-lock-exists",
         "pnpm: pnpm-lock.yaml exists",
         file_exists(&typescript_root.join("pnpm-lock.yaml")),
@@ -124,7 +124,7 @@ pub(crate) fn check_pnpm(ctx: &ComponentContext, report: &mut Report) {
 }
 
 pub(crate) fn check_pnpm_workspace(ctx: &ComponentContext, report: &mut Report) {
-    let Some(config) = report.recommend_parsed(
+    let Some(config) = report.require_parsed(
         "pnpm-workspace",
         "pnpm-workspace.yaml",
         ctx.pnpm_workspace(),
@@ -471,11 +471,14 @@ fn eslint_config_code(text: &str) -> String {
 
 /// Check that `eslint.config.ts` imports `eslint-config-prettier`, which is also a dependency, if the
 /// dependencies are known.
-fn check_config_prettier(code: &str, in_dependencies: Option<bool>) -> Result<(), String> {
+fn check_config_prettier(code: &str, in_dependencies: Option<bool>) -> Result<(), Issue> {
     if !CONFIG_PRETTIER_IMPORT.is_match(code) {
-        Err("eslint.config.ts doesn't import eslint-config-prettier".to_owned())
+        Err(Issue::warn(
+            "eslint.config.ts doesn't import eslint-config-prettier",
+        ))
     } else if in_dependencies == Some(false) {
-        Err("eslint-config-prettier isn't in dependencies".to_owned())
+        // ESLint can't load its configuration then.
+        Err(Issue::fail("eslint-config-prettier isn't in dependencies"))
     } else {
         Ok(())
     }
@@ -523,7 +526,7 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
                 },
             );
         }
-        report.should(
+        report.check(
             "eslint-config-prettier",
             "ESLint: eslint-config-prettier turns off rules Prettier covers",
             check_config_prettier(
@@ -537,7 +540,7 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
 
     // Check for ESLint in dependencies
     if let Some(pkg) = ctx.package_json().as_ref_ok() {
-        report.should(
+        report.must(
             "eslint-dependency",
             "ESLint: in dependencies",
             pkg.has_dep("eslint"),
@@ -546,13 +549,13 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
         // Check for typescript-eslint
         let has_ts_eslint =
             pkg.has_dep("typescript-eslint") || pkg.has_dep_starting_with("@typescript-eslint/");
-        report.should(
+        report.must(
             "eslint-typescript-eslint",
             "ESLint: typescript-eslint configured",
             if has_ts_eslint {
                 Outcome::Pass
             } else {
-                Outcome::fail("Consider adding typescript-eslint for TypeScript-aware linting")
+                Outcome::fail("typescript-eslint isn't in dependencies")
             },
         );
     }
@@ -569,20 +572,16 @@ pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
     let config = report.require_parsed("prettier-config", ".prettierrc", ctx.prettier());
 
     // .prettierignore
-    report.should(
+    report.must(
         "prettier-ignore-exists",
         "Prettier: .prettierignore exists",
-        if ctx.path().join(".prettierignore").exists() {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider adding .prettierignore")
-        },
+        file_exists(&ctx.path().join(".prettierignore")),
     );
 
     // Prettier in dependencies
     let package_json = ctx.package_json().as_ref_ok();
     if let Some(pkg) = package_json {
-        report.should(
+        report.must(
             "prettier-dependency",
             "Prettier: in dependencies",
             pkg.has_dep("prettier"),
@@ -594,17 +593,20 @@ pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
     };
 
     // package.json formatting, which sorts its dependencies
-    report.should(
+    report.check(
         "prettier-plugin-packagejson",
         "Prettier: formats package.json with prettier-plugin-packagejson",
         if !config.has_plugin(PACKAGEJSON_PLUGIN) {
-            Outcome::fail(format!(
+            Err(Issue::warn(format!(
                 "{PACKAGEJSON_PLUGIN} isn't in .prettierrc's plugins"
-            ))
+            )))
         } else if package_json.is_some_and(|pkg| !pkg.has_dep(PACKAGEJSON_PLUGIN)) {
-            Outcome::fail(format!("{PACKAGEJSON_PLUGIN} isn't in dependencies"))
+            // Prettier can't load its configuration then.
+            Err(Issue::fail(format!(
+                "{PACKAGEJSON_PLUGIN} isn't in dependencies"
+            )))
         } else {
-            Outcome::Pass
+            Ok(())
         },
     );
 }
@@ -1044,7 +1046,7 @@ mod tests {
                 "import prettier from \"eslint-config-prettier\";",
                 Some(false)
             ),
-            Err("eslint-config-prettier isn't in dependencies".to_owned())
+            Err(Issue::fail("eslint-config-prettier isn't in dependencies"))
         );
         for code in [
             "import prettier from \"eslint-plugin-prettier/recommended\";",
@@ -1052,7 +1054,9 @@ mod tests {
         ] {
             assert_eq!(
                 check_config_prettier(code, Some(true)),
-                Err("eslint.config.ts doesn't import eslint-config-prettier".to_owned()),
+                Err(Issue::warn(
+                    "eslint.config.ts doesn't import eslint-config-prettier"
+                )),
                 "{code}"
             );
         }

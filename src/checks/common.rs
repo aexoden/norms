@@ -186,7 +186,7 @@ pub(crate) fn check_agent_guidance(ctx: &ProjectContext, report: &mut Report) {
 /// so for it the check passes.
 pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     if ctx.path().join("CHANGELOG.md").exists() {
-        report.should("changelog-exists", "CHANGELOG.md", Outcome::Pass);
+        report.must("changelog-exists", "CHANGELOG.md", Outcome::Pass);
         return;
     }
 
@@ -209,14 +209,14 @@ pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
         format!("it has release tags, such as {tag}")
     } else {
         // Recorded as passing, so that a waiver for it is reported as unneeded rather than as naming no check.
-        report.should(
+        report.must(
             "changelog-exists",
             "CHANGELOG.md (not needed: no published library or release tag)",
             Outcome::Pass,
         );
         return;
     };
-    report.should(
+    report.must(
         "changelog-exists",
         "CHANGELOG.md",
         Outcome::fail(format!(
@@ -260,7 +260,7 @@ pub(crate) fn check_licenses(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 
-    let Some(config) = report.recommend_parsed("reuse-toml", "REUSE.toml", ctx.reuse_toml()) else {
+    let Some(config) = report.require_parsed("reuse-toml", "REUSE.toml", ctx.reuse_toml()) else {
         return;
     };
 
@@ -443,7 +443,7 @@ pub(crate) fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Check for devbox.lock
-    report.should(
+    report.must(
         "devbox-lock-exists",
         "devbox.lock",
         file_exists(&ctx.path().join("devbox.lock")),
@@ -540,7 +540,7 @@ fn devbox_toolchains(config: &DevboxConfig) -> Result<(), String> {
 
 /// Check `.markdownlint-cli2.jsonc`, the markdownlint configuration that the hook and the CI action share.
 pub(crate) fn check_markdownlint(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = report.recommend_parsed(
+    let Some(config) = report.require_parsed(
         "markdownlint-cli2",
         MARKDOWNLINT_CLI2_CONFIG,
         ctx.markdownlint_cli2(),
@@ -702,13 +702,11 @@ fn pre_commit_hooks_in(config: &PrecommitConfig) -> Result<(), Issue> {
 }
 
 pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
-    report.must(
-        "precommit-config-exists",
+    let Some(config) = report.require_parsed(
+        "precommit-config",
         ".pre-commit-config.yaml",
-        file_exists(&ctx.path().join(".pre-commit-config.yaml")),
-    );
-
-    let Some(config) = ctx.precommit().as_ref_ok() else {
+        ctx.precommit(),
+    ) else {
         return;
     };
 
@@ -1265,7 +1263,7 @@ fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
 //
 
 pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = report.recommend_parsed("renovate", "renovate.json", ctx.renovate()) else {
+    let Some(config) = report.require_parsed("renovate", "renovate.json", ctx.renovate()) else {
         return;
     };
 
@@ -1375,8 +1373,7 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
     report.require_parsed("ci-yaml", "CI: ci.yaml", ctx.ci_workflow());
 
-    if let Some(audit) =
-        report.recommend_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
+    if let Some(audit) = report.require_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
     {
         report.must(
             "audit-yaml-schedule",

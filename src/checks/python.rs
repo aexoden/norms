@@ -37,11 +37,11 @@ pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
     );
 
     if let Some(license) = config.project.as_ref().and_then(|p| p.license.as_ref()) {
-        report.should(
+        report.check(
             "pyproject-license-texts",
             "pyproject.toml: license has its texts in LICENSES/",
             license.as_str().map_or_else(
-                || Err("Not an SPDX expression string".to_owned()),
+                || Err(Issue::warn("Not an SPDX expression string")),
                 |expression| ctx.license_files().check_expression(expression),
             ),
         );
@@ -50,7 +50,7 @@ pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
 
 /// Check that the component pins its development Python with an exact version in its own `.python-version`.
 pub(crate) fn check_python_version(ctx: &ComponentContext, report: &mut Report) {
-    report.should(
+    report.must(
         "python-version-exists",
         "Python: .python-version",
         file_exists(&ctx.path().join(PYTHON_VERSION)),
@@ -122,12 +122,12 @@ pub(crate) fn check_versioning(ctx: &ComponentContext, report: &mut Report) {
         "pyproject.toml: version is dynamic",
         config.check_version_dynamic(),
     );
-    report.should(
+    report.check(
         "pyproject-build-system",
         "pyproject.toml: builds with hatchling and hatch-vcs",
         config.check_build_system(),
     );
-    report.should(
+    report.check(
         "pyproject-hatch-version",
         "pyproject.toml: version from git tags (hatch-vcs)",
         config.check_hatch_version(!ctx.component().path.as_os_str().is_empty()),
@@ -197,13 +197,13 @@ pub(crate) fn check_git_archival(
         return;
     }
 
-    report.should(
+    report.check(
         "python-git-archival",
         "Python: .git_archival.txt (node and describe-name)",
         match ctx.git_archival() {
-            ConfigStatus::Ok(content) => check_git_archival_content(content),
-            ConfigStatus::NotFound => Err(format!("Not found: {GIT_ARCHIVAL}")),
-            ConfigStatus::ParseError { error, .. } => Err(error.clone()),
+            ConfigStatus::Ok(content) => check_git_archival_content(content).map_err(Issue::warn),
+            ConfigStatus::NotFound => Err(Issue::fail(format!("Not found: {GIT_ARCHIVAL}"))),
+            ConfigStatus::ParseError { error, .. } => Err(Issue::fail(error.clone())),
         },
     );
 
@@ -272,7 +272,7 @@ pub(crate) fn check_uv_required_version(
         }
     }
     if pinned {
-        report.should(
+        report.must(
             "uv-required-version-ci",
             "uv: CI's pinned uv satisfies required-version",
             if rejected.is_empty() {
@@ -324,7 +324,7 @@ pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
 //
 
 pub(crate) fn check_uv_lock(ctx: &ComponentContext, report: &mut Report) {
-    report.should(
+    report.must(
         "uv-lock-exists",
         "Python: uv.lock",
         file_exists(&ctx.path().join("uv.lock")),
@@ -458,15 +458,15 @@ pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
         .and_then(|r| r.lint.as_ref());
 
     let Some(lint) = lint else {
-        report.should(
+        report.must(
             "ruff-lint-configured",
             "Ruff lint: configured",
-            Outcome::fail("Consider configuring [tool.ruff.lint]"),
+            Outcome::fail("Missing [tool.ruff.lint] in pyproject.toml"),
         );
         return;
     };
 
-    report.should(
+    report.must(
         "ruff-lint-configured",
         "Ruff lint: configured",
         Outcome::Pass,

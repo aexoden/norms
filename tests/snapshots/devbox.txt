@@ -7,9 +7,9 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
-warn  changelog-exists  CHANGELOG.md
+fail  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md, which the project needs because the Python component at . is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
@@ -17,7 +17,7 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
 pass  devbox-exists  devbox.json: exists
 pass  devbox-valid  devbox.json: valid
@@ -25,9 +25,9 @@ pass  devbox-schema  devbox.json: has $schema
 pass  devbox-packages  devbox.json: has packages
 pass  devbox-no-toolchains  devbox.json: installs no language toolchains
 pass  devbox-lock-exists  devbox.lock
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
-warn  renovate-exists  renovate.json: exists
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
@@ -35,7 +35,7 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [.] pyproject.toml: exists
 pass  pyproject-valid  [.] pyproject.toml: valid
 pass  pyproject-project  [.] pyproject.toml: has [project] section
-warn  python-version-exists  [.] Python: .python-version
+fail  python-version-exists  [.] Python: .python-version
       Not found: .python-version
 warn  pyproject-python-classifiers  [.] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
@@ -47,11 +47,11 @@ warn  pyproject-hatch-version  [.] pyproject.toml: version from git tags (hatch-
       No [tool.hatch.version] table
 warn  uv-cache-keys  [.] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [.] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [.] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [.] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [.] Python: uv.lock
+fail  uv-lock-exists  [.] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
@@ -61,8 +61,8 @@ warn  python-dependency-groups  [.] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [.] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [.] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [.] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [.] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists
@@ -71,16 +71,16 @@ warn  cargo-toml-license  [.] Cargo.toml: has license
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
 warn  cargo-toml-edition  [.] Cargo.toml: has edition
-warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
-warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
+fail  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
-warn  clippy-toml-exists  [.] clippy.toml: exists
+fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
-warn  deny-toml-exists  [.] deny.toml: exists
+fail  deny-toml-exists  [.] deny.toml: exists
       File not found
-warn  cargo-config-exists  .cargo/config.toml: exists
+fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid
@@ -95,21 +95,21 @@ warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEng
 warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
-warn  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
+fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
-warn  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
+fail  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [.] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [.] ESLint: configured
       Not found: eslint.config.ts
-warn  eslint-dependency  [.] ESLint: in dependencies
-warn  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
-      Consider adding typescript-eslint for TypeScript-aware linting
+fail  eslint-dependency  [.] ESLint: in dependencies
+fail  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
+      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [.] .prettierrc: exists
       File not found
-warn  prettier-ignore-exists  [.] Prettier: .prettierignore exists
-      Consider adding .prettierignore
-warn  prettier-dependency  [.] Prettier: in dependencies
+fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
+      Not found: .prettierignore
+fail  prettier-dependency  [.] Prettier: in dependencies
 warn  package-json-scripts  [.] package.json: has scripts
       No scripts defined in package.json

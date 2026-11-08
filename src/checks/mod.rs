@@ -210,6 +210,22 @@ mod tests {
     }
 
     #[test]
+    fn invalid_precommit_config_fails() {
+        let project = TempProject::new("precommit", None);
+        fs::write(project.0.join(".pre-commit-config.yaml"), "repos: [\n").unwrap();
+        fs::write(project.0.join("Cargo.toml"), "[package]\nname = \"demo\"\n").unwrap();
+        let results = project.verify();
+
+        let valid = find(&results, "precommit-config-valid");
+        assert!(matches!(valid.as_slice(), [r] if r.status == Status::Fail));
+        assert!(
+            !results
+                .iter()
+                .any(|r| r.id.starts_with("rust-precommit-") || r.id == "precommit-reuse")
+        );
+    }
+
+    #[test]
     fn waivers_apply_after_every_check() {
         let results = TempProject::new(
             "waived",
@@ -450,7 +466,7 @@ mod tests {
             [(
                 Some("nested/app".to_owned()),
                 "clippy.toml: exists".to_owned(),
-                Status::Warn
+                Status::Fail
             )]
         );
     }
@@ -550,7 +566,7 @@ mod tests {
                 (
                     Some("listed"),
                     "prettier-plugin-packagejson",
-                    Status::Warn,
+                    Status::Fail,
                     "prettier-plugin-packagejson isn't in dependencies"
                 ),
                 (
@@ -608,7 +624,7 @@ mod tests {
         let changelog = find(&results, "changelog-exists");
         assert!(matches!(
             changelog.as_slice(),
-            [r] if r.status == Status::Warn
+            [r] if r.status == Status::Fail
                 && r.message == "Not found: CHANGELOG.md, which the project needs because the Rust component at crates \
                                  is a published library"
         ));

@@ -11,7 +11,7 @@
 //! ```ignore
 //! // Severity is explicit: must = FAIL on issue, should = WARN on issue
 //! report.must("readme-exists", "README.md", file_exists(&path.join("README.md")));
-//! report.should("changelog-exists", "CHANGELOG.md", file_exists(&path.join("CHANGELOG.md")));
+//! report.should("mypy-strict", "mypy: strict mode", mypy.strict == Some(true));
 //!
 //! // For config files, require_parsed handles exists+valid in one call:
 //! let Some(config) = report.require_parsed("pyproject", "pyproject.toml", ctx.pyproject()) else { return };
@@ -382,35 +382,6 @@ impl Report {
             }
             ConfigStatus::Ok(value) => {
                 self.must(exists, exists_name, Outcome::Pass);
-                self.must(valid, valid_name, Outcome::Pass);
-                Some(value)
-            }
-        }
-    }
-
-    /// Like [`require_parsed`](Self::require_parsed) but issues a `WARN` instead
-    /// of `FAIL` if the file is missing. Useful for optional config files.
-    pub(crate) fn recommend_parsed<'a, T>(
-        &mut self,
-        id: &str,
-        label: &str,
-        status: &'a ConfigStatus<T>,
-    ) -> Option<&'a T> {
-        let (exists, valid) = (format!("{id}-exists"), format!("{id}-valid"));
-        let (exists_name, valid_name) = (format!("{label}: exists"), format!("{label}: valid"));
-
-        match status {
-            ConfigStatus::NotFound => {
-                self.should(exists, exists_name, Outcome::fail("File not found"));
-                None
-            }
-            ConfigStatus::ParseError { error, .. } => {
-                self.should(exists, exists_name, Outcome::Pass);
-                self.must(valid, valid_name, Outcome::fail(error.clone()));
-                None
-            }
-            ConfigStatus::Ok(value) => {
-                self.should(exists, exists_name, Outcome::Pass);
                 self.must(valid, valid_name, Outcome::Pass);
                 Some(value)
             }

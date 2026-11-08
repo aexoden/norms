@@ -100,8 +100,25 @@ mod tests {
         let project = dir.path().join("project");
         copy_dir(&root().join("tests/fixtures/rust"), &project);
 
+        // A toolchain without an exact channel warns, and a missing renovate.json fails.
+        let toolchain = project.join("rust-toolchain.toml");
+        let pinned = fs::read_to_string(&toolchain).unwrap();
+        fs::write(
+            &toolchain,
+            pinned.replace("channel = \"1.99.1\"", "channel = \"stable\""),
+        )
+        .unwrap();
+        let warned = verify(&project, &["--deny-warnings"]);
+        assert_eq!(warned.status.code(), Some(1), "{warned:?}");
+        waive(&project, &["rust-toolchain-toml-channel"]);
+        let waived_warning = verify(&project, &["--deny-warnings"]);
+        assert!(waived_warning.status.success(), "{waived_warning:?}");
+
         fs::remove_file(project.join("renovate.json")).unwrap();
-        waive(&project, &["renovate-exists"]);
+        waive(
+            &project,
+            &["rust-toolchain-toml-channel", "renovate-exists"],
+        );
         let waived = verify(&project, &["--deny-warnings"]);
         assert!(waived.status.success(), "{waived:?}");
     }

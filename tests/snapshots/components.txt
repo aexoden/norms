@@ -15,9 +15,9 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
-warn  changelog-exists  CHANGELOG.md
+fail  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md, which the project needs because the Python component at tools is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
@@ -25,11 +25,11 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
-warn  renovate-exists  renovate.json: exists
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
@@ -37,7 +37,7 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [tools] pyproject.toml: exists
 pass  pyproject-valid  [tools] pyproject.toml: valid
 pass  pyproject-project  [tools] pyproject.toml: has [project] section
-warn  python-version-exists  [tools] Python: .python-version
+fail  python-version-exists  [tools] Python: .python-version
       Not found: .python-version
 warn  pyproject-python-classifiers  [tools] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
@@ -49,11 +49,11 @@ warn  pyproject-hatch-version  [tools] pyproject.toml: version from git tags (ha
       No [tool.hatch.version] table
 warn  uv-cache-keys  [tools] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [tools] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [tools] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [tools] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [tools] Python: uv.lock
+fail  uv-lock-exists  [tools] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [tools] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
@@ -63,8 +63,8 @@ warn  python-dependency-groups  [tools] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [tools] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [tools] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [tools] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [tools] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists
@@ -80,19 +80,19 @@ warn  cargo-toml-license  [.] crates/core/Cargo.toml: has license
 warn  cargo-toml-description  [.] crates/core/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
 warn  cargo-toml-edition  [.] crates/core/Cargo.toml: has edition
-warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
 warn  cargo-toml-rust-version  [.] crates/core/Cargo.toml: MSRV set (rust-version, library)
-warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
+fail  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
-warn  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured
+fail  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured
       No [lints.clippy] section
-warn  clippy-toml-exists  [.] clippy.toml: exists
+fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
-warn  deny-toml-exists  [.] deny.toml: exists
+fail  deny-toml-exists  [.] deny.toml: exists
       File not found
-warn  cargo-config-exists  .cargo/config.toml: exists
+fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
 pass  package-json-exists  [apps/admin] package.json: exists
 pass  package-json-valid  [apps/admin] package.json: valid
@@ -107,22 +107,22 @@ warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js 
 warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [apps/admin] package.json: no Corepack packageManager field
-warn  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
+fail  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
-warn  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
+fail  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [apps/admin] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [apps/admin] ESLint: configured
       Not found: eslint.config.ts
-warn  eslint-dependency  [apps/admin] ESLint: in dependencies
-warn  eslint-typescript-eslint  [apps/admin] ESLint: typescript-eslint configured
-      Consider adding typescript-eslint for TypeScript-aware linting
+fail  eslint-dependency  [apps/admin] ESLint: in dependencies
+fail  eslint-typescript-eslint  [apps/admin] ESLint: typescript-eslint configured
+      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [apps/admin] .prettierrc: exists
       File not found
-warn  prettier-ignore-exists  [apps/admin] Prettier: .prettierignore exists
-      Consider adding .prettierignore
-warn  prettier-dependency  [apps/admin] Prettier: in dependencies
+fail  prettier-ignore-exists  [apps/admin] Prettier: .prettierignore exists
+      Not found: .prettierignore
+fail  prettier-dependency  [apps/admin] Prettier: in dependencies
 warn  package-json-scripts  [apps/admin] package.json: has scripts
       No scripts defined in package.json
 pass  package-json-exists  [apps/web] package.json: exists
@@ -138,21 +138,21 @@ warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in
 warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [apps/web] package.json: no Corepack packageManager field
-warn  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
+fail  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
-warn  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists
+fail  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [apps/web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [apps/web] ESLint: configured
       Not found: eslint.config.ts
-warn  eslint-dependency  [apps/web] ESLint: in dependencies
-warn  eslint-typescript-eslint  [apps/web] ESLint: typescript-eslint configured
-      Consider adding typescript-eslint for TypeScript-aware linting
+fail  eslint-dependency  [apps/web] ESLint: in dependencies
+fail  eslint-typescript-eslint  [apps/web] ESLint: typescript-eslint configured
+      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [apps/web] .prettierrc: exists
       File not found
-warn  prettier-ignore-exists  [apps/web] Prettier: .prettierignore exists
-      Consider adding .prettierignore
-warn  prettier-dependency  [apps/web] Prettier: in dependencies
+fail  prettier-ignore-exists  [apps/web] Prettier: .prettierignore exists
+      Not found: .prettierignore
+fail  prettier-dependency  [apps/web] Prettier: in dependencies
 warn  package-json-scripts  [apps/web] package.json: has scripts
       No scripts defined in package.json

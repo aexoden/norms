@@ -9,6 +9,8 @@ use std::path::Path;
 
 use spdx::{AdditionItem, Expression, LicenseItem};
 
+use crate::report::Issue;
+
 /// The license files of a project, each keyed by file name and holding its contents.
 #[derive(Debug, Default)]
 pub(crate) struct LicenseFiles {
@@ -65,10 +67,15 @@ impl LicenseFiles {
     }
 
     /// Check that `expression`, a manifest's license, is a valid SPDX expression and that `LICENSES/` holds a text
-    /// for each license and exception it names.
-    pub(crate) fn check_expression(&self, expression: &str) -> Result<(), String> {
-        let parsed = Expression::parse(expression)
-            .map_err(|e| format!("Not a valid SPDX expression ({}): {expression}", e.reason))?;
+    /// for each license and exception it names. A missing text, a required file, fails; an expression that isn't valid
+    /// SPDX, which is metadata that differs from the standard, warns.
+    pub(crate) fn check_expression(&self, expression: &str) -> Result<(), Issue> {
+        let parsed = Expression::parse(expression).map_err(|e| {
+            Issue::warn(format!(
+                "Not a valid SPDX expression ({}): {expression}",
+                e.reason
+            ))
+        })?;
 
         let ids = self.text_ids();
         let missing: BTreeSet<String> = parsed
@@ -84,10 +91,10 @@ impl LicenseFiles {
         if missing.is_empty() {
             Ok(())
         } else {
-            Err(format!(
+            Err(Issue::fail(format!(
                 "No text in LICENSES/ for: {}",
                 missing.into_iter().collect::<Vec<_>>().join(", ")
-            ))
+            )))
         }
     }
 
@@ -192,6 +199,7 @@ fn read_files(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report::Severity;
 
     fn files(texts: &[(&str, &str)], copies: &[(&str, &str)]) -> LicenseFiles {
         let map = |entries: &[(&str, &str)]| {
@@ -292,15 +300,17 @@ mod tests {
 
         assert_eq!(
             files.check_expression("MIT OR BSD-3-Clause OR ISC"),
-            Err("No text in LICENSES/ for: BSD-3-Clause, ISC".to_owned())
+            Err(Issue::fail("No text in LICENSES/ for: BSD-3-Clause, ISC"))
         );
         assert_eq!(
             files.check_expression("GPL-2.0-only WITH Classpath-exception-2.0"),
-            Err("No text in LICENSES/ for: Classpath-exception-2.0, GPL-2.0-only".to_owned())
+            Err(Issue::fail(
+                "No text in LICENSES/ for: Classpath-exception-2.0, GPL-2.0-only"
+            ))
         );
         assert_eq!(
             files.check_expression("LicenseRef-Other"),
-            Err("No text in LICENSES/ for: LicenseRef-Other".to_owned())
+            Err(Issue::fail("No text in LICENSES/ for: LicenseRef-Other"))
         );
     }
 
@@ -311,9 +321,8 @@ mod tests {
         for expression in ["MIT/Apache-2.0", "mit", "GPL-3.0", "UNLICENSED", ""] {
             let result = files.check_expression(expression);
             assert!(
-                result
-                    .as_ref()
-                    .is_err_and(|e| e.starts_with("Not a valid SPDX expression")),
+                result.as_ref().is_err_and(|e| e.severity == Severity::Warn
+                    && e.message.starts_with("Not a valid SPDX expression")),
                 "{expression}: {result:?}"
             );
         }

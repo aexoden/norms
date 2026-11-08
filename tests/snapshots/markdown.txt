@@ -7,7 +7,7 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
 pass  changelog-exists  CHANGELOG.md (not needed: no published library or release tag)
 warn  claude-md-imports-agents  CLAUDE.md: imports AGENTS.md
@@ -24,7 +24,8 @@ warn  markdownlint-cli2-rules  .markdownlint-cli2.jsonc: every default rule enab
       Turned off: MD001 (heading-increment), MD003 (heading-style), MD018 (no-missing-space-atx), MD019 (no-multiple-space-atx), MD020 (no-missing-space-closed-atx), MD021 (no-multiple-space-closed-atx), MD022 (blanks-around-headings), MD023 (heading-start-left), MD024 (no-duplicate-heading), MD025 (single-title), MD026 (no-trailing-punctuation), MD036 (no-emphasis-as-heading), MD043 (required-headings); Only warning: MD055 (table-pipe-style), MD056 (table-column-count), MD058 (blanks-around-tables), MD060 (table-column-style)
 warn  markdownlint-cli2-settings  .markdownlint-cli2.jsonc: dash lists, 80 columns, repeated headings under different parents
       MD004 style is asterisk, not dash; MD013 line_length is 100, not 80; MD013 code_blocks isn't false; MD024 siblings_only isn't true
-pass  precommit-config-exists  .pre-commit-config.yaml
+pass  precommit-config-exists  .pre-commit-config.yaml: exists
+pass  precommit-config-valid  .pre-commit-config.yaml: valid
 pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
@@ -40,12 +41,12 @@ fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hoo
       No conventional-pre-commit hook
 fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
-warn  renovate-exists  renovate.json: exists
+fail  renovate-exists  renovate.json: exists
       File not found
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
-warn  audit-yaml-exists  CI: audit.yaml: exists
+fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs

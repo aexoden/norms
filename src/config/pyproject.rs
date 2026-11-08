@@ -18,6 +18,7 @@ use pep508_rs::{PackageName, Pep508ErrorSource, Requirement, VerbatimUrl, Versio
 use serde::Deserialize;
 
 use super::python_version::PYTHON_VERSION;
+use crate::report::Issue;
 
 /// Top-level `pyproject.toml` structure.
 #[derive(Debug, Deserialize, Default)]
@@ -185,10 +186,12 @@ impl PyprojectToml {
     }
 
     /// Check that the project builds with hatchling and hatch-vcs: `[build-system]` requires both, at any version, and
-    /// names `hatchling.build` as its backend.
-    pub(crate) fn check_build_system(&self) -> Result<(), String> {
+    /// names `hatchling.build` as its backend. Lacking hatch-vcs while hatchling builds the project and
+    /// `[tool.hatch.version]` takes the version from git fails, since the build can't load it; any other difference
+    /// warns.
+    pub(crate) fn check_build_system(&self) -> Result<(), Issue> {
         let Some(build) = &self.build_system else {
-            return Err("No [build-system] table".to_owned());
+            return Err(Issue::warn("No [build-system] table"));
         };
         let mut issues = Vec::new();
         let names: Vec<PackageName> = match build.requires.as_ref().map(toml::Value::as_array) {
@@ -224,63 +227,77 @@ impl PyprojectToml {
             .into_iter()
             .filter(|name| !names.iter().any(|known| known.as_ref() == *name))
             .collect();
+        let mut issues: Vec<_> = issues.into_iter().map(Issue::warn).collect();
         if !missing.is_empty() {
-            issues.push(format!(
-                "build-system.requires lacks {}",
-                missing.join(" and ")
-            ));
+            let message = format!("build-system.requires lacks {}", missing.join(" and "));
+            let hatchling = build.build_backend.as_ref().and_then(toml::Value::as_str)
+                == Some("hatchling.build");
+            issues.push(
+                if missing.contains(&"hatch-vcs")
+                    && hatchling
+                    && self.hatch_version_source() == Some("vcs")
+                {
+                    Issue::fail(message)
+                } else {
+                    Issue::warn(message)
+                },
+            );
         }
         match build.build_backend.as_ref().map(toml::Value::as_str) {
             Some(Some("hatchling.build")) => {}
             Some(Some(backend)) => {
-                issues.push(format!(
+                issues.push(Issue::warn(format!(
                     "build-system.build-backend is {backend}, not hatchling.build"
-                ));
+                )));
             }
-            Some(None) => issues.push("build-system.build-backend isn't a string".to_owned()),
-            None => issues.push("build-system.build-backend isn't set".to_owned()),
+            Some(None) => issues.push(Issue::warn("build-system.build-backend isn't a string")),
+            None => issues.push(Issue::warn("build-system.build-backend isn't set")),
         }
-        if issues.is_empty() {
-            Ok(())
-        } else {
-            Err(issues.join("; "))
-        }
+        Issue::combine(issues)
+    }
+
+    /// The `source` of `[tool.hatch.version]`, if it sets one.
+    fn hatch_version_source(&self) -> Option<&str> {
+        self.tool
+            .as_ref()
+            .and_then(|tool| tool.hatch.as_ref())
+            .and_then(|hatch| hatch.version.as_ref())
+            .and_then(|version| version.get("source"))
+            .and_then(toml::Value::as_str)
     }
 
     /// Check that hatch takes the version from git: `[tool.hatch.version] source = "vcs"`. A project below the root of
     /// its repository also needs `raw-options = { search_parent_directories = true }`, without which hatch-vcs looks
-    /// for the repository only in the project's own directory.
-    pub(crate) fn check_hatch_version(&self, in_subdirectory: bool) -> Result<(), String> {
+    /// for the repository only in the project's own directory, and so fails to build, which fails; any other
+    /// difference warns.
+    pub(crate) fn check_hatch_version(&self, in_subdirectory: bool) -> Result<(), Issue> {
         let Some(version) = self
             .tool
             .as_ref()
             .and_then(|tool| tool.hatch.as_ref())
             .and_then(|hatch| hatch.version.as_ref())
         else {
-            return Err("No [tool.hatch.version] table".to_owned());
+            return Err(Issue::warn("No [tool.hatch.version] table"));
         };
         let mut issues = Vec::new();
-        if version.get("source").and_then(toml::Value::as_str) != Some("vcs") {
-            issues.push("[tool.hatch.version] source isn't \"vcs\"".to_owned());
+        let vcs = version.get("source").and_then(toml::Value::as_str) == Some("vcs");
+        if !vcs {
+            issues.push(Issue::warn("[tool.hatch.version] source isn't \"vcs\""));
         }
         if in_subdirectory
+            && vcs
             && version
                 .get("raw-options")
                 .and_then(|options| options.get("search_parent_directories"))
                 .and_then(toml::Value::as_bool)
                 != Some(true)
         {
-            issues.push(
+            issues.push(Issue::fail(
                 "[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
-                 below the repository root needs"
-                    .to_owned(),
-            );
+                 below the repository root needs",
+            ));
         }
-        if issues.is_empty() {
-            Ok(())
-        } else {
-            Err(issues.join("; "))
-        }
+        Issue::combine(issues)
     }
 
     /// `[tool.uv] required-version`, parsed as uv parses it, or why it can't be.
@@ -802,9 +819,10 @@ cache-keys = [{ file = "pyproject.toml" }, { file = "README.md" }, { git = { com
         assert_eq!(conforming.check_uv_cache_keys(), Ok(()));
         assert_eq!(
             conforming.check_hatch_version(true),
-            Err("[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
+            Err(Issue::fail(
+                "[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
                  below the repository root needs"
-                .to_owned())
+            ))
         );
         let nested = parse(
             "[tool.hatch.version]\nsource = 'vcs'\nraw-options = { search_parent_directories = true }\n",
@@ -838,13 +856,14 @@ cache-keys = [{ git = { commit = true } }]
         );
         assert_eq!(
             drifted.check_build_system(),
-            Err("build-system.requires lacks hatch-vcs; build-system.build-backend is setuptools.build_meta, not \
+            Err(Issue::warn(
+                "build-system.requires lacks hatch-vcs; build-system.build-backend is setuptools.build_meta, not \
                  hatchling.build"
-                .to_owned())
+            ))
         );
         assert_eq!(
             drifted.check_hatch_version(false),
-            Err("[tool.hatch.version] source isn't \"vcs\"".to_owned())
+            Err(Issue::warn("[tool.hatch.version] source isn't \"vcs\""))
         );
         assert_eq!(
             drifted.check_uv_cache_keys(),
@@ -856,21 +875,23 @@ cache-keys = [{ git = { commit = true } }]
         let empty = parse("");
         assert_eq!(
             empty.check_build_system(),
-            Err("No [build-system] table".to_owned())
+            Err(Issue::warn("No [build-system] table"))
         );
         assert_eq!(
             empty.check_hatch_version(false),
-            Err("No [tool.hatch.version] table".to_owned())
+            Err(Issue::warn("No [tool.hatch.version] table"))
         );
         assert_eq!(
             empty.check_uv_cache_keys(),
             Err("[tool.uv] sets no cache-keys".to_owned())
         );
         assert_eq!(
-            parse("[build-system]\nrequires = 'hatchling'\nbuild-backend = 1\n").check_build_system(),
-            Err("build-system.requires isn't a list; build-system.requires lacks hatch-vcs and hatchling; \
+            parse("[build-system]\nrequires = 'hatchling'\nbuild-backend = 1\n")
+                .check_build_system(),
+            Err(Issue::warn(
+                "build-system.requires isn't a list; build-system.requires lacks hatch-vcs and hatchling; \
                  build-system.build-backend isn't a string"
-                .to_owned())
+            ))
         );
         assert_eq!(
             parse("[tool.uv]\ncache-keys = 'pyproject.toml'\n").check_uv_cache_keys(),
@@ -881,16 +902,34 @@ cache-keys = [{ git = { commit = true } }]
     }
 
     #[test]
+    fn versioning_issues_that_break_the_build_fail() {
+        assert_eq!(
+            parse(
+                "[build-system]\nrequires = ['hatchling']\nbuild-backend = 'hatchling.build'\n\n\
+                 [tool.hatch.version]\nsource = 'vcs'\n"
+            )
+            .check_build_system(),
+            Err(Issue::fail("build-system.requires lacks hatch-vcs"))
+        );
+        assert_eq!(
+            parse("[tool.hatch.version]\npath = 'src/demo/__about__.py'\n")
+                .check_hatch_version(true),
+            Err(Issue::warn("[tool.hatch.version] source isn't \"vcs\""))
+        );
+    }
+
+    #[test]
     fn versioning_issues_are_named() {
         assert_eq!(
             parse("[build-system]\nrequires = ['hatch-vcs', 'hatchling']\n").check_build_system(),
-            Err("build-system.build-backend isn't set".to_owned())
+            Err(Issue::warn("build-system.build-backend isn't set"))
         );
         let requires = parse(
             "[build-system]\nrequires = ['hatch-vcs >= 0.4,', 1, 'hatchling']\nbuild-backend = 'hatchling.build'\n",
         )
         .check_build_system()
-        .unwrap_err();
+        .unwrap_err()
+        .message;
         assert!(
             requires.starts_with(
                 "build-system.requires has an invalid requirement \"hatch-vcs >= 0.4,\": "
@@ -906,9 +945,8 @@ cache-keys = [{ git = { commit = true } }]
         assert_eq!(
             parse("[tool.hatch.version]\nsource = 'vcs'\nraw-options = { search_parent_directories = false }\n")
                 .check_hatch_version(true),
-            Err("[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
-                 below the repository root needs"
-                .to_owned())
+            Err(Issue::fail("[tool.hatch.version] raw-options doesn't set search_parent_directories = true, which a project \
+                 below the repository root needs"))
         );
         assert_eq!(
             parse(

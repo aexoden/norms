@@ -30,7 +30,8 @@ pass  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
 pass  markdownlint-cli2-valid  .markdownlint-cli2.jsonc: valid
 pass  markdownlint-cli2-rules  .markdownlint-cli2.jsonc: every default rule enabled
 pass  markdownlint-cli2-settings  .markdownlint-cli2.jsonc: dash lists, 80 columns, repeated headings under different parents
-pass  precommit-config-exists  .pre-commit-config.yaml
+pass  precommit-config-exists  .pre-commit-config.yaml: exists
+pass  precommit-config-valid  .pre-commit-config.yaml: valid
 pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias

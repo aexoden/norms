@@ -94,7 +94,7 @@ fn check_package_metadata(
     );
 
     if let Some(license) = package.license {
-        report.should(
+        report.check(
             "cargo-toml-license-texts",
             format!("{label}: license has its texts in LICENSES/"),
             ctx.license_files().check_expression(license),
@@ -191,7 +191,7 @@ pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) 
                 "rustup uses the legacy {label}, which should be named {RUST_TOOLCHAIN}"
             )),
         );
-    } else if let Some(toolchain) = report.recommend_parsed("rust-toolchain-toml", label, status) {
+    } else if let Some(toolchain) = report.require_parsed("rust-toolchain-toml", label, status) {
         report.should(
             "rust-toolchain-toml-channel",
             format!("{label}: exact channel"),
@@ -266,12 +266,12 @@ fn check_package_lints(
     let lints = match manifest.clippy_lints(workspace) {
         Ok(lints) => lints,
         Err(error) => {
-            report.should("clippy-lints", name, Outcome::fail(error));
+            report.must("clippy-lints", name, Outcome::fail(error));
             return;
         }
     };
 
-    report.should("clippy-lints", name, Outcome::Pass);
+    report.must("clippy-lints", name, Outcome::Pass);
     report.should(
         "clippy-pedantic",
         format!("{label}: Clippy pedantic enabled"),
@@ -284,7 +284,7 @@ fn check_package_lints(
 /// segments.
 pub(crate) fn check_clippy_toml(ctx: &ComponentContext, report: &mut Report) {
     for (label, status) in std::iter::once(ctx.clippy_toml()).chain(ctx.member_clippy_tomls()) {
-        if let Some(config) = report.recommend_parsed("clippy-toml", label, status) {
+        if let Some(config) = report.require_parsed("clippy-toml", label, status) {
             check_clippy_toml_settings(label, config, report);
         }
     }
@@ -310,7 +310,7 @@ fn check_clippy_toml_settings(label: &str, config: &ClippyToml, report: &mut Rep
 /// Check the component's `deny.toml`: that it allows multiple versions of a crate, and that every ignored advisory
 /// gives a reason.
 pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
-    let Some(config) = report.recommend_parsed("deny-toml", "deny.toml", ctx.deny_toml()) else {
+    let Some(config) = report.require_parsed("deny-toml", "deny.toml", ctx.deny_toml()) else {
         return;
     };
 
@@ -336,7 +336,7 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
     };
 
     if is_application(ctx, config) {
-        report.should(
+        report.must(
             "cargo-lock-exists",
             "Rust: Cargo.lock comitted (binary)",
             file_exists(&ctx.path().join("Cargo.lock")),
@@ -483,7 +483,7 @@ pub(crate) fn check_cargo_config(ctx: &ProjectContext, report: &mut Report) {
 }
 
 fn check_cargo_config_file(status: &ConfigStatus<CargoConfig>, report: &mut Report) {
-    let Some(config) = report.recommend_parsed("cargo-config", ".cargo/config.toml", status) else {
+    let Some(config) = report.require_parsed("cargo-config", ".cargo/config.toml", status) else {
         return;
     };
 

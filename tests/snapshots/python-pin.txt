@@ -7,9 +7,9 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
-warn  changelog-exists  CHANGELOG.md
+fail  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md, which the project needs because the Python component at lib-below is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
@@ -17,11 +17,11 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
-warn  renovate-exists  renovate.json: exists
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
@@ -42,11 +42,11 @@ warn  pyproject-hatch-version  [app-other] pyproject.toml: version from git tags
       No [tool.hatch.version] table
 warn  uv-cache-keys  [app-other] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [app-other] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [app-other] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [app-other] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [app-other] Python: uv.lock
+fail  uv-lock-exists  [app-other] Python: uv.lock
       Not found: uv.lock
 pass  pyproject-dependencies-exact  [app-other] pyproject.toml: dependencies pinned exactly (application)
 warn  uv-exclude-newer  [app-other] uv: release age of 3 days (exclude-newer)
@@ -57,8 +57,8 @@ warn  python-dependency-groups  [app-other] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [app-other] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [app-other] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [app-other] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [app-other] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  pyproject-exists  [app-range] pyproject.toml: exists
@@ -77,11 +77,11 @@ warn  pyproject-hatch-version  [app-range] pyproject.toml: version from git tags
       No [tool.hatch.version] table
 warn  uv-cache-keys  [app-range] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [app-range] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [app-range] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [app-range] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [app-range] Python: uv.lock
+fail  uv-lock-exists  [app-range] Python: uv.lock
       Not found: uv.lock
 pass  pyproject-dependencies-exact  [app-range] pyproject.toml: dependencies pinned exactly (application)
 warn  uv-exclude-newer  [app-range] uv: release age of 3 days (exclude-newer)
@@ -92,8 +92,8 @@ warn  python-dependency-groups  [app-range] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [app-range] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [app-range] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [app-range] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [app-range] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  pyproject-exists  [lib-below] pyproject.toml: exists
@@ -112,11 +112,11 @@ warn  pyproject-hatch-version  [lib-below] pyproject.toml: version from git tags
       No [tool.hatch.version] table
 warn  uv-cache-keys  [lib-below] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [lib-below] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [lib-below] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [lib-below] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [lib-below] Python: uv.lock
+fail  uv-lock-exists  [lib-below] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [lib-below] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
@@ -126,8 +126,8 @@ warn  python-dependency-groups  [lib-below] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [lib-below] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [lib-below] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [lib-below] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [lib-below] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  pyproject-exists  [minor] pyproject.toml: exists
@@ -145,11 +145,11 @@ warn  pyproject-hatch-version  [minor] pyproject.toml: version from git tags (ha
       No [tool.hatch.version] table
 warn  uv-cache-keys  [minor] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [minor] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [minor] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [minor] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [minor] Python: uv.lock
+fail  uv-lock-exists  [minor] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [minor] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
@@ -159,7 +159,7 @@ warn  python-dependency-groups  [minor] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [minor] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [minor] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [minor] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [minor] mypy: configured
       Missing [tool.mypy] in pyproject.toml

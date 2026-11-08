@@ -7,9 +7,9 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
-warn  changelog-exists  CHANGELOG.md
+fail  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md, which the project needs because the Rust component at backend is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
@@ -17,11 +17,11 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
-warn  renovate-exists  renovate.json: exists
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
@@ -37,13 +37,13 @@ pass  rust-toolchain-toml-valid  [backend] rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [backend] rust-toolchain.toml: exact channel
 pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy and rustfmt components
 warn  cargo-toml-rust-version  [backend] Cargo.toml: MSRV set (rust-version, library)
-warn  clippy-lints  [backend] Cargo.toml: Clippy lints configured
+fail  clippy-lints  [backend] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 pass  clippy-toml-exists  [backend] .clippy.toml: exists
 pass  clippy-toml-valid  [backend] .clippy.toml: valid
 pass  clippy-toml-allow-in-tests  [backend] .clippy.toml: unwrap, expect and panic allowed in tests
 pass  clippy-toml-absolute-paths  [backend] .clippy.toml: absolute paths limited to 3 segments
-warn  deny-toml-exists  [backend] deny.toml: exists
+fail  deny-toml-exists  [backend] deny.toml: exists
       File not found
 pass  cargo-toml-exists  [tools/cli] Cargo.toml: exists
 pass  cargo-toml-valid  [tools/cli] Cargo.toml: valid
@@ -58,7 +58,7 @@ warn  rust-toolchain-toml-channel  [tools/cli] ../../rust-toolchain.toml: exact 
 warn  rust-toolchain-toml-components  [tools/cli] ../../rust-toolchain.toml: clippy and rustfmt components
       Missing components: clippy
 warn  cargo-toml-rust-version  [tools/cli] Cargo.toml: MSRV set (rust-version, library)
-warn  clippy-lints  [tools/cli] Cargo.toml: Clippy lints configured
+fail  clippy-lints  [tools/cli] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 pass  clippy-toml-exists  [tools/cli] ../../clippy.toml: exists
 pass  clippy-toml-valid  [tools/cli] ../../clippy.toml: valid
@@ -66,7 +66,7 @@ warn  clippy-toml-allow-in-tests  [tools/cli] ../../clippy.toml: unwrap, expect 
       Not set to true: allow-panic-in-tests
 warn  clippy-toml-absolute-paths  [tools/cli] ../../clippy.toml: absolute paths limited to 3 segments
       absolute-paths-max-segments is 4, not 3
-warn  deny-toml-exists  [tools/cli] deny.toml: exists
+fail  deny-toml-exists  [tools/cli] deny.toml: exists
       File not found
-warn  cargo-config-exists  .cargo/config.toml: exists
+fail  cargo-config-exists  .cargo/config.toml: exists
       File not found

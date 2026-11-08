@@ -7,9 +7,9 @@ fail  readme-exists  README.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
-warn  reuse-toml-exists  REUSE.toml: exists
+fail  reuse-toml-exists  REUSE.toml: exists
       File not found
-warn  changelog-exists  CHANGELOG.md
+fail  changelog-exists  CHANGELOG.md
       Not found: CHANGELOG.md, which the project needs because the Python component at python-lib is a published library
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
@@ -17,11 +17,11 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
-warn  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml
-      Not found: .pre-commit-config.yaml
-warn  renovate-exists  renovate.json: exists
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
       File not found
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
@@ -29,7 +29,7 @@ pass  components-search  Components: every directory searched
 pass  pyproject-exists  [python-app] pyproject.toml: exists
 pass  pyproject-valid  [python-app] pyproject.toml: valid
 pass  pyproject-project  [python-app] pyproject.toml: has [project] section
-warn  python-version-exists  [python-app] Python: .python-version
+fail  python-version-exists  [python-app] Python: .python-version
       Not found: .python-version
 warn  pyproject-python-classifiers  [python-app] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
@@ -41,11 +41,11 @@ warn  pyproject-hatch-version  [python-app] pyproject.toml: version from git tag
       No [tool.hatch.version] table
 warn  uv-cache-keys  [python-app] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [python-app] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [python-app] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [python-app] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [python-app] Python: uv.lock
+fail  uv-lock-exists  [python-app] Python: uv.lock
       Not found: uv.lock
 warn  pyproject-dependencies-exact  [python-app] pyproject.toml: dependencies pinned exactly (application)
       Not pinned with ==: project.dependencies "httpx>=0.28" (not a single == version), dependency-groups.dev "ruff" (no version)
@@ -57,14 +57,14 @@ pass  python-dependency-groups  [python-app] Python: has dependency-groups
 pass  python-dev-group  [python-app] Python: has dev dependency group
 fail  ruff-configured  [python-app] Ruff: configured
       Missing [tool.ruff] in pyrpoject.toml
-warn  ruff-lint-configured  [python-app] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [python-app] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [python-app] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  pyproject-exists  [python-lib] pyproject.toml: exists
 pass  pyproject-valid  [python-lib] pyproject.toml: valid
 pass  pyproject-project  [python-lib] pyproject.toml: has [project] section
-warn  python-version-exists  [python-lib] Python: .python-version
+fail  python-version-exists  [python-lib] Python: .python-version
       Not found: .python-version
 warn  pyproject-python-classifiers  [python-lib] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
@@ -76,11 +76,11 @@ warn  pyproject-hatch-version  [python-lib] pyproject.toml: version from git tag
       No [tool.hatch.version] table
 warn  uv-cache-keys  [python-lib] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
       [tool.uv] sets no cache-keys
-warn  python-git-archival  [python-lib] Python: .git_archival.txt (node and describe-name)
+fail  python-git-archival  [python-lib] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [python-lib] Python: src/ directory
       Consider using a src/ layout
-warn  uv-lock-exists  [python-lib] Python: uv.lock
+fail  uv-lock-exists  [python-lib] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [python-lib] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
@@ -90,8 +90,8 @@ warn  python-dependency-groups  [python-lib] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [python-lib] Ruff: configured
       No [tool] section in pyproject.toml
-warn  ruff-lint-configured  [python-lib] Ruff lint: configured
-      Consider configuring [tool.ruff.lint]
+fail  ruff-lint-configured  [python-lib] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [python-lib] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists
@@ -102,15 +102,15 @@ warn  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: has edition
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: dependencies.serde ("1.0"), dev-dependencies.tempfile ("^3.27")
-warn  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
+fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
-warn  clippy-lints  [.] Cargo.toml: Clippy lints configured
+fail  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
-warn  clippy-toml-exists  [.] clippy.toml: exists
+fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
-warn  deny-toml-exists  [.] deny.toml: exists
+fail  deny-toml-exists  [.] deny.toml: exists
       File not found
-warn  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+fail  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
       Not found: Cargo.lock
 pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid
@@ -129,7 +129,7 @@ warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in
       Missing devEngines.packageManager
 warn  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
       Sets Corepack's packageManager ("pnpm@10.0.0"); pin pnpm only in devEngines.packageManager
-warn  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
+fail  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 pass  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [web] pnpm-workspace.yaml: valid
@@ -143,13 +143,13 @@ fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [web] ESLint: configured
       Not found: eslint.config.ts
-warn  eslint-dependency  [web] ESLint: in dependencies
-warn  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
-      Consider adding typescript-eslint for TypeScript-aware linting
+fail  eslint-dependency  [web] ESLint: in dependencies
+fail  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
+      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [web] .prettierrc: exists
       File not found
-warn  prettier-ignore-exists  [web] Prettier: .prettierignore exists
-      Consider adding .prettierignore
-warn  prettier-dependency  [web] Prettier: in dependencies
+fail  prettier-ignore-exists  [web] Prettier: .prettierignore exists
+      Not found: .prettierignore
+fail  prettier-dependency  [web] Prettier: in dependencies
 warn  package-json-scripts  [web] package.json: has scripts
       No scripts defined in package.json
