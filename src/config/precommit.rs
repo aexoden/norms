@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::report::Issue;
+
 /// The hook types pre-commit can install, from its `clientlib.HOOK_TYPES`.
 const HOOK_TYPES: [&str; 10] = [
     "commit-msg",
@@ -225,8 +227,9 @@ impl PrecommitConfig {
             .filter(move |hook| self.runs_in(hook, stage))
     }
 
-    /// The hooks with ID `id` that run before each commit, or, if there are none, why not.
-    pub(crate) fn commit_hooks(&self, id: &str) -> Result<Vec<&PrecommitHook>, String> {
+    /// The hooks with ID `id` that run before each commit, or, if there are none, why not: a failure if there is no
+    /// such hook, and a warning if it runs only in other stages.
+    pub(crate) fn commit_hooks(&self, id: &str) -> Result<Vec<&PrecommitHook>, Issue> {
         let hooks: Vec<_> = self
             .repos
             .iter()
@@ -234,7 +237,7 @@ impl PrecommitConfig {
             .filter(|hook| hook.id == id)
             .collect();
         if hooks.is_empty() {
-            return Err(format!("No {id} hook"));
+            return Err(Issue::fail(format!("No {id} hook")));
         }
 
         let hooks: Vec<_> = hooks
@@ -242,14 +245,16 @@ impl PrecommitConfig {
             .filter(|hook| self.runs_at_commit(hook))
             .collect();
         if hooks.is_empty() {
-            Err(format!("The {id} hook doesn't run in the pre-commit stage"))
+            Err(Issue::warn(format!(
+                "The {id} hook doesn't run in the pre-commit stage"
+            )))
         } else {
             Ok(hooks)
         }
     }
 
     /// Whether a hook with ID `id` runs before each commit. See [`commit_hooks`](Self::commit_hooks).
-    pub(crate) fn check_commit_hook(&self, id: &str) -> Result<(), String> {
+    pub(crate) fn check_commit_hook(&self, id: &str) -> Result<(), Issue> {
         self.commit_hooks(id).map(|_| ())
     }
 }
@@ -416,7 +421,7 @@ mod tests {
         }
     }
 
-    fn commit_hook(yaml: &str) -> Result<(), String> {
+    fn commit_hook(yaml: &str) -> Result<(), Issue> {
         serde_saphyr::from_str::<PrecommitConfig>(yaml)
             .unwrap()
             .check_commit_hook("markdownlint-cli2")
@@ -432,7 +437,7 @@ mod tests {
         );
         assert_eq!(
             commit_hook("repos: []\n"),
-            Err("No markdownlint-cli2 hook".to_owned())
+            Err(Issue::fail("No markdownlint-cli2 hook"))
         );
     }
 
@@ -469,7 +474,9 @@ mod tests {
         ] {
             assert_eq!(
                 hook(stages, default_stages),
-                Err("The markdownlint-cli2 hook doesn't run in the pre-commit stage".to_owned()),
+                Err(Issue::warn(
+                    "The markdownlint-cli2 hook doesn't run in the pre-commit stage"
+                )),
                 "{stages} {default_stages}"
             );
         }

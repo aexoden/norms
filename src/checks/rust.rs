@@ -500,31 +500,31 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.check(
         "rust-precommit-cargo-lock",
         "Rust pre-commit: cargo-lock hook",
         config.check_commit_hook("cargo-lock"),
     );
 
-    report.should(
+    report.check(
         "rust-precommit-rustfmt",
         "Rust pre-commit: rustfmt hook",
         config.check_commit_hook("rustfmt"),
     );
 
-    report.should(
+    report.check(
         "rust-precommit-clippy",
         "Rust pre-commit: clippy hook",
         config.check_commit_hook("clippy"),
     );
 
-    report.should(
+    report.check(
         "rust-precommit-cargo-test",
         "Rust pre-commit: cargo-test hook",
         config.check_commit_hook("cargo-test"),
     );
 
-    report.should(
+    report.check(
         "rust-precommit-cargo-deny",
         "Rust pre-commit: cargo-deny hook",
         config.check_commit_hook("cargo-deny"),

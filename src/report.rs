@@ -33,7 +33,8 @@
 //!
 //! # Severity
 //!
-//! A check records a failure with `must` and a warning with `should`. Choose
+//! A check records a failure with `must` and a warning with `should`, or, when
+//! its issues differ in severity, each [`Issue`] at its own with `check`. Choose
 //! by what the issue means: a failure when something the standards require is
 //! absent or unusable (a required file is missing, a config can't be parsed,
 //! or a tool isn't configured or run at all), and a warning when it's present
@@ -88,6 +89,70 @@ impl Outcome {
     #[expect(dead_code, reason = "placeholder for future use in conditional logic")]
     pub(crate) const fn is_pass(&self) -> bool {
         matches!(self, Self::Pass)
+    }
+}
+
+/// How serious an [`Issue`] is: whether its check fails or warns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Severity {
+    Warn,
+    Fail,
+}
+
+/// An issue a check found, with its own severity, for a check whose issues differ in severity: such as a hook that
+/// fails when it is missing but warns when it runs in another stage. [`Report::check`] records it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Issue {
+    pub severity: Severity,
+    pub message: String,
+}
+
+impl Issue {
+    /// An issue that fails its check.
+    pub(crate) fn fail(message: impl Into<String>) -> Self {
+        Self {
+            severity: Severity::Fail,
+            message: message.into(),
+        }
+    }
+
+    /// An issue that warns.
+    pub(crate) fn warn(message: impl Into<String>) -> Self {
+        Self {
+            severity: Severity::Warn,
+            message: message.into(),
+        }
+    }
+
+    /// The issues of requirements that must all hold, if there are any: their messages joined with `"; "`, and the
+    /// most severe of their severities.
+    pub(crate) fn combine(issues: impl IntoIterator<Item = Self>) -> Result<(), Self> {
+        Self::join(issues, Severity::max)
+    }
+
+    /// The issues of alternatives, such as several hooks with the same ID, any of which would do, if there are any:
+    /// their messages joined with `"; "`, and the least severe of their severities, since the best alternative
+    /// decides.
+    pub(crate) fn alternatives(issues: impl IntoIterator<Item = Self>) -> Result<(), Self> {
+        Self::join(issues, Severity::min)
+    }
+
+    fn join(
+        issues: impl IntoIterator<Item = Self>,
+        severity: impl Fn(Severity, Severity) -> Severity,
+    ) -> Result<(), Self> {
+        let mut joined: Option<Self> = None;
+        for issue in issues {
+            match &mut joined {
+                None => joined = Some(issue),
+                Some(joined) => {
+                    joined.severity = severity(joined.severity, issue.severity);
+                    joined.message.push_str("; ");
+                    joined.message.push_str(&issue.message);
+                }
+            }
+        }
+        joined.map_or(Ok(()), Err)
     }
 }
 
@@ -237,6 +302,26 @@ impl Report {
         outcome: impl Into<Outcome>,
     ) -> &mut Self {
         self.record(id.into(), name.into(), outcome.into(), Status::Warn)
+    }
+
+    /// Record a check whose issues each carry their own severity: `FAIL` or `WARN`, as the issue says.
+    pub(crate) fn check(
+        &mut self,
+        id: impl Into<String>,
+        name: impl Into<String>,
+        outcome: Result<(), Issue>,
+    ) -> &mut Self {
+        let (outcome, status) = match outcome {
+            Ok(()) => (Outcome::Pass, Status::Pass),
+            Err(issue) => (
+                Outcome::Issue(issue.message),
+                match issue.severity {
+                    Severity::Fail => Status::Fail,
+                    Severity::Warn => Status::Warn,
+                },
+            ),
+        };
+        self.record(id.into(), name.into(), outcome, status)
     }
 
     /// Low-level recording: maps an `Outcome` to the appropriate status.
@@ -565,6 +650,63 @@ mod tests {
             .map(|r| r.component.as_deref())
             .collect();
         assert_eq!(components, [None, Some("frontend"), None]);
+    }
+
+    #[test]
+    fn check_records_each_issue_at_its_own_severity() {
+        let mut report = Report::new(PathBuf::new(), Vec::new());
+        report.check("precommit-reuse", "Pre-commit: reuse hook", Ok(()));
+        report.check(
+            "precommit-reuse",
+            "Pre-commit: reuse hook",
+            Err(Issue::fail("No reuse hook")),
+        );
+        report.check(
+            "precommit-reuse",
+            "Pre-commit: reuse hook",
+            Err(Issue::warn(
+                "The reuse hook doesn't run in the pre-commit stage",
+            )),
+        );
+
+        assert_eq!(
+            statuses(&report),
+            [
+                ("precommit-reuse", Status::Pass, ""),
+                ("precommit-reuse", Status::Fail, "No reuse hook"),
+                (
+                    "precommit-reuse",
+                    Status::Warn,
+                    "The reuse hook doesn't run in the pre-commit stage"
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn combined_issues_take_the_most_severe() {
+        assert_eq!(Issue::combine([]), Ok(()));
+        assert_eq!(
+            Issue::combine([Issue::warn("a"), Issue::fail("b"), Issue::warn("c")]),
+            Err(Issue::fail("a; b; c"))
+        );
+        assert_eq!(
+            Issue::combine([Issue::warn("a"), Issue::warn("b")]),
+            Err(Issue::warn("a; b"))
+        );
+    }
+
+    #[test]
+    fn alternatives_take_the_least_severe() {
+        assert_eq!(Issue::alternatives([]), Ok(()));
+        assert_eq!(
+            Issue::alternatives([Issue::fail("a"), Issue::warn("b")]),
+            Err(Issue::warn("a; b"))
+        );
+        assert_eq!(
+            Issue::alternatives([Issue::fail("a"), Issue::fail("b")]),
+            Err(Issue::fail("a; b"))
+        );
     }
 
     fn waiver(check: &str) -> Waiver {

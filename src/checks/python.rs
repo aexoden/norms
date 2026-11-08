@@ -11,7 +11,7 @@ use crate::config::{
     check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
-use crate::report::{Outcome, Report, file_exists};
+use crate::report::{Issue, Outcome, Report, file_exists};
 
 /// Whether the component is a published library: its `pyproject.toml` parses and describes a package that installs no
 /// command and isn't marked private.
@@ -560,38 +560,38 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.check(
         "python-precommit-uv-lock",
         "Python pre-commit: uv-lock hook",
         config.check_commit_hook("uv-lock"),
     );
 
-    report.should(
+    report.check(
         "python-precommit-ruff-check",
         "Python pre-commit: ruff-check",
         config.check_commit_hook("ruff-check"),
     );
-    report.should(
+    report.check(
         "python-precommit-ruff-format",
         "Python pre-commit: ruff-format",
         config.check_commit_hook("ruff-format"),
     );
 
     // Mypy hook
-    report.should(
+    report.check(
         "python-precommit-mypy",
         "Python pre-commit: Mypy hook",
         config.check_commit_hook("mypy"),
     );
 
-    report.should(
+    report.check(
         "python-precommit-pytest",
         "Python pre-commit: pytest hook (with coverage)",
         config.commit_hooks("pytest").and_then(|hooks| {
             if hooks.into_iter().any(pytest_hook_covers) {
                 Ok(())
             } else {
-                Err("The pytest hook doesn't pass --cov".to_owned())
+                Err(Issue::warn("The pytest hook doesn't pass --cov"))
             }
         }),
     );

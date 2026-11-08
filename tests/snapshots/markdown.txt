@@ -28,17 +28,17 @@ pass  precommit-config-exists  .pre-commit-config.yaml
 pass  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
-warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
+fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
       Missing: check-added-large-files, check-case-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
-warn  precommit-reuse  Pre-commit: reuse hook
+fail  precommit-reuse  Pre-commit: reuse hook
       No reuse hook
-warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
+fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-warn  precommit-tombi  Pre-commit: tombi-format hook
+fail  precommit-tombi  Pre-commit: tombi-format hook
       No tombi-format hook
-warn  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
-warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
 warn  renovate-exists  renovate.json: exists
       File not found

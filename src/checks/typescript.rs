@@ -11,7 +11,7 @@ use crate::config::{
     PrecommitHook, TsCompilerOptions, TsConfig, Workflow, check_dev_engine, commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
-use crate::report::{Outcome, Report, file_exists};
+use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
 // Package configuration
@@ -702,43 +702,43 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.check(
         "typescript-precommit-pnpm-lock",
         "Pre-commit: has pnpm-lock hook",
         precommit.check_commit_hook("pnpm-lock"),
     );
-    report.should(
+    report.check(
         "typescript-precommit-pnpm-peer-dependencies",
         "Pre-commit: has pnpm-peer-dependencies hook",
         precommit.check_commit_hook("pnpm-peer-dependencies"),
     );
-    report.should(
+    report.check(
         "typescript-precommit-eslint",
         "Pre-commit: has ESLint hook (--max-warnings 0)",
         precommit.commit_hooks("eslint").and_then(|hooks| {
             if hooks.into_iter().any(eslint_hook_strict) {
                 Ok(())
             } else {
-                Err("The ESLint hook doesn't pass --max-warnings 0".to_owned())
+                Err(Issue::warn("The ESLint hook doesn't pass --max-warnings 0"))
             }
         }),
     );
-    report.should(
+    report.check(
         "typescript-precommit-prettier",
         "Pre-commit: has Prettier hook",
         precommit.check_commit_hook("prettier"),
     );
-    report.should(
+    report.check(
         "typescript-precommit-tsc",
         "Pre-commit: has TypeScript type check hook",
         precommit.check_commit_hook("tsc"),
     );
-    report.should(
+    report.check(
         "typescript-precommit-vite-build",
         "Pre-commit: has vite-build hook",
         precommit.check_commit_hook("vite-build"),
     );
-    report.should(
+    report.check(
         "typescript-precommit-vitest",
         "Pre-commit: has vitest hook",
         precommit.check_commit_hook("vitest"),

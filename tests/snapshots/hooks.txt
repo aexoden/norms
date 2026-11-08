@@ -25,17 +25,17 @@ warn  precommit-install-hook-types  Pre-commit: default_install_hook_types inclu
 warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
-warn  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
+fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
       Missing: check-added-large-files, check-case-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
-warn  precommit-reuse  Pre-commit: reuse hook
+fail  precommit-reuse  Pre-commit: reuse hook
       No reuse hook
-warn  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
+fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-warn  precommit-tombi  Pre-commit: tombi-format hook
+fail  precommit-tombi  Pre-commit: tombi-format hook
       No tombi-format hook
-warn  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
-warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
 warn  renovate-exists  renovate.json: exists
       File not found
@@ -101,11 +101,11 @@ fail  mypy-configured  [.] mypy: configured
 warn  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-warn  python-precommit-ruff-check  Python pre-commit: ruff-check
+fail  python-precommit-ruff-check  Python pre-commit: ruff-check
       No ruff-check hook
-warn  python-precommit-ruff-format  Python pre-commit: ruff-format
+fail  python-precommit-ruff-format  Python pre-commit: ruff-format
       No ruff-format hook
-warn  python-precommit-mypy  Python pre-commit: Mypy hook
+fail  python-precommit-mypy  Python pre-commit: Mypy hook
       No mypy hook
 warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       The pytest hook doesn't pass --cov
@@ -157,16 +157,16 @@ warn  package-json-script-typecheck  [.] Scripts: has 'typecheck'
       Consider adding a 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
       Consider adding a 'test' script
-warn  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
+fail  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
       No pnpm-lock hook
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook
 warn  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
       The ESLint hook doesn't pass --max-warnings 0
-warn  typescript-precommit-prettier  Pre-commit: has Prettier hook
+fail  typescript-precommit-prettier  Pre-commit: has Prettier hook
       No prettier hook
-warn  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
+fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
       No tsc hook
-warn  typescript-precommit-vite-build  Pre-commit: has vite-build hook
+fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
       No vite-build hook
 pass  typescript-precommit-vitest  Pre-commit: has vitest hook
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
