@@ -151,6 +151,7 @@ fail  python-ci-min-python  [tool] Python CI: tests on the oldest supported Pyth
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
+      No step runs ruff format
 fail  python-ci-ruff-check  Python CI: lint check
 fail  python-ci-mypy  Python CI: type check
 pass  python-ci-pytest  Python CI: tests (with coverage)

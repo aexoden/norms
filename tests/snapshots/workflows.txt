@@ -128,6 +128,7 @@ fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
 fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
+      No step runs ruff format
 fail  python-ci-ruff-check  Python CI: lint check
 fail  python-ci-mypy  Python CI: type check
 fail  python-ci-pytest  Python CI: tests (with coverage)
@@ -164,6 +165,7 @@ fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
       No cargo-deny hook
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
+      No step runs cargo fmt
 fail  rust-ci-clippy  Rust CI: clippy check
 fail  rust-ci-test  Rust CI: test
 fail  rust-ci-cargo-deny  Rust CI: cargo deny

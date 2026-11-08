@@ -553,6 +553,34 @@ impl Workflow {
         results
     }
 
+    /// Whether some step runs the formatter `name` so that it fails on unformatted files rather than rewriting them.
+    /// `runs` tells, for a command's words, whether it runs the formatter at all, and if so how. A formatter that only
+    /// rewrites passes every file, so it fails as surely as no formatter; one that checks with another flag than
+    /// `--check` warns.
+    pub(crate) fn check_formatter(
+        &self,
+        name: &str,
+        runs: impl FnMut(&[&str]) -> Option<FormatterRun>,
+    ) -> Result<(), Issue> {
+        let runs = self.filter_map_commands(runs);
+        if runs.contains(&FormatterRun::Checks) {
+            Ok(())
+        } else if let Some(flag) = runs.iter().find_map(|run| match run {
+            FormatterRun::ChecksWith(flag) => Some(flag),
+            FormatterRun::Checks | FormatterRun::Rewrites => None,
+        }) {
+            Err(Issue::warn(format!(
+                "{name} runs with {flag} rather than --check"
+            )))
+        } else if runs.is_empty() {
+            Err(Issue::fail(format!("No step runs {name}")))
+        } else {
+            Err(Issue::fail(format!(
+                "{name} runs without --check, so it rewrites files instead of failing on them"
+            )))
+        }
+    }
+
     /// Whether any step's `run` script contains `command`. Commands that reach a script only through an expression,
     /// such as `${{ matrix.command }}`, are not seen.
     pub(crate) fn runs_command(&self, command: &str) -> bool {
@@ -638,6 +666,31 @@ fn is_needs_results(context: &Context<'_>) -> bool {
                 && identifier(result, "result")
         }
         _ => false,
+    }
+}
+
+/// How a command runs a formatter, for [`Workflow::check_formatter`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FormatterRun {
+    /// It checks with `--check` (or a short form of it), failing on unformatted files.
+    Checks,
+    /// It checks with another flag, such as `--diff`, which also fails on unformatted files without rewriting them.
+    ChecksWith(&'static str),
+    /// It rewrites unformatted files.
+    Rewrites,
+}
+
+impl FormatterRun {
+    /// How a formatter given `args` runs: it checks if they include one of `checks`, checks otherwise if they include
+    /// one of `others`, and rewrites if neither.
+    pub(crate) fn from_args(args: &[&str], checks: &[&str], others: &[&'static str]) -> Self {
+        if args.iter().any(|arg| checks.contains(arg)) {
+            Self::Checks
+        } else if let Some(flag) = others.iter().find(|flag| args.contains(flag)) {
+            Self::ChecksWith(flag)
+        } else {
+            Self::Rewrites
+        }
     }
 }
 
@@ -1223,5 +1276,35 @@ jobs:
         let workflow: Workflow = serde_saphyr::from_str("name: CI\n").expect("workflow parses");
         assert!(!workflow.uses_action("actions/checkout"));
         assert!(!workflow.runs_command("cargo test"));
+    }
+
+    #[test]
+    fn formatters_must_run_in_check_mode() {
+        let check = |run: &str| {
+            serde_saphyr::from_str::<Workflow>(&format!(
+                "jobs:\n  format:\n    steps:\n      - run: {run}\n"
+            ))
+            .expect("workflow parses")
+            .check_formatter("fmt", |words| {
+                Some(FormatterRun::from_args(
+                    program_args(words, "fmt")?,
+                    &["--check"],
+                    &["--diff"],
+                ))
+            })
+        };
+        assert_eq!(check("fmt --check"), Ok(()));
+        assert_eq!(check("fmt --diff && fmt --check"), Ok(()));
+        assert_eq!(
+            check("fmt . && fmt --diff"),
+            Err(Issue::warn("fmt runs with --diff rather than --check"))
+        );
+        assert_eq!(
+            check("fmt ."),
+            Err(Issue::fail(
+                "fmt runs without --check, so it rewrites files instead of failing on them"
+            ))
+        );
+        assert_eq!(check("lint ."), Err(Issue::fail("No step runs fmt")));
     }
 }

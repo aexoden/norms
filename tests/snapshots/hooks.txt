@@ -46,7 +46,7 @@ pass  ci-yaml-valid  CI: ci.yaml: valid
 fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
-      No timeout-minutes: eslint, mypy, pnpm-peer-dependencies, pytest, ruff-check, ruff-format, uv-lock
+      No timeout-minutes: eslint, mypy, pnpm-peer-dependencies, prettier, pytest, ruff-check, ruff-format, uv-lock
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
 fail  ci-reuse  CI: REUSE compliance
@@ -113,7 +113,8 @@ warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 warn  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
       Jobs that uv run without uv sync --locked first: pytest, ruff-check
-pass  python-ci-ruff-format  Python CI: format check
+fail  python-ci-ruff-format  Python CI: format check
+      ruff format runs without --check, so it rewrites files instead of failing on them
 pass  python-ci-ruff-check  Python CI: lint check
 pass  python-ci-mypy  Python CI: type check
 warn  python-ci-pytest  Python CI: tests (with coverage)
@@ -174,6 +175,7 @@ pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       CI runs the lint script rather than eslint with --max-warnings 0
 fail  typescript-ci-format  TypeScript CI: format check
+      prettier runs without --check, so it rewrites files instead of failing on them
 fail  typescript-ci-tsc  TypeScript CI: type check
 fail  typescript-ci-test  TypeScript CI: tests
 fail  typescript-ci-vite-build  TypeScript CI: Vite build

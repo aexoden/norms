@@ -9,8 +9,8 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CargoConfig, CargoToml, CargoWorkspace, ClippyToml, Workflow, WorkflowJob, WorkflowStep,
-    commands,
+    CargoConfig, CargoToml, CargoWorkspace, ClippyToml, FormatterRun, Workflow, WorkflowJob,
+    WorkflowStep, commands,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -548,10 +548,14 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "Rust CI: Cargo.lock up to date",
         workflow.run_lines().any(|line| checks_cargo_lock(&line)),
     );
-    report.must(
+    report.check(
         "rust-ci-rustfmt",
         "Rust CI: format check",
-        workflow.runs_command("cargo fmt") || workflow.uses_action("actions-rust-lang/rustfmt"),
+        if workflow.uses_action("actions-rust-lang/rustfmt") {
+            Ok(())
+        } else {
+            workflow.check_formatter("cargo fmt", rustfmt_run)
+        },
     );
     report.must(
         "rust-ci-clippy",
@@ -569,6 +573,21 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         workflow.runs_command("cargo deny")
             || workflow.uses_action("EmbarkStudios/cargo-deny-action"),
     );
+}
+
+/// Whether a command's words run rustfmt, through `cargo fmt` or as the command itself, and if so how: with `--check`,
+/// which fails on unformatted files instead of rewriting them, or not. `cargo fmt` takes the flag itself or passes it
+/// on after `--`. A command that only names rustfmt, such as `rustup component add rustfmt`, doesn't run it.
+fn rustfmt_run(words: &[&str]) -> Option<FormatterRun> {
+    let args = match cargo_subcommand(words) {
+        Some(("fmt", args)) => args,
+        _ => words
+            .split_first()
+            .filter(|(program, _)| program.rsplit('/').next() == Some("rustfmt"))?
+            .1
+            .to_vec(),
+    };
+    Some(FormatterRun::from_args(&args, &["--check"], &[]))
 }
 
 /// The actions that build no Rust code.
@@ -1208,6 +1227,31 @@ jobs:
             ),
         ] {
             assert!(!runs(&steps), "{steps}");
+        }
+    }
+
+    #[test]
+    fn rustfmt_in_ci_checks_rather_than_writes() {
+        let checks = |line: &str| rustfmt_run(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "cargo fmt --all --check",
+            "cargo +nightly fmt --check",
+            "cargo fmt --all -- --check",
+            "rustfmt --check src/main.rs",
+        ] {
+            assert_eq!(checks(line), Some(FormatterRun::Checks), "{line}");
+        }
+        for line in ["cargo fmt --all", "cargo fmt", "rustfmt src/main.rs"] {
+            assert_eq!(checks(line), Some(FormatterRun::Rewrites), "{line}");
+        }
+        for line in [
+            "cargo clippy --check",
+            "cargo test",
+            "echo cargo-fmt --check",
+            "rustup component add rustfmt",
+            "rustup component add rustfmt clippy",
+        ] {
+            assert_eq!(checks(line), None, "{line}");
         }
     }
 }

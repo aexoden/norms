@@ -8,7 +8,8 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::{
-    PrecommitHook, TsCompilerOptions, TsConfig, Workflow, check_dev_engine, commands, program_args,
+    FormatterRun, PrecommitHook, TsCompilerOptions, TsConfig, Workflow, check_dev_engine, commands,
+    program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -782,11 +783,10 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Format check
-    let has_format = workflow.runs_command("prettier");
-    report.must(
+    report.check(
         "typescript-ci-format",
         "TypeScript CI: format check",
-        has_format,
+        workflow.check_formatter("prettier", prettier_run),
     );
 
     // Type check
@@ -811,6 +811,16 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "TypeScript CI: Vite build",
         workflow.runs_matching(&VITE_BUILD),
     );
+}
+
+/// Whether a command's words run `prettier`, and if so how: with `--check` (or `-c`), which fails on unformatted files
+/// instead of rewriting them, with `--list-different` (or `-l`), which fails on them too, or neither.
+fn prettier_run(words: &[&str]) -> Option<FormatterRun> {
+    Some(FormatterRun::from_args(
+        program_args(words, "prettier")?,
+        &["--check", "-c"],
+        &["--list-different", "-l"],
+    ))
 }
 
 /// Whether a command's words run `eslint`, and if so, whether with `--max-warnings 0`, which fails on warnings as well as
@@ -1102,6 +1112,36 @@ mod tests {
             "pnpm exec vite\nbuild",
         ] {
             assert!(!VITE_BUILD.is_match(run), "{run}");
+        }
+    }
+
+    #[test]
+    fn prettier_in_ci_checks_rather_than_writes() {
+        let checks = |line: &str| prettier_run(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "pnpm exec prettier --check .",
+            "prettier -c src",
+            "node_modules/.bin/prettier . --check",
+        ] {
+            assert_eq!(checks(line), Some(FormatterRun::Checks), "{line}");
+        }
+        assert_eq!(
+            checks("prettier --list-different ."),
+            Some(FormatterRun::ChecksWith("--list-different"))
+        );
+        assert_eq!(
+            checks("pnpm exec prettier -l ."),
+            Some(FormatterRun::ChecksWith("-l"))
+        );
+        for line in ["pnpm exec prettier --write .", "prettier ."] {
+            assert_eq!(checks(line), Some(FormatterRun::Rewrites), "{line}");
+        }
+        for line in [
+            "pnpm format",
+            "pnpm exec eslint --check .",
+            "echo prettier-check",
+        ] {
+            assert_eq!(checks(line), None, "{line}");
         }
     }
 }

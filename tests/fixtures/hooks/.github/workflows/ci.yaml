@@ -29,11 +29,11 @@ jobs:
       - run: uv run ruff check
 
   ruff-format:
-    name: Sync with --locked first
+    name: Sync with --locked first, then format without checking
     runs-on: ubuntu-latest
     steps:
       - run: uv sync --locked
-      - run: uv run ruff format --check
+      - run: uv run ruff format
 
   mypy:
     name: Run with --locked
@@ -59,3 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: pnpm run lint
+
+  prettier:
+    name: Format without checking
+    runs-on: ubuntu-latest
+    steps:
+      - run: pnpm exec prettier --write .

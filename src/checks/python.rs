@@ -7,7 +7,7 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
-    GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow,
+    FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow,
     check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
@@ -624,10 +624,10 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
             ))
         },
     );
-    report.must(
+    report.check(
         "python-ci-ruff-format",
         "Python CI: format check",
-        workflow.runs_command("ruff format"),
+        workflow.check_formatter("ruff format", ruff_format_run),
     );
     report.must(
         "python-ci-ruff-check",
@@ -644,6 +644,15 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "Python CI: tests (with coverage)",
         pytest_in_ci(workflow),
     );
+}
+
+/// Whether a command's words run `ruff format`, and if so how: with `--check`, which fails on unformatted files instead
+/// of rewriting them, with `--diff`, which fails on them too, or neither.
+fn ruff_format_run(words: &[&str]) -> Option<FormatterRun> {
+    match program_args(words, "ruff")?.split_first() {
+        Some((&"format", args)) => Some(FormatterRun::from_args(args, &["--check"], &["--diff"])),
+        _ => None,
+    }
 }
 
 /// uv's global options that take a value as the next word, such as the `--directory` that the hooks of a component in a
@@ -1049,5 +1058,25 @@ jobs:
             pytest_in_ci(&workflow("uv run mypy .")),
             Err(Issue::fail("No step runs pytest"))
         );
+    }
+
+    #[test]
+    fn ruff_format_in_ci_checks_rather_than_writes() {
+        let checks = |line: &str| ruff_format_run(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "uv run ruff format --check",
+            "uvx ruff format --check src",
+            "ruff format . --check",
+        ] {
+            assert_eq!(checks(line), Some(FormatterRun::Checks), "{line}");
+        }
+        assert_eq!(
+            checks("ruff format --diff ."),
+            Some(FormatterRun::ChecksWith("--diff"))
+        );
+        assert_eq!(checks("uv run ruff format"), Some(FormatterRun::Rewrites));
+        for line in ["uv run ruff check --check", "uv run mypy ."] {
+            assert_eq!(checks(line), None, "{line}");
+        }
     }
 }
