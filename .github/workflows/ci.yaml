@@ -16,7 +16,7 @@ permissions: {}
 
 jobs:
   build-norms:
-    name: Build norms for the template checks
+    name: Build norms
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -99,7 +99,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [build-norms, cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, pre-commit, reuse, rustfmt, template, tombi, zizmor]
+    needs: [build-norms, cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, norms-verify, pre-commit, reuse, rustfmt, template, tombi, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -143,6 +143,32 @@ jobs:
         with:
           globs: '**/*.md'
 
+  norms-verify:
+    name: Verify norms with norms
+    needs: build-norms
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Without CHANGELOG.md, the changelog check reads the release tags.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download norms
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: norms
+          path: ${{ runner.temp }}/norms
+
+      - name: Verify norms with norms
+        run: |
+          chmod +x "$RUNNER_TEMP/norms/norms"
+          "$RUNNER_TEMP/norms/norms" verify --deny-warnings .
+
   pre-commit:
     name: Run the remaining pre-commit hooks
     runs-on: ubuntu-latest
@@ -170,7 +196,7 @@ jobs:
       - name: Run the hooks that have no job of their own
         env:
           PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
-          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,reuse,rustfmt,tombi-format,zizmor
+          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
         run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
 
   reuse:
@@ -303,11 +329,10 @@ jobs:
           name: norms
           path: ${{ runner.temp }}/norms
 
-      # Fails on norms' failures only; its warnings don't change the exit code.
       - name: Verify the rendered project with norms
         run: |
           chmod +x "$RUNNER_TEMP/norms/norms"
-          "$RUNNER_TEMP/norms/norms" verify "$RUNNER_TEMP/project"
+          "$RUNNER_TEMP/norms/norms" verify --deny-warnings "$RUNNER_TEMP/project"
 
   tombi:
     name: Check TOML formatting with Tombi

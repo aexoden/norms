@@ -64,8 +64,8 @@ repos:
         stages: [commit-msg]
         args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
 
-  # Commit message line lengths, checked by this checkout's norms; other
-  # projects use the hook in .pre-commit-hooks.yaml instead.
+  # norms, run from this checkout; other projects use the hooks in
+  # .pre-commit-hooks.yaml instead.
   - repo: local
     hooks:
       - id: norms-commit-msg
@@ -74,6 +74,15 @@ repos:
         entry: cargo run --quiet --locked -- commit-msg
         language: system
         stages: [commit-msg]
+      - id: norms-verify
+        name: norms verify
+        description: Check that the project follows the norms standards
+        entry: cargo run --quiet --locked -- verify .
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        args: [--deny-warnings]
 
   # Rust
   - repo: local

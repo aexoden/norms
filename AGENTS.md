@@ -5,10 +5,11 @@ and the `norms` Rust CLI that checks a project against them
 (`norms verify <path> [--json] [--deny-warnings]`), which other projects run as
 the `norms-verify` hook from `.pre-commit-hooks.yaml`. The CLI also checks a
 commit message's line lengths (`norms commit-msg <file>`, in `commit_msg.rs`),
-which other projects run as the `norms-commit-msg` hook and norms runs as a
-local hook (`tests/commit_msg.rs` keeps the two in step). The repository
-also ships a Copier template (`copier.yml`, `template/`) that renders new
-projects following the standards.
+which other projects run as the `norms-commit-msg` hook. norms runs both hooks
+on itself as local hooks (`tests/hooks.rs` keeps them in step with the shipped
+ones), and CI's `norms-verify` job runs `norms verify --deny-warnings` on it.
+The repository also ships a Copier template (`copier.yml`, `template/`) that
+renders new projects following the standards.
 The repository follows its own standards, so `STANDARDS.md` is the reference for
 conventions here too.
 
@@ -26,6 +27,7 @@ NORMS_BLESS=1 cargo test --test fixtures  # rewrite the fixture snapshots
 # cargo-deny is installed separately
 cargo deny --workspace --all-features check -D warnings bans licenses sources
 cargo run -- verify <path>                # run norms against a project
+cargo run -- verify --deny-warnings .     # run norms against itself
 pre-commit run --all-files                # every hook, incl. reuse, markdownlint, tombi, zizmor
 ```
 
@@ -107,8 +109,8 @@ any check failed or warned.
   project at the top of its repository has any, so the fixtures don't see
   norms' own tags.
 
-CI's `template` job runs `norms verify` on each render and fails if it reports
-a failure; warnings don't change its exit code.
+CI's `template` job runs `norms verify --deny-warnings` on each render, so a
+render must have no failures or warnings.
 
 ## Tests
 
