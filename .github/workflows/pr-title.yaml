@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+name: Pull Request Title
+
+# A pull request's title becomes the subject of its squash merge, so it's checked
+# when the pull request opens and whenever the title is edited. This workflow is
+# separate from CI, so editing a pull request doesn't rerun CI, and the gate job
+# doesn't depend on it.
+on:
+  pull_request:
+    types: [opened, reopened, edited]
+
+# Runs for edits that leave the title alone do nothing, so each gets a group of
+# its own rather than cancelling a check of the title in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && !github.event.changes.title && format('-{0}', github.run_id) || '' }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  pr-title:
+    name: Check the pull request title
+    if: github.event.action != 'edited' || github.event.changes.title
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # As in CI's pre-commit job, norms uses the pre-commit version the template pins.
+      - name: Read the template's tool versions
+        id: versions
+        run: |
+          echo "pre-commit=$(yq '.pre_commit_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      # The squash merge's subject is the title followed by the pull request's number. The hooks
+      # pass autosquash and merge subjects, which a squash merge keeps, so they're rejected first.
+      - name: Run the commit-msg hooks on the squash merge's subject
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
+        run: |
+          case "$PR_TITLE" in
+            'fixup! '* | 'squash! '* | 'amend! '* | Merge*)
+              echo "::error::The title is an autosquash or merge subject, not a conventional commit subject."
+              exit 1
+              ;;
+          esac
+          printf '%s (#%s)\n' "$PR_TITLE" "$PR_NUMBER" > "$RUNNER_TEMP/subject.txt"
+          uvx "pre-commit@$PRE_COMMIT_VERSION" run --hook-stage commit-msg \
+            --commit-msg-filename "$RUNNER_TEMP/subject.txt"

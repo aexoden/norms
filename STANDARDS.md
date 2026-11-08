@@ -389,6 +389,18 @@ Pull requests are squash-merged, so the pull request title becomes the commit
 subject. The repository's merge settings allow only squash merging. Every pull
 request title, whoever opens it, must follow the subject rules above.
 
+A `pr-title.yaml` workflow checks each title by running the `commit-msg` hooks
+on the subject the squash merge would create, which is the title followed by
+its number, as in `(#123)`, so the number takes part of the 72 characters. It
+first rejects a title starting with `fixup!`, `squash!`, `amend!` or `Merge`,
+which the hooks let through in local commits but a squash merge keeps. It runs
+when a pull request is opened or reopened and when its title is edited: its
+job is skipped for other edits, which also get a concurrency group of their own
+so that they don't cancel a check in progress. It's separate from `ci.yaml`,
+so editing a pull request doesn't rerun CI, and advisory: the
+[gate job](#gate-job) doesn't depend on it, and
+[branch protection](#branch-protection) doesn't require it.
+
 ### Branch Protection
 
 A repository ruleset named `Default` protects the default branch. It is active,
@@ -407,10 +419,11 @@ GitHub Actions as its source means a commit status of the same name from
 anywhere else cannot satisfy it. Requiring branches to be up to date means the
 tree CI tested is the tree that is merged. Checks that do not report on every
 commit are never required, since a required check that never reports blocks the
-merge. This excludes `audit.yaml`, which runs on a schedule, and Renovate's
-commit statuses such as `renovate/artifacts`, which appear only on some Renovate
-branches. Renovate waits for those itself, because the shared preset disables
-platform automerge.
+merge. This excludes `audit.yaml`, which runs on a schedule, `pr-title.yaml`,
+which runs when a pull request's title changes, and Renovate's commit statuses
+such as `renovate/artifacts`, which appear only on some Renovate branches.
+Renovate waits for those itself, because the shared preset disables platform
+automerge.
 
 The ruleset does not require a pull request, so that `main` can be
 fast-forwarded to `dev`. The required status check still applies to a direct
@@ -452,7 +465,8 @@ through `astral-sh/setup-uv` and run with `uvx`. Its `SKIP` lists every hook
 that has its own job, so a hook added later runs in this job until it gets one.
 A hook's job has the hook's ID, or for the `markdownlint-cli2` and
 `tombi-format` hooks, is the `markdownlint` or `tombi` job.
-The `commit-msg` hooks don't run in it.
+The `commit-msg` hooks don't run in it, but in the `pr-title.yaml` workflow on
+pull request titles (see [Branches](#branches)).
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -670,8 +684,9 @@ Every project uses these hooks:
       - id: norms-commit-msg
   ```
 
-  No norms release includes the hook yet, so the template doesn't add it. CI
-  applies the same subject rules to pull request titles.
+  CI applies the same rules to pull request titles (see
+  [Branches](#branches)). No norms release includes the hook yet, so the
+  template doesn't add it or the `pr-title.yaml` workflow.
 
 `norms verify` checks that every hook it checks, the language hooks included,
 runs in the `pre-commit` stage (the `conventional-pre-commit` hook in
