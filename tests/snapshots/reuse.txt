@@ -53,21 +53,21 @@ warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: pre-commit, reuse
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
-warn  ci-reuse  CI: REUSE compliance
-warn  ci-markdownlint  CI: Markdown linting (every file)
+fail  ci-reuse  CI: REUSE compliance
+fail  ci-markdownlint  CI: Markdown linting (every file)
       No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
-warn  ci-tombi  CI: TOML formatting
-warn  ci-zizmor  CI: zizmor (pedantic)
+fail  ci-tombi  CI: TOML formatting
+fail  ci-zizmor  CI: zizmor (pedantic)
       No step runs zizmor or uses zizmorcore/zizmor-action
 warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)
 pass  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
-warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
+fail  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       Doesn't run on pull_request
 pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
 pass  ci-ubuntu-slim  CI: jobs that install nothing run on ubuntu-slim
 pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
-warn  ci-gate-exists  CI: gate job ci-success
+fail  ci-gate-exists  CI: gate job ci-success
       No ci-success job
 pass  components-search  Components: every directory searched
 pass  pyproject-exists  [py] pyproject.toml: exists
@@ -105,7 +105,7 @@ warn  ruff-lint-configured  [py] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [py] mypy: configured
       Missing [tool.mypy] in pyproject.toml
-warn  python-ci-min-python  [py] Python CI: tests on the oldest supported Python (library)
+fail  python-ci-min-python  [py] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook
       No uv-lock hook
@@ -117,12 +117,12 @@ fail  python-precommit-mypy  Python pre-commit: Mypy hook
       No mypy hook
 fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       No pytest hook
-warn  python-ci-uv-lock  Python CI: uv.lock up to date
+fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
-warn  python-ci-ruff-format  Python CI: format check
-warn  python-ci-ruff-check  Python CI: lint check
-warn  python-ci-mypy  Python CI: type check
-warn  python-ci-pytest  Python CI: tests (with coverage)
+fail  python-ci-ruff-format  Python CI: format check
+fail  python-ci-ruff-check  Python CI: lint check
+fail  python-ci-mypy  Python CI: type check
+fail  python-ci-pytest  Python CI: tests (with coverage)
       No step runs pytest
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
@@ -141,7 +141,7 @@ warn  clippy-toml-exists  [.] clippy.toml: exists
       File not found
 warn  deny-toml-exists  [.] deny.toml: exists
       File not found
-warn  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
+fail  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
       No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
 warn  cargo-config-exists  .cargo/config.toml: exists
       File not found
@@ -155,11 +155,11 @@ fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
       No cargo-test hook
 fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
       No cargo-deny hook
-warn  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
-warn  rust-ci-rustfmt  Rust CI: format check
-warn  rust-ci-clippy  Rust CI: clippy check
-warn  rust-ci-test  Rust CI: test
-warn  rust-ci-cargo-deny  Rust CI: cargo deny
+fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
+fail  rust-ci-rustfmt  Rust CI: format check
+fail  rust-ci-clippy  Rust CI: clippy check
+fail  rust-ci-test  Rust CI: test
+fail  rust-ci-cargo-deny  Rust CI: cargo deny
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
@@ -208,10 +208,10 @@ fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
       No vite-build hook
 fail  typescript-precommit-vitest  Pre-commit: has vitest hook
       No vitest hook
-warn  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
-warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
+fail  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
+fail  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       No step runs eslint
-warn  typescript-ci-format  TypeScript CI: format check
-warn  typescript-ci-tsc  TypeScript CI: type check
-warn  typescript-ci-test  TypeScript CI: tests
-warn  typescript-ci-vite-build  TypeScript CI: Vite build
+fail  typescript-ci-format  TypeScript CI: format check
+fail  typescript-ci-tsc  TypeScript CI: type check
+fail  typescript-ci-test  TypeScript CI: tests
+fail  typescript-ci-vite-build  TypeScript CI: Vite build

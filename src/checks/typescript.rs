@@ -764,7 +764,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     };
 
     // Peer dependencies
-    report.should(
+    report.must(
         "typescript-ci-pnpm-peer-dependencies",
         "TypeScript CI: peer dependencies",
         workflow
@@ -773,7 +773,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Lint step
-    report.should(
+    report.check(
         "typescript-ci-lint",
         "TypeScript CI: lint check (--max-warnings 0)",
         eslint_in_ci(workflow),
@@ -781,21 +781,21 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
 
     // Format check
     let has_format = workflow.runs_command("prettier");
-    report.should(
+    report.must(
         "typescript-ci-format",
         "TypeScript CI: format check",
         has_format,
     );
 
     // Type check
-    report.should(
+    report.must(
         "typescript-ci-tsc",
         "TypeScript CI: type check",
         workflow.runs_command("tsc"),
     );
 
     // Tests
-    report.should(
+    report.must(
         "typescript-ci-test",
         "TypeScript CI: tests",
         workflow.runs_command("vitest")
@@ -804,7 +804,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Build
-    report.should(
+    report.must(
         "typescript-ci-vite-build",
         "TypeScript CI: Vite build",
         workflow.runs_matching(&VITE_BUILD),
@@ -849,16 +849,18 @@ fn eslint_hook_strict(hook: &PrecommitHook) -> bool {
 
 /// Check that some step runs `eslint` with `--max-warnings 0`. A step running the `lint` script doesn't count, since the
 /// flag would have to be found in the script of the right component.
-fn eslint_in_ci(workflow: &Workflow) -> Result<(), String> {
+fn eslint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let runs = workflow.filter_map_commands(eslint_max_warnings_zero);
     if runs.contains(&true) {
         Ok(())
     } else if !runs.is_empty() {
-        Err("ESLint runs without --max-warnings 0".to_owned())
+        Err(Issue::warn("ESLint runs without --max-warnings 0"))
     } else if workflow.runs_command("pnpm lint") || workflow.runs_command("pnpm run lint") {
-        Err("CI runs the lint script rather than eslint with --max-warnings 0".to_owned())
+        Err(Issue::warn(
+            "CI runs the lint script rather than eslint with --max-warnings 0",
+        ))
     } else {
-        Err("No step runs eslint".to_owned())
+        Err(Issue::fail("No step runs eslint"))
     }
 }
 
@@ -875,7 +877,7 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.must(
         "typescript-audit-pnpm",
         "TypeScript audit: pnpm audit",
         workflow.runs_command("pnpm audit"),
@@ -966,15 +968,17 @@ mod tests {
         );
         assert_eq!(
             eslint_in_ci(&workflow("pnpm exec eslint .")),
-            Err("ESLint runs without --max-warnings 0".to_owned())
+            Err(Issue::warn("ESLint runs without --max-warnings 0"))
         );
         assert_eq!(
             eslint_in_ci(&workflow("pnpm run lint")),
-            Err("CI runs the lint script rather than eslint with --max-warnings 0".to_owned())
+            Err(Issue::warn(
+                "CI runs the lint script rather than eslint with --max-warnings 0"
+            ))
         );
         assert_eq!(
             eslint_in_ci(&workflow("pnpm exec tsc -b")),
-            Err("No step runs eslint".to_owned())
+            Err(Issue::fail("No step runs eslint"))
         );
     }
 

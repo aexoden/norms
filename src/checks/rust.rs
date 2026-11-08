@@ -16,7 +16,7 @@ use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
 use crate::models::Language;
-use crate::report::{Outcome, Report, file_exists};
+use crate::report::{Issue, Outcome, Report, file_exists};
 
 /// Whether the package whose manifest, `config`, is in `dir` builds a binary, from an explicit `[[bin]]` target or,
 /// unless `autobins = false`, `src/main.rs` or `src/bin/`. A virtual manifest, without a `[package]`, builds nothing.
@@ -390,20 +390,23 @@ fn is_msrv_toolchain(toolchain: &str, msrv: &str) -> bool {
 }
 
 /// Whether some job of `workflow` that compiles the crate installs each of `msrvs` as its default toolchain, through
-/// setup-rust-toolchain's `toolchain` input.
-fn msrvs_tested(msrvs: &BTreeSet<&str>, workflow: &Workflow) -> Result<(), String> {
+/// setup-rust-toolchain's `toolchain` input. Without any such job, the MSRV isn't checked at all, which fails; a job
+/// checking with another version warns.
+fn msrvs_tested(msrvs: &BTreeSet<&str>, workflow: &Workflow) -> Result<(), Issue> {
     let toolchains: Vec<String> = workflow
         .steps_using_in_jobs_running("actions-rust-lang/setup-rust-toolchain", compiles_crate)
         .filter_map(default_toolchain)
         .collect();
     if toolchains.is_empty() {
-        return Err(
-            "No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check"
-                .to_owned(),
-        );
+        return Err(Issue::fail(
+            "No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check",
+        ));
     }
+    // cargo-toml-rust-version reports the missing MSRV itself.
     if msrvs.is_empty() {
-        return Err("Cargo.toml sets no rust-version for the job to match".to_owned());
+        return Err(Issue::warn(
+            "Cargo.toml sets no rust-version for the job to match",
+        ));
     }
 
     let untested: Vec<&str> = msrvs
@@ -418,11 +421,11 @@ fn msrvs_tested(msrvs: &BTreeSet<&str>, workflow: &Workflow) -> Result<(), Strin
     if untested.is_empty() {
         Ok(())
     } else {
-        Err(format!(
+        Err(Issue::warn(format!(
             "No job checks with the rust-version {} (the jobs install {})",
             untested.join(", "),
             toolchains.join(", ")
-        ))
+        )))
     }
 }
 
@@ -452,7 +455,7 @@ pub(crate) fn check_msrv_job(
         return;
     }
 
-    report.should(
+    report.check(
         "rust-ci-msrv",
         "Rust CI: MSRV checked (library)",
         msrvs_tested(&declared_msrvs(ctx, config), workflow),
@@ -540,27 +543,27 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.must(
         "rust-ci-cargo-lock",
         "Rust CI: Cargo.lock up to date",
         workflow.run_lines().any(|line| checks_cargo_lock(&line)),
     );
-    report.should(
+    report.must(
         "rust-ci-rustfmt",
         "Rust CI: format check",
         workflow.runs_command("cargo fmt") || workflow.uses_action("actions-rust-lang/rustfmt"),
     );
-    report.should(
+    report.must(
         "rust-ci-clippy",
         "Rust CI: clippy check",
         workflow.runs_command("cargo clippy"),
     );
-    report.should(
+    report.must(
         "rust-ci-test",
         "Rust CI: test",
         workflow.runs_command("cargo test"),
     );
-    report.should(
+    report.must(
         "rust-ci-cargo-deny",
         "Rust CI: cargo deny",
         workflow.runs_command("cargo deny")
@@ -740,7 +743,7 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.must(
         "rust-audit-cargo-deny",
         "Rust audit: cargo deny advisories",
         runs_cargo_deny_advisories(workflow),
@@ -904,22 +907,23 @@ jobs:
         for msrv in ["1.90", "1.80", "1.81"] {
             assert_eq!(
                 msrvs_tested(&BTreeSet::from(["1.85", msrv]), &workflow),
-                Err(format!(
+                Err(Issue::warn(format!(
                     "No job checks with the rust-version {msrv} (the jobs install nightly, 1.85)"
-                )),
+                ))),
                 "{msrv}"
             );
         }
         assert_eq!(
             msrvs_tested(&BTreeSet::new(), &workflow),
-            Err("Cargo.toml sets no rust-version for the job to match".to_owned())
+            Err(Issue::warn(
+                "Cargo.toml sets no rust-version for the job to match"
+            ))
         );
         assert_eq!(
             msrvs_tested(&BTreeSet::from(["1.85"]), &Workflow::default()),
-            Err(
+            Err(Issue::fail(
                 "No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check"
-                    .to_owned()
-            )
+            ))
         );
         for line in [
             "cargo check",

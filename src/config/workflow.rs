@@ -16,6 +16,8 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::report::Issue;
+
 /// The ID of `ci.yaml`'s gate job, which succeeds only if every other job did.
 pub(crate) const GATE_JOB: &str = "ci-success";
 
@@ -31,13 +33,16 @@ fn value_text(value: &Value) -> Option<Cow<'_, str>> {
 }
 
 /// The patterns of a push trigger's `branches` or `branches-ignore`, a list of them or a single one, each as whether
-/// it is negated with `!` and the glob the rest compiles to.
-fn branch_patterns(patterns: &Value) -> Result<Vec<(bool, GlobMatcher)>, String> {
+/// it is negated with `!` and the glob the rest compiles to. A filter that isn't a pattern or a list of them fails,
+/// since GitHub rejects the workflow, and a pattern globset can't compile warns, since GitHub's syntax differs.
+fn branch_patterns(patterns: &Value) -> Result<Vec<(bool, GlobMatcher)>, Issue> {
     let patterns = match patterns {
         Value::String(pattern) => vec![pattern.as_str()],
         Value::Array(patterns) => patterns.iter().filter_map(Value::as_str).collect(),
         Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => {
-            return Err("push's branch filter isn't a list of patterns".to_owned());
+            return Err(Issue::fail(
+                "push's branch filter isn't a list of patterns, which GitHub rejects",
+            ));
         }
     };
     patterns
@@ -50,7 +55,11 @@ fn branch_patterns(patterns: &Value) -> Result<Vec<(bool, GlobMatcher)>, String>
                 .literal_separator(true)
                 .build()
                 .map(|glob| (negated, glob.compile_matcher()))
-                .map_err(|error| format!("push's branch pattern {pattern} is invalid: {error}"))
+                .map_err(|error| {
+                    Issue::warn(format!(
+                        "push's branch pattern {pattern} is invalid: {error}"
+                    ))
+                })
         })
         .collect()
 }
@@ -286,12 +295,13 @@ impl Workflow {
 
     /// Whether the workflow runs for every pull request and every commit pushed to one: `on` names `pull_request`
     /// without filtering it by `branches` or `paths`, and any `types` it lists include `opened`, `synchronize` and
-    /// `reopened`, the activity types it runs for by default.
-    pub(crate) fn runs_on_every_pull_request(&self) -> Result<(), String> {
+    /// `reopened`, the activity types it runs for by default. A workflow that doesn't run on pull requests at all fails,
+    /// and one that skips some of them warns.
+    pub(crate) fn runs_on_every_pull_request(&self) -> Result<(), Issue> {
         const FILTERS: [&str; 4] = ["branches", "branches-ignore", "paths", "paths-ignore"];
         const DEFAULT_TYPES: [&str; 3] = ["opened", "synchronize", "reopened"];
 
-        let not_run = || Err("Doesn't run on pull_request".to_owned());
+        let not_run = || Err(Issue::fail("Doesn't run on pull_request"));
         let config = match &self.on {
             Some(Value::String(event)) if event == "pull_request" => return Ok(()),
             Some(Value::Array(events)) if events.iter().any(|event| event == "pull_request") => {
@@ -306,6 +316,15 @@ impl Workflow {
         let Value::Object(config) = config else {
             return Ok(());
         };
+
+        // GitHub rejects a workflow whose filter both includes and ignores branches, or paths.
+        for (filter, ignore) in [("branches", "branches-ignore"), ("paths", "paths-ignore")] {
+            if config.contains_key(filter) && config.contains_key(ignore) {
+                return Err(Issue::fail(format!(
+                    "pull_request sets both {filter} and {ignore}, which GitHub rejects"
+                )));
+            }
+        }
 
         let mut problems = Vec::new();
         let filters: Vec<_> = FILTERS
@@ -325,6 +344,13 @@ impl Workflow {
                 .into_iter()
                 .filter(|activity| !listed(activity))
                 .collect();
+            // Without any of them, it never runs on the commits of an open pull request.
+            if missing.len() == DEFAULT_TYPES.len() {
+                return Err(Issue::fail(format!(
+                    "pull_request types omit {}, so it never runs on a pull request's commits",
+                    missing.join(", ")
+                )));
+            }
             if !missing.is_empty() {
                 problems.push(format!("pull_request types omit {}", missing.join(", ")));
             }
@@ -332,7 +358,7 @@ impl Workflow {
         if problems.is_empty() {
             Ok(())
         } else {
-            Err(problems.join("; "))
+            Err(Issue::warn(problems.join("; ")))
         }
     }
 
@@ -375,9 +401,10 @@ impl Workflow {
     /// globset's globs, in which `*` stops at `/` and `**` doesn't, as in GitHub's. They differ from GitHub's in rarer
     /// syntax, which isn't read as GitHub reads it: GitHub's `?` and `+` repeat the character before them, its `**/`
     /// needs a `/`, where globset's also matches none, and it has no `{a,b}` alternation. A `push` filtered only by
-    /// `tags` or `tags-ignore` runs on no branch.
-    pub(crate) fn runs_on_push_to(&self, branches: &[&str]) -> Result<(), String> {
-        let not_run = || Err("Doesn't run on push".to_owned());
+    /// `tags` or `tags-ignore` runs on no branch. A filter GitHub rejects, which stops the whole workflow from running,
+    /// fails, and any other issue warns.
+    pub(crate) fn runs_on_push_to(&self, branches: &[&str]) -> Result<(), Issue> {
+        let not_run = || Err(Issue::warn("Doesn't run on push"));
         let config = match &self.on {
             Some(Value::String(event)) if event == "push" => return Ok(()),
             Some(Value::Array(events)) if events.iter().any(|event| event == "push") => {
@@ -397,9 +424,9 @@ impl Workflow {
         let ignored = config.get("branches-ignore");
         let runs: Box<dyn Fn(&str) -> bool> = match (included, ignored) {
             (Some(_), Some(_)) => {
-                return Err(
-                    "push sets both branches and branches-ignore, which GitHub rejects".to_owned(),
-                );
+                return Err(Issue::fail(
+                    "push sets both branches and branches-ignore, which GitHub rejects",
+                ));
             }
             (Some(patterns), None) => {
                 let patterns = branch_patterns(patterns)?;
@@ -416,7 +443,9 @@ impl Workflow {
                 Box::new(move |branch| !patterns.iter().any(|(_, glob)| glob.is_match(branch)))
             }
             (None, None) if config.contains_key("tags") || config.contains_key("tags-ignore") => {
-                return Err("push is filtered only by tags, so it runs on no branch".to_owned());
+                return Err(Issue::warn(
+                    "push is filtered only by tags, so it runs on no branch",
+                ));
             }
             (None, None) => return Ok(()),
         };
@@ -429,7 +458,10 @@ impl Workflow {
         if missing.is_empty() {
             Ok(())
         } else {
-            Err(format!("push doesn't run on {}", missing.join(", ")))
+            Err(Issue::warn(format!(
+                "push doesn't run on {}",
+                missing.join(", ")
+            )))
         }
     }
 
@@ -960,24 +992,46 @@ jobs:
         ] {
             assert_eq!(
                 runs(yaml),
-                Err("Doesn't run on pull_request".to_owned()),
+                Err(Issue::fail("Doesn't run on pull_request")),
                 "{yaml}"
             );
         }
         assert_eq!(
             runs("on:\n  pull_request:\n    branches: [main]\n    paths-ignore: ['**.md']\n"),
-            Err("pull_request filters by branches, paths-ignore".to_owned())
+            Err(Issue::warn(
+                "pull_request filters by branches, paths-ignore"
+            ))
         );
         assert_eq!(
             runs("on:\n  pull_request:\n    types: opened\n    paths: [src]\n"),
-            Err(
+            Err(Issue::warn(
                 "pull_request filters by paths; pull_request types omit synchronize, reopened"
-                    .to_owned()
-            )
+            ))
+        );
+        for yaml in [
+            "on:\n  pull_request:\n    types:\n",
+            "on:\n  pull_request:\n    types: [closed, labeled]\n",
+        ] {
+            assert_eq!(
+                runs(yaml),
+                Err(Issue::fail(
+                    "pull_request types omit opened, synchronize, reopened, so it never runs on a pull request's \
+                     commits"
+                )),
+                "{yaml}"
+            );
+        }
+        assert_eq!(
+            runs("on:\n  pull_request:\n    branches: [main]\n    branches-ignore: [dev]\n"),
+            Err(Issue::fail(
+                "pull_request sets both branches and branches-ignore, which GitHub rejects"
+            ))
         );
         assert_eq!(
-            runs("on:\n  pull_request:\n    types:\n"),
-            Err("pull_request types omit opened, synchronize, reopened".to_owned())
+            runs("on:\n  pull_request:\n    paths: [src]\n    paths-ignore: [docs]\n"),
+            Err(Issue::fail(
+                "pull_request sets both paths and paths-ignore, which GitHub rejects"
+            ))
         );
     }
 
@@ -1002,56 +1056,56 @@ jobs:
         ] {
             assert_eq!(runs(yaml), Ok(()), "{yaml}");
         }
-        for (yaml, error) in [
-            ("on: pull_request\n", "Doesn't run on push"),
-            ("name: CI\n", "Doesn't run on push"),
-            ("on:\n  pull_request:\n", "Doesn't run on push"),
+        for (yaml, issue) in [
+            ("on: pull_request\n", Issue::warn("Doesn't run on push")),
+            ("name: CI\n", Issue::warn("Doesn't run on push")),
+            ("on:\n  pull_request:\n", Issue::warn("Doesn't run on push")),
             (
                 "on:\n  push:\n    branches: [main]\n",
-                "push doesn't run on dev",
+                Issue::warn("push doesn't run on dev"),
             ),
             (
                 "on:\n  push:\n    branches: main\n",
-                "push doesn't run on dev",
+                Issue::warn("push doesn't run on dev"),
             ),
             (
                 "on:\n  push:\n    branches: ['*/**']\n",
-                "push doesn't run on main, dev",
+                Issue::warn("push doesn't run on main, dev"),
             ),
             (
                 "on:\n  push:\n    branches: []\n",
-                "push doesn't run on main, dev",
+                Issue::warn("push doesn't run on main, dev"),
             ),
             (
                 "on:\n  push:\n    branches: ['!main', '!dev']\n",
-                "push doesn't run on main, dev",
+                Issue::warn("push doesn't run on main, dev"),
             ),
             (
                 "on:\n  push:\n    branches-ignore: dev\n",
-                "push doesn't run on dev",
+                Issue::warn("push doesn't run on dev"),
             ),
             (
                 "on:\n  push:\n    branches: ['*', '!dev']\n",
-                "push doesn't run on dev",
+                Issue::warn("push doesn't run on dev"),
             ),
             (
                 "on:\n  push:\n    branches-ignore: [d*]\n",
-                "push doesn't run on dev",
+                Issue::warn("push doesn't run on dev"),
             ),
             (
                 "on:\n  push:\n    tags: ['v*']\n",
-                "push is filtered only by tags, so it runs on no branch",
+                Issue::warn("push is filtered only by tags, so it runs on no branch"),
             ),
             (
                 "on:\n  push:\n    branches: [main]\n    branches-ignore: [dev]\n",
-                "push sets both branches and branches-ignore, which GitHub rejects",
+                Issue::fail("push sets both branches and branches-ignore, which GitHub rejects"),
             ),
             (
                 "on:\n  push:\n    branches: {main: true}\n",
-                "push's branch filter isn't a list of patterns",
+                Issue::fail("push's branch filter isn't a list of patterns, which GitHub rejects"),
             ),
         ] {
-            assert_eq!(runs(yaml), Err(error.to_owned()), "{yaml}");
+            assert_eq!(runs(yaml), Err(issue), "{yaml}");
         }
     }
 

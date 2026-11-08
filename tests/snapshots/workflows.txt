@@ -44,7 +44,7 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
-warn  audit-yaml-schedule  CI: audit.yaml: runs on a schedule
+fail  audit-yaml-schedule  CI: audit.yaml: runs on a schedule
 pass  workflow-valid  CI: release.yaml: valid
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
@@ -55,13 +55,13 @@ warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
       concurrency doesn't set cancel-in-progress: true
-warn  ci-reuse  CI: REUSE compliance
-warn  ci-markdownlint  CI: Markdown linting (every file)
+fail  ci-reuse  CI: REUSE compliance
+fail  ci-markdownlint  CI: Markdown linting (every file)
       No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
-warn  ci-tombi  CI: TOML formatting
+fail  ci-tombi  CI: TOML formatting
 warn  ci-zizmor  CI: zizmor (pedantic)
       A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
-warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+fail  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       pull_request filters by branches, paths-ignore
@@ -69,14 +69,14 @@ warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
       push doesn't run on dev
 warn  ci-ubuntu-slim  CI: jobs that install nothing run on ubuntu-slim
       These jobs install nothing, but don't run on ubuntu-slim: ci-success, zizmor-action
-warn  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
+fail  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
       continue-on-error lets the workflow pass when these jobs fail: ci-success, zizmor-action
 pass  ci-gate-exists  CI: gate job ci-success
-warn  ci-gate-always  CI: the gate runs whatever the other jobs' results
+fail  ci-gate-always  CI: the gate runs whatever the other jobs' results
       ci-success doesn't set if: always(), so it's skipped when a job fails, which passes a required check
-warn  ci-gate-needs  CI: the gate needs every other job
+fail  ci-gate-needs  CI: the gate needs every other job
       ci-success doesn't need zizmor-action
-warn  ci-gate-results  CI: the gate fails unless every job succeeded
+fail  ci-gate-results  CI: the gate fails unless every job succeeded
       No step of ci-success exits with an error when a job's result is cancelled or skipped, as one with if: contains(needs.*.result, '<result>') does
 pass  components-search  Components: every directory searched
 pass  pyproject-exists  [.] pyproject.toml: exists
@@ -112,7 +112,7 @@ warn  ruff-lint-configured  [.] Ruff lint: configured
       Consider configuring [tool.ruff.lint]
 fail  mypy-configured  [.] mypy: configured
       Missing [tool.mypy] in pyproject.toml
-warn  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
+fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook
       No uv-lock hook
@@ -124,12 +124,12 @@ fail  python-precommit-mypy  Python pre-commit: Mypy hook
       No mypy hook
 fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       No pytest hook
-warn  python-ci-uv-lock  Python CI: uv.lock up to date
+fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
-warn  python-ci-ruff-format  Python CI: format check
-warn  python-ci-ruff-check  Python CI: lint check
-warn  python-ci-mypy  Python CI: type check
-warn  python-ci-pytest  Python CI: tests (with coverage)
+fail  python-ci-ruff-format  Python CI: format check
+fail  python-ci-ruff-check  Python CI: lint check
+fail  python-ci-mypy  Python CI: type check
+fail  python-ci-pytest  Python CI: tests (with coverage)
       No step runs pytest
 pass  python-audit-uv  Python audit: uv audit
 pass  cargo-toml-exists  [.] Cargo.toml: exists
@@ -147,7 +147,7 @@ warn  clippy-toml-exists  [.] clippy.toml: exists
       File not found
 warn  deny-toml-exists  [.] deny.toml: exists
       File not found
-warn  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
+fail  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
       No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
 warn  cargo-config-exists  .cargo/config.toml: exists
       File not found
@@ -161,11 +161,11 @@ fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
       No cargo-test hook
 fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
       No cargo-deny hook
-warn  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
-warn  rust-ci-rustfmt  Rust CI: format check
-warn  rust-ci-clippy  Rust CI: clippy check
-warn  rust-ci-test  Rust CI: test
-warn  rust-ci-cargo-deny  Rust CI: cargo deny
+fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
+fail  rust-ci-rustfmt  Rust CI: format check
+fail  rust-ci-clippy  Rust CI: clippy check
+fail  rust-ci-test  Rust CI: test
+fail  rust-ci-cargo-deny  Rust CI: cargo deny
 warn  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
       These jobs build nothing, but setup-rust-toolchain caches their build: release.yaml: rustfmt
-warn  rust-audit-cargo-deny  Rust audit: cargo deny advisories
+fail  rust-audit-cargo-deny  Rust audit: cargo deny advisories

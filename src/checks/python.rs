@@ -606,7 +606,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.must(
         "python-ci-uv-lock",
         "Python CI: uv.lock up to date",
         workflow.run_lines().any(|line| checks_uv_lock(&line)),
@@ -624,22 +624,22 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
             ))
         },
     );
-    report.should(
+    report.must(
         "python-ci-ruff-format",
         "Python CI: format check",
         workflow.runs_command("ruff format"),
     );
-    report.should(
+    report.must(
         "python-ci-ruff-check",
         "Python CI: lint check",
         workflow.runs_command("ruff check"),
     );
-    report.should(
+    report.must(
         "python-ci-mypy",
         "Python CI: type check",
         workflow.runs_command("mypy"),
     );
-    report.should(
+    report.check(
         "python-ci-pytest",
         "Python CI: tests (with coverage)",
         pytest_in_ci(workflow),
@@ -733,14 +733,14 @@ fn pytest_hook_covers(hook: &PrecommitHook) -> bool {
 }
 
 /// Check that some step runs pytest with coverage.
-fn pytest_in_ci(workflow: &Workflow) -> Result<(), String> {
+fn pytest_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let runs = workflow.filter_map_commands(pytest_coverage);
     if runs.contains(&true) {
         Ok(())
     } else if runs.is_empty() {
-        Err("No step runs pytest".to_owned())
+        Err(Issue::fail("No step runs pytest"))
     } else {
-        Err("No step runs pytest with --cov".to_owned())
+        Err(Issue::warn("No step runs pytest with --cov"))
     }
 }
 
@@ -765,22 +765,24 @@ fn is_min_python(python_version: &str, min: &Version) -> bool {
 
 /// Check that a library's tests run in CI on the oldest Python its `requires-python` allows: some job sets that
 /// version as setup-uv's `python-version` input and runs pytest.
-fn min_python_tested(config: &PyprojectToml, workflow: &Workflow) -> Result<(), String> {
+fn min_python_tested(config: &PyprojectToml, workflow: &Workflow) -> Result<(), Issue> {
     let versions: Vec<_> = workflow
         .steps_using_in_jobs_running(SETUP_UV, runs_pytest)
         .filter_map(|step| step.input("python-version"))
         .collect();
     if versions.is_empty() {
-        return Err("No job sets setup-uv's python-version input and runs pytest".to_owned());
+        return Err(Issue::fail(
+            "No job sets setup-uv's python-version input and runs pytest",
+        ));
     }
-    let min = config.min_python()?;
+    let min = config.min_python().map_err(Issue::warn)?;
     if versions.iter().any(|version| is_min_python(version, &min)) {
         Ok(())
     } else {
-        Err(format!(
+        Err(Issue::warn(format!(
             "No job tests with the oldest supported Python, {min} (the jobs set {})",
             versions.join(", ")
-        ))
+        )))
     }
 }
 
@@ -790,7 +792,7 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    report.must(
         "python-audit-uv",
         "Python audit: uv audit",
         workflow.runs_command("uv audit"),
@@ -812,7 +814,7 @@ pub(crate) fn check_min_python_job(
         return;
     }
 
-    report.should(
+    report.check(
         "python-ci-min-python",
         "Python CI: tests on the oldest supported Python (library)",
         min_python_tested(config, workflow),
@@ -970,14 +972,15 @@ jobs:
         assert_eq!(min_python_tested(&library(">=3.12"), &workflow), Ok(()));
         assert_eq!(
             min_python_tested(&library(">=3.11"), &workflow),
-            Err(
+            Err(Issue::warn(
                 "No job tests with the oldest supported Python, 3.11 (the jobs set 3.12)"
-                    .to_owned()
-            )
+            ))
         );
         assert_eq!(
             min_python_tested(&library(">=3.11"), &Workflow::default()),
-            Err("No job sets setup-uv's python-version input and runs pytest".to_owned())
+            Err(Issue::fail(
+                "No job sets setup-uv's python-version input and runs pytest"
+            ))
         );
         for line in ["uv run pytest", "python -m pytest -q", ".venv/bin/pytest"] {
             assert!(runs_pytest(line), "{line}");
@@ -1040,11 +1043,11 @@ jobs:
         );
         assert_eq!(
             pytest_in_ci(&workflow("uv run pytest")),
-            Err("No step runs pytest with --cov".to_owned())
+            Err(Issue::warn("No step runs pytest with --cov"))
         );
         assert_eq!(
             pytest_in_ci(&workflow("uv run mypy .")),
-            Err("No step runs pytest".to_owned())
+            Err(Issue::fail("No step runs pytest"))
         );
     }
 }

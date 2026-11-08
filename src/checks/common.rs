@@ -609,7 +609,7 @@ const MARKDOWN_GLOBS: [&str; 2] = ["**/*.md", "**/*.{md,markdown}"];
 /// Whether `workflow` runs markdownlint-cli2 on every Markdown file: a `DavidAnson/markdownlint-cli2-action` step whose
 /// `globs` include `**/*.md`, since the action otherwise lints only the files at the root, or a script running
 /// `markdownlint-cli2` with that glob, quoted so that the shell leaves it to markdownlint-cli2.
-fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), String> {
+fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut runs = false;
 
     for step in workflow.steps_using("DavidAnson/markdownlint-cli2-action") {
@@ -652,12 +652,13 @@ fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), String> {
     }
 
     if runs {
-        Err(
-            "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root"
-                .to_owned(),
-        )
+        Err(Issue::warn(
+            "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+        ))
     } else {
-        Err("No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2".to_owned())
+        Err(Issue::fail(
+            "No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2",
+        ))
     }
 }
 
@@ -948,7 +949,7 @@ fn is_pre_commit_command(word: &str) -> bool {
 /// (or `-a`), with a pinned pre-commit. The pin belongs to that command, as `uvx pre-commit@x.y.z` or `uvx --from
 /// pre-commit==x.y.z pre-commit`, or, for a plain `pre-commit run`, to an earlier command of the same job that
 /// installs it, such as `pip install pre-commit==x.y.z`.
-fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), String> {
+fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut runs = false;
     let mut all_files = false;
     let mut pinned = false;
@@ -982,18 +983,23 @@ fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), String> {
     }
 
     if !runs {
+        // pre-commit/action runs the hooks too, but with whatever pre-commit is newest.
         Err(if workflow.uses_action("pre-commit/action") {
-            "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned".to_owned()
+            Issue::warn(
+                "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned",
+            )
         } else {
-            "No step runs pre-commit run".to_owned()
+            Issue::fail("No step runs pre-commit run")
         })
     } else if !all_files {
-        Err("pre-commit run doesn't pass --all-files".to_owned())
+        // CI has no staged files, so without --all-files every hook is skipped and the job passes.
+        Err(Issue::fail(
+            "pre-commit run doesn't pass --all-files, so it checks no files",
+        ))
     } else if !pinned {
-        Err(
-            "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)"
-                .to_owned(),
-        )
+        Err(Issue::warn(
+            "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+        ))
     } else {
         Ok(())
     }
@@ -1206,7 +1212,7 @@ fn is_zizmor_command(word: &str) -> bool {
 /// Whether `workflow` runs zizmor so that its findings fail the job, with a persona at least as strict as pedantic:
 /// either a `run` script line invoking it with such a persona, or a `zizmorcore/zizmor-action` step setting one in
 /// `persona` and turning off `advanced-security`, whose default uploads findings to code scanning and passes the job.
-fn zizmor_in_ci(workflow: &Workflow) -> Result<(), String> {
+fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut issues = Vec::new();
 
     for line in workflow.run_lines() {
@@ -1217,7 +1223,7 @@ fn zizmor_in_ci(workflow: &Workflow) -> Result<(), String> {
         if zizmor_args_strict(words.iter().skip(start + 1).copied()) {
             return Ok(());
         }
-        issues.push("A step runs zizmor without --pedantic".to_owned());
+        issues.push(Issue::warn("A step runs zizmor without --pedantic"));
     }
 
     for step in workflow.steps_using("zizmorcore/zizmor-action") {
@@ -1227,22 +1233,30 @@ fn zizmor_in_ci(workflow: &Workflow) -> Result<(), String> {
         let gating = step.input("advanced-security").as_deref() == Some("false");
         match (strict, gating) {
             (true, true) => return Ok(()),
-            (false, true) => issues.push("zizmor-action doesn't set persona: pedantic".to_owned()),
-            (true, false) => {
-                issues.push("zizmor-action doesn't set advanced-security: false".to_owned());
+            (false, true) => {
+                issues.push(Issue::warn("zizmor-action doesn't set persona: pedantic"));
             }
-            (false, false) => issues.push(
-                "zizmor-action doesn't set persona: pedantic or advanced-security: false"
-                    .to_owned(),
-            ),
+            // Uploading the findings to code scanning instead passes the job whatever zizmor finds.
+            (true, false) => {
+                issues.push(Issue::fail(
+                    "zizmor-action doesn't set advanced-security: false",
+                ));
+            }
+            (false, false) => issues.push(Issue::fail(
+                "zizmor-action doesn't set persona: pedantic or advanced-security: false",
+            )),
         }
     }
 
     if issues.is_empty() {
-        Err("No step runs zizmor or uses zizmorcore/zizmor-action".to_owned())
+        Err(Issue::fail(
+            "No step runs zizmor or uses zizmorcore/zizmor-action",
+        ))
     } else {
         issues.dedup();
-        Err(issues.join("; "))
+        // Each issue is a step's, and the best of them decides: one that fails the job on findings, only with too
+        // lax a persona, makes the check a warning whatever the others do.
+        Issue::alternatives(issues)
     }
 }
 
@@ -1364,7 +1378,7 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
     if let Some(audit) =
         report.recommend_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
     {
-        report.should(
+        report.must(
             "audit-yaml-schedule",
             "CI: audit.yaml: runs on a schedule",
             audit.runs_on_schedule(),
@@ -1424,23 +1438,23 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
 /// Check `ci.yaml`, `workflow`: the common hooks' jobs, its triggers and its gate job.
 fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Report) {
-    report.should(
+    report.must(
         "ci-reuse",
         "CI: REUSE compliance",
         workflow.uses_action("fsfe/reuse-action") || workflow.runs_matching(&REUSE_LINT),
     );
-    report.should(
+    report.check(
         "ci-markdownlint",
         "CI: Markdown linting (every file)",
         markdownlint_in_ci(workflow),
     );
-    report.should(
+    report.must(
         "ci-tombi",
         "CI: TOML formatting",
         workflow.runs_matching(&TOMBI_FORMAT_CHECK),
     );
-    report.should("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
-    report.should(
+    report.check("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
+    report.check(
         "ci-pre-commit",
         "CI: remaining pre-commit hooks (pinned, --all-files)",
         pre_commit_in_ci(workflow),
@@ -1455,12 +1469,12 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
         );
     }
 
-    report.should(
+    report.check(
         "ci-yaml-pull-request",
         "CI: ci.yaml: runs on every pull request",
         workflow.runs_on_every_pull_request(),
     );
-    report.should(
+    report.check(
         "ci-yaml-push",
         "CI: ci.yaml: runs on pushes to main and dev",
         workflow.runs_on_push_to(&["main", "dev"]),
@@ -1552,7 +1566,7 @@ fn check_slim_runner(workflow: &Workflow, report: &mut Report) {
 /// `continue-on-error`, which lets the workflow pass when it fails.
 fn check_gate(workflow: &Workflow, report: &mut Report) {
     let continuing = workflow.jobs_continuing_on_error();
-    report.should(
+    report.must(
         "ci-gate-continue-on-error",
         "CI: no job, the gate included, sets continue-on-error",
         if continuing.is_empty() {
@@ -1566,20 +1580,20 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
     );
 
     let Some(gate) = workflow.jobs.get(GATE_JOB) else {
-        report.should(
+        report.must(
             "ci-gate-exists",
             format!("CI: gate job {GATE_JOB}"),
             Outcome::fail(format!("No {GATE_JOB} job")),
         );
         return;
     };
-    report.should(
+    report.must(
         "ci-gate-exists",
         format!("CI: gate job {GATE_JOB}"),
         Outcome::Pass,
     );
 
-    report.should(
+    report.must(
         "ci-gate-always",
         "CI: the gate runs whatever the other jobs' results",
         if gate.runs_always() {
@@ -1591,7 +1605,7 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
         },
     );
 
-    report.should(
+    report.must(
         "ci-gate-needs",
         "CI: the gate needs every other job",
         gate.needed_jobs().and_then(|needed| {
@@ -1610,7 +1624,7 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
     );
 
     let not_failing = gate.results_not_failing();
-    report.should(
+    report.must(
         "ci-gate-results",
         "CI: the gate fails unless every job succeeded",
         if not_failing.is_empty() {
@@ -1962,7 +1976,7 @@ jobs:
         ));
     }
 
-    fn pre_commit(run: &str) -> Result<(), String> {
+    fn pre_commit(run: &str) -> Result<(), Issue> {
         let yaml = format!("jobs:\n  hooks:\n    steps:\n      - run: {run:?}\n");
         pre_commit_in_ci(&serde_saphyr::from_str(&yaml).unwrap())
     }
@@ -1979,38 +1993,49 @@ jobs:
         ] {
             assert_eq!(pre_commit(run), Ok(()), "{run}");
         }
-        for (run, error) in [
-            ("pre-commit install", "No step runs pre-commit run"),
+        for (run, issue) in [
+            (
+                "pre-commit install",
+                Issue::fail("No step runs pre-commit run"),
+            ),
             (
                 "uvx pre-commit@4.3.0 run",
-                "pre-commit run doesn't pass --all-files",
+                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
             ),
             (
                 "uvx pre-commit@4.3.0 run --all-files-later",
-                "pre-commit run doesn't pass --all-files",
+                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
             ),
             (
                 "uvx pre-commit@4.3.0 run cargo-test; echo --all-files",
-                "pre-commit run doesn't pass --all-files",
+                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
             ),
             (
                 "uvx pre-commit run --all-files",
-                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                Issue::warn(
+                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                ),
             ),
             (
                 "uvx pre-commit@latest run --all-files",
-                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                Issue::warn(
+                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                ),
             ),
             (
                 "pip install pre-commit==4.3.0\nuvx pre-commit run -a",
-                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                Issue::warn(
+                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                ),
             ),
             (
                 "pip install pre-commit>=4 && pre-commit run -a",
-                "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                Issue::warn(
+                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
+                ),
             ),
         ] {
-            assert_eq!(pre_commit(run), Err(error.to_owned()), "{run}");
+            assert_eq!(pre_commit(run), Err(issue), "{run}");
         }
 
         // A pin in another job doesn't apply.
@@ -2025,10 +2050,9 @@ jobs:
         .unwrap();
         assert_eq!(
             pre_commit_in_ci(&action),
-            Err(
+            Err(Issue::warn(
                 "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned"
-                    .to_owned()
-            )
+            ))
         );
     }
 
@@ -2183,7 +2207,7 @@ jobs:
         assert!(!zizmor_hook_strict(&hook(Some("echo --pedantic"), &[])));
     }
 
-    fn zizmor_in(yaml: &str) -> Result<(), String> {
+    fn zizmor_in(yaml: &str) -> Result<(), Issue> {
         let workflow: Workflow = serde_saphyr::from_str(yaml).expect("workflow parses");
         zizmor_in_ci(&workflow)
     }
@@ -2201,11 +2225,13 @@ jobs:
         }
         assert_eq!(
             zizmor_in(&script("zizmor .")),
-            Err("A step runs zizmor without --pedantic".to_owned())
+            Err(Issue::warn("A step runs zizmor without --pedantic"))
         );
         assert_eq!(
             zizmor_in(&script("echo zizmorish --pedantic")),
-            Err("No step runs zizmor or uses zizmorcore/zizmor-action".to_owned())
+            Err(Issue::fail(
+                "No step runs zizmor or uses zizmorcore/zizmor-action"
+            ))
         );
     }
 
@@ -2226,18 +2252,30 @@ jobs:
         );
         assert_eq!(
             zizmor_in(&step("advanced-security: false")),
-            Err("zizmor-action doesn't set persona: pedantic".to_owned())
+            Err(Issue::warn("zizmor-action doesn't set persona: pedantic"))
         );
         assert_eq!(
             zizmor_in(&step("persona: pedantic")),
-            Err("zizmor-action doesn't set advanced-security: false".to_owned())
+            Err(Issue::fail(
+                "zizmor-action doesn't set advanced-security: false"
+            ))
         );
         assert_eq!(
             zizmor_in(&step("")),
-            Err(
+            Err(Issue::fail(
                 "zizmor-action doesn't set persona: pedantic or advanced-security: false"
-                    .to_owned()
-            )
+            ))
+        );
+
+        // A step that fails the job on findings decides, though another uploads them instead.
+        assert_eq!(
+            zizmor_in(&format!(
+                "{}      - run: zizmor .\n",
+                step("persona: pedantic")
+            )),
+            Err(Issue::warn(
+                "A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false"
+            ))
         );
     }
 
@@ -2440,7 +2478,7 @@ jobs:
         );
     }
 
-    fn markdownlint(steps: &str) -> Result<(), String> {
+    fn markdownlint(steps: &str) -> Result<(), Issue> {
         markdownlint_in_ci(
             &serde_saphyr::from_str(&format!("jobs:\n  markdownlint:\n    steps:\n{steps}"))
                 .unwrap(),
@@ -2465,30 +2503,40 @@ jobs:
         ] {
             assert_eq!(markdownlint(&steps), Ok(()), "{steps}");
         }
-        for (steps, error) in [
+        for (steps, issue) in [
             (
                 "      - run: echo\n".to_owned(),
-                "No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2",
+                Issue::fail(
+                    "No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2",
+                ),
             ),
             (
                 ACTION.to_owned(),
-                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                Issue::warn(
+                    "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                ),
             ),
             (
                 format!("{ACTION}        with:\n          globs: '*.md'\n"),
-                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                Issue::warn(
+                    "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                ),
             ),
             (
                 format!("{ACTION}        with:\n          globs: '**/*.md,docs'\n"),
-                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                Issue::warn(
+                    "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                ),
             ),
             // Unquoted, the shell expands the glob itself.
             (
                 "      - run: markdownlint-cli2 **/*.md\n".to_owned(),
-                "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                Issue::warn(
+                    "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
+                ),
             ),
         ] {
-            assert_eq!(markdownlint(&steps), Err(error.to_owned()), "{steps}");
+            assert_eq!(markdownlint(&steps), Err(issue), "{steps}");
         }
     }
 
