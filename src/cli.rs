@@ -14,7 +14,7 @@ use serde::Serialize;
 use crate::checks;
 use crate::commit_msg::{self, MAX_LINE_LENGTH};
 use crate::context::ProjectContext;
-use crate::models::{Language, Status};
+use crate::models::Language;
 use crate::report::{CheckResult, Report};
 
 #[derive(Parser)]
@@ -34,6 +34,10 @@ enum Commands {
         /// Output results as JSON.
         #[arg(long = "json")]
         output_json: bool,
+
+        /// Exit with failure if any check warns, not only if one fails.
+        #[arg(long)]
+        deny_warnings: bool,
     },
 
     /// Check a commit message's line lengths, for a commit-msg hook.
@@ -126,7 +130,13 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
     serde_json::to_string_pretty(&output).context("Failed to serialize JSON output")
 }
 
-fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<ExitCode> {
+/// Whether a report fails verification: if any check failed, or, with
+/// `deny_warnings`, if any check warned.
+fn report_fails(report: &Report, deny_warnings: bool) -> bool {
+    report.failed() > 0 || (deny_warnings && report.warnings() > 0)
+}
+
+fn verify(path: PathBuf, output_json: bool, deny_warnings: bool) -> anyhow::Result<ExitCode> {
     if !path.is_dir() {
         eprintln!("Error: '{}' is not a valid directory.", path.display());
         return Ok(ExitCode::FAILURE);
@@ -144,11 +154,19 @@ fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<ExitCode> {
         report.print();
     }
 
-    if report.results.iter().any(|r| r.status == Status::Fail) {
-        return Ok(ExitCode::FAILURE);
+    if !report_fails(&report, deny_warnings) {
+        return Ok(ExitCode::SUCCESS);
     }
-
-    Ok(ExitCode::SUCCESS)
+    if report.failed() == 0 {
+        let warnings = report.warnings();
+        let (noun, failure) = if warnings == 1 {
+            ("warning", "a failure")
+        } else {
+            ("warnings", "failures")
+        };
+        eprintln!("Error: {warnings} {noun}, treated as {failure} by --deny-warnings.");
+    }
+    Ok(ExitCode::FAILURE)
 }
 
 /// Describes each line of a commit message that is too long, as
@@ -190,7 +208,11 @@ pub fn run() -> ExitCode {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Verify { path, output_json } => verify(path, output_json),
+        Commands::Verify {
+            path,
+            output_json,
+            deny_warnings,
+        } => verify(path, output_json, deny_warnings),
         Commands::CommitMsg { file } => commit_msg(&file),
     };
     result.unwrap_or_else(|e| {
@@ -237,6 +259,22 @@ mod tests {
         assert_eq!(json.pointer("/languages/0").unwrap(), "typescript");
         assert!(json.pointer("/results/0/component").is_none());
         assert_eq!(json.pointer("/results/1/component").unwrap(), "frontend");
+    }
+
+    #[test]
+    fn report_fails_on_warnings_only_when_denied() {
+        let mut report = Report::new(PathBuf::new(), Vec::new());
+        report.should("readme-exists", "README.md", true);
+        assert!(!report_fails(&report, false));
+        assert!(!report_fails(&report, true));
+
+        report.should("changelog-exists", "CHANGELOG.md", false);
+        assert!(!report_fails(&report, false));
+        assert!(report_fails(&report, true));
+
+        report.must("license-exists", "LICENSE", false);
+        assert!(report_fails(&report, false));
+        assert!(report_fails(&report, true));
     }
 
     #[test]

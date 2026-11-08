@@ -31,6 +31,20 @@
 //! An ID labels one check, which may record several results: one for each
 //! file it inspects, such as each referenced tsconfig. All of them share the ID.
 //!
+//! # Severity
+//!
+//! A check records a failure with `must` and a warning with `should`. Choose
+//! by what the issue means: a failure when something the standards require is
+//! absent or unusable (a required file is missing, a config can't be parsed,
+//! or a tool isn't configured or run at all), and a warning when it's present
+//! but differs from the standard (weaker settings, other flags, versions,
+//! names or metadata), when norms can't be sure of the issue, or when config
+//! is merely stale, such as an unneeded waiver. Not every existing check
+//! follows this rule yet.
+//!
+//! `norms verify` exits with failure if any check fails, or with
+//! `--deny-warnings` if any check fails or warns.
+//!
 //! # Components
 //!
 //! A language's checks of its own files run once for each component of that

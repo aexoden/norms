@@ -2,12 +2,12 @@
 
 norms is two things: `STANDARDS.md`, the standards for the author's projects,
 and the `norms` Rust CLI that checks a project against them
-(`norms verify <path> [--json]`). The CLI also checks a commit message's line
-lengths (`norms commit-msg <file>`, in `commit_msg.rs`), which other projects
-run as the `norms-commit-msg` hook from `.pre-commit-hooks.yaml` and norms runs
-as a local hook (`tests/commit_msg.rs` keeps the two in step). The repository
-also ships a Copier template (`copier.yml`, `template/`) that renders new
-projects following the standards.
+(`norms verify <path> [--json] [--deny-warnings]`). The CLI also checks a
+commit message's line lengths (`norms commit-msg <file>`, in `commit_msg.rs`),
+which other projects run as the `norms-commit-msg` hook from
+`.pre-commit-hooks.yaml` and norms runs as a local hook (`tests/commit_msg.rs`
+keeps the two in step). The repository also ships a Copier template
+(`copier.yml`, `template/`) that renders new projects following the standards.
 The repository follows its own standards, so `STANDARDS.md` is the reference for
 conventions here too.
 
@@ -48,7 +48,8 @@ git -C /tmp/demo add --all && (cd /tmp/demo && uvx pre-commit run --all-files)
 ## Architecture of the CLI
 
 `cli::verify` builds a `ProjectContext`, runs `checks::run_all_checks`, and
-prints a `Report`, exiting 1 if any check failed.
+prints a `Report`, exiting 1 if any check failed, or with `--deny-warnings` if
+any check failed or warned.
 
 - `context.rs`: `ProjectContext` lazily parses each config file at most once
   (`OnceLock`) and returns a `ConfigStatus<T>` (`NotFound`, `ParseError` with
@@ -71,7 +72,8 @@ prints a `Report`, exiting 1 if any check failed.
   component's path), then the checks of the language's place in repository-wide
   files (pre-commit hooks, CI) run once.
 - `report.rs`: `report.must(id, name, outcome)` records a check whose issue is
-  a failure, `report.should(...)` one whose issue is a warning;
+  a failure, `report.should(...)` one whose issue is a warning (its Severity
+  section gives the rule for choosing);
   `require_parsed`/`recommend_parsed` unwrap a `ConfigStatus` while recording
   the problem if it's missing or malformed. Every check has a stable kebab-case
   ID (subject, then property: `cargo-toml-license`; see `report.rs`), so don't
@@ -109,7 +111,8 @@ a failure; warnings don't change its exit code.
 
 ## Tests
 
-Unit tests sit beside the code they test. `tests/fixtures.rs` runs
+Unit tests sit beside the code they test. `tests/verify.rs` checks
+`norms verify`'s exit codes on a copy of a fixture. `tests/fixtures.rs` runs
 `norms verify --json` on each project in `tests/fixtures/` and compares what it
 reports with `tests/snapshots/<name>.txt`, so any change in findings shows up as
 a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review

@@ -95,6 +95,10 @@ reason = "The repository holds no binary files."
   doesn't.
 - Unknown keys are errors.
 
+`norms verify <path>` reports each check as passed, failed, warned or skipped,
+and exits with failure if any check failed. With `--deny-warnings`, it also
+exits with failure if any check warned.
+
 ## Development Environment
 
 Each language's own toolchain manager provides the development environment. Tool
