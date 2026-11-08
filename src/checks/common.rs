@@ -1025,13 +1025,15 @@ const PRE_COMMIT_RUN_VALUE_OPTIONS: [&str; 20] = [
     "-s",
 ];
 
-/// The words before pre-commit in a command, as its words, that runs `pre-commit run` for every hook, however
-/// pre-commit is invoked, or `None` if the command doesn't run it or names the one hook it runs. Option values aren't
-/// hook IDs, and the words after `--files` are files.
-fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
+/// The words before pre-commit in a command, as its words, that runs `pre-commit run` for every hook of a stage,
+/// however pre-commit is invoked, and that stage, `--hook-stage`'s value or else `pre-commit`, or `None` if the
+/// command doesn't run it or names the one hook it runs. Option values aren't hook IDs, and the words after `--files`
+/// are files.
+fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<(&'b [&'a str], &'a str)> {
     let start = words
         .windows(2)
         .position(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))?;
+    let mut stage = "pre-commit";
     let mut args = words.iter().skip(start + 2);
     while let Some(arg) = args.next() {
         if *arg == "--files" || arg.starts_with('#') {
@@ -1040,11 +1042,18 @@ fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
         if !arg.starts_with('-') {
             return None;
         }
-        if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
-            args.next();
+        if let Some(value) = arg.strip_prefix("--hook-stage=") {
+            stage = value;
+        } else if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
+            let value = args.next();
+            if *arg == "--hook-stage"
+                && let Some(value) = value
+            {
+                stage = value;
+            }
         }
     }
-    words.get(..start)
+    Some((words.get(..start)?, stage.trim_matches(['"', '\''])))
 }
 
 /// The value a word of a shell command assigns to `SKIP`, as `SKIP=<value>` does, without quotes around it.
@@ -1059,13 +1068,14 @@ const HOOK_JOBS: [(&str, &str); 2] = [
     ("tombi-format", "tombi"),
 ];
 
-/// The hooks of `config` that run before commits and have a job of their own in `workflow`, other than `job_id`, as
-/// each one's alias or ID, that `skip`, a comma-separated list of hook IDs and aliases as pre-commit reads `SKIP`,
-/// doesn't list. A hook has a job if a job has its ID or alias as its own ID, or is the job [`HOOK_JOBS`] gives it.
+/// The hooks of `config` that run in `stage` and have a job of their own in `workflow`, other than `job_id`, as each
+/// one's alias or ID, that `skip`, a comma-separated list of hook IDs and aliases as pre-commit reads `SKIP`, doesn't
+/// list. A hook has a job if a job has its ID or alias as its own ID, or is the job [`HOOK_JOBS`] gives it.
 fn hooks_not_skipped<'a>(
     config: &'a PrecommitConfig,
     workflow: &Workflow,
     job_id: &str,
+    stage: &'a str,
     skip: &str,
 ) -> Vec<&'a str> {
     let skipped: BTreeSet<&str> = skip
@@ -1083,7 +1093,7 @@ fn hooks_not_skipped<'a>(
             .any(|job| job != job_id && workflow.jobs.contains_key(job))
     };
     let mut missing: Vec<&str> = Vec::new();
-    for hook in config.hooks_at_commit() {
+    for hook in config.hooks_in(stage) {
         let names: Vec<&str> = std::iter::once(hook.id.as_str())
             .chain(hook.alias())
             .collect();
@@ -1098,8 +1108,9 @@ fn hooks_not_skipped<'a>(
     missing
 }
 
-/// Check that each command of `workflow` that runs `pre-commit run` for every hook at the repository's root, where
-/// `config` applies, lists in its `SKIP` every hook of `config` that runs before commits and has a job of its own, or
+/// Check that each command of `workflow` that runs `pre-commit run` for every hook of a stage at the repository's
+/// root, where `config` applies, lists in its `SKIP` every hook of `config` that runs in that stage and has a job of
+/// its own, or
 /// `None` if no command runs it. `SKIP` is read from the command's own `SKIP=` prefix, or else an earlier command of
 /// the step that sets it (`SKIP=...` or `export SKIP=...`), or else the step's, job's or workflow's `env`.
 fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Result<(), String>> {
@@ -1114,7 +1125,7 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
             let mut shell_skip: Option<String> = None;
             for line in step.run_lines() {
                 for words in commands(&line) {
-                    let Some(prefix) = pre_commit_run_all(&words) else {
+                    let Some((prefix, stage)) = pre_commit_run_all(&words) else {
                         let assignment = match words.as_slice() {
                             ["export", word] | [word] => skip_assignment(word),
                             _ => None,
@@ -1132,7 +1143,7 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
                         .or_else(|| shell_skip.clone())
                         .or_else(|| workflow.env(job, step, "SKIP").map(Cow::into_owned))
                         .unwrap_or_default();
-                    let missing = hooks_not_skipped(config, workflow, job_id, &skip);
+                    let missing = hooks_not_skipped(config, workflow, job_id, stage, &skip);
                     let issue = format!(
                         "SKIP in {job_id} doesn't list these hooks, which have jobs of their own: {}",
                         missing.join(", ")
@@ -1807,6 +1818,43 @@ jobs:
             "pre-commit run --hook-stage pre-push clippy",
         ] {
             assert_eq!(skip(clippy, &script("", run)), None, "{run}");
+        }
+        // A run of another stage's hooks skips those of that stage that have jobs, given by its current or old name,
+        // quoted or not.
+        let stages = "default_stages: [pre-commit]\nrepos: [{repo: local, hooks: [{id: clippy, stages: [pre-commit, pre-push]}, {id: cargo-test}]}]\n";
+        for run in [
+            "pre-commit run --hook-stage commit-msg --commit-msg-filename title.txt",
+            "pre-commit run --hook-stage=manual --all-files",
+        ] {
+            assert_eq!(skip(stages, &script("", run)), Some(Ok(())), "{run}");
+        }
+        for run in [
+            "pre-commit run --hook-stage pre-push --all-files",
+            "pre-commit run --hook-stage=push -a",
+            "pre-commit run --hook-stage 'pre-push' -a",
+        ] {
+            assert_eq!(
+                skip(stages, &script("", run)),
+                Some(Err(
+                    "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy"
+                        .to_owned()
+                )),
+                "{run}"
+            );
+        }
+        for run in [
+            "pre-commit run --hook-stage pre-commit --all-files",
+            "pre-commit run --hook-stage=commit -a",
+            "pre-commit run --hook-stage \"pre-commit\" -a",
+        ] {
+            assert_eq!(
+                skip(stages, &script("", run)),
+                Some(Err(
+                    "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
+                        .to_owned()
+                )),
+                "{run}"
+            );
         }
         // SKIP set in the script, as a prefix or by an earlier command, comes before env.
         for run in [

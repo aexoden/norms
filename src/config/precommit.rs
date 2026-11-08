@@ -193,29 +193,36 @@ impl PrecommitConfig {
         }
     }
 
-    /// Whether `hook` runs before each commit: the stages it lists include `pre-commit`, or, if it lists none or an
-    /// empty list, `default_stages` does. Without either, pre-commit runs it in every stage its repository gives it,
-    /// which for the hooks checked before commits includes `pre-commit`. A malformed `default_stages` is left to
-    /// [`check_default_stages`](Self::check_default_stages). pre-commit still accepts `commit`, the stage's old name.
-    fn runs_at_commit(&self, hook: &PrecommitHook) -> bool {
-        const NAMES: [&str; 2] = ["pre-commit", "commit"];
+    /// Whether `hook` runs in `stage`: the stages it lists include `stage`, or, if it lists none or an empty list,
+    /// `default_stages` does. Without either, pre-commit runs it in every stage its repository gives it, which for the
+    /// hooks checked includes the one they're checked in. A malformed `default_stages` is left to
+    /// [`check_default_stages`](Self::check_default_stages). Stages may be given by their old names, such as `commit`.
+    fn runs_in(&self, hook: &PrecommitHook, stage: &str) -> bool {
+        let wanted = current_stage_name(stage);
+        let listed = |listed: &str| current_stage_name(listed) == wanted;
         match (&hook.stages, &self.default_stages) {
-            (Some(stages), _) if !stages.is_empty() => {
-                stages.iter().any(|stage| NAMES.contains(&stage.as_str()))
+            (Some(stages), _) if !stages.is_empty() => stages.iter().any(|name| listed(name)),
+            (_, Some(Value::Array(stages))) => {
+                stages.iter().any(|name| name.as_str().is_some_and(listed))
             }
-            (_, Some(Value::Array(stages))) => stages
-                .iter()
-                .any(|stage| stage.as_str().is_some_and(|stage| NAMES.contains(&stage))),
             (_, _) => true,
         }
     }
 
-    /// Every hook that runs before each commit, as [`runs_at_commit`](Self::runs_at_commit) decides.
-    pub(crate) fn hooks_at_commit(&self) -> impl Iterator<Item = &PrecommitHook> {
+    /// Whether `hook` runs before each commit, in the `pre-commit` stage. See [`runs_in`](Self::runs_in).
+    fn runs_at_commit(&self, hook: &PrecommitHook) -> bool {
+        self.runs_in(hook, "pre-commit")
+    }
+
+    /// Every hook that runs in `stage`, as [`runs_in`](Self::runs_in) decides.
+    pub(crate) fn hooks_in<'a>(
+        &'a self,
+        stage: &'a str,
+    ) -> impl Iterator<Item = &'a PrecommitHook> {
         self.repos
             .iter()
             .flat_map(|repo| &repo.hooks)
-            .filter(|hook| self.runs_at_commit(hook))
+            .filter(move |hook| self.runs_in(hook, stage))
     }
 
     /// The hooks with ID `id` that run before each commit, or, if there are none, why not.
@@ -244,6 +251,16 @@ impl PrecommitConfig {
     /// Whether a hook with ID `id` runs before each commit. See [`commit_hooks`](Self::commit_hooks).
     pub(crate) fn check_commit_hook(&self, id: &str) -> Result<(), String> {
         self.commit_hooks(id).map(|_| ())
+    }
+}
+
+/// The current name of a pre-commit stage, given by its current or its old name, which pre-commit still accepts.
+fn current_stage_name(stage: &str) -> &str {
+    match stage {
+        "commit" => "pre-commit",
+        "merge-commit" => "pre-merge-commit",
+        "push" => "pre-push",
+        stage => stage,
     }
 }
 
