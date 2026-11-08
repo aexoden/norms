@@ -10,3 +10,12 @@
   entry: norms commit-msg
   language: rust
   stages: [commit-msg]
+
+- id: norms-verify
+  name: norms verify
+  description: Check that the project follows the norms standards
+  entry: norms verify .
+  language: rust
+  pass_filenames: false
+  always_run: true
+  stages: [pre-commit]

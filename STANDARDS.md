@@ -678,19 +678,27 @@ Every project uses these hooks:
   `git commit --verbose` adds. The subject is the first paragraph, its lines
   joined as `git log` shows them, less the `fixup!`, `squash!` and `amend!`
   prefixes that `git rebase --autosquash` removes; a merge subject git writes,
-  starting with `Merge`, may be of any length. pre-commit builds norms at the
-  pinned revision with cargo, installing Rust first in a project without it:
+  starting with `Merge`, may be of any length. CI applies the same rules to
+  pull request titles (see [Branches](#branches)).
+
+  `norms-verify`, in the `pre-commit` stage, runs `norms verify` on the whole
+  project, whichever files a commit changes. Like the other hooks that check
+  the whole project, it also sees untracked files that `.gitignore` doesn't
+  exclude. It fails if a check fails, and with `--deny-warnings` if one warns,
+  too, which these standards require. pre-commit builds norms at the pinned
+  revision with cargo, installing Rust first in a project without it:
 
   ```yaml
   - repo: https://github.com/aexoden/norms
     rev: vX.Y.Z
     hooks:
       - id: norms-commit-msg
+      - id: norms-verify
+        args: [--deny-warnings]
   ```
 
-  CI applies the same rules to pull request titles (see
-  [Branches](#branches)). No norms release includes the hook yet, so the
-  template doesn't add it or the `pr-title.yaml` workflow.
+  No norms release includes the hooks yet, so the template doesn't add them or
+  the `pr-title.yaml` workflow.
 
 `norms verify` checks that every hook it checks, the language hooks included,
 runs in the `pre-commit` stage (the `conventional-pre-commit` hook in
