@@ -113,8 +113,8 @@ fail  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [apps/admin] tsconfig.json: exists
       File not found
-fail  eslint-config-exists  [apps/admin] ESLint: configured
-      Not found: eslint.config.ts
+fail  eslint-config-exists  [apps/admin] eslint.config.ts: exists
+      File not found
 fail  eslint-dependency  [apps/admin] ESLint: in dependencies
 fail  eslint-typescript-eslint  [apps/admin] ESLint: typescript-eslint configured
       typescript-eslint isn't in dependencies
@@ -144,8 +144,8 @@ fail  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [apps/web] tsconfig.json: exists
       File not found
-fail  eslint-config-exists  [apps/web] ESLint: configured
-      Not found: eslint.config.ts
+fail  eslint-config-exists  [apps/web] eslint.config.ts: exists
+      File not found
 fail  eslint-dependency  [apps/web] ESLint: in dependencies
 fail  eslint-typescript-eslint  [apps/web] ESLint: typescript-eslint configured
       typescript-eslint isn't in dependencies

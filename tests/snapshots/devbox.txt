@@ -101,8 +101,8 @@ fail  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [.] tsconfig.json: exists
       File not found
-fail  eslint-config-exists  [.] ESLint: configured
-      Not found: eslint.config.ts
+fail  eslint-config-exists  [.] eslint.config.ts: exists
+      File not found
 fail  eslint-dependency  [.] ESLint: in dependencies
 fail  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
       typescript-eslint isn't in dependencies

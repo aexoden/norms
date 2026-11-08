@@ -141,8 +141,8 @@ pass  pnpm-workspace-no-legacy-build-settings  [web] pnpm: no build settings rep
 pass  pnpm-workspace-builds-restricted  [web] pnpm: builds limited to allowBuilds
 fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
-fail  eslint-config-exists  [web] ESLint: configured
-      Not found: eslint.config.ts
+fail  eslint-config-exists  [web] eslint.config.ts: exists
+      File not found
 fail  eslint-dependency  [web] ESLint: in dependencies
 fail  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
       typescript-eslint isn't in dependencies

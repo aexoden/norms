@@ -486,16 +486,11 @@ fn check_config_prettier(code: &str, in_dependencies: Option<bool>) -> Result<()
 }
 
 pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
-    let ts_root = ctx.path();
-    let eslint_config = ts_root.join("eslint.config.ts");
-
-    report.must(
-        "eslint-config-exists",
-        "ESLint: configured",
-        file_exists(&eslint_config),
-    );
-
-    if let ConfigStatus::Ok(text) = ctx.eslint_config() {
+    // An eslint.config.ts that can't be read, such as a directory, fails here, rather than leaving out the checks of
+    // its contents.
+    if let Some(text) =
+        report.require_parsed("eslint-config", "eslint.config.ts", ctx.eslint_config())
+    {
         let code = eslint_config_code(text);
         for (id, name, pattern, message) in [
             (

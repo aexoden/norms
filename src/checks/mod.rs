@@ -621,6 +621,30 @@ mod tests {
     }
 
     #[test]
+    fn unreadable_eslint_config_fails() {
+        let project = TempProject::new("eslint", None);
+        fs::write(project.0.join("package.json"), "{}\n").unwrap();
+        fs::create_dir_all(project.0.join("eslint.config.ts")).unwrap();
+        let results = project.verify();
+
+        let eslint: Vec<_> = results
+            .iter()
+            .filter(|r| {
+                r.id.starts_with("eslint-")
+                    && !["eslint-dependency", "eslint-typescript-eslint"].contains(&r.id.as_str())
+            })
+            .map(|r| (r.id.as_str(), r.status))
+            .collect();
+        assert_eq!(
+            eslint,
+            [
+                ("eslint-config-exists", Status::Pass),
+                ("eslint-config-valid", Status::Fail),
+            ]
+        );
+    }
+
+    #[test]
     fn unpublished_libraries_need_no_changelog() {
         let project = TempProject::new("changelog", None);
         for (component, manifest, file) in [
