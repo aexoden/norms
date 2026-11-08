@@ -21,7 +21,7 @@ fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
 pass  precommit-config-exists  .pre-commit-config.yaml: exists
 pass  precommit-config-valid  .pre-commit-config.yaml: valid
-warn  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
+fail  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
       No default_install_hook_types, so pre-commit install installs only the pre-commit hook
 warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage

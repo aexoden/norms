@@ -714,7 +714,9 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.should(
+    // Without both types, pre-commit install leaves the pre-commit or the commit-msg hooks uninstalled, so they never
+    // run, and pre-commit rejects a list it can't read.
+    report.must(
         "precommit-install-hook-types",
         "Pre-commit: default_install_hook_types includes pre-commit and commit-msg",
         config.check_default_install_hook_types(),
