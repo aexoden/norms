@@ -3,7 +3,8 @@
 
 //! Command-line interface.
 
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anyhow::Context as _;
@@ -11,6 +12,7 @@ use clap::{Parser, Subcommand};
 use serde::Serialize;
 
 use crate::checks;
+use crate::commit_msg::{self, MAX_LINE_LENGTH};
 use crate::context::ProjectContext;
 use crate::models::{Language, Status};
 use crate::report::{CheckResult, Report};
@@ -32,6 +34,12 @@ enum Commands {
         /// Output results as JSON.
         #[arg(long = "json")]
         output_json: bool,
+    },
+
+    /// Check a commit message's line lengths, for a commit-msg hook.
+    CommitMsg {
+        /// Path to the file holding the commit message.
+        file: PathBuf,
     },
 }
 
@@ -143,17 +151,52 @@ fn verify(path: PathBuf, output_json: bool) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
+/// Describes each line of a commit message that is too long, as
+/// `<file>:<line>: <problem>`.
+fn commit_msg_problems(file: &Path, message: &str) -> Vec<String> {
+    commit_msg::long_lines(message)
+        .into_iter()
+        .map(|line| {
+            let what = if line.subject { "subject" } else { "body line" };
+            format!(
+                "{}:{}: {what} is {} characters long, over {MAX_LINE_LENGTH}",
+                file.display(),
+                line.number,
+                line.length
+            )
+        })
+        .collect()
+}
+
+fn commit_msg(file: &Path) -> anyhow::Result<ExitCode> {
+    let message = fs::read(file).with_context(|| format!("Failed to read {}", file.display()))?;
+    let problems = commit_msg_problems(file, &String::from_utf8_lossy(&message));
+    if problems.is_empty() {
+        return Ok(ExitCode::SUCCESS);
+    }
+    for problem in problems {
+        eprintln!("{problem}");
+    }
+    eprintln!(
+        "Keep the subject within {MAX_LINE_LENGTH} characters (aiming for 50) and wrap the body at \
+         {MAX_LINE_LENGTH}; body lines with URLs are exempt."
+    );
+    Ok(ExitCode::FAILURE)
+}
+
 /// Entry point for the CLI.
 #[must_use]
 pub fn run() -> ExitCode {
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Verify { path, output_json } => verify(path, output_json).unwrap_or_else(|e| {
-            eprintln!("Error: {e}");
-            ExitCode::FAILURE
-        }),
-    }
+    let result = match cli.command {
+        Commands::Verify { path, output_json } => verify(path, output_json),
+        Commands::CommitMsg { file } => commit_msg(&file),
+    };
+    result.unwrap_or_else(|e| {
+        eprintln!("Error: {e:#}");
+        ExitCode::FAILURE
+    })
 }
 
 #[cfg(test)]
@@ -194,5 +237,17 @@ mod tests {
         assert_eq!(json.pointer("/languages/0").unwrap(), "typescript");
         assert!(json.pointer("/results/0/component").is_none());
         assert_eq!(json.pointer("/results/1/component").unwrap(), "frontend");
+    }
+
+    #[test]
+    fn commit_msg_problems_name_the_file_and_line() {
+        let message = format!("feat: {}\n\n{}\n", "a".repeat(70), "b".repeat(73));
+        assert_eq!(
+            commit_msg_problems(Path::new(".git/COMMIT_EDITMSG"), &message),
+            [
+                ".git/COMMIT_EDITMSG:1: subject is 76 characters long, over 72",
+                ".git/COMMIT_EDITMSG:3: body line is 73 characters long, over 72",
+            ]
+        );
     }
 }

@@ -4,6 +4,7 @@
 mod cargo_workspace;
 mod checks;
 pub mod cli;
+mod commit_msg;
 mod config;
 mod context;
 mod detection;

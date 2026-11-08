@@ -64,6 +64,17 @@ repos:
         stages: [commit-msg]
         args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
 
+  # Commit message line lengths, checked by this checkout's norms; other
+  # projects use the hook in .pre-commit-hooks.yaml instead.
+  - repo: local
+    hooks:
+      - id: norms-commit-msg
+        name: norms commit-msg
+        description: Check that a commit message's subject and body lines are within 72 characters
+        entry: cargo run --quiet --locked -- commit-msg
+        language: system
+        stages: [commit-msg]
+
   # Rust
   - repo: local
     hooks:

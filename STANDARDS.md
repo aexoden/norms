@@ -653,10 +653,25 @@ Every project uses these hooks:
     args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
   ```
 
-- A commit message length hook, also in the `commit-msg` stage, which rejects a
-  subject line over 72 characters or a body line over 72 characters (lines
-  containing a URL are exempt). CI applies the same subject rules to pull
-  request titles.
+- [norms](https://github.com/aexoden/norms): `norms-commit-msg`, also in the
+  `commit-msg` stage, which rejects a subject over 72 characters or a body line
+  over 72 characters, unless the body line holds a URL. Like git's default
+  cleanup, it leaves out lines starting with `#` and the diff
+  `git commit --verbose` adds. The subject is the first paragraph, its lines
+  joined as `git log` shows them, less the `fixup!`, `squash!` and `amend!`
+  prefixes that `git rebase --autosquash` removes; a merge subject git writes,
+  starting with `Merge`, may be of any length. pre-commit builds norms at the
+  pinned revision with cargo, installing Rust first in a project without it:
+
+  ```yaml
+  - repo: https://github.com/aexoden/norms
+    rev: vX.Y.Z
+    hooks:
+      - id: norms-commit-msg
+  ```
+
+  No norms release includes the hook yet, so the template doesn't add it. CI
+  applies the same subject rules to pull request titles.
 
 `norms verify` checks that every hook it checks, the language hooks included,
 runs in the `pre-commit` stage (the `conventional-pre-commit` hook in

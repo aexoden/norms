@@ -2,8 +2,12 @@
 
 norms is two things: `STANDARDS.md`, the standards for the author's projects,
 and the `norms` Rust CLI that checks a project against them
-(`norms verify <path> [--json]`). The repository also ships a Copier template
-(`copier.yml`, `template/`) that renders new projects following the standards.
+(`norms verify <path> [--json]`). The CLI also checks a commit message's line
+lengths (`norms commit-msg <file>`, in `commit_msg.rs`), which other projects
+run as the `norms-commit-msg` hook from `.pre-commit-hooks.yaml` and norms runs
+as a local hook (`tests/commit_msg.rs` keeps the two in step). The repository
+also ships a Copier template (`copier.yml`, `template/`) that renders new
+projects following the standards.
 The repository follows its own standards, so `STANDARDS.md` is the reference for
 conventions here too.
 

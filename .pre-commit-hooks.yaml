@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
+
+# The hooks norms provides to other projects. pre-commit builds norms from the
+# pinned revision with cargo, installing Rust first if it isn't available.
+
+- id: norms-commit-msg
+  name: norms commit-msg
+  description: Check that a commit message's subject and body lines are within 72 characters
+  entry: norms commit-msg
+  language: rust
+  stages: [commit-msg]
