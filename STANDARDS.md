@@ -107,7 +107,12 @@ that a failed job doesn't fail or a configuration that loads a package missing
 from the dependencies. A check warns when the safeguard is present but differs
 from the standard (weaker settings, other flags, versions, pins, names or
 metadata), when norms can't be sure of the issue, or when configuration is
-stale, such as an unneeded waiver. A malformed `norms.toml` fails.
+stale, such as an unneeded waiver. A malformed `norms.toml` fails. Three
+safeguards are an exception to warning when norms can't be sure: the gate job's
+failing step, and the `actions-rust-lang/setup-rust-toolchain` `toolchain` and
+`astral-sh/setup-uv` `python-version` inputs of the jobs testing a library's
+oldest supported Rust and Python. norms can't tell one written another way from
+one that doesn't work, so written another way, it fails as if absent.
 
 ## Development Environment
 
