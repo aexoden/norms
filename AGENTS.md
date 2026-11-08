@@ -75,12 +75,13 @@ any check failed or warned.
   component's path), then the checks of the language's place in repository-wide
   files (pre-commit hooks, CI) run once.
 - `report.rs`: `report.must(id, name, outcome)` records a check whose issue is
-  a failure, `report.should(...)` one whose issue is a warning (its Severity
-  section gives the rule for choosing); `require_parsed` unwraps a
-  `ConfigStatus` while recording a failure if it's missing or malformed. Every
-  check has a stable kebab-case ID (subject, then property:
-  `cargo-toml-license`; see `report.rs`), so don't rename an ID once projects
-  may depend on it; the name beside it is free text.
+  a failure, `report.should(...)` one whose issue is a warning, and
+  `report.check(...)` one whose issues differ in severity, each an `Issue` that
+  fails or warns (its Severity section gives the rule for choosing);
+  `require_parsed` unwraps a `ConfigStatus` while recording a failure if it's
+  missing or malformed. Every check has a stable kebab-case ID (subject, then
+  property: `cargo-toml-license`; see `report.rs`), so don't rename an ID once
+  projects may depend on it; the name beside it is free text.
 - `norms.toml` (`config/norms.rs`, documented in `STANDARDS.md`) is optional
   and holds the project's waivers and the directories excluded from component
   detection; norms' own excludes `tests/fixtures`. Unlike the other models it

@@ -35,13 +35,14 @@
 //!
 //! A check records a failure with `must` and a warning with `should`, or, when
 //! its issues differ in severity, each [`Issue`] at its own with `check`. Choose
-//! by what the issue means: a failure when something the standards require is
-//! absent or unusable (a required file is missing, a config can't be parsed,
-//! or a tool isn't configured or run at all), and a warning when it's present
-//! but differs from the standard (weaker settings, other flags, versions,
-//! names or metadata), when norms can't be sure of the issue, or when config
-//! is merely stale, such as an unneeded waiver. Not every existing check
-//! follows this rule yet.
+//! by what the issue means, as STANDARDS.md's "norms Configuration" section
+//! states: a failure when a safeguard the standards require is absent or
+//! unusable (a required file is missing, a config can't be parsed, a tool isn't
+//! configured or run at all, or it is set up so that it can't run or passes
+//! what it should fail), and a warning when it's present but differs from the
+//! standard (weaker settings, other flags, versions, pins, names or metadata),
+//! when norms can't be sure of the issue, or when config is merely stale, such
+//! as an unneeded waiver. A malformed `norms.toml` fails.
 //!
 //! `norms verify` exits with failure if any check fails, or with
 //! `--deny-warnings` if any check fails or warns.

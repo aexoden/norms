@@ -288,7 +288,7 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, config: &TsConfig, repo
 /// "tsconfig.app.json: strict mode enabled").
 fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Report) {
     // Strict mode
-    report.must(
+    report.should(
         "tsconfig-strict",
         format!("{label}: strict mode enabled"),
         opts.strict == Some(true),

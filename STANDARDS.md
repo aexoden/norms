@@ -99,6 +99,16 @@ reason = "The repository holds no binary files."
 and exits with failure if any check failed. With `--deny-warnings`, it also
 exits with failure if any check warned.
 
+A check fails when a safeguard these standards require is absent or unusable: a
+required file is missing, a configuration can't be parsed, a tool isn't
+configured or run at all (no hook, CI step or linter configuration), or it is
+set up so that it can't run or passes what it should fail, such as a gate job
+that a failed job doesn't fail or a configuration that loads a package missing
+from the dependencies. A check warns when the safeguard is present but differs
+from the standard (weaker settings, other flags, versions, pins, names or
+metadata), when norms can't be sure of the issue, or when configuration is
+stale, such as an unneeded waiver. A malformed `norms.toml` fails.
+
 ## Development Environment
 
 Each language's own toolchain manager provides the development environment. Tool

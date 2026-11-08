@@ -249,13 +249,17 @@ pub(crate) fn check_licenses(ctx: &ProjectContext, report: &mut Report) {
     if !files.texts.is_empty() || files.has_copy() {
         let problems = files.copy_problems();
 
-        report.must(
+        // A text without a copy at all is a missing file; a copy that's misnamed or differs only warns.
+        let missing = files.copies.len() < files.texts.len();
+        report.check(
             "license-copies",
             "LICENSE: root copies match LICENSES/",
             if problems.is_empty() {
                 Ok(())
+            } else if missing {
+                Err(Issue::fail(problems.join("\n")))
             } else {
-                Err(problems.join("\n"))
+                Err(Issue::warn(problems.join("\n")))
             },
         );
     }

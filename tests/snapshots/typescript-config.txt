@@ -70,7 +70,7 @@ warn  tsconfig-module-detection  [.] tsconfig.app.json: moduleDetection is force
 pass  tsconfig-isolated-modules  [.] tsconfig.app.json: isolatedModules enabled
 pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
-pass  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
+warn  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
 pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.node.json: noUncheckedIndexedAccess enabled
 pass  tsconfig-module  [.] tsconfig.node.json: module setting configured
 pass  tsconfig-target  [.] tsconfig.node.json: target configured

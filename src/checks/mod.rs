@@ -226,6 +226,40 @@ mod tests {
     }
 
     #[test]
+    fn license_copies_fail_only_when_one_is_missing() {
+        let project = TempProject::new("copies", None);
+        fs::create_dir_all(project.0.join("LICENSES")).unwrap();
+        fs::write(project.0.join("LICENSES/MIT.txt"), "mit").unwrap();
+        fs::write(project.0.join("LICENSES/Apache-2.0.txt"), "apache").unwrap();
+        fs::write(project.0.join("LICENSE-MIT"), "mit").unwrap();
+
+        let copies = |results: &[CheckResult]| -> Vec<(Status, String)> {
+            find(results, "license-copies")
+                .into_iter()
+                .map(|r| (r.status, r.message.clone()))
+                .collect()
+        };
+        assert_eq!(
+            copies(&project.verify()),
+            [(
+                Status::Fail,
+                "LICENSES/Apache-2.0.txt: no identical copy at the root".to_owned()
+            )]
+        );
+
+        fs::write(project.0.join("LICENSE-APACHE-2.0"), "apache, edited").unwrap();
+        assert_eq!(
+            copies(&project.verify()),
+            [(
+                Status::Warn,
+                "LICENSES/Apache-2.0.txt: no identical copy at the root\nLICENSE-APACHE-2.0: matches no text in \
+                 LICENSES/"
+                    .to_owned()
+            )]
+        );
+    }
+
+    #[test]
     fn waivers_apply_after_every_check() {
         let results = TempProject::new(
             "waived",

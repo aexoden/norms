@@ -6,7 +6,7 @@ fail  readme-exists  README.md
       Not found: README.md
 pass  license-exists  LICENSE
 pass  licenses-dir-exists  LICENSES/: holds the license texts
-fail  license-copies  LICENSE: root copies match LICENSES/
+warn  license-copies  LICENSE: root copies match LICENSES/
       LICENSE: with several licenses, each copy is named LICENSE-<description>
       LICENSES/Apache-2.0.txt: no identical copy at the root
       LICENSE-APACHE-2.0: matches no text in LICENSES/
