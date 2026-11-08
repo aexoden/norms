@@ -2455,19 +2455,32 @@ jobs:
             .collect();
         assert_eq!(pre_commit_hooks_in(&config(&all.join(", "))), Ok(()));
 
-        let manual = all
-            .iter()
-            .map(|hook| hook.replace("{id: check-yaml}", "{id: check-yaml, stages: [manual]}"))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let in_stage = |stage: &str| {
+            all.iter()
+                .map(|hook| {
+                    hook.replace(
+                        "{id: check-yaml}",
+                        &format!("{{id: check-yaml, stages: [{stage}]}}"),
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        let pre_push = in_stage("pre-push");
         assert_eq!(
-            pre_commit_hooks_in(&config(&manual)),
+            pre_commit_hooks_in(&config(&pre_push)),
             Err(Issue::warn(
                 "The check-yaml hook doesn't run in the pre-commit stage"
             ))
         );
+        assert_eq!(
+            pre_commit_hooks_in(&config(&in_stage("manual"))),
+            Err(Issue::fail(
+                "The check-yaml hook runs only in the manual stage, so it never runs on its own"
+            ))
+        );
 
-        let without_toml: Vec<_> = manual
+        let without_toml: Vec<_> = pre_push
             .split(", ")
             .filter(|hook| *hook != "{id: check-toml}")
             .collect();

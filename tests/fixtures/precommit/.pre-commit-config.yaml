@@ -15,6 +15,11 @@ repos:
     hooks:
       - id: reuse
         stages: [pre-push]
+  - repo: https://github.com/tombi-toml/tombi-pre-commit
+    rev: v1.10.0
+    hooks:
+      - id: tombi-format
+        stages: [manual]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.0
     hooks:

@@ -195,20 +195,39 @@ impl PrecommitConfig {
         }
     }
 
-    /// Whether `hook` runs in `stage`: the stages it lists include `stage`, or, if it lists none or an empty list,
-    /// `default_stages` does. Without either, pre-commit runs it in every stage its repository gives it, which for the
-    /// hooks checked includes the one they're checked in. A malformed `default_stages` is left to
-    /// [`check_default_stages`](Self::check_default_stages). Stages may be given by their old names, such as `commit`.
+    /// The stages `hook` runs in, by the names the configuration gives them: those it lists, or, if it lists none or an
+    /// empty list, `default_stages`. Without either, pre-commit runs it in every stage its repository gives it, which
+    /// is none. A malformed `default_stages` is left to [`check_default_stages`](Self::check_default_stages).
+    fn stages_of<'a>(&'a self, hook: &'a PrecommitHook) -> Option<Vec<&'a str>> {
+        match (&hook.stages, &self.default_stages) {
+            (Some(stages), _) if !stages.is_empty() => {
+                Some(stages.iter().map(String::as_str).collect())
+            }
+            (_, Some(Value::Array(stages))) => {
+                Some(stages.iter().filter_map(Value::as_str).collect())
+            }
+            (_, _) => None,
+        }
+    }
+
+    /// Whether `hook` runs in `stage`, as [`stages_of`](Self::stages_of) reads its stages. One that runs in every stage
+    /// its repository gives it is taken to run in `stage`, which for the hooks checked is among them. Stages may be
+    /// given by their old names, such as `commit`.
     fn runs_in(&self, hook: &PrecommitHook, stage: &str) -> bool {
         let wanted = current_stage_name(stage);
-        let listed = |listed: &str| current_stage_name(listed) == wanted;
-        match (&hook.stages, &self.default_stages) {
-            (Some(stages), _) if !stages.is_empty() => stages.iter().any(|name| listed(name)),
-            (_, Some(Value::Array(stages))) => {
-                stages.iter().any(|name| name.as_str().is_some_and(listed))
-            }
-            (_, _) => true,
-        }
+        self.stages_of(hook).is_none_or(|stages| {
+            stages
+                .into_iter()
+                .any(|listed| current_stage_name(listed) == wanted)
+        })
+    }
+
+    /// Whether `hook` runs only in the `manual` stage, as [`stages_of`](Self::stages_of) reads its stages, so that it
+    /// runs only when `pre-commit run --hook-stage manual` asks for it.
+    fn runs_only_manually(&self, hook: &PrecommitHook) -> bool {
+        self.stages_of(hook).is_some_and(|stages| {
+            !stages.is_empty() && stages.into_iter().all(|stage| stage == "manual")
+        })
     }
 
     /// Whether `hook` runs before each commit, in the `pre-commit` stage. See [`runs_in`](Self::runs_in).
@@ -228,7 +247,8 @@ impl PrecommitConfig {
     }
 
     /// The hooks with ID `id` that run before each commit, or, if there are none, why not: a failure if there is no
-    /// such hook, and a warning if it runs only in other stages.
+    /// such hook or it runs only in the `manual` stage, so never on its own, and a warning if it runs only in other
+    /// stages.
     pub(crate) fn commit_hooks(&self, id: &str) -> Result<Vec<&PrecommitHook>, Issue> {
         let hooks: Vec<_> = self
             .repos
@@ -238,6 +258,11 @@ impl PrecommitConfig {
             .collect();
         if hooks.is_empty() {
             return Err(Issue::fail(format!("No {id} hook")));
+        }
+        if hooks.iter().all(|hook| self.runs_only_manually(hook)) {
+            return Err(Issue::fail(format!(
+                "The {id} hook runs only in the manual stage, so it never runs on its own"
+            )));
         }
 
         let hooks: Vec<_> = hooks
@@ -480,6 +505,52 @@ mod tests {
                 "{stages} {default_stages}"
             );
         }
+        for (stages, default_stages) in [
+            (", stages: [manual]", ""),
+            (", stages: [manual]", "default_stages: [pre-commit]\n"),
+            ("", "default_stages: [manual]\n"),
+            (", stages: []", "default_stages: [manual]\n"),
+        ] {
+            assert_eq!(
+                hook(stages, default_stages),
+                Err(Issue::fail(
+                    "The markdownlint-cli2 hook runs only in the manual stage, so it never runs on its own"
+                )),
+                "{stages} {default_stages}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_hook_in_manual_and_another_stage_still_runs() {
+        assert_eq!(
+            commit_hook(
+                "repos:\n  - repo: local\n    hooks: [{id: markdownlint-cli2, stages: [manual, pre-push]}]\n"
+            ),
+            Err(Issue::warn(
+                "The markdownlint-cli2 hook doesn't run in the pre-commit stage"
+            ))
+        );
+        assert_eq!(
+            commit_hook(
+                "repos:\n  - repo: local\n    hooks:\n      - {id: markdownlint-cli2, stages: [manual]}\n      \
+                 - {id: markdownlint-cli2, stages: [pre-commit]}\n"
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn a_manual_hook_beside_one_in_another_stage_still_runs() {
+        assert_eq!(
+            commit_hook(
+                "repos:\n  - repo: local\n    hooks:\n      - {id: markdownlint-cli2, stages: [manual]}\n      \
+                 - {id: markdownlint-cli2, stages: [pre-push]}\n"
+            ),
+            Err(Issue::warn(
+                "The markdownlint-cli2 hook doesn't run in the pre-commit stage"
+            ))
+        );
     }
 
     #[test]
