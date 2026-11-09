@@ -1300,6 +1300,15 @@ it replaced in pnpm 11, such as `onlyBuiltDependencies`, which pnpm ignores.
 "moduleDetection": "force"
 ```
 
+The module settings follow what loads each config's files. Vite bundles the
+application, so `tsconfig.app.json` sets `"module": "esnext"` and
+`"moduleResolution": "bundler"`. Node can load the tooling files itself,
+stripping their types, so `tsconfig.node.json` sets `"module": "nodenext"`, which
+holds their imports to Node's rules, and leaves `moduleResolution` unset to
+follow it. Node finds a relative import by the name of the TypeScript file, as
+in `import { x } from "./helper.ts"`, which TypeScript accepts only with
+`"allowImportingTsExtensions": true`, so the tooling's config sets that too.
+
 #### Formatting and Linting
 
 Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc`,

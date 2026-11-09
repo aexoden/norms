@@ -74,4 +74,5 @@ pub(crate) struct TsCompilerOptions {
     pub resolve_json_module: Option<bool>,
     pub isolated_modules: Option<bool>,
     pub verbatim_module_syntax: Option<bool>,
+    pub allow_importing_ts_extensions: Option<bool>,
 }

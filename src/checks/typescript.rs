@@ -296,12 +296,28 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
         report,
     );
 
-    // Module setting
+    // Module settings, which depend on what loads the config's files
+    let role = ConfigRole::of(label);
     report.should(
         "tsconfig-module",
-        format!("{label}: module setting configured"),
-        opts.module.is_some(),
+        format!("{label}: module is {}", role.module()),
+        option_is("module", opts.module.as_deref(), role.module()),
     );
+    report.should(
+        "tsconfig-module-resolution",
+        format!("{label}: {}", role.module_resolution_name()),
+        role.check_module_resolution(opts.module_resolution.as_deref()),
+    );
+    if role == ConfigRole::Node {
+        // Node loads the tooling files' relative imports by the names of the TypeScript files.
+        check_enabled(
+            "tsconfig-allow-importing-ts-extensions",
+            label,
+            "allowImportingTsExtensions",
+            opts.allow_importing_ts_extensions,
+            report,
+        );
+    }
 
     // Target setting
     report.should(
@@ -379,13 +395,69 @@ fn option_enabled(option: &str, value: Option<bool>) -> Result<(), String> {
     }
 }
 
-/// Check that `moduleDetection` is `force`, so that every file is a module. TypeScript reads the value
-/// case-insensitively.
+/// Check that `moduleDetection` is `force`, so that every file is a module.
 fn check_module_detection(value: Option<&str>) -> Result<(), String> {
+    option_is("moduleDetection", value, "force")
+}
+
+/// Whether the string compiler option `option`, whose value is `value`, is `expected`. TypeScript reads these values
+/// case-insensitively.
+fn option_is(option: &str, value: Option<&str>, expected: &str) -> Result<(), String> {
     match value {
-        Some(value) if value.eq_ignore_ascii_case("force") => Ok(()),
-        Some(value) => Err(format!("moduleDetection is {value:?}, not \"force\"")),
-        None => Err("Missing moduleDetection".to_owned()),
+        Some(value) if value.eq_ignore_ascii_case(expected) => Ok(()),
+        Some(value) => Err(format!("{option} is {value:?}, not \"{expected}\"")),
+        None => Err(format!("Missing {option}")),
+    }
+}
+
+/// What loads the files a tsconfig covers, which decides how it resolves their imports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ConfigRole {
+    /// Code that Vite bundles, such as the application's: `module` is `esnext`, with `bundler` resolution.
+    Bundled,
+    /// Tooling files, such as `vite.config.ts`, which Node loads itself: `module` is `nodenext`, which sets the
+    /// resolution to match, and relative imports name the TypeScript files, which `allowImportingTsExtensions` lets
+    /// TypeScript accept.
+    Node,
+}
+
+impl ConfigRole {
+    /// The role of the config file named `name`: `tsconfig.node.json` covers the tooling files, and any other config
+    /// code that Vite bundles.
+    fn of(name: &str) -> Self {
+        if name == "tsconfig.node.json" {
+            Self::Node
+        } else {
+            Self::Bundled
+        }
+    }
+
+    /// The `module` setting of a config of this role.
+    const fn module(self) -> &'static str {
+        match self {
+            Self::Bundled => "esnext",
+            Self::Node => "nodenext",
+        }
+    }
+
+    /// The name of the `moduleResolution` check of a config of this role.
+    const fn module_resolution_name(self) -> &'static str {
+        match self {
+            Self::Bundled => "moduleResolution is bundler",
+            Self::Node => "moduleResolution unset, following module",
+        }
+    }
+
+    /// Check a config's `moduleResolution`, `value`: `bundler` for bundled code, and for tooling files unset, so that
+    /// it follows `module`.
+    fn check_module_resolution(self, value: Option<&str>) -> Result<(), String> {
+        match (self, value) {
+            (Self::Bundled, value) => option_is("moduleResolution", value, "bundler"),
+            (Self::Node, None) => Ok(()),
+            (Self::Node, Some(value)) => Err(format!(
+                "moduleResolution is {value:?}: leave it unset, so that it follows module \"nodenext\""
+            )),
+        }
     }
 }
 
@@ -914,6 +986,44 @@ mod tests {
         assert_eq!(
             check_module_detection(None),
             Err("Missing moduleDetection".to_owned())
+        );
+    }
+
+    #[test]
+    fn module_settings_follow_the_config_role() {
+        assert_eq!(ConfigRole::of("tsconfig.app.json"), ConfigRole::Bundled);
+        assert_eq!(ConfigRole::of("tsconfig.json"), ConfigRole::Bundled);
+        assert_eq!(ConfigRole::of("tsconfig.node.json"), ConfigRole::Node);
+
+        assert_eq!(option_is("module", Some("ESNext"), "esnext"), Ok(()));
+        assert_eq!(
+            option_is("module", Some("ES2022"), "esnext"),
+            Err("module is \"ES2022\", not \"esnext\"".to_owned())
+        );
+
+        let bundled = |value| ConfigRole::Bundled.check_module_resolution(value);
+        assert_eq!(bundled(Some("Bundler")), Ok(()));
+        assert_eq!(
+            bundled(Some("nodenext")),
+            Err("moduleResolution is \"nodenext\", not \"bundler\"".to_owned())
+        );
+        assert_eq!(bundled(None), Err("Missing moduleResolution".to_owned()));
+
+        let node = |value| ConfigRole::Node.check_module_resolution(value);
+        assert_eq!(node(None), Ok(()));
+        assert_eq!(
+            node(Some("NodeNext")),
+            Err(
+                "moduleResolution is \"NodeNext\": leave it unset, so that it follows module \"nodenext\""
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            node(Some("bundler")),
+            Err(
+                "moduleResolution is \"bundler\": leave it unset, so that it follows module \"nodenext\""
+                    .to_owned()
+            )
         );
     }
 

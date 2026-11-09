@@ -56,7 +56,8 @@ pass  tsconfig-reference-exists  [.] tsconfig.app.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.app.json: valid
 pass  tsconfig-strict  [.] tsconfig.app.json: strict mode enabled
 pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.app.json: noUncheckedIndexedAccess enabled
-pass  tsconfig-module  [.] tsconfig.app.json: module setting configured
+pass  tsconfig-module  [.] tsconfig.app.json: module is esnext
+pass  tsconfig-module-resolution  [.] tsconfig.app.json: moduleResolution is bundler
 pass  tsconfig-target  [.] tsconfig.app.json: target configured
 pass  tsconfig-verbatim-module-syntax  [.] tsconfig.app.json: verbatimModuleSyntax enabled
 warn  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.app.json: noUncheckedSideEffectImports enabled
@@ -72,7 +73,12 @@ pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
 warn  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
 pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.node.json: noUncheckedIndexedAccess enabled
-pass  tsconfig-module  [.] tsconfig.node.json: module setting configured
+warn  tsconfig-module  [.] tsconfig.node.json: module is nodenext
+      module is "ESNext", not "nodenext"
+warn  tsconfig-module-resolution  [.] tsconfig.node.json: moduleResolution unset, following module
+      moduleResolution is "bundler": leave it unset, so that it follows module "nodenext"
+warn  tsconfig-allow-importing-ts-extensions  [.] tsconfig.node.json: allowImportingTsExtensions enabled
+      Missing allowImportingTsExtensions
 pass  tsconfig-target  [.] tsconfig.node.json: target configured
 pass  tsconfig-verbatim-module-syntax  [.] tsconfig.node.json: verbatimModuleSyntax enabled
 pass  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.node.json: noUncheckedSideEffectImports enabled
