@@ -423,28 +423,32 @@ impl ComponentContext {
     /// no file at all, the path is the bare `rust-toolchain.toml`.
     pub(crate) fn rust_toolchain(&self) -> &(String, ConfigStatus<RustToolchain>) {
         self.rust_toolchain.get_or_init(|| {
-            for (depth, dir) in self.component.path.ancestors().enumerate() {
-                let dir = self.root.join(dir);
-                let up = "../".repeat(depth);
-
-                // rustup prefers the legacy file when a directory has both.
-                if dir.join(LEGACY_RUST_TOOLCHAIN).is_file() {
-                    return (
-                        format!("{up}{LEGACY_RUST_TOOLCHAIN}"),
-                        ConfigStatus::NotFound,
-                    );
-                }
-                let path = dir.join(RUST_TOOLCHAIN);
-                if path.is_file() {
-                    return (
-                        format!("{up}{RUST_TOOLCHAIN}"),
-                        parse_toml_file::<RustToolchain>(&path),
-                    );
-                }
-            }
-
-            (RUST_TOOLCHAIN.to_owned(), ConfigStatus::NotFound)
+            // rustup prefers the legacy file when a directory has both.
+            let names = [LEGACY_RUST_TOOLCHAIN, RUST_TOOLCHAIN];
+            let Some(found) = nearest_file(&self.root, &self.component.path, &names) else {
+                return (RUST_TOOLCHAIN.to_owned(), ConfigStatus::NotFound);
+            };
+            let status = if found.ends_with(LEGACY_RUST_TOOLCHAIN) {
+                ConfigStatus::NotFound
+            } else {
+                parse_toml_file(&self.root.join(&found))
+            };
+            (self.relative_label(&found), status)
         })
+    }
+
+    /// The path of `found`, a file in the component's directory or a parent, relative to the project root, as a label
+    /// relative to the component: its name, after a `../` for each directory it lies above the component.
+    fn relative_label(&self, found: &Path) -> String {
+        let (depth, name) = self
+            .component
+            .path
+            .ancestors()
+            .enumerate()
+            .find_map(|(depth, dir)| Some((depth, found.strip_prefix(dir).ok()?)))
+            .unwrap_or((0, found));
+        let name: Vec<_> = name.iter().map(|part| part.to_string_lossy()).collect();
+        format!("{}{}", "../".repeat(depth), name.join("/"))
     }
 
     /// The Clippy configuration that applies to the component's package (cached): the nearest `.clippy.toml` or
@@ -456,15 +460,8 @@ impl ComponentContext {
             let Some(found) = nearest_clippy_toml(&self.root, &self.component.path) else {
                 return (CLIPPY_TOML.to_owned(), ConfigStatus::NotFound);
             };
-            let depth = self
-                .component
-                .path
-                .ancestors()
-                .position(|dir| found.parent() == Some(dir))
-                .unwrap_or_default();
-            let name = found.file_name().unwrap_or_default().to_string_lossy();
             (
-                format!("{}{name}", "../".repeat(depth)),
+                self.relative_label(&found),
                 read_clippy_toml(&self.root, &found),
             )
         })
@@ -488,10 +485,11 @@ impl ComponentContext {
                 .collect();
             found
                 .into_iter()
-                .filter_map(|found| {
-                    let label = found.strip_prefix(&self.component.path).ok()?;
-                    let label: Vec<_> = label.iter().map(|part| part.to_string_lossy()).collect();
-                    Some((label.join("/"), read_clippy_toml(&self.root, &found)))
+                .map(|found| {
+                    (
+                        self.relative_label(&found),
+                        read_clippy_toml(&self.root, &found),
+                    )
                 })
                 .collect()
         })
@@ -628,9 +626,15 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
 /// or `clippy.toml` in `dir` or a parent, up to the root, as Clippy finds it from a package's directory. Clippy prefers
 /// `.clippy.toml` when a directory has both.
 fn nearest_clippy_toml(root: &Path, dir: &Path) -> Option<PathBuf> {
+    nearest_file(root, dir, &[HIDDEN_CLIPPY_TOML, CLIPPY_TOML])
+}
+
+/// The nearest of the files `names` to `dir`, all relative to the project root `root`: the first that exists in `dir`
+/// or a parent, up to the root, trying `names` in order within each directory.
+fn nearest_file(root: &Path, dir: &Path, names: &[&str]) -> Option<PathBuf> {
     dir.ancestors().find_map(|dir| {
-        [HIDDEN_CLIPPY_TOML, CLIPPY_TOML]
-            .into_iter()
+        names
+            .iter()
             .map(|name| dir.join(name))
             .find(|path| root.join(path).is_file())
     })
