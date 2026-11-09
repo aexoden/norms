@@ -801,13 +801,14 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
-/// Whether a command's words run `prettier`, and if so how: with `--check` (or `-c`), which fails on unformatted files
-/// instead of rewriting them, with `--list-different` (or `-l`), which fails on them too, or neither.
+/// Whether a command's words run `prettier`, and if so how: with `--check`, which fails on unformatted files instead
+/// of rewriting them, with its short form `-c` or with `--list-different` (or `-l`), which fail on them too, or with
+/// none of them.
 fn prettier_run(words: &[&str]) -> Option<FormatterRun> {
     Some(FormatterRun::from_args(
         program_args(words, "prettier")?,
-        &["--check", "-c"],
-        &["--list-different", "-l"],
+        &["--check"],
+        &["-c", "--list-different", "-l"],
     ))
 }
 
@@ -1121,11 +1122,14 @@ mod tests {
         let checks = |line: &str| prettier_run(&line.split_whitespace().collect::<Vec<_>>());
         for line in [
             "pnpm exec prettier --check .",
-            "prettier -c src",
             "node_modules/.bin/prettier . --check",
         ] {
             assert_eq!(checks(line), Some(FormatterRun::Checks), "{line}");
         }
+        assert_eq!(
+            checks("prettier -c src"),
+            Some(FormatterRun::ChecksWith("-c"))
+        );
         assert_eq!(
             checks("prettier --list-different ."),
             Some(FormatterRun::ChecksWith("--list-different"))

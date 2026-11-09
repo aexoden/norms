@@ -672,7 +672,7 @@ fn is_needs_results(context: &Context<'_>) -> bool {
 /// How a command runs a formatter, for [`Workflow::check_formatter`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FormatterRun {
-    /// It checks with `--check` (or a short form of it), failing on unformatted files.
+    /// It checks with `--check`, failing on unformatted files.
     Checks,
     /// It checks with another flag, such as `--diff`, which also fails on unformatted files without rewriting them.
     ChecksWith(&'static str),
