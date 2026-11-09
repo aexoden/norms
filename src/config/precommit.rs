@@ -59,8 +59,6 @@ fn not_null<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
 pub(crate) struct PrecommitRepo {
     /// The repository URL (or `"local"` for local hooks).
     pub repo: String,
-    /// The revision/tag to use.
-    pub rev: Option<String>,
     /// Hooks defined in this repo.
     pub hooks: Vec<PrecommitHook>,
 }
@@ -72,9 +70,7 @@ pub(crate) struct PrecommitHook {
     pub id: String,
     /// Another name that `SKIP` and `pre-commit run` match; empty or null means none.
     pub alias: Option<String>,
-    pub name: Option<String>,
     pub entry: Option<String>,
-    pub language: Option<String>,
     /// The stages the hook lists, if it lists any. A null value fails parsing, as pre-commit rejects it, rather than
     /// reading as no list.
     #[serde(deserialize_with = "not_null")]
