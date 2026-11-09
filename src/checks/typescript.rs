@@ -319,11 +319,16 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
         );
     }
 
-    // Target setting
+    // ECMAScript version, which may be left to TypeScript's default, the newest
     report.should(
         "tsconfig-target",
-        format!("{label}: target configured"),
-        opts.target.is_some(),
+        format!("{label}: target is ES{MIN_ES_YEAR} or newer"),
+        check_target(opts.target.as_deref()),
+    );
+    report.should(
+        "tsconfig-lib",
+        format!("{label}: lib includes ES{MIN_ES_YEAR} or newer"),
+        check_lib(opts.lib.as_deref()),
     );
 
     // verbatimModuleSyntax
@@ -407,6 +412,53 @@ fn option_is(option: &str, value: Option<&str>, expected: &str) -> Result<(), St
         Some(value) if value.eq_ignore_ascii_case(expected) => Ok(()),
         Some(value) => Err(format!("{option} is {value:?}, not \"{expected}\"")),
         None => Err(format!("Missing {option}")),
+    }
+}
+
+/// The oldest ECMAScript version, as a year, that a tsconfig's `target` and `lib` may name. The standards choose the
+/// newest version the code's runtime fully supports, which norms can't tell, so it only rejects versions older than
+/// any such runtime.
+const MIN_ES_YEAR: u32 = 2022;
+
+/// The ECMAScript version that a `target` or `lib` value names, as the year of its edition, with `esnext` newer than
+/// any: `None` for a value that names none, such as `dom`, or only part of a version's library, such as
+/// `es2023.array`. TypeScript reads the values case-insensitively.
+fn es_year(value: &str) -> Option<u32> {
+    let value = value.to_ascii_lowercase();
+    match value.strip_prefix("es")? {
+        "next" => Some(u32::MAX),
+        "3" => Some(1999),
+        "5" => Some(2009),
+        "6" => Some(2015),
+        "7" => Some(2016),
+        year => year.parse().ok().filter(|&year| year >= 2015),
+    }
+}
+
+/// Check that `target`, if set, names ECMAScript [`MIN_ES_YEAR`] or newer. Left unset, it defaults to the newest
+/// version TypeScript knows, since TypeScript 6, which the standards use.
+fn check_target(target: Option<&str>) -> Result<(), String> {
+    match target.and_then(|target| Some((target, es_year(target)?))) {
+        Some((target, year)) if year < MIN_ES_YEAR => {
+            Err(format!("target is {target:?}, older than ES{MIN_ES_YEAR}"))
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Check that `lib`, if set, includes ECMAScript [`MIN_ES_YEAR`] or newer, which decides the APIs that code may use.
+/// Left unset, it follows `target`. A `lib` naming no version, which TypeScript can't check code with, isn't judged.
+fn check_lib(lib: Option<&[String]>) -> Result<(), String> {
+    let newest = lib
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| Some((entry, es_year(entry)?)))
+        .max_by_key(|&(_, year)| year);
+    match newest {
+        Some((entry, year)) if year < MIN_ES_YEAR => Err(format!(
+            "lib's newest ECMAScript version is {entry:?}, older than ES{MIN_ES_YEAR}"
+        )),
+        _ => Ok(()),
     }
 }
 
@@ -986,6 +1038,48 @@ mod tests {
         assert_eq!(
             check_module_detection(None),
             Err("Missing moduleDetection".to_owned())
+        );
+    }
+
+    #[test]
+    fn target_and_lib_are_es2022_or_newer() {
+        for (value, year) in [
+            ("ES2022", Some(2022)),
+            ("es2025", Some(2025)),
+            ("ESNext", Some(u32::MAX)),
+            ("ES6", Some(2015)),
+            ("es7", Some(2016)),
+            ("ES5", Some(2009)),
+            ("es2023.array", None),
+            ("DOM", None),
+            ("esnext.disposable", None),
+        ] {
+            assert_eq!(es_year(value), year, "{value}");
+        }
+
+        for target in [None, Some("ES2022"), Some("esnext"), Some("unknown")] {
+            assert_eq!(check_target(target), Ok(()), "{target:?}");
+        }
+        assert_eq!(
+            check_target(Some("ES2020")),
+            Err("target is \"ES2020\", older than ES2022".to_owned())
+        );
+
+        let lib = |entries: &[&str]| {
+            check_lib(Some(
+                &entries
+                    .iter()
+                    .map(|&entry| entry.to_owned())
+                    .collect::<Vec<_>>(),
+            ))
+        };
+        assert_eq!(check_lib(None), Ok(()));
+        assert_eq!(lib(&["ES2022", "DOM", "DOM.Iterable"]), Ok(()));
+        assert_eq!(lib(&["ES2020", "ES2025"]), Ok(()));
+        assert_eq!(lib(&["DOM"]), Ok(()));
+        assert_eq!(
+            lib(&["ES2020", "ES2023.Array", "DOM"]),
+            Err("lib's newest ECMAScript version is \"ES2020\", older than ES2022".to_owned())
         );
     }
 

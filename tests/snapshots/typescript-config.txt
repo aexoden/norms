@@ -58,7 +58,9 @@ pass  tsconfig-strict  [.] tsconfig.app.json: strict mode enabled
 pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.app.json: noUncheckedIndexedAccess enabled
 pass  tsconfig-module  [.] tsconfig.app.json: module is esnext
 pass  tsconfig-module-resolution  [.] tsconfig.app.json: moduleResolution is bundler
-pass  tsconfig-target  [.] tsconfig.app.json: target configured
+pass  tsconfig-target  [.] tsconfig.app.json: target is ES2022 or newer
+warn  tsconfig-lib  [.] tsconfig.app.json: lib includes ES2022 or newer
+      lib's newest ECMAScript version is "ES2021", older than ES2022
 pass  tsconfig-verbatim-module-syntax  [.] tsconfig.app.json: verbatimModuleSyntax enabled
 warn  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.app.json: noUncheckedSideEffectImports enabled
       Missing noUncheckedSideEffectImports
@@ -79,7 +81,9 @@ warn  tsconfig-module-resolution  [.] tsconfig.node.json: moduleResolution unset
       moduleResolution is "bundler": leave it unset, so that it follows module "nodenext"
 warn  tsconfig-allow-importing-ts-extensions  [.] tsconfig.node.json: allowImportingTsExtensions enabled
       Missing allowImportingTsExtensions
-pass  tsconfig-target  [.] tsconfig.node.json: target configured
+warn  tsconfig-target  [.] tsconfig.node.json: target is ES2022 or newer
+      target is "ES2020", older than ES2022
+pass  tsconfig-lib  [.] tsconfig.node.json: lib includes ES2022 or newer
 pass  tsconfig-verbatim-module-syntax  [.] tsconfig.node.json: verbatimModuleSyntax enabled
 pass  tsconfig-no-unchecked-side-effect-imports  [.] tsconfig.node.json: noUncheckedSideEffectImports enabled
 warn  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.node.json: noFallthroughCasesInSwitch enabled

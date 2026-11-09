@@ -63,6 +63,7 @@ pub(crate) struct TsCompilerOptions {
     pub module_detection: Option<String>,
     pub module: Option<String>,
     pub target: Option<String>,
+    pub lib: Option<Vec<String>>,
     pub module_resolution: Option<String>,
     pub out_dir: Option<String>,
     pub root_dir: Option<String>,

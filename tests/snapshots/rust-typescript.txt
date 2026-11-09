@@ -135,7 +135,8 @@ pass  tsconfig-strict  [frontend] tsconfig.app.json: strict mode enabled
 pass  tsconfig-no-unchecked-indexed-access  [frontend] tsconfig.app.json: noUncheckedIndexedAccess enabled
 pass  tsconfig-module  [frontend] tsconfig.app.json: module is esnext
 pass  tsconfig-module-resolution  [frontend] tsconfig.app.json: moduleResolution is bundler
-pass  tsconfig-target  [frontend] tsconfig.app.json: target configured
+pass  tsconfig-target  [frontend] tsconfig.app.json: target is ES2022 or newer
+pass  tsconfig-lib  [frontend] tsconfig.app.json: lib includes ES2022 or newer
 pass  tsconfig-verbatim-module-syntax  [frontend] tsconfig.app.json: verbatimModuleSyntax enabled
 pass  tsconfig-no-unchecked-side-effect-imports  [frontend] tsconfig.app.json: noUncheckedSideEffectImports enabled
 pass  tsconfig-no-fallthrough-cases-in-switch  [frontend] tsconfig.app.json: noFallthroughCasesInSwitch enabled
@@ -150,7 +151,8 @@ pass  tsconfig-no-unchecked-indexed-access  [frontend] tsconfig.node.json: noUnc
 pass  tsconfig-module  [frontend] tsconfig.node.json: module is nodenext
 pass  tsconfig-module-resolution  [frontend] tsconfig.node.json: moduleResolution unset, following module
 pass  tsconfig-allow-importing-ts-extensions  [frontend] tsconfig.node.json: allowImportingTsExtensions enabled
-pass  tsconfig-target  [frontend] tsconfig.node.json: target configured
+pass  tsconfig-target  [frontend] tsconfig.node.json: target is ES2022 or newer
+pass  tsconfig-lib  [frontend] tsconfig.node.json: lib includes ES2022 or newer
 pass  tsconfig-verbatim-module-syntax  [frontend] tsconfig.node.json: verbatimModuleSyntax enabled
 pass  tsconfig-no-unchecked-side-effect-imports  [frontend] tsconfig.node.json: noUncheckedSideEffectImports enabled
 pass  tsconfig-no-fallthrough-cases-in-switch  [frontend] tsconfig.node.json: noFallthroughCasesInSwitch enabled

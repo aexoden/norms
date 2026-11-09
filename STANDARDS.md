@@ -1244,8 +1244,8 @@ versions automatically:
 
 ```json
 "devEngines": {
-  "runtime": { "name": "node", "version": "25.9.0", "onFail": "download" },
-  "packageManager": { "name": "pnpm", "version": "12.7.0", "onFail": "download" }
+  "runtime": { "name": "node", "version": "26.13.0", "onFail": "download" },
+  "packageManager": { "name": "pnpm", "version": "12.18.0", "onFail": "download" }
 }
 ```
 
@@ -1308,6 +1308,16 @@ holds their imports to Node's rules, and leaves `moduleResolution` unset to
 follow it. Node finds a relative import by the name of the TypeScript file, as
 in `import { x } from "./helper.ts"`, which TypeScript accepts only with
 `"allowImportingTsExtensions": true`, so the tooling's config sets that too.
+
+`target` and `lib` name the newest ECMAScript version that the code's runtime
+fully supports. Vite lowers newer syntax to its build target, but adds no
+polyfills, so `lib` decides which APIs type-check. For the application, that is
+the newest version every browser of Vite's default build target supports:
+ES2022 for Vite 8, since its Firefox 114 lacks ES2023's copying array methods,
+such as `toSorted`. For the tooling files, it is the newest version TypeScript
+knows that the pinned Node.js supports: ES2025 for Node.js 26. `norms verify`
+can't tell the runtime, so it only warns when either names a version older than
+ES2022.
 
 #### Formatting and Linting
 
