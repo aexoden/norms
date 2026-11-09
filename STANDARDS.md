@@ -407,8 +407,14 @@ the same types as listed above. Branches created by AI agents or bots may use
 whatever names those tools choose.
 
 Pull requests are squash-merged, so the pull request title becomes the commit
-subject. The repository's merge settings allow only squash merging. Every pull
-request title, whoever opens it, must follow the subject rules above.
+subject. The repository's merge settings allow only squash merging, with the
+default commit message set to "Pull request title and commit details"
+(`squash_merge_commit_title: PR_TITLE` and
+`squash_merge_commit_message: COMMIT_MESSAGES` in the API). GitHub's own default
+takes the subject of a pull request with a single commit from that commit
+rather than the title, so the title check below wouldn't check the subject
+that is merged. Every pull request title, whoever opens it, must follow the
+subject rules above.
 
 A `pr-title.yaml` workflow checks each title by running the `commit-msg` hooks
 on the subject the squash merge would create, which is the title followed by
