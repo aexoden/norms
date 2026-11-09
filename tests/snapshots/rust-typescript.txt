@@ -170,6 +170,7 @@ pass  prettier-config-exists  [frontend] .prettierrc: exists
 pass  prettier-config-valid  [frontend] .prettierrc: valid
 pass  prettier-ignore-exists  [frontend] Prettier: .prettierignore exists
 pass  prettier-dependency  [frontend] Prettier: in dependencies
+pass  prettier-config-print-width  [frontend] .prettierrc: printWidth is 120
 pass  prettier-plugin-packagejson  [frontend] Prettier: formats package.json with prettier-plugin-packagejson
 pass  package-json-scripts  [frontend] package.json: has scripts
 pass  package-json-script-build  [frontend] Scripts: has 'build'

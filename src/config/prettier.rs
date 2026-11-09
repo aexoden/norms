@@ -16,9 +16,22 @@ pub(crate) struct PrettierConfig {
     /// The plugins Prettier loads, by package name or path. Kept unparsed, so that a malformed value fails only the
     /// check reading it.
     pub plugins: Option<Value>,
+
+    /// The line length Prettier wraps at. Kept unparsed, as for `plugins`.
+    #[serde(rename = "printWidth")]
+    pub print_width: Option<Value>,
 }
 
 impl PrettierConfig {
+    /// Check that `printWidth` is `width`. Prettier's own default is 80.
+    pub(crate) fn check_print_width(&self, width: u64) -> Result<(), String> {
+        match &self.print_width {
+            Some(value) if value.as_u64() == Some(width) => Ok(()),
+            Some(value) => Err(format!("printWidth is {value}, not {width}")),
+            None => Err("Missing printWidth".to_owned()),
+        }
+    }
+
     /// Whether `plugins` lists the given package by name.
     pub(crate) fn has_plugin(&self, name: &str) -> bool {
         matches!(&self.plugins, Some(Value::Array(plugins)) if plugins.iter().any(|p| p.as_str() == Some(name)))
@@ -31,6 +44,23 @@ mod tests {
 
     fn parse(text: &str) -> PrettierConfig {
         serde_saphyr::from_str(text).unwrap()
+    }
+
+    #[test]
+    fn print_width_is_checked() {
+        assert_eq!(parse("printWidth: 120\n").check_print_width(120), Ok(()));
+        assert_eq!(
+            parse(r#"{ "printWidth": 80 }"#).check_print_width(120),
+            Err("printWidth is 80, not 120".to_owned())
+        );
+        assert_eq!(
+            parse(r#"{ "printWidth": "120" }"#).check_print_width(120),
+            Err("printWidth is \"120\", not 120".to_owned())
+        );
+        assert_eq!(
+            parse("plugins: []\n").check_print_width(120),
+            Err("Missing printWidth".to_owned())
+        );
     }
 
     #[test]

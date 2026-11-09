@@ -680,6 +680,9 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
 /// The Prettier plugin that formats `package.json`, sorting its dependencies.
 const PACKAGEJSON_PLUGIN: &str = "prettier-plugin-packagejson";
 
+/// The line length the standards set for Prettier, as for Ruff's `line-length`.
+const PRETTIER_PRINT_WIDTH: u64 = 120;
+
 pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
     let config = report.require_parsed("prettier-config", ".prettierrc", ctx.prettier());
 
@@ -703,6 +706,13 @@ pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = config else {
         return;
     };
+
+    // Line length, as for Ruff
+    report.should(
+        "prettier-config-print-width",
+        format!(".prettierrc: printWidth is {PRETTIER_PRINT_WIDTH}"),
+        config.check_print_width(PRETTIER_PRINT_WIDTH),
+    );
 
     // package.json formatting, which sorts its dependencies
     report.check(
