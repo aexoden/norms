@@ -150,14 +150,23 @@ pub(crate) fn check_tsconfig(ctx: &ComponentContext, report: &mut Report) {
     };
 
     if config.is_solution_style() {
-        check_tsconfig_solution_style(ctx, config, report);
+        check_tsconfig_solution_style(ctx, report);
     } else {
         check_tsconfig_single(config, report);
     }
 }
 
-/// Check a single (non-solution-style) tsconfig with inline `compilerOptions`.
+/// Check a single (non-solution-style) tsconfig with inline `compilerOptions`, which differs from the standards'
+/// solution-style config, though its options are checked all the same.
 fn check_tsconfig_single(config: &TsConfig, report: &mut Report) {
+    report.should(
+        "tsconfig-project-references",
+        "tsconfig.json: uses project references",
+        Outcome::fail(
+            "tsconfig.json has no references: it should reference tsconfig.app.json and tsconfig.node.json",
+        ),
+    );
+
     let Some(compiler_options) = &config.compiler_options else {
         report.must(
             "tsconfig-compiler-options",
@@ -176,39 +185,14 @@ fn check_tsconfig_single(config: &TsConfig, report: &mut Report) {
 }
 
 /// Check a solution-style tsconfig that delegates to referenced sub-projects.
-fn check_tsconfig_solution_style(ctx: &ComponentContext, config: &TsConfig, report: &mut Report) {
+fn check_tsconfig_solution_style(ctx: &ComponentContext, report: &mut Report) {
+    // A solution-style config has references, which the context resolves, each to a config file.
+    let referenced = ctx.typescript_referenced_configs();
     report.should(
         "tsconfig-project-references",
         "tsconfig.json: uses project references",
-        Outcome::Pass,
+        check_references(referenced.iter().map(|(name, _)| name.as_str())),
     );
-
-    let ref_paths = config.reference_paths();
-    if ref_paths.is_empty() {
-        report.must(
-            "tsconfig-references-non-empty",
-            "tsconfig.json: references non-empty",
-            Outcome::fail("references array is empty"),
-        );
-        return;
-    }
-
-    report.must(
-        "tsconfig-references-non-empty",
-        "tsconfig.json: references non-empty",
-        Outcome::Pass,
-    );
-
-    let referenced = ctx.typescript_referenced_configs();
-
-    if referenced.is_empty() {
-        report.must(
-            "tsconfig-references-parsed",
-            "tsconfig.json: referenced configs parsed",
-            Outcome::fail("Could not resolve any referenced configs"),
-        );
-        return;
-    }
 
     // Validate each referenced config exists and is valid, then check its compilerOptions.
     let mut any_valid = false;
@@ -265,6 +249,27 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, config: &TsConfig, repo
             "tsconfig: at least one reference has compilerOptions",
             Outcome::fail("No referenced config has a compilerOptions section"),
         );
+    }
+}
+
+/// The configs a solution-style `tsconfig.json` references: the application's, and the tooling files'.
+const REFERENCED_CONFIGS: [&str; 2] = ["tsconfig.app.json", "tsconfig.node.json"];
+
+/// Check that a solution-style `tsconfig.json`, referencing the config files named `names`, references each of
+/// [`REFERENCED_CONFIGS`], whose roles decide their module settings.
+fn check_references<'a>(names: impl IntoIterator<Item = &'a str>) -> Result<(), String> {
+    let names: Vec<_> = names.into_iter().collect();
+    let missing: Vec<_> = REFERENCED_CONFIGS
+        .into_iter()
+        .filter(|config| !names.contains(config))
+        .collect();
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "tsconfig.json doesn't reference {}",
+            missing.join(" or ")
+        ))
     }
 }
 
@@ -1053,6 +1058,56 @@ mod tests {
         assert_eq!(
             check_module_detection(None),
             Err("Missing moduleDetection".to_owned())
+        );
+    }
+
+    #[test]
+    fn single_tsconfig_warns() {
+        let config: TsConfig = serde_json::from_str(
+            r#"{"compilerOptions": {"strict": true, "module": "esnext", "moduleResolution": "bundler"}}"#,
+        )
+        .unwrap();
+        let mut report = Report::new(std::path::PathBuf::new(), Vec::new());
+        check_tsconfig_single(&config, &mut report);
+        let warned: Vec<_> = report
+            .results
+            .iter()
+            .filter(|result| result.status == crate::models::Status::Warn)
+            .map(|result| result.id.as_str())
+            .collect();
+        assert!(
+            warned.contains(&"tsconfig-project-references"),
+            "{warned:?}"
+        );
+        // The config's own options are still checked.
+        assert!(
+            report
+                .results
+                .iter()
+                .any(|result| result.id == "tsconfig-module"
+                    && result.status == crate::models::Status::Pass),
+            "{:?}",
+            report.results
+        );
+
+        assert_eq!(
+            check_references([
+                "tsconfig.app.json",
+                "tsconfig.node.json",
+                "tsconfig.test.json"
+            ]),
+            Ok(())
+        );
+        assert_eq!(
+            check_references(["tsconfig.app.json"]),
+            Err("tsconfig.json doesn't reference tsconfig.node.json".to_owned())
+        );
+        assert_eq!(
+            check_references([]),
+            Err(
+                "tsconfig.json doesn't reference tsconfig.app.json or tsconfig.node.json"
+                    .to_owned()
+            )
         );
     }
 

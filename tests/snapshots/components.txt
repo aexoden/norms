@@ -112,8 +112,32 @@ fail  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 fail  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
       File not found
-fail  tsconfig-exists  [apps/admin] tsconfig.json: exists
-      File not found
+pass  tsconfig-exists  [apps/admin] tsconfig.json: exists
+pass  tsconfig-valid  [apps/admin] tsconfig.json: valid
+warn  tsconfig-project-references  [apps/admin] tsconfig.json: uses project references
+      tsconfig.json has no references: it should reference tsconfig.app.json and tsconfig.node.json
+pass  tsconfig-compiler-options  [apps/admin] tsconfig.json: has compilerOptions
+pass  tsconfig-strict  [apps/admin] tsconfig.json: strict mode enabled
+warn  tsconfig-no-unchecked-indexed-access  [apps/admin] tsconfig.json: noUncheckedIndexedAccess enabled
+      Missing noUncheckedIndexedAccess
+pass  tsconfig-module  [apps/admin] tsconfig.json: module is esnext
+pass  tsconfig-module-resolution  [apps/admin] tsconfig.json: moduleResolution is bundler
+pass  tsconfig-target  [apps/admin] tsconfig.json: target is ES2022 or newer
+pass  tsconfig-lib  [apps/admin] tsconfig.json: lib includes ES2022 or newer
+warn  tsconfig-verbatim-module-syntax  [apps/admin] tsconfig.json: verbatimModuleSyntax enabled
+      Missing verbatimModuleSyntax
+warn  tsconfig-no-unchecked-side-effect-imports  [apps/admin] tsconfig.json: noUncheckedSideEffectImports enabled
+      Missing noUncheckedSideEffectImports
+warn  tsconfig-no-fallthrough-cases-in-switch  [apps/admin] tsconfig.json: noFallthroughCasesInSwitch enabled
+      Missing noFallthroughCasesInSwitch
+warn  tsconfig-no-unused-locals  [apps/admin] tsconfig.json: noUnusedLocals enabled
+      Missing noUnusedLocals
+warn  tsconfig-no-unused-parameters  [apps/admin] tsconfig.json: noUnusedParameters enabled
+      Missing noUnusedParameters
+warn  tsconfig-module-detection  [apps/admin] tsconfig.json: moduleDetection is force
+      Missing moduleDetection
+warn  tsconfig-erasable-syntax-only  [apps/admin] tsconfig.json: erasableSyntaxOnly enabled
+      Missing erasableSyntaxOnly
 fail  eslint-config-exists  [apps/admin] eslint.config.ts: exists
       File not found
 fail  eslint-dependency  [apps/admin] ESLint: in dependencies
@@ -142,8 +166,33 @@ fail  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 fail  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists
       File not found
-fail  tsconfig-exists  [apps/web] tsconfig.json: exists
-      File not found
+pass  tsconfig-exists  [apps/web] tsconfig.json: exists
+pass  tsconfig-valid  [apps/web] tsconfig.json: valid
+warn  tsconfig-project-references  [apps/web] tsconfig.json: uses project references
+      tsconfig.json doesn't reference tsconfig.node.json
+pass  tsconfig-reference-exists  [apps/web] tsconfig.app.json: exists
+pass  tsconfig-reference-valid  [apps/web] tsconfig.app.json: valid
+pass  tsconfig-strict  [apps/web] tsconfig.app.json: strict mode enabled
+warn  tsconfig-no-unchecked-indexed-access  [apps/web] tsconfig.app.json: noUncheckedIndexedAccess enabled
+      Missing noUncheckedIndexedAccess
+pass  tsconfig-module  [apps/web] tsconfig.app.json: module is esnext
+pass  tsconfig-module-resolution  [apps/web] tsconfig.app.json: moduleResolution is bundler
+pass  tsconfig-target  [apps/web] tsconfig.app.json: target is ES2022 or newer
+pass  tsconfig-lib  [apps/web] tsconfig.app.json: lib includes ES2022 or newer
+warn  tsconfig-verbatim-module-syntax  [apps/web] tsconfig.app.json: verbatimModuleSyntax enabled
+      Missing verbatimModuleSyntax
+warn  tsconfig-no-unchecked-side-effect-imports  [apps/web] tsconfig.app.json: noUncheckedSideEffectImports enabled
+      Missing noUncheckedSideEffectImports
+warn  tsconfig-no-fallthrough-cases-in-switch  [apps/web] tsconfig.app.json: noFallthroughCasesInSwitch enabled
+      Missing noFallthroughCasesInSwitch
+warn  tsconfig-no-unused-locals  [apps/web] tsconfig.app.json: noUnusedLocals enabled
+      Missing noUnusedLocals
+warn  tsconfig-no-unused-parameters  [apps/web] tsconfig.app.json: noUnusedParameters enabled
+      Missing noUnusedParameters
+warn  tsconfig-module-detection  [apps/web] tsconfig.app.json: moduleDetection is force
+      Missing moduleDetection
+warn  tsconfig-erasable-syntax-only  [apps/web] tsconfig.app.json: erasableSyntaxOnly enabled
+      Missing erasableSyntaxOnly
 fail  eslint-config-exists  [apps/web] eslint.config.ts: exists
       File not found
 fail  eslint-dependency  [apps/web] ESLint: in dependencies

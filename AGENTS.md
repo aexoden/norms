@@ -143,7 +143,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   laid out to exercise detection: a Cargo workspace member and a nested
   pnpm package to fold, two TypeScript components, a Python one, and markers
   under `node_modules/`, a hidden directory and an excluded `vendor/` to
-  skip; its `norms.toml` also excludes a missing directory. `unpinned` has
+  skip; its `norms.toml` also excludes a missing directory. Of the
+  TypeScript components, one has a single `tsconfig.json` and the other one
+  that references only `tsconfig.app.json`. `unpinned` has
   applications whose manifests break the pinning standards (one also pins pnpm
   through Corepack's `packageManager`), beside a Python library that isn't
   checked for them, and release ages other than 3 days.

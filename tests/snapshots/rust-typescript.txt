@@ -127,7 +127,6 @@ pass  pnpm-workspace-builds-restricted  [frontend] pnpm: builds limited to permi
 pass  tsconfig-exists  [frontend] tsconfig.json: exists
 pass  tsconfig-valid  [frontend] tsconfig.json: valid
 pass  tsconfig-project-references  [frontend] tsconfig.json: uses project references
-pass  tsconfig-references-non-empty  [frontend] tsconfig.json: references non-empty
 pass  tsconfig-reference-exists  [frontend] tsconfig.app.json: exists
 pass  tsconfig-reference-valid  [frontend] tsconfig.app.json: valid
 pass  tsconfig-strict  [frontend] tsconfig.app.json: strict mode enabled
