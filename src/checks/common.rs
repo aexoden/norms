@@ -154,8 +154,9 @@ fn same_file(a: &Path, b: &Path) -> bool {
     matches!((a.canonicalize(), b.canonicalize()), (Ok(a), Ok(b)) if a == b)
 }
 
-/// Check that the root `CLAUDE.md` beside an `AGENTS.md` imports it rather than repeating it, or is a symlink to it,
-/// which Claude Code also accepts. A `.claude/CLAUDE.md` isn't read.
+/// Check that the root `CLAUDE.md` beside an `AGENTS.md` imports it rather than repeating it. Two files that are one,
+/// through a symlink either way, which Claude Code also reads, warn, so that every project has the one form, with room
+/// for instructions specific to Claude. A `.claude/CLAUDE.md` isn't read.
 pub(crate) fn check_agent_guidance(ctx: &ProjectContext, report: &mut Report) {
     let agents = ctx.path().join("AGENTS.md");
     if !agents.is_file() {
@@ -164,7 +165,11 @@ pub(crate) fn check_agent_guidance(ctx: &ProjectContext, report: &mut Report) {
     let outcome = match ctx.claude_md() {
         ConfigStatus::NotFound => return,
         ConfigStatus::ParseError { error } => Err(error.clone()),
-        ConfigStatus::Ok(_) if same_file(&ctx.path().join("CLAUDE.md"), &agents) => Ok(()),
+        ConfigStatus::Ok(_) if same_file(&ctx.path().join("CLAUDE.md"), &agents) => Err(
+            "CLAUDE.md and AGENTS.md are the same file, through a symlink: make CLAUDE.md a file of its own that has \
+             @AGENTS.md on a line of its own"
+                .to_owned(),
+        ),
         ConfigStatus::Ok(content) if imports_agents(content) => Ok(()),
         ConfigStatus::Ok(_) => Err(
             "AGENTS.md isn't imported: add @AGENTS.md at the start of a line of its own, outside code"
@@ -1637,6 +1642,7 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Status;
 
     #[test]
     fn claude_md_imports_agents_md() {
@@ -1668,19 +1674,47 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn claude_md_may_link_to_agents_md() {
+    fn claude_md_linked_to_agents_md_warns() {
         use std::os::unix::fs::symlink;
 
         let dir = tempfile::TempDir::new().unwrap();
         let agents = dir.path().join("AGENTS.md");
         let claude = dir.path().join("CLAUDE.md");
         let other = dir.path().join("OTHER.md");
-        std::fs::write(&agents, "# AGENTS.md\n").unwrap();
+        // AGENTS.md imports itself, so that the import alone would pass and only the symlink warns.
+        std::fs::write(&agents, "# AGENTS.md\n\n@AGENTS.md\n").unwrap();
         std::fs::write(&other, "# AGENTS.md\n").unwrap();
+        let check = || {
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_agent_guidance(&ProjectContext::new(dir.path().to_path_buf()), &mut report);
+            report
+                .results
+                .iter()
+                .map(|result| (result.status, result.message.clone()))
+                .collect::<Vec<_>>()
+        };
+
+        std::fs::write(&claude, "# CLAUDE.md\n\n@AGENTS.md\n").unwrap();
+        assert_eq!(check(), [(Status::Pass, String::new())]);
+
+        std::fs::remove_file(&claude).unwrap();
         symlink("AGENTS.md", &claude).unwrap();
         assert!(same_file(&claude, &agents));
         assert!(!same_file(&other, &agents));
         assert!(!same_file(&dir.path().join("MISSING.md"), &agents));
+        let linked = vec![(
+            Status::Warn,
+            "CLAUDE.md and AGENTS.md are the same file, through a symlink: make CLAUDE.md a file of its own that \
+             has @AGENTS.md on a line of its own"
+                .to_owned(),
+        )];
+        assert_eq!(check(), linked);
+
+        // The other way round, AGENTS.md links to CLAUDE.md.
+        std::fs::remove_file(&claude).unwrap();
+        std::fs::rename(&agents, &claude).unwrap();
+        symlink("CLAUDE.md", &agents).unwrap();
+        assert_eq!(check(), linked);
     }
 
     #[test]
