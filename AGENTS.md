@@ -220,11 +220,11 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `package.json` sets `private` to the string `"true"`, and its two
   referenced tsconfigs lack, turn off or set to another value some of the
   required compiler options, one spelling `moduleDetection` in another case,
-  which TypeScript accepts. Its `pnpm-workspace.yaml` lists `allowBuilds` as
-  a sequence, keeps the older `onlyBuiltDependencies`, and lets unlisted
-  dependencies' build scripts through. Its `eslint.config.ts` includes
-  typescript-eslint's `recommendedTypeChecked` and an `Only` variant of
-  `stylisticTypeChecked` rather than the standard's configs, comments out
+  which TypeScript accepts. Its `pnpm-workspace.yaml` lists `permissions` as
+  a sequence, keeps the older `allowBuilds` and `onlyBuiltDependencies`, and
+  lets unreviewed dependencies' build scripts through. Its `eslint.config.ts`
+  includes typescript-eslint's `recommendedTypeChecked` and an `Only` variant
+  of `stylisticTypeChecked` rather than the standard's configs, comments out
   `strictTypeChecked`, sets `project` rather than `projectService`, and takes
   Prettier's config from `eslint-plugin-prettier`.
   Symlinks and `.gitignore` handling are covered by the unit tests in

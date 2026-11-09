@@ -1254,19 +1254,23 @@ it, so it would be a second pnpm pin that can drift from `devEngines`.
 
 Like the hook and CI job, the `lint` script fails on warnings as well as errors.
 
-`pnpm-workspace.yaml` sets the release age, and lists explicitly the
-dependencies allowed to run build scripts:
+`pnpm-workspace.yaml` sets the release age, and records in `permissions` (read
+since pnpm 12.11) what each dependency may do, such as running build scripts:
 
 ```yaml
-allowBuilds:
-  esbuild: true
 minimumReleaseAge: 4320
+permissions:
+  esbuild:
+    build: true
 ```
 
-pnpm fails the install when an unlisted dependency has build scripts, so
-neither `dangerouslyAllowAllBuilds: true` nor `strictDepBuilds: false` is set.
-The settings `allowBuilds` replaced in pnpm 11, such as
-`onlyBuiltDependencies`, are ignored by pnpm and aren't used.
+A new project starts with `permissions: {}`, so that `pnpm approve` and
+`pnpm approve-builds` record their decisions there. pnpm fails the install when
+a dependency's build scripts haven't been approved or denied, so neither
+`dangerouslyAllowAllBuilds: true` nor `strictDepBuilds: false` is set.
+`allowBuilds`, which pnpm still reads for the dependencies `permissions` doesn't
+list, isn't used, so that every decision is in one place. Nor are the settings
+it replaced in pnpm 11, such as `onlyBuiltDependencies`, which pnpm ignores.
 
 #### Compiler Options
 

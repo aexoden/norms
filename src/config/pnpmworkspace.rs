@@ -19,16 +19,19 @@ pub(crate) struct PnpmWorkspace {
     /// only the check reading it.
     pub minimum_release_age: Option<Value>,
 
-    /// The dependencies allowed (`true`) or forbidden (`false`) to run build scripts, by package name pattern. Kept
-    /// unparsed, so that one of the wrong shape fails only its check.
-    pub allow_builds: Option<Value>,
+    /// What each dependency may do, by package name pattern: whether it may run build scripts (`build`) and which of
+    /// its agent skills pnpm links (`skills`). Kept unparsed, so that one of the wrong shape fails only its check.
+    pub permissions: Option<Value>,
 
-    /// Whether every dependency that `allowBuilds` doesn't deny may run build scripts.
+    /// Whether every dependency that `permissions` doesn't deny may run build scripts.
     pub dangerously_allow_all_builds: Option<Value>,
 
-    /// Whether a dependency running build scripts without being listed in `allowBuilds` fails the install, as it does
-    /// by default.
+    /// Whether a dependency running build scripts without being approved or denied in `permissions` fails the
+    /// install, as it does by default.
     pub strict_dep_builds: Option<Value>,
+
+    /// The older map of dependencies allowed to run build scripts, still read for those `permissions` doesn't list.
+    pub allow_builds: Option<Value>,
 
     /// The settings pnpm 11 replaced with `allowBuilds`, which it no longer reads.
     pub only_built_dependencies: Option<Value>,
@@ -55,34 +58,28 @@ impl PnpmWorkspace {
         check_release_age_minutes(minutes)
     }
 
-    /// Check that `allowBuilds` lists the dependencies allowed to run build scripts: a map, possibly empty, from
-    /// package name patterns to `true` or `false`.
-    pub(crate) fn check_allow_builds(&self) -> Result<(), String> {
-        let value = self.allow_builds.as_ref().ok_or("Missing allowBuilds")?;
-        let Value::Object(entries) = value else {
-            return Err(format!(
-                "allowBuilds {value} isn't a map of package names to true or false"
-            ));
-        };
-        let others: Vec<&str> = entries
-            .iter()
-            .filter(|(_, allowed)| !allowed.is_boolean())
-            .map(|(name, _)| name.as_str())
-            .collect();
-        if others.is_empty() {
+    /// Check that `permissions` records what dependencies may do: a map, possibly empty, from package name patterns
+    /// to capabilities. pnpm validates the entries itself, but a project without `permissions` has its build
+    /// approvals written to `allowBuilds` instead.
+    pub(crate) fn check_permissions(&self) -> Result<(), String> {
+        let value = self.permissions.as_ref().ok_or("Missing permissions")?;
+        if value.is_object() {
             Ok(())
         } else {
             Err(format!(
-                "allowBuilds sets {} to something other than true or false",
-                others.join(", ")
+                "permissions {value} isn't a map of package names to capabilities"
             ))
         }
     }
 
-    /// Check that none of the build settings pnpm 11 removed in favor of `allowBuilds` is set, since pnpm ignores
-    /// them.
+    /// Check that none of the older build settings is set: `allowBuilds`, which pnpm still reads beside `permissions`,
+    /// and those pnpm 11 removed in favor of `allowBuilds`, which pnpm ignores.
     pub(crate) fn check_no_legacy_build_settings(&self) -> Result<(), String> {
-        let set: Vec<&str> = [
+        let mut problems = Vec::new();
+        if self.allow_builds.is_some() {
+            problems.push("allowBuilds, which permissions replaces".to_owned());
+        }
+        let removed: Vec<&str> = [
             ("onlyBuiltDependencies", &self.only_built_dependencies),
             (
                 "onlyBuiltDependenciesFile",
@@ -95,19 +92,19 @@ impl PnpmWorkspace {
         .filter(|(_, value)| value.is_some())
         .map(|(name, _)| name)
         .collect();
-        if set.is_empty() {
+        if !removed.is_empty() {
+            problems.push(format!("{}, which pnpm 11 removed", removed.join(", ")));
+        }
+        if problems.is_empty() {
             Ok(())
         } else {
-            Err(format!(
-                "Sets {}, which pnpm 11 replaced with allowBuilds",
-                set.join(", ")
-            ))
+            Err(format!("Sets {}", problems.join("; ")))
         }
     }
 
-    /// Check that nothing lets dependencies run build scripts that `allowBuilds` doesn't allow:
-    /// `dangerouslyAllowAllBuilds: true` lets every dependency not denied there run them, and `strictDepBuilds: false` only warns about
-    /// the unlisted ones.
+    /// Check that nothing lets dependencies run build scripts that `permissions` doesn't allow:
+    /// `dangerouslyAllowAllBuilds: true` lets every dependency not denied there run them, and `strictDepBuilds: false`
+    /// only warns about the unreviewed ones.
     pub(crate) fn check_builds_restricted(&self) -> Result<(), String> {
         let mut problems = Vec::new();
         if self.dangerously_allow_all_builds == Some(Value::Bool(true)) {
@@ -140,7 +137,7 @@ mod tests {
             "minimumReleaseAge: 4320\n",
             "minimumReleaseAge: 4320.0\n",
             "minimumReleaseAge: \"4320\"\n",
-            "allowBuilds: {}\nminimumReleaseAge: 4320\n",
+            "minimumReleaseAge: 4320\npermissions: {}\n",
         ] {
             assert_eq!(check(yaml), Ok(()), "{yaml}");
         }
@@ -151,42 +148,52 @@ mod tests {
     }
 
     #[test]
-    fn allow_builds_maps_packages_to_booleans() {
+    fn permissions_map_packages_to_capabilities() {
         for yaml in [
-            "allowBuilds: {}\n",
-            "allowBuilds:\n  esbuild: true\n  core-js: false\n  \"@scope/*\": true\n",
+            "permissions: {}\n",
+            "permissions:\n  esbuild:\n    build: true\n  core-js:\n    build: false\n    skills: [guide]\n",
         ] {
-            assert_eq!(parse(yaml).check_allow_builds(), Ok(()), "{yaml}");
+            assert_eq!(parse(yaml).check_permissions(), Ok(()), "{yaml}");
         }
         assert_eq!(
-            parse("minimumReleaseAge: 4320\n").check_allow_builds(),
-            Err("Missing allowBuilds".to_owned())
+            parse("minimumReleaseAge: 4320\n").check_permissions(),
+            Err("Missing permissions".to_owned())
         );
         assert_eq!(
-            parse("allowBuilds: [esbuild]\n").check_allow_builds(),
+            parse("allowBuilds: {}\n").check_permissions(),
+            Err("Missing permissions".to_owned())
+        );
+        assert_eq!(
+            parse("permissions: [esbuild]\n").check_permissions(),
             Err(
-                "allowBuilds [\"esbuild\"] isn't a map of package names to true or false"
-                    .to_owned()
+                "permissions [\"esbuild\"] isn't a map of package names to capabilities".to_owned()
             )
-        );
-        assert_eq!(
-            parse("allowBuilds:\n  core-js: false\n  esbuild: \"true\"\n  sharp:\n")
-                .check_allow_builds(),
-            Err("allowBuilds sets esbuild, sharp to something other than true or false".to_owned())
         );
     }
 
     #[test]
-    fn rejects_the_removed_build_settings() {
+    fn rejects_the_older_build_settings() {
         assert_eq!(
-            parse("allowBuilds: {}\n").check_no_legacy_build_settings(),
+            parse("permissions: {}\n").check_no_legacy_build_settings(),
             Ok(())
+        );
+        assert_eq!(
+            parse("allowBuilds: {}\npermissions: {}\n").check_no_legacy_build_settings(),
+            Err("Sets allowBuilds, which permissions replaces".to_owned())
         );
         assert_eq!(
             parse("onlyBuiltDependencies: [esbuild]\nignoredBuiltDependencies: []\n")
                 .check_no_legacy_build_settings(),
             Err(
-                "Sets onlyBuiltDependencies, ignoredBuiltDependencies, which pnpm 11 replaced with allowBuilds"
+                "Sets onlyBuiltDependencies, ignoredBuiltDependencies, which pnpm 11 removed"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            parse("allowBuilds:\n  esbuild: true\nneverBuiltDependencies: []\n")
+                .check_no_legacy_build_settings(),
+            Err(
+                "Sets allowBuilds, which permissions replaces; neverBuiltDependencies, which pnpm 11 removed"
                     .to_owned()
             )
         );
@@ -198,18 +205,16 @@ mod tests {
         ] {
             assert_eq!(
                 parse(&format!("{setting}: []\n")).check_no_legacy_build_settings(),
-                Err(format!(
-                    "Sets {setting}, which pnpm 11 replaced with allowBuilds"
-                )),
+                Err(format!("Sets {setting}, which pnpm 11 removed")),
                 "{setting}"
             );
         }
     }
 
     #[test]
-    fn builds_stay_restricted_to_allow_builds() {
+    fn builds_stay_restricted_to_permissions() {
         for yaml in [
-            "allowBuilds: {}\n",
+            "permissions: {}\n",
             "dangerouslyAllowAllBuilds: false\nstrictDepBuilds: true\n",
         ] {
             assert_eq!(parse(yaml).check_builds_restricted(), Ok(()), "{yaml}");
@@ -228,7 +233,7 @@ mod tests {
     #[test]
     fn rejects_a_missing_or_other_age() {
         assert_eq!(
-            check("allowBuilds: {}\n"),
+            check("permissions: {}\n"),
             Err("Missing minimumReleaseAge".to_owned())
         );
         assert_eq!(

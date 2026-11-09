@@ -42,11 +42,11 @@ fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
 pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minimumReleaseAge)
-warn  pnpm-workspace-allow-builds  [.] pnpm: lists the dependencies allowed to build (allowBuilds)
-      allowBuilds ["esbuild"] isn't a map of package names to true or false
-warn  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no build settings replaced by allowBuilds
-      Sets onlyBuiltDependencies, which pnpm 11 replaced with allowBuilds
-warn  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to allowBuilds
+warn  pnpm-workspace-permissions  [.] pnpm: records what dependencies may do (permissions)
+      permissions ["esbuild"] isn't a map of package names to capabilities
+warn  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no older build settings
+      Sets allowBuilds, which permissions replaces; onlyBuiltDependencies, which pnpm 11 removed
+warn  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to permissions
       dangerouslyAllowAllBuilds is true; strictDepBuilds is false
 pass  tsconfig-exists  [.] tsconfig.json: exists
 pass  tsconfig-valid  [.] tsconfig.json: valid
