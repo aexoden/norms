@@ -45,6 +45,14 @@ fn present<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Value>, 
     Value::deserialize(deserializer).map(Some)
 }
 
+/// A value that is present and not null, which pre-commit requires of a key it validates whenever it is given, though
+/// `Option` alone would read a null value as a missing one.
+fn not_null<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
+    deserializer: D,
+) -> Result<Option<T>, D::Error> {
+    T::deserialize(deserializer).map(Some)
+}
+
 /// A single repo entry in the pre-commit config.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -67,6 +75,9 @@ pub(crate) struct PrecommitHook {
     pub name: Option<String>,
     pub entry: Option<String>,
     pub language: Option<String>,
+    /// The stages the hook lists, if it lists any. A null value fails parsing, as pre-commit rejects it, rather than
+    /// reading as no list.
+    #[serde(deserialize_with = "not_null")]
     pub stages: Option<Vec<String>>,
     pub args: Vec<String>,
 }
@@ -553,6 +564,37 @@ mod tests {
                 "{stages} {default_stages}"
             );
         }
+    }
+
+    #[test]
+    fn null_stages_fail_parsing() {
+        let stages = |stages: &str| {
+            serde_saphyr::from_str::<PrecommitConfig>(&format!(
+                "repos:\n  - repo: local\n    hooks: [{{id: markdownlint-cli2{stages}}}]\n"
+            ))
+            .map(|config| {
+                config
+                    .repos
+                    .into_iter()
+                    .flat_map(|repo| repo.hooks)
+                    .map(|hook| hook.stages)
+                    .collect::<Vec<_>>()
+            })
+        };
+        assert!(stages(", stages: ~").is_err());
+        assert!(stages(", stages: null").is_err());
+        // A key without a value, the likeliest way to write null by accident.
+        assert!(
+            serde_saphyr::from_str::<PrecommitConfig>(
+                "repos:\n  - repo: local\n    hooks:\n      - id: markdownlint-cli2\n        stages:\n"
+            )
+            .is_err()
+        );
+        assert_eq!(stages("").unwrap(), [None]);
+        assert_eq!(
+            stages(", stages: [pre-commit]").unwrap(),
+            [Some(vec!["pre-commit".to_owned()])]
+        );
     }
 
     #[test]
