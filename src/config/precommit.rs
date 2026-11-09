@@ -68,8 +68,13 @@ pub(crate) struct PrecommitRepo {
 #[serde(default)]
 pub(crate) struct PrecommitHook {
     pub id: String,
-    /// Another name that `SKIP` and `pre-commit run` match; empty or null means none.
+    /// Another name that `SKIP` and `pre-commit run` match; empty means none. A null value fails parsing, as
+    /// pre-commit rejects it, rather than reading as no alias.
+    #[serde(deserialize_with = "not_null")]
     pub alias: Option<String>,
+    /// The hook's command, if it sets one. A null value fails parsing, as pre-commit rejects it, rather than reading as
+    /// no entry, which would leave [`commands`](Self::commands) to the hook repository's.
+    #[serde(deserialize_with = "not_null")]
     pub entry: Option<String>,
     /// The stages the hook lists, if it lists any. A null value fails parsing, as pre-commit rejects it, rather than
     /// reading as no list.
@@ -413,7 +418,6 @@ mod tests {
             "[{id: pytest}, {id: cargo-test}, {id: vitest}]",
             "[{id: eslint, alias: eslint-admin}, {id: eslint, alias: eslint-web}]",
             "[{id: test, alias: test}, {id: vitest}]",
-            "[{id: test, alias: ~}, {id: vitest}]",
             "[{id: test, alias: ''}, {id: vitest}]",
         ] {
             assert_eq!(unique_hook_ids(hooks), Ok(()), "{hooks}");
@@ -428,7 +432,6 @@ mod tests {
                 "eslint",
             ),
             ("[{id: a}, {id: b}, {id: a}, {id: b}]", "a, b"),
-            ("[{id: test, alias: ~}, {id: test}]", "test"),
             ("[{alias: a}, {alias: a}]", "(no id)"),
             (
                 "[{id: eslint, alias: lint}, {id: eslint, alias: lint}]",
@@ -590,6 +593,57 @@ mod tests {
         assert_eq!(
             stages(", stages: [pre-commit]").unwrap(),
             [Some(vec!["pre-commit".to_owned()])]
+        );
+    }
+
+    #[test]
+    fn null_aliases_and_entries_fail_parsing() {
+        let hooks = |yaml: &str| {
+            serde_saphyr::from_str::<PrecommitConfig>(&format!(
+                "repos:\n  - repo: local\n    hooks: {yaml}\n"
+            ))
+            .map(|config| {
+                config
+                    .repos
+                    .into_iter()
+                    .flat_map(|repo| repo.hooks)
+                    .map(|hook| (hook.alias, hook.entry))
+                    .collect::<Vec<_>>()
+            })
+        };
+        for key in ["alias", "entry"] {
+            assert!(
+                hooks(&format!("[{{id: test, {key}: ~}}]")).is_err(),
+                "{key}"
+            );
+            assert!(
+                hooks(&format!("[{{id: test, {key}: null}}]")).is_err(),
+                "{key}"
+            );
+            // A key without a value, the likeliest way to write null by accident.
+            assert!(
+                hooks(&format!("\n      - id: test\n        {key}:")).is_err(),
+                "{key}"
+            );
+            assert!(
+                hooks(&format!("\n      - id: test\n        {key}: test")).is_ok(),
+                "{key}"
+            );
+        }
+        assert_eq!(hooks("[{id: test}]").unwrap(), [(None, None)]);
+        assert_eq!(
+            hooks("[{id: test, alias: ''}]").unwrap(),
+            [(Some(String::new()), None)]
+        );
+        // An empty alias is kept, but means none.
+        let hook = PrecommitHook {
+            alias: Some(String::new()),
+            ..PrecommitHook::default()
+        };
+        assert_eq!(hook.alias(), None);
+        assert_eq!(
+            hooks("[{id: test, alias: unit, entry: cargo test}]").unwrap(),
+            [(Some("unit".to_owned()), Some("cargo test".to_owned()))]
         );
     }
 
