@@ -41,10 +41,11 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
-    CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DenyToml, DevboxConfig, GIT_ARCHIVAL,
-    HIDDEN_CLIPPY_TOML, MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION, PackageJson,
-    PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml,
-    RustToolchain, TsConfig, Workflow, parse_python_version,
+    CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DENY_TOML, DenyToml, DevboxConfig,
+    GIT_ARCHIVAL, HIDDEN_CLIPPY_TOML, MarkdownlintCli2Config, NormsConfig, OTHER_DENY_TOMLS,
+    PYTHON_VERSION, PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml,
+    RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow, is_other_deny_toml,
+    parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -338,7 +339,7 @@ pub(crate) struct ComponentContext {
     rust_toolchain: OnceLock<(String, ConfigStatus<RustToolchain>)>,
     clippy_toml: OnceLock<(String, ConfigStatus<ClippyToml>)>,
     member_clippy_tomls: OnceLock<Vec<(String, ConfigStatus<ClippyToml>)>>,
-    deny_toml: OnceLock<ConfigStatus<DenyToml>>,
+    deny_toml: OnceLock<(String, ConfigStatus<DenyToml>)>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
     python_version: OnceLock<ConfigStatus<Version>>,
     git_archival: OnceLock<ConfigStatus<String>>,
@@ -495,10 +496,23 @@ impl ComponentContext {
         })
     }
 
-    /// Parsed `deny.toml` in the component's own directory (cached).
-    pub(crate) fn deny_toml(&self) -> &ConfigStatus<DenyToml> {
-        self.deny_toml
-            .get_or_init(|| parse_toml_file::<DenyToml>(&self.path.join("deny.toml")))
+    /// The cargo-deny configuration that applies to the component (cached): the nearest `deny.toml`, `.deny.toml` or
+    /// `.cargo/deny.toml` in the component's directory or a parent, up to the project root, as cargo-deny finds it from
+    /// the component's manifest, with its path relative to the component. If there is none, the path is the bare
+    /// `deny.toml`. A file of another name than `deny.toml` is reported as `NotFound`, since only `deny.toml` is read.
+    pub(crate) fn deny_toml(&self) -> &(String, ConfigStatus<DenyToml>) {
+        self.deny_toml.get_or_init(|| {
+            let names: Vec<&str> = std::iter::once(DENY_TOML).chain(OTHER_DENY_TOMLS).collect();
+            let Some(found) = nearest_file(&self.root, &self.component.path, &names) else {
+                return (DENY_TOML.to_owned(), ConfigStatus::NotFound);
+            };
+            let status = if is_other_deny_toml(&found) {
+                ConfigStatus::NotFound
+            } else {
+                parse_toml_file(&self.root.join(&found))
+            };
+            (self.relative_label(&found), status)
+        })
     }
 
     /// Parsed `pyproject.toml` (cached).

@@ -41,8 +41,8 @@ fail  clippy-lints  [backend] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
 warn  clippy-toml-exists  [backend] .clippy.toml: exists
       Clippy uses .clippy.toml, which should be named clippy.toml
-fail  deny-toml-exists  [backend] deny.toml: exists
-      File not found
+warn  deny-toml-exists  [backend] .deny.toml: exists
+      cargo-deny uses .deny.toml, which should be named deny.toml
 pass  cargo-toml-exists  [tools/cli] Cargo.toml: exists
 pass  cargo-toml-valid  [tools/cli] Cargo.toml: valid
 warn  cargo-toml-license  [tools/cli] Cargo.toml: has license
@@ -64,7 +64,9 @@ warn  clippy-toml-allow-in-tests  [tools/cli] ../../clippy.toml: unwrap, expect 
       Not set to true: allow-panic-in-tests
 warn  clippy-toml-absolute-paths  [tools/cli] ../../clippy.toml: absolute paths limited to 3 segments
       absolute-paths-max-segments is 4, not 3
-fail  deny-toml-exists  [tools/cli] deny.toml: exists
-      File not found
+pass  deny-toml-exists  [tools/cli] ../../deny.toml: exists
+pass  deny-toml-valid  [tools/cli] ../../deny.toml: valid
+pass  deny-toml-multiple-versions  [tools/cli] ../../deny.toml: multiple versions allowed (bans)
+pass  deny-toml-ignore-reasons  [tools/cli] ../../deny.toml: every ignored advisory has a reason
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found

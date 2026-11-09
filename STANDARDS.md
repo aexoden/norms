@@ -1175,6 +1175,12 @@ The hooks and CI pass `-D warnings`, so any warning fails the check.
   above.
 - Every entry in `[advisories] ignore` has a `reason`.
 
+cargo-deny uses the nearest `deny.toml` in the directory of the manifest it
+checks or a parent, so a Rust component in a subdirectory shares the root's file
+unless it has its own. Whichever file a component uses must meet these rules.
+The file is named `deny.toml`, not `.deny.toml` or `.cargo/deny.toml`, which
+cargo-deny also reads.
+
 The hooks and CI pass `-D warnings`, so any warning fails the check.
 
 cargo-deny is installed separately by the developer. See the [cargo-deny

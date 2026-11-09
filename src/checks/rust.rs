@@ -9,8 +9,8 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, HIDDEN_CLIPPY_TOML, Workflow,
-    WorkflowJob, WorkflowStep, commands, is_program,
+    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, HIDDEN_CLIPPY_TOML,
+    Workflow, WorkflowJob, WorkflowStep, commands, is_other_deny_toml, is_program,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -315,21 +315,32 @@ fn check_clippy_toml_settings(label: &str, config: &ClippyToml, report: &mut Rep
 // Dependency auditing
 //
 
-/// Check the component's `deny.toml`: that it allows multiple versions of a crate, and that every ignored advisory
-/// gives a reason.
+/// Check the cargo-deny configuration that applies to the component: that it is named `deny.toml`, allows multiple
+/// versions of a crate, and gives a reason for every ignored advisory.
 pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
-    let Some(config) = report.require_parsed("deny-toml", "deny.toml", ctx.deny_toml()) else {
+    let (label, status) = ctx.deny_toml();
+    if is_other_deny_toml(Path::new(label)) {
+        report.should(
+            "deny-toml-exists",
+            format!("{label}: exists"),
+            Outcome::fail(format!(
+                "cargo-deny uses {label}, which should be named {DENY_TOML}"
+            )),
+        );
+        return;
+    }
+    let Some(config) = report.require_parsed("deny-toml", label, status) else {
         return;
     };
 
     report.should(
         "deny-toml-multiple-versions",
-        "deny.toml: multiple versions allowed (bans)",
+        format!("{label}: multiple versions allowed (bans)"),
         config.check_multiple_versions(),
     );
     report.should(
         "deny-toml-ignore-reasons",
-        "deny.toml: every ignored advisory has a reason",
+        format!("{label}: every ignored advisory has a reason"),
         config.check_ignore_reasons(),
     );
 }
@@ -1071,6 +1082,63 @@ jobs:
         assert_eq!(
             declared_msrvs(&ctx, config),
             BTreeSet::from(["1.85", "1.88"])
+        );
+    }
+
+    #[test]
+    fn deny_toml_is_found_as_cargo_deny_finds_it() {
+        // The deny-toml-exists result for a component in `rust/`, given the files in the project.
+        let exists = |files: &[&str]| {
+            let dir = tempfile::tempdir().unwrap();
+            let root = dir.path().join("project");
+            for file in files {
+                let path = root.join(file);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, "[bans]\nmultiple-versions = \"allow\"\n").unwrap();
+            }
+            let component = Component {
+                language: Language::Rust,
+                path: PathBuf::from("rust"),
+            };
+            let project = ProjectContext::new(root.clone());
+            let mut report = Report::new(root, Vec::new());
+            check_cargo_deny(&ComponentContext::new(&project, &component), &mut report);
+            let result = report.results.first().unwrap();
+            assert_eq!(result.id, "deny-toml-exists");
+            (result.name.clone(), result.status)
+        };
+        let exists_as = |name: &str, status| (format!("{name}: exists"), status);
+
+        assert_eq!(exists(&[]), exists_as("deny.toml", Status::Fail));
+        assert_eq!(
+            exists(&["rust/deny.toml", "deny.toml"]),
+            exists_as("deny.toml", Status::Pass)
+        );
+        assert_eq!(
+            exists(&["deny.toml"]),
+            exists_as("../deny.toml", Status::Pass)
+        );
+        // cargo-deny tries deny.toml first within a directory, but any name in a nearer directory.
+        assert_eq!(
+            exists(&["rust/deny.toml", "rust/.deny.toml", "rust/.cargo/deny.toml"]),
+            exists_as("deny.toml", Status::Pass)
+        );
+        assert_eq!(
+            exists(&["rust/.deny.toml", "rust/.cargo/deny.toml", "deny.toml"]),
+            exists_as(".deny.toml", Status::Warn)
+        );
+        assert_eq!(
+            exists(&["rust/.cargo/deny.toml", "deny.toml"]),
+            exists_as(".cargo/deny.toml", Status::Warn)
+        );
+        assert_eq!(
+            exists(&[".cargo/deny.toml"]),
+            exists_as("../.cargo/deny.toml", Status::Warn)
+        );
+        // Neither a file below the component nor one above the project root applies.
+        assert_eq!(
+            exists(&["rust/sub/deny.toml", "../deny.toml"]),
+            exists_as("deny.toml", Status::Fail)
         );
     }
 

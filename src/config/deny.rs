@@ -6,7 +6,21 @@
 //! Only the subset of fields inspected by checks is modeled. The values checks read are kept unparsed, so that a
 //! malformed one fails only the check reading it; a table of the wrong type fails parsing.
 
+use std::path::Path;
+
 use serde::Deserialize;
+
+/// The file that holds cargo-deny's configuration.
+pub(crate) const DENY_TOML: &str = "deny.toml";
+
+/// The other names cargo-deny reads its configuration from, after [`DENY_TOML`] within one directory, in the order it
+/// tries them. The standard doesn't use them.
+pub(crate) const OTHER_DENY_TOMLS: [&str; 2] = [".deny.toml", ".cargo/deny.toml"];
+
+/// Whether `path` names one of the [`OTHER_DENY_TOMLS`] rather than [`DENY_TOML`].
+pub(crate) fn is_other_deny_toml(path: &Path) -> bool {
+    OTHER_DENY_TOMLS.iter().any(|name| path.ends_with(name))
+}
 
 /// Top-level `deny.toml` structure.
 #[derive(Debug, Deserialize, Default)]
