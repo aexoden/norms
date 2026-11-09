@@ -621,8 +621,9 @@ expression.
 
 `norms verify` leaves these rules to zizmor's pedantic persona, which flags
 unpinned actions, missing or broad permissions and persisted credentials. It
-checks only that the hook and the CI job run zizmor with that persona, or the
-stricter `auditor` one, and that the action sets `advanced-security: false`.
+checks only that the hook and the CI job run zizmor with that persona, written
+as `--pedantic` on a command line and `persona: pedantic` for the action, and
+that the action sets `advanced-security: false`.
 
 ## Pre-Commit Hooks
 

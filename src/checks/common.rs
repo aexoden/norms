@@ -762,7 +762,7 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "precommit-zizmor",
         "Pre-commit: zizmor hook (pedantic)",
         config.commit_hooks("zizmor").and_then(|hooks| {
-            if hooks.into_iter().any(zizmor_hook_strict) {
+            if hooks.into_iter().any(zizmor_hook_pedantic) {
                 Ok(())
             } else {
                 Err(Issue::warn("The zizmor hook doesn't pass --pedantic"))
@@ -1178,34 +1178,17 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
 // zizmor
 //
 
-/// The zizmor personas that report at least what the pedantic one does: pedantic itself, and auditor.
-const STRICT_ZIZMOR_PERSONAS: [&str; 2] = ["pedantic", "auditor"];
-
-/// Whether zizmor's command-line arguments select a persona at least as strict as pedantic: `--pedantic` (or `-p`), or
-/// `--persona` naming one, as `--persona=<name>` or `--persona <name>`.
-fn zizmor_args_strict<'a>(args: impl IntoIterator<Item = &'a str>) -> bool {
-    let mut args = args.into_iter();
-    while let Some(arg) = args.next() {
-        let persona = match arg {
-            "--pedantic" | "-p" => return true,
-            "--persona" => args.next(),
-            _ => arg.strip_prefix("--persona="),
-        };
-        if persona.is_some_and(|persona| STRICT_ZIZMOR_PERSONAS.contains(&persona)) {
-            return true;
-        }
-    }
-    false
+/// Whether the words of a command run zizmor with its pedantic persona, passing `--pedantic`.
+fn zizmor_command_pedantic(words: &[&str]) -> Option<bool> {
+    let start = words.iter().position(|word| is_zizmor_command(word))?;
+    Some(words.iter().skip(start + 1).any(|arg| *arg == "--pedantic"))
 }
 
-/// Whether a zizmor hook runs a persona at least as strict as pedantic, from its entry and the args pre-commit appends
-/// to it. A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
-fn zizmor_hook_strict(hook: &PrecommitHook) -> bool {
-    hook.filter_map_commands("zizmor", |words| {
-        let start = words.iter().position(|word| is_zizmor_command(word))?;
-        Some(zizmor_args_strict(words.iter().skip(start + 1).copied()))
-    })
-    .contains(&true)
+/// Whether a zizmor hook runs the pedantic persona, passing `--pedantic` in its entry or the args pre-commit appends to
+/// it. A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
+fn zizmor_hook_pedantic(hook: &PrecommitHook) -> bool {
+    hook.filter_map_commands("zizmor", zizmor_command_pedantic)
+        .contains(&true)
 }
 
 /// Whether a word of a shell command invokes zizmor: `zizmor`, a path to it, or a versioned `zizmor@x.y.z` as uvx
@@ -1215,27 +1198,23 @@ fn is_zizmor_command(word: &str) -> bool {
     name == "zizmor" || name.starts_with("zizmor@") || name.starts_with("zizmor==")
 }
 
-/// Whether `workflow` runs zizmor so that its findings fail the job, with a persona at least as strict as pedantic:
-/// either a `run` script line invoking it with such a persona, or a `zizmorcore/zizmor-action` step setting one in
-/// `persona` and turning off `advanced-security`, whose default uploads findings to code scanning and passes the job.
+/// Whether `workflow` runs zizmor's pedantic persona so that its findings fail the job: either a `run` script line
+/// invoking it with `--pedantic`, or a `zizmorcore/zizmor-action` step setting `persona: pedantic` and turning off
+/// `advanced-security`, whose default uploads findings to code scanning and passes the job.
 fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut issues = Vec::new();
 
     for line in workflow.run_lines() {
         let words: Vec<&str> = line.split_whitespace().collect();
-        let Some(start) = words.iter().position(|word| is_zizmor_command(word)) else {
-            continue;
-        };
-        if zizmor_args_strict(words.iter().skip(start + 1).copied()) {
-            return Ok(());
+        match zizmor_command_pedantic(&words) {
+            Some(true) => return Ok(()),
+            Some(false) => issues.push(Issue::warn("A step runs zizmor without --pedantic")),
+            None => {}
         }
-        issues.push(Issue::warn("A step runs zizmor without --pedantic"));
     }
 
     for step in workflow.steps_using("zizmorcore/zizmor-action") {
-        let strict = step
-            .input("persona")
-            .is_some_and(|persona| STRICT_ZIZMOR_PERSONAS.contains(&persona.as_ref()));
+        let strict = step.input("persona").as_deref() == Some("pedantic");
         let gating = step.input("advanced-security").as_deref() == Some("false");
         match (strict, gating) {
             (true, true) => return Ok(()),
@@ -1260,8 +1239,8 @@ fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         ))
     } else {
         issues.dedup();
-        // Each issue is a step's, and the best of them decides: one that fails the job on findings, only with too
-        // lax a persona, makes the check a warning whatever the others do.
+        // Each issue is a step's, and the best of them decides: one that fails the job on findings, only with another
+        // persona than pedantic, makes the check a warning whatever the others do.
         Issue::alternatives(issues)
     }
 }
@@ -2170,46 +2149,39 @@ jobs:
     }
 
     #[test]
-    fn zizmor_args_need_a_strict_persona() {
-        for args in [
-            "--pedantic",
-            "--offline --pedantic",
-            "-p",
-            "--persona=pedantic",
-            "--persona=auditor",
-            "--persona pedantic .",
-        ] {
-            assert!(zizmor_args_strict(args.split_whitespace()), "{args}");
-        }
-        for args in [
-            "",
-            "--offline",
-            "--persona=regular",
-            "--persona",
-            "--persona regular --pedantic-ish",
-            "pedantic",
-        ] {
-            assert!(!zizmor_args_strict(args.split_whitespace()), "{args}");
-        }
-    }
-
-    #[test]
-    fn zizmor_hooks_need_a_strict_persona() {
+    fn zizmor_hooks_need_the_pedantic_flag() {
         let hook = |entry: Option<&str>, args: &[&str]| PrecommitHook {
             id: "zizmor".to_owned(),
             entry: entry.map(str::to_owned),
             args: args.iter().map(|arg| (*arg).to_owned()).collect(),
             ..PrecommitHook::default()
         };
-        assert!(zizmor_hook_strict(&hook(None, &["--pedantic"])));
-        assert!(zizmor_hook_strict(&hook(Some("zizmor --pedantic"), &[])));
-        assert!(zizmor_hook_strict(&hook(
-            Some("uvx zizmor"),
-            &["--persona", "auditor"]
+        assert!(zizmor_hook_pedantic(&hook(None, &["--pedantic"])));
+        assert!(zizmor_hook_pedantic(&hook(
+            None,
+            &["--offline", "--pedantic"]
         )));
-        assert!(!zizmor_hook_strict(&hook(None, &[])));
-        assert!(!zizmor_hook_strict(&hook(Some("zizmor --offline"), &["."])));
-        assert!(!zizmor_hook_strict(&hook(Some("echo --pedantic"), &[])));
+        assert!(zizmor_hook_pedantic(&hook(Some("zizmor --pedantic"), &[])));
+        assert!(zizmor_hook_pedantic(&hook(
+            Some("uvx zizmor"),
+            &["--pedantic"]
+        )));
+        assert!(!zizmor_hook_pedantic(&hook(None, &[])));
+        assert!(!zizmor_hook_pedantic(&hook(
+            Some("zizmor --offline"),
+            &["."]
+        )));
+        assert!(!zizmor_hook_pedantic(&hook(Some("echo --pedantic"), &[])));
+        assert!(!zizmor_hook_pedantic(&hook(None, &["--pedantic-ish"])));
+        // Other spellings of the persona, and the stricter auditor one, aren't the standard's.
+        for args in [
+            &["-p"][..],
+            &["--persona=pedantic"],
+            &["--persona", "pedantic"],
+            &["--persona=auditor"],
+        ] {
+            assert!(!zizmor_hook_pedantic(&hook(None, args)), "{args:?}");
+        }
     }
 
     fn zizmor_in(yaml: &str) -> Result<(), Issue> {
@@ -2222,16 +2194,25 @@ jobs:
         let script = |run: &str| format!("jobs:\n  z:\n    steps:\n      - run: \"{run}\"\n");
         for run in [
             "zizmor --pedantic .",
-            "uvx zizmor@1.32.0 --persona=pedantic --format github .",
+            "uvx zizmor@1.32.0 --pedantic --format github .",
             "echo start\\n  ~/.cargo/bin/zizmor --pedantic .",
             "zizmor --format github \\\\\\n  --pedantic .",
         ] {
             assert_eq!(zizmor_in(&script(run)), Ok(()), "{run}");
         }
-        assert_eq!(
-            zizmor_in(&script("zizmor .")),
-            Err(Issue::warn("A step runs zizmor without --pedantic"))
-        );
+        for run in [
+            "zizmor .",
+            "zizmor -p .",
+            "uvx zizmor@1.32.0 --persona=pedantic .",
+            "zizmor --persona auditor .",
+            "zizmor --pedantic-ish .",
+        ] {
+            assert_eq!(
+                zizmor_in(&script(run)),
+                Err(Issue::warn("A step runs zizmor without --pedantic")),
+                "{run}"
+            );
+        }
         assert_eq!(
             zizmor_in(&script("echo zizmorish --pedantic")),
             Err(Issue::fail(
@@ -2252,8 +2233,12 @@ jobs:
             Ok(())
         );
         assert_eq!(
-            zizmor_in(&step("persona: auditor, advanced-security: \"false\"")),
+            zizmor_in(&step("persona: pedantic, advanced-security: \"false\"")),
             Ok(())
+        );
+        assert_eq!(
+            zizmor_in(&step("persona: auditor, advanced-security: false")),
+            Err(Issue::warn("zizmor-action doesn't set persona: pedantic"))
         );
         assert_eq!(
             zizmor_in(&step("advanced-security: false")),
