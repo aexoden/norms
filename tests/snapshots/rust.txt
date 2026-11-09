@@ -92,7 +92,7 @@ pass  deny-toml-exists  [.] deny.toml: exists
 pass  deny-toml-valid  [.] deny.toml: valid
 pass  deny-toml-multiple-versions  [.] deny.toml: multiple versions allowed (bans)
 pass  deny-toml-ignore-reasons  [.] deny.toml: every ignored advisory has a reason
-pass  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+pass  cargo-lock-exists  [.] Rust: Cargo.lock committed (binary)
 pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid
 pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)

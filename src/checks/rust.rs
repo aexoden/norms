@@ -338,7 +338,7 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
     if is_application(ctx, config) {
         report.must(
             "cargo-lock-exists",
-            "Rust: Cargo.lock comitted (binary)",
+            "Rust: Cargo.lock committed (binary)",
             file_exists(&ctx.path().join("Cargo.lock")),
         );
     }

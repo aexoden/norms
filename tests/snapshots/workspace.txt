@@ -78,7 +78,7 @@ fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
 fail  deny-toml-exists  [.] deny.toml: exists
       File not found
-fail  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+fail  cargo-lock-exists  [.] Rust: Cargo.lock committed (binary)
       Not found: Cargo.lock
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found

@@ -413,7 +413,7 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
         report.must(
             "ruff-configured",
             "Ruff: configured",
-            Outcome::fail("Missing [tool.ruff] in pyrpoject.toml"),
+            Outcome::fail("Missing [tool.ruff] in pyproject.toml"),
         );
         return;
     };

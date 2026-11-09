@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Common checks that apply to all projects reqgardless of language.
+//! Common checks that apply to all projects regardless of language.
 
 use std::borrow::Cow;
 use std::collections::BTreeSet;

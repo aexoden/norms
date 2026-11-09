@@ -56,7 +56,7 @@ warn  uv-required-version  [python-app] uv: required-version sets the oldest uv 
 pass  python-dependency-groups  [python-app] Python: has dependency-groups
 pass  python-dev-group  [python-app] Python: has dev dependency group
 fail  ruff-configured  [python-app] Ruff: configured
-      Missing [tool.ruff] in pyrpoject.toml
+      Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [python-app] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [python-app] mypy: configured
@@ -110,7 +110,7 @@ fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
 fail  deny-toml-exists  [.] deny.toml: exists
       File not found
-fail  cargo-lock-exists  [.] Rust: Cargo.lock comitted (binary)
+fail  cargo-lock-exists  [.] Rust: Cargo.lock committed (binary)
       Not found: Cargo.lock
 pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid

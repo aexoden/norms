@@ -78,7 +78,7 @@ pass  uv-required-version-ci  [api] uv: CI's pinned uv satisfies required-versio
 warn  python-dependency-groups  [api] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [api] Ruff: configured
-      Missing [tool.ruff] in pyrpoject.toml
+      Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [api] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [api] mypy: configured
@@ -104,7 +104,7 @@ pass  uv-required-version-ci  [service] uv: CI's pinned uv satisfies required-ve
 warn  python-dependency-groups  [service] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [service] Ruff: configured
-      Missing [tool.ruff] in pyrpoject.toml
+      Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [service] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [service] mypy: configured
@@ -141,7 +141,7 @@ fail  uv-required-version-ci  [tool] uv: CI's pinned uv satisfies required-versi
 warn  python-dependency-groups  [tool] Python: has dependency-groups
       Consider using dependency-groups for dev dependencies
 fail  ruff-configured  [tool] Ruff: configured
-      Missing [tool.ruff] in pyrpoject.toml
+      Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [tool] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [tool] mypy: configured
