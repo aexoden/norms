@@ -90,12 +90,6 @@ impl Outcome {
     pub(crate) fn fail(msg: impl Into<String>) -> Self {
         Self::Issue(msg.into())
     }
-
-    /// Returns `true` if this outcome is a pass.
-    #[expect(dead_code, reason = "placeholder for future use in conditional logic")]
-    pub(crate) const fn is_pass(&self) -> bool {
-        matches!(self, Self::Pass)
-    }
 }
 
 /// How serious an [`Issue`] is: whether its check fails or warns.
@@ -196,16 +190,6 @@ pub(crate) fn file_exists(path: &Path) -> Outcome {
             "Not found: {}",
             path.file_name().unwrap_or_default().to_string_lossy()
         ))
-    }
-}
-
-/// Check whether a string contains a given pattern.
-#[expect(dead_code, reason = "placeholder for future use in content checks")]
-pub(crate) fn contains(haystack: &str, needle: &str) -> Outcome {
-    if haystack.contains(needle) {
-        Outcome::Pass
-    } else {
-        Outcome::fail(format!("Missing: {needle}"))
     }
 }
 
@@ -381,7 +365,7 @@ impl Report {
                 self.must(exists, exists_name, Outcome::fail("File not found"));
                 None
             }
-            ConfigStatus::ParseError { error, .. } => {
+            ConfigStatus::ParseError { error } => {
                 self.must(exists, exists_name, Outcome::Pass);
                 self.must(valid, valid_name, Outcome::fail(error.clone()));
                 None
@@ -592,7 +576,6 @@ mod tests {
     fn require_parsed_derives_ids_from_prefix() {
         let mut report = Report::new(PathBuf::new(), Vec::new());
         let status = ConfigStatus::<()>::ParseError {
-            raw: String::new(),
             error: "bad".into(),
         };
 

@@ -56,8 +56,8 @@ any check failed or warned.
 
 - `context.rs`: `ProjectContext` lazily parses each config file at most once
   (`OnceLock`) and returns a `ConfigStatus<T>` (`NotFound`, `ParseError` with
-  the raw text, or `Ok`). Checks share parsed data through it rather than
-  reading files themselves. It holds the repository-wide files and the detected
+  the error, or `Ok`). Checks share parsed data through it rather than reading
+  files themselves. It holds the repository-wide files and the detected
   components; each component's own files (`Cargo.toml`, `package.json`, ...)
   are in a `ComponentContext` rooted at the component's directory, one per
   component, which `ProjectContext::component_contexts` caches so that every

@@ -236,7 +236,7 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, config: &TsConfig, repo
                     Outcome::fail("Referenced config not found"),
                 );
             }
-            ConfigStatus::ParseError { error, .. } => {
+            ConfigStatus::ParseError { error } => {
                 report.must(
                     "tsconfig-reference-exists",
                     format!("{name}: exists"),

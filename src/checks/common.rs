@@ -166,7 +166,7 @@ pub(crate) fn check_agent_guidance(ctx: &ProjectContext, report: &mut Report) {
     }
     let outcome = match ctx.claude_md() {
         ConfigStatus::NotFound => return,
-        ConfigStatus::ParseError { error, .. } => Err(error.clone()),
+        ConfigStatus::ParseError { error } => Err(error.clone()),
         ConfigStatus::Ok(_) if same_file(&ctx.path().join("CLAUDE.md"), &agents) => Ok(()),
         ConfigStatus::Ok(content) if imports_agents(content) => Ok(()),
         ConfigStatus::Ok(_) => Err(
@@ -1401,7 +1401,7 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
             format!("CI: {name}: valid"),
             match status {
                 ConfigStatus::NotFound => Outcome::fail("File not found"),
-                ConfigStatus::ParseError { error, .. } => Outcome::fail(error.clone()),
+                ConfigStatus::ParseError { error } => Outcome::fail(error.clone()),
                 ConfigStatus::Ok(_) => Outcome::Pass,
             },
         );

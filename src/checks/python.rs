@@ -59,7 +59,7 @@ pub(crate) fn check_python_version(ctx: &ComponentContext, report: &mut Report) 
     // it, but it isn't the exact version the standards ask for.
     let exact = match ctx.python_version() {
         ConfigStatus::NotFound => return,
-        ConfigStatus::ParseError { error, .. } => Err(error.clone()),
+        ConfigStatus::ParseError { error } => Err(error.clone()),
         ConfigStatus::Ok(version) => check_python_version_exact(version),
     };
     report.should(
@@ -203,7 +203,7 @@ pub(crate) fn check_git_archival(
         match ctx.git_archival() {
             ConfigStatus::Ok(content) => check_git_archival_content(content).map_err(Issue::warn),
             ConfigStatus::NotFound => Err(Issue::fail(format!("Not found: {GIT_ARCHIVAL}"))),
-            ConfigStatus::ParseError { error, .. } => Err(Issue::fail(error.clone())),
+            ConfigStatus::ParseError { error } => Err(Issue::fail(error.clone())),
         },
     );
 

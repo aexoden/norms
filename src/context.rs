@@ -14,14 +14,23 @@
 //! or pass to [`Report::require_parsed`](crate::report::Report::require_parsed).
 //!
 //! ```ignore
-//! fn check_devbox_packages(ctx: &ProjectContext, report: &mut Report) {
+//! fn check_devbox(ctx: &ProjectContext, report: &mut Report) {
 //!     // This call is free if another check already triggered the parse.
-//!     let Some(config) = report.require_parsed("devbox.json", ctx.devbox()) else { return };
-//!     report.should("devbox.json: has packages", !config.packages.is_empty());
+//!     let status = ctx.devbox();
+//!     // Devbox is optional, so a project without it has nothing to check.
+//!     if matches!(status, ConfigStatus::NotFound) {
+//!         return;
+//!     }
+//!     let Some(config) = report.require_parsed("devbox", "devbox.json", status) else {
+//!         return;
+//!     };
+//!     report.should(
+//!         "devbox-packages",
+//!         "devbox.json: has packages",
+//!         !config.packages.is_empty(),
+//!     );
 //! }
 //! ```
-//!
-//! NOTE: This specific Devbox functionality does not yet exist -- this is more of a planning note.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -59,17 +68,13 @@ pub(crate) const LEGACY_RUST_TOOLCHAIN: &str = "rust-toolchain";
 /// The result of attempting to read and parse a config file.
 ///
 /// This three-state enum lets checks distinguish between "file missing",
-/// "file present but malformed", and "file present and valid". The raw content
-/// is preserved in the `ParseError` variant so that checks can still do
-/// text-level matching even if structured parsing failed.
+/// "file present but malformed", and "file present and valid".
 #[derive(Debug)]
 pub(crate) enum ConfigStatus<T> {
     /// The file does not exist.
     NotFound,
     /// The file exists but could not be parsed.
     ParseError {
-        /// The raw file content (useful for fallback text matching).
-        raw: String,
         /// A human-readable description of the parse error.
         error: String,
     },
@@ -83,15 +88,6 @@ impl<T> ConfigStatus<T> {
         match self {
             Self::Ok(v) => Some(v),
             Self::NotFound | Self::ParseError { .. } => None,
-        }
-    }
-
-    /// Get the raw file content if the file exists (regardless of parse success).
-    #[expect(dead_code, reason = "placeholder for future config getters")]
-    pub(crate) fn raw_content(&self) -> Option<&str> {
-        match self {
-            Self::ParseError { raw, .. } => Some(raw),
-            Self::NotFound | Self::Ok(_) => None,
         }
     }
 }
@@ -523,9 +519,9 @@ impl ComponentContext {
             .get_or_init(|| match read_text_file(&self.path.join(PYTHON_VERSION)) {
                 ConfigStatus::Ok(raw) => match parse_python_version(&raw) {
                     Ok(version) => ConfigStatus::Ok(version),
-                    Err(error) => ConfigStatus::ParseError { raw, error },
+                    Err(error) => ConfigStatus::ParseError { error },
                 },
-                ConfigStatus::ParseError { raw, error } => ConfigStatus::ParseError { raw, error },
+                ConfigStatus::ParseError { error } => ConfigStatus::ParseError { error },
                 ConfigStatus::NotFound => ConfigStatus::NotFound,
             })
     }
@@ -626,7 +622,6 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
     match fs::read_to_string(path) {
         Ok(content) => ConfigStatus::Ok(content),
         Err(e) => ConfigStatus::ParseError {
-            raw: String::new(),
             error: format!("Could not read file: {e}"),
         },
     }
@@ -654,7 +649,6 @@ pub(crate) fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> Co
         Ok(s) => s,
         Err(e) => {
             return ConfigStatus::ParseError {
-                raw: String::new(),
                 error: format!("Could not read file: {e}"),
             };
         }
@@ -663,7 +657,6 @@ pub(crate) fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> Co
     match toml::from_str::<T>(&raw) {
         Ok(value) => ConfigStatus::Ok(value),
         Err(e) => ConfigStatus::ParseError {
-            raw,
             error: format!("Invalid TOML: {e}"),
         },
     }
@@ -679,7 +672,6 @@ fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus
         Ok(s) => s,
         Err(e) => {
             return ConfigStatus::ParseError {
-                raw: String::new(),
                 error: format!("Could not read file: {e}"),
             };
         }
@@ -688,7 +680,6 @@ fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus
     match json5::from_str(&raw) {
         Ok(value) => ConfigStatus::Ok(value),
         Err(e) => ConfigStatus::ParseError {
-            raw,
             error: format!("Invalid JSON: {e}"),
         },
     }
@@ -704,7 +695,6 @@ fn parse_yaml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<
         Ok(s) => s,
         Err(e) => {
             return ConfigStatus::ParseError {
-                raw: String::new(),
                 error: format!("Could not read file: {e}"),
             };
         }
@@ -713,7 +703,6 @@ fn parse_yaml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<
     match serde_saphyr::from_str(&raw) {
         Ok(value) => ConfigStatus::Ok(value),
         Err(e) => ConfigStatus::ParseError {
-            raw,
             error: format!("Invalid YAML: {e}"),
         },
     }
