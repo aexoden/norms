@@ -565,9 +565,10 @@ tests, such as Clippy, mypy, ESLint and the test suites, and 10 for the rest. A
 project whose jobs legitimately take longer raises the value for those jobs.
 Jobs on `ubuntu-slim` can't exceed its own 15-minute limit.
 
-`ci.yaml` runs on pushes to `main` and `dev`, as `push: branches: [dev, main]`
-does, whether or not the project keeps a `dev` branch (see
-[Branches](#branches)).
+`ci.yaml` runs on pushes to `main` and `dev`, naming both in
+`push: branches: [dev, main]` rather than matching them with patterns, whether
+or not the project keeps a `dev` branch (see [Branches](#branches)). A `push`
+without a branch filter, which runs on every branch, also does.
 
 `ci.yaml` never filters `pull_request` by `paths` or `branches` (or their
 `-ignore` forms), nor limits its `types` to fewer than the default `opened`,

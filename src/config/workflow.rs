@@ -11,7 +11,6 @@ use github_actions_expressions::context::Context;
 use github_actions_expressions::literal::Literal;
 use github_actions_expressions::op::{BinExpr, BinOp};
 use github_actions_expressions::{Expr, SpannedExpr};
-use globset::{GlobBuilder, GlobMatcher};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
@@ -32,36 +31,16 @@ fn value_text(value: &Value) -> Option<Cow<'_, str>> {
     }
 }
 
-/// The patterns of a push trigger's `branches` or `branches-ignore`, a list of them or a single one, each as whether
-/// it is negated with `!` and the glob the rest compiles to. A filter that isn't a pattern or a list of them fails,
-/// since GitHub rejects the workflow, and a pattern globset can't compile warns, since GitHub's syntax differs.
-fn branch_patterns(patterns: &Value) -> Result<Vec<(bool, GlobMatcher)>, Issue> {
-    let patterns = match patterns {
-        Value::String(pattern) => vec![pattern.as_str()],
-        Value::Array(patterns) => patterns.iter().filter_map(Value::as_str).collect(),
-        Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => {
-            return Err(Issue::fail(
-                "push's branch filter isn't a list of patterns, which GitHub rejects",
-            ));
-        }
-    };
-    patterns
-        .into_iter()
-        .map(|pattern| {
-            let (negated, glob) = pattern
-                .strip_prefix('!')
-                .map_or((false, pattern), |rest| (true, rest));
-            GlobBuilder::new(glob)
-                .literal_separator(true)
-                .build()
-                .map(|glob| (negated, glob.compile_matcher()))
-                .map_err(|error| {
-                    Issue::warn(format!(
-                        "push's branch pattern {pattern} is invalid: {error}"
-                    ))
-                })
-        })
-        .collect()
+/// The patterns of a push trigger's `branches` or `branches-ignore`, a list of them or a single one, as written. A
+/// filter that isn't a pattern or a list of them fails, since GitHub rejects the workflow.
+fn branch_patterns(patterns: &Value) -> Result<Vec<&str>, Issue> {
+    match patterns {
+        Value::String(pattern) => Ok(vec![pattern.as_str()]),
+        Value::Array(patterns) => Ok(patterns.iter().filter_map(Value::as_str).collect()),
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => Err(Issue::fail(
+            "push's branch filter isn't a list of patterns, which GitHub rejects",
+        )),
+    }
 }
 
 /// The results a needed job can have other than `success`, each of which must fail the gate.
@@ -395,14 +374,12 @@ impl Workflow {
             .is_none_or(|directory| matches!(directory.as_str(), Some("." | "./")))
     }
 
-    /// Whether the workflow runs on pushes to each of `branches`: `on` names `push`, and any branch filters it sets let
-    /// each branch through. A `branches` list runs a branch whose last matching pattern isn't negated with `!`, and
-    /// `branches-ignore` runs one that no pattern matches, a leading `!` there being dropped. Patterns are matched as
-    /// globset's globs, in which `*` stops at `/` and `**` doesn't, as in GitHub's. They differ from GitHub's in rarer
-    /// syntax, which isn't read as GitHub reads it: GitHub's `?` and `+` repeat the character before them, its `**/`
-    /// needs a `/`, where globset's also matches none, and it has no `{a,b}` alternation. A `push` filtered only by
-    /// `tags` or `tags-ignore` runs on no branch. A filter GitHub rejects, which stops the whole workflow from running,
-    /// fails, and any other issue warns.
+    /// Whether the workflow runs on pushes to each of `branches`, naming each in its filter: `on` names `push`, either
+    /// without a branch filter or with a `branches` list that has each branch's name as one of its patterns. Patterns
+    /// are compared as written rather than matched as globs, whose syntax GitHub reads differently from glob crates, so
+    /// a glob such as `'**'` or a negated `'!dev'` names no branch, and `branches-ignore` warns. A `push`
+    /// filtered only by `tags` or `tags-ignore` runs on no branch. A filter GitHub rejects, which stops the whole
+    /// workflow from running, fails, and any other issue warns.
     pub(crate) fn runs_on_push_to(&self, branches: &[&str]) -> Result<(), Issue> {
         let not_run = || Err(Issue::warn("Doesn't run on push"));
         let config = match &self.on {
@@ -420,27 +397,19 @@ impl Workflow {
             return Ok(());
         };
 
-        let included = config.get("branches");
-        let ignored = config.get("branches-ignore");
-        let runs: Box<dyn Fn(&str) -> bool> = match (included, ignored) {
+        let listed = match (config.get("branches"), config.get("branches-ignore")) {
             (Some(_), Some(_)) => {
                 return Err(Issue::fail(
                     "push sets both branches and branches-ignore, which GitHub rejects",
                 ));
             }
-            (Some(patterns), None) => {
-                let patterns = branch_patterns(patterns)?;
-                Box::new(move |branch| {
-                    patterns
-                        .iter()
-                        .rev()
-                        .find(|(_, glob)| glob.is_match(branch))
-                        .is_some_and(|(negated, _)| !negated)
-                })
-            }
+            (Some(patterns), None) => branch_patterns(patterns)?,
             (None, Some(patterns)) => {
-                let patterns = branch_patterns(patterns)?;
-                Box::new(move |branch| !patterns.iter().any(|(_, glob)| glob.is_match(branch)))
+                branch_patterns(patterns)?;
+                return Err(Issue::warn(format!(
+                    "push sets branches-ignore rather than naming {} in branches",
+                    branches.join(", ")
+                )));
             }
             (None, None) if config.contains_key("tags") || config.contains_key("tags-ignore") => {
                 return Err(Issue::warn(
@@ -453,13 +422,13 @@ impl Workflow {
         let missing: Vec<_> = branches
             .iter()
             .copied()
-            .filter(|branch| !runs(branch))
+            .filter(|branch| !listed.contains(branch))
             .collect();
         if missing.is_empty() {
             Ok(())
         } else {
             Err(Issue::warn(format!(
-                "push doesn't run on {}",
+                "push's branches don't name {}",
                 missing.join(", ")
             )))
         }
@@ -1161,50 +1130,43 @@ jobs:
             "on: [push, pull_request]\n",
             "on:\n  push:\n",
             "on:\n  push:\n    branches: [dev, main]\n",
-            "on:\n  push:\n    branches: ['**']\n",
-            "on:\n  push:\n    branches: ['*', '!release/*']\n",
-            "on:\n  push:\n    branches: ['!dev', '*']\n",
+            "on:\n  push:\n    branches: [main, 'release/*', dev]\n",
             "on:\n  push:\n    branches: [main, dev]\n    tags: ['v*']\n",
-            "on:\n  push:\n    branches-ignore: ['renovate/**']\n",
             "on:\n  push:\n    paths: [src]\n",
         ] {
             assert_eq!(runs(yaml), Ok(()), "{yaml}");
         }
+        let neither = Issue::warn("push's branches don't name main, dev");
         for (yaml, issue) in [
             ("on: pull_request\n", Issue::warn("Doesn't run on push")),
             ("name: CI\n", Issue::warn("Doesn't run on push")),
             ("on:\n  pull_request:\n", Issue::warn("Doesn't run on push")),
             (
                 "on:\n  push:\n    branches: [main]\n",
-                Issue::warn("push doesn't run on dev"),
+                Issue::warn("push's branches don't name dev"),
             ),
             (
                 "on:\n  push:\n    branches: main\n",
-                Issue::warn("push doesn't run on dev"),
+                Issue::warn("push's branches don't name dev"),
             ),
             (
-                "on:\n  push:\n    branches: ['*/**']\n",
-                Issue::warn("push doesn't run on main, dev"),
+                "on:\n  push:\n    branches: [main, 'd*']\n",
+                Issue::warn("push's branches don't name dev"),
             ),
+            ("on:\n  push:\n    branches: ['**']\n", neither.clone()),
             (
-                "on:\n  push:\n    branches: []\n",
-                Issue::warn("push doesn't run on main, dev"),
+                "on:\n  push:\n    branches: ['*', '!release/*']\n",
+                neither.clone(),
             ),
+            ("on:\n  push:\n    branches: []\n", neither.clone()),
+            ("on:\n  push:\n    branches: ['!main', '!dev']\n", neither),
             (
-                "on:\n  push:\n    branches: ['!main', '!dev']\n",
-                Issue::warn("push doesn't run on main, dev"),
+                "on:\n  push:\n    branches-ignore: ['renovate/**']\n",
+                Issue::warn("push sets branches-ignore rather than naming main, dev in branches"),
             ),
             (
                 "on:\n  push:\n    branches-ignore: dev\n",
-                Issue::warn("push doesn't run on dev"),
-            ),
-            (
-                "on:\n  push:\n    branches: ['*', '!dev']\n",
-                Issue::warn("push doesn't run on dev"),
-            ),
-            (
-                "on:\n  push:\n    branches-ignore: [d*]\n",
-                Issue::warn("push doesn't run on dev"),
+                Issue::warn("push sets branches-ignore rather than naming main, dev in branches"),
             ),
             (
                 "on:\n  push:\n    tags: ['v*']\n",
@@ -1216,6 +1178,10 @@ jobs:
             ),
             (
                 "on:\n  push:\n    branches: {main: true}\n",
+                Issue::fail("push's branch filter isn't a list of patterns, which GitHub rejects"),
+            ),
+            (
+                "on:\n  push:\n    branches-ignore: {main: true}\n",
                 Issue::fail("push's branch filter isn't a list of patterns, which GitHub rejects"),
             ),
         ] {
