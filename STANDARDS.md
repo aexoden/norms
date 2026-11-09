@@ -1295,10 +1295,17 @@ it replaced in pnpm 11, such as `onlyBuiltDependencies`, which pnpm ignores.
 "noFallthroughCasesInSwitch": true,
 "noUnusedLocals": true,
 "noUnusedParameters": true,
-"isolatedModules": true,
 "verbatimModuleSyntax": true,
+"erasableSyntaxOnly": true,
 "moduleDetection": "force"
 ```
+
+`verbatimModuleSyntax` implies `isolatedModules`, which therefore need not be
+set. `erasableSyntaxOnly` rejects the TypeScript syntax that has effects at
+runtime, such as enums, namespaces and parameter properties, so that removing
+the types leaves working JavaScript, as Node's type stripping requires. The
+application sets it too, so that all of the project's TypeScript is written the
+same way, and any of it could run without a build step.
 
 The module settings follow what loads each config's files. Vite bundles the
 application, so `tsconfig.app.json` sets `"module": "esnext"` and

@@ -143,7 +143,7 @@ pass  tsconfig-no-fallthrough-cases-in-switch  [frontend] tsconfig.app.json: noF
 pass  tsconfig-no-unused-locals  [frontend] tsconfig.app.json: noUnusedLocals enabled
 pass  tsconfig-no-unused-parameters  [frontend] tsconfig.app.json: noUnusedParameters enabled
 pass  tsconfig-module-detection  [frontend] tsconfig.app.json: moduleDetection is force
-pass  tsconfig-isolated-modules  [frontend] tsconfig.app.json: isolatedModules enabled
+pass  tsconfig-erasable-syntax-only  [frontend] tsconfig.app.json: erasableSyntaxOnly enabled
 pass  tsconfig-reference-exists  [frontend] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [frontend] tsconfig.node.json: valid
 pass  tsconfig-strict  [frontend] tsconfig.node.json: strict mode enabled
@@ -159,7 +159,7 @@ pass  tsconfig-no-fallthrough-cases-in-switch  [frontend] tsconfig.node.json: no
 pass  tsconfig-no-unused-locals  [frontend] tsconfig.node.json: noUnusedLocals enabled
 pass  tsconfig-no-unused-parameters  [frontend] tsconfig.node.json: noUnusedParameters enabled
 pass  tsconfig-module-detection  [frontend] tsconfig.node.json: moduleDetection is force
-pass  tsconfig-isolated-modules  [frontend] tsconfig.node.json: isolatedModules enabled
+pass  tsconfig-erasable-syntax-only  [frontend] tsconfig.node.json: erasableSyntaxOnly enabled
 pass  eslint-config-exists  [frontend] eslint.config.ts: exists
 pass  eslint-config-valid  [frontend] eslint.config.ts: valid
 pass  eslint-strict-type-checked  [frontend] ESLint: includes typescript-eslint's strictTypeChecked

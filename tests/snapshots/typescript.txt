@@ -104,7 +104,7 @@ pass  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.app.json: noFallthro
 pass  tsconfig-no-unused-locals  [.] tsconfig.app.json: noUnusedLocals enabled
 pass  tsconfig-no-unused-parameters  [.] tsconfig.app.json: noUnusedParameters enabled
 pass  tsconfig-module-detection  [.] tsconfig.app.json: moduleDetection is force
-pass  tsconfig-isolated-modules  [.] tsconfig.app.json: isolatedModules enabled
+pass  tsconfig-erasable-syntax-only  [.] tsconfig.app.json: erasableSyntaxOnly enabled
 pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
 pass  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
@@ -120,7 +120,7 @@ pass  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.node.json: noFallthr
 pass  tsconfig-no-unused-locals  [.] tsconfig.node.json: noUnusedLocals enabled
 pass  tsconfig-no-unused-parameters  [.] tsconfig.node.json: noUnusedParameters enabled
 pass  tsconfig-module-detection  [.] tsconfig.node.json: moduleDetection is force
-pass  tsconfig-isolated-modules  [.] tsconfig.node.json: isolatedModules enabled
+pass  tsconfig-erasable-syntax-only  [.] tsconfig.node.json: erasableSyntaxOnly enabled
 pass  eslint-config-exists  [.] eslint.config.ts: exists
 pass  eslint-config-valid  [.] eslint.config.ts: valid
 pass  eslint-strict-type-checked  [.] ESLint: includes typescript-eslint's strictTypeChecked

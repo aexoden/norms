@@ -70,7 +70,8 @@ warn  tsconfig-no-unused-parameters  [.] tsconfig.app.json: noUnusedParameters e
       noUnusedParameters is false
 warn  tsconfig-module-detection  [.] tsconfig.app.json: moduleDetection is force
       moduleDetection is "auto", not "force"
-pass  tsconfig-isolated-modules  [.] tsconfig.app.json: isolatedModules enabled
+warn  tsconfig-erasable-syntax-only  [.] tsconfig.app.json: erasableSyntaxOnly enabled
+      Missing erasableSyntaxOnly
 pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
 warn  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
@@ -91,7 +92,8 @@ warn  tsconfig-no-fallthrough-cases-in-switch  [.] tsconfig.node.json: noFallthr
 pass  tsconfig-no-unused-locals  [.] tsconfig.node.json: noUnusedLocals enabled
 pass  tsconfig-no-unused-parameters  [.] tsconfig.node.json: noUnusedParameters enabled
 pass  tsconfig-module-detection  [.] tsconfig.node.json: moduleDetection is force
-pass  tsconfig-isolated-modules  [.] tsconfig.node.json: isolatedModules enabled
+warn  tsconfig-erasable-syntax-only  [.] tsconfig.node.json: erasableSyntaxOnly enabled
+      Missing erasableSyntaxOnly
 pass  eslint-config-exists  [.] eslint.config.ts: exists
 pass  eslint-config-valid  [.] eslint.config.ts: valid
 warn  eslint-strict-type-checked  [.] ESLint: includes typescript-eslint's strictTypeChecked

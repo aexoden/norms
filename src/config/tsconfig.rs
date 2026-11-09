@@ -73,7 +73,7 @@ pub(crate) struct TsCompilerOptions {
     pub skip_lib_check: Option<bool>,
     pub force_consistent_casing_in_file_names: Option<bool>,
     pub resolve_json_module: Option<bool>,
-    pub isolated_modules: Option<bool>,
     pub verbatim_module_syntax: Option<bool>,
+    pub erasable_syntax_only: Option<bool>,
     pub allow_importing_ts_extensions: Option<bool>,
 }

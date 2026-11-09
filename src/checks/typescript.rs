@@ -372,12 +372,12 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
         check_module_detection(opts.module_detection.as_deref()),
     );
 
-    // isolatedModules (important for bundler compatibility)
+    // erasableSyntaxOnly, which rejects the syntax that Node's type stripping can't remove
     check_enabled(
-        "tsconfig-isolated-modules",
+        "tsconfig-erasable-syntax-only",
         label,
-        "isolatedModules",
-        opts.isolated_modules,
+        "erasableSyntaxOnly",
+        opts.erasable_syntax_only,
         report,
     );
 }
@@ -1015,14 +1015,14 @@ mod tests {
 
     #[test]
     fn boolean_compiler_options_are_enabled() {
-        assert_eq!(option_enabled("isolatedModules", Some(true)), Ok(()));
+        assert_eq!(option_enabled("erasableSyntaxOnly", Some(true)), Ok(()));
         assert_eq!(
-            option_enabled("isolatedModules", Some(false)),
-            Err("isolatedModules is false".to_owned())
+            option_enabled("erasableSyntaxOnly", Some(false)),
+            Err("erasableSyntaxOnly is false".to_owned())
         );
         assert_eq!(
-            option_enabled("isolatedModules", None),
-            Err("Missing isolatedModules".to_owned())
+            option_enabled("erasableSyntaxOnly", None),
+            Err("Missing erasableSyntaxOnly".to_owned())
         );
     }
 
