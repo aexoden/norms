@@ -11,7 +11,7 @@ fail  reuse-toml-exists  REUSE.toml: exists
       File not found
 pass  changelog-exists  CHANGELOG.md (not needed: no published library or release tag)
 warn  claude-md-imports-agents  CLAUDE.md: imports AGENTS.md
-      AGENTS.md isn't imported: add @AGENTS.md on a line of its own, outside code
+      AGENTS.md isn't imported: add @AGENTS.md at the start of a line of its own, outside code
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
 fail  gitattributes-exists  .gitattributes: exists

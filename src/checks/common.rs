@@ -130,16 +130,12 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
-/// An import of `AGENTS.md` in `CLAUDE.md`: `@AGENTS.md` (or `@./AGENTS.md`) as a word of its own. In a code span, as
-/// in `` `@AGENTS.md` ``, it isn't an import.
-static AGENTS_IMPORT: LazyLock<Regex> = LazyLock::new(|| {
-    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
-    Regex::new(r"(?:^|\s)@(?:\./)?AGENTS\.md(?:\s|$)").unwrap()
-});
+/// The import of `AGENTS.md` in `CLAUDE.md`, as the standards write it on a line of its own.
+const AGENTS_IMPORT: &str = "@AGENTS.md";
 
-/// Whether `content`, the text of a `CLAUDE.md`, imports `AGENTS.md`: a line outside fenced code blocks, which Claude
-/// Code doesn't read imports from, has [`AGENTS_IMPORT`]. Indented code blocks, code spans with other text inside them
-/// and HTML comments, which Claude Code also skips, aren't recognized.
+/// Whether `content`, the text of a `CLAUDE.md`, imports `AGENTS.md` as the standards write it: a line outside fenced
+/// code blocks, which Claude Code doesn't read imports from, is [`AGENTS_IMPORT`] alone, unindented, so that neither
+/// an indented code block nor an import within a sentence, a code span or an HTML comment on that line counts.
 fn imports_agents(content: &str) -> bool {
     let mut fenced = false;
     content.lines().any(|line| {
@@ -148,7 +144,7 @@ fn imports_agents(content: &str) -> bool {
             fenced = !fenced;
             return false;
         }
-        !fenced && AGENTS_IMPORT.is_match(line)
+        !fenced && line.trim_end() == AGENTS_IMPORT
     })
 }
 
@@ -170,7 +166,7 @@ pub(crate) fn check_agent_guidance(ctx: &ProjectContext, report: &mut Report) {
         ConfigStatus::Ok(_) if same_file(&ctx.path().join("CLAUDE.md"), &agents) => Ok(()),
         ConfigStatus::Ok(content) if imports_agents(content) => Ok(()),
         ConfigStatus::Ok(_) => Err(
-            "AGENTS.md isn't imported: add @AGENTS.md on a line of its own, outside code"
+            "AGENTS.md isn't imported: add @AGENTS.md at the start of a line of its own, outside code"
                 .to_owned(),
         ),
     };
@@ -1607,23 +1603,28 @@ mod tests {
     fn claude_md_imports_agents_md() {
         for content in [
             "@AGENTS.md\n",
-            "# CLAUDE.md\n\n@./AGENTS.md\n",
-            "See @AGENTS.md for the commands.\n",
+            "# CLAUDE.md\n\n@AGENTS.md  \n\nUse Claude's tools.\n",
+            "```sh\ncargo test\n```\n\n@AGENTS.md\r\n",
         ] {
             assert!(imports_agents(content), "{content}");
         }
         for content in [
             "",
             "See AGENTS.md.\n",
+            "See @AGENTS.md for the commands.\n",
             "Import it with `@AGENTS.md`.\n",
+            "<!-- @AGENTS.md -->\n",
+            " @AGENTS.md\n",
+            "\t@AGENTS.md\n",
+            "@./AGENTS.md\n",
             "@AGENTS.md.bak\n",
             "@docs/AGENTS.md\n",
+            "To share it, add:\n\n    @AGENTS.md\n",
             "To share it, add:\n\n```markdown\n@AGENTS.md\n```\n",
             "~~~\n@AGENTS.md\n~~~\n",
         ] {
             assert!(!imports_agents(content), "{content}");
         }
-        assert!(imports_agents("```sh\ncargo test\n```\n\n@AGENTS.md\r\n"));
     }
 
     #[cfg(unix)]

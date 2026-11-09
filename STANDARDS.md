@@ -201,7 +201,8 @@ there only the libraries count.
 
 Projects may include an `AGENTS.md` describing the project's commands and
 conventions for AI coding agents. Use `CLAUDE.md` only for instructions specific
-to Claude, and have it import `AGENTS.md` rather than repeat it.
+to Claude, and have it import `AGENTS.md` rather than repeat it, with
+`@AGENTS.md` at the start of a line of its own.
 
 ### Markdown
 
