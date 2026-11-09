@@ -239,6 +239,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   rather than the standard's configs, comments out `strictTypeChecked`, sets
   `project` rather than `projectService`, and takes Prettier's config from
   `eslint-plugin-prettier`.
+  `layout` breaks the layout standards: a TypeScript component has npm's and
+  yarn's lock files beside `pnpm-lock.yaml`, and a Python component's `src/`
+  holds a module and a namespace package, but no package with an
+  `__init__.py`.
   Symlinks and `.gitignore` handling are covered by the unit tests in
   `detection.rs` instead: a fixture's `.gitignore` would also apply to this
   repository, so the files it ignores couldn't be committed.

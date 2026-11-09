@@ -1,0 +1,93 @@
+exit: 1
+languages: python, typescript
+components: python (py), typescript (web)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+fail  reuse-toml-exists  REUSE.toml: exists
+      File not found
+fail  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md, which the project needs because the Python component at py is a published library
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [py] pyproject.toml: exists
+pass  pyproject-valid  [py] pyproject.toml: valid
+pass  pyproject-project  [py] pyproject.toml: has [project] section
+fail  python-version-exists  [py] Python: .python-version
+      Not found: .python-version
+warn  pyproject-python-classifiers  [py] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
+warn  pyproject-version-dynamic  [py] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [py] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [py] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [py] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
+fail  python-git-archival  [py] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
+pass  python-src-layout  [py] Python: src/ directory
+warn  python-src-packages  [py] Python: src/ contains packages
+      src/ holds no package, a directory with an __init__.py
+fail  uv-lock-exists  [py] Python: uv.lock
+      Not found: uv.lock
+warn  uv-exclude-newer  [py] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  uv-required-version  [py] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
+warn  python-dependency-groups  [py] Python: has dependency-groups
+      Missing [dependency-groups]
+fail  ruff-configured  [py] Ruff: configured
+      No [tool] section in pyproject.toml
+fail  ruff-lint-configured  [py] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
+fail  mypy-configured  [py] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+pass  package-json-exists  [web] package.json: exists
+pass  package-json-valid  [web] package.json: valid
+pass  package-json-esm  [web] package.json: uses ESM (type: module)
+pass  package-json-private  [web] package.json: private (application)
+pass  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
+warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
+      Missing devEngines.runtime
+warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
+      Missing devEngines.packageManager
+pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
+pass  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
+warn  pnpm-no-npm-lock  [web] pnpm: no npm lock file
+      Found package-lock.json, though pnpm is the package manager
+warn  pnpm-no-yarn-lock  [web] pnpm: no yarn lock file
+      Found yarn.lock, though pnpm is the package manager
+fail  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
+      File not found
+fail  tsconfig-exists  [web] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [web] eslint.config.ts: exists
+      File not found
+fail  eslint-dependency  [web] ESLint: in dependencies
+fail  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
+      typescript-eslint isn't in dependencies
+fail  prettier-config-exists  [web] .prettierrc: exists
+      File not found
+fail  prettier-ignore-exists  [web] Prettier: .prettierignore exists
+      Not found: .prettierignore
+fail  prettier-dependency  [web] Prettier: in dependencies
+warn  package-json-scripts  [web] package.json: has scripts
+      No scripts defined in package.json

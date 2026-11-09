@@ -315,7 +315,11 @@ pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
     report.should(
         "python-src-packages",
         "Python: src/ contains packages",
-        has_packages,
+        if has_packages {
+            Outcome::Pass
+        } else {
+            Outcome::fail("src/ holds no package, a directory with an __init__.py")
+        },
     );
 }
 
