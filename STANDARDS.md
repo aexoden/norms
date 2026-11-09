@@ -704,12 +704,14 @@ Every project uses these hooks:
 - [norms](https://github.com/aexoden/norms): `norms-commit-msg`, also in the
   `commit-msg` stage, which rejects a subject over 72 characters or a body line
   over 72 characters, unless the body line holds a URL. Like git's default
-  cleanup, it leaves out lines starting with `#` and the diff
-  `git commit --verbose` adds. The subject is the first paragraph, its lines
-  joined as `git log` shows them, less the `fixup!`, `squash!` and `amend!`
-  prefixes that `git rebase --autosquash` removes; a merge subject git writes,
-  starting with `Merge`, may be of any length. CI applies the same rules to
-  pull request titles (see [Branches](#branches)).
+  cleanup, it leaves out comment lines, which start with `#`, or instead with
+  the `core.commentChar` (or `core.commentString`) git is configured with, and
+  the diff `git commit --verbose` adds. When git opens no editor, as for
+  `git commit -m`, it keeps comment lines, as git does. The subject is the first
+  paragraph, its lines joined as `git log` shows them, less the `fixup!`,
+  `squash!` and `amend!` prefixes that `git rebase --autosquash` removes; a
+  merge subject git writes, starting with `Merge`, may be of any length. CI
+  applies the same rules to pull request titles (see [Branches](#branches)).
 
   `norms-verify`, in the `pre-commit` stage, runs `norms verify` on the whole
   project, whichever files a commit changes. Like the other hooks that check

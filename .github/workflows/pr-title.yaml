@@ -49,8 +49,11 @@ jobs:
 
       # The squash merge's subject is the title followed by the pull request's number. The hooks
       # pass autosquash and merge subjects, which a squash merge keeps, so they're rejected first.
+      # GIT_EDITOR=: tells norms, as git does, that the message wasn't edited, so a title starting
+      # with git's comment character is checked as GitHub keeps it rather than left out.
       - name: Run the commit-msg hooks on the squash merge's subject
         env:
+          GIT_EDITOR: ":"
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}

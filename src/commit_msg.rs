@@ -10,9 +10,13 @@ use regex::Regex;
 /// The longest a subject or body line may be, in characters.
 pub(crate) const MAX_LINE_LENGTH: usize = 72;
 
-/// The line below which `git commit --verbose` puts the diff, which git
-/// removes from the message along with everything after it.
-const SCISSORS: &str = "# ------------------------ >8 ------------------------";
+/// The line below which `git commit --verbose` puts the diff, after the
+/// comment string, which git removes from the message along with everything
+/// after it.
+const SCISSORS: &str = " ------------------------ >8 ------------------------";
+
+/// The comment string git uses unless configured otherwise.
+pub(crate) const DEFAULT_COMMENT: &str = "#";
 
 /// The prefixes `git commit --fixup` and `--squash` put before the subject of
 /// the commit they amend, which `git rebase --autosquash` removes.
@@ -40,13 +44,17 @@ pub(crate) struct LongLine {
 /// Returns the lines of a commit message, as git would record it, that are
 /// longer than [`MAX_LINE_LENGTH`].
 ///
-/// The message is read as git's default cleanup leaves it: lines starting with
-/// `#` and everything from the scissors line on are left out. The subject is
-/// the first paragraph, its lines joined by spaces as `git log` shows them. A
-/// subject's autosquash prefixes don't count towards its length, a merge
-/// subject git wrote (starting with `Merge `) may be of any length, as may a
-/// body line holding a URL.
-pub(crate) fn long_lines(message: &str) -> Vec<LongLine> {
+/// The message is read as git's default cleanup leaves it, with `comment` the
+/// comment string. Lines starting with it are left out if the message was
+/// `edited`, but kept if it wasn't, as with `git commit -m`. Everything from
+/// the scissors line on is left out either way: git adds the line only to a
+/// message it edits, but someone who sets `GIT_EDITOR=:` to skip the editor
+/// makes an edited message look unedited to a hook. The subject is the first
+/// paragraph, its lines joined by spaces as `git log` shows them. A subject's
+/// autosquash prefixes don't count towards its length, a merge subject git
+/// wrote (starting with `Merge `) may be of any length, as may a body line
+/// holding a URL.
+pub(crate) fn long_lines(message: &str, comment: &str, edited: bool) -> Vec<LongLine> {
     let mut long = Vec::new();
     // The number of the subject's first line and its lines, until it ends.
     let mut subject: Option<(usize, Vec<&str>)> = None;
@@ -54,8 +62,8 @@ pub(crate) fn long_lines(message: &str) -> Vec<LongLine> {
     let lines = message
         .lines()
         .enumerate()
-        .take_while(|(_, line)| *line != SCISSORS)
-        .filter(|(_, line)| !line.starts_with('#'));
+        .take_while(|(_, line)| line.strip_prefix(comment) != Some(SCISSORS))
+        .filter(|(_, line)| !(edited && line.starts_with(comment)));
     for (index, line) in lines {
         let number = index + 1;
         let line = line.trim_end();
@@ -112,6 +120,11 @@ fn strip_autosquash_prefixes(mut subject: &str) -> &str {
 mod tests {
     use super::*;
 
+    /// The long lines of an edited message, with git's default comment string.
+    fn edited(message: &str) -> Vec<LongLine> {
+        long_lines(message, DEFAULT_COMMENT, true)
+    }
+
     fn subject(number: usize, length: usize) -> LongLine {
         LongLine {
             number,
@@ -131,9 +144,9 @@ mod tests {
     #[test]
     fn accepts_lines_up_to_the_limit() {
         let message = format!("feat: {}\n\n{}\n", "a".repeat(66), "b".repeat(72));
-        assert_eq!(long_lines(&message), []);
-        assert_eq!(long_lines(""), []);
-        assert_eq!(long_lines("\n\n"), []);
+        assert_eq!(edited(&message), []);
+        assert_eq!(edited(""), []);
+        assert_eq!(edited("\n\n"), []);
     }
 
     #[test]
@@ -144,22 +157,19 @@ mod tests {
             "b".repeat(73),
             "c".repeat(80)
         );
-        assert_eq!(
-            long_lines(&message),
-            [subject(1, 73), body(4, 73), body(5, 80)]
-        );
+        assert_eq!(edited(&message), [subject(1, 73), body(4, 73), body(5, 80)]);
     }
 
     #[test]
     fn counts_characters_rather_than_bytes() {
         let message = format!("docs: {}\n\n{}\n", "é".repeat(66), "—".repeat(72));
-        assert_eq!(long_lines(&message), []);
+        assert_eq!(edited(&message), []);
     }
 
     #[test]
     fn ignores_trailing_whitespace_and_crlf() {
         let message = format!("feat: {}  \r\n\r\n{}\t\r\n", "a".repeat(66), "b".repeat(72));
-        assert_eq!(long_lines(&message), []);
+        assert_eq!(edited(&message), []);
     }
 
     #[test]
@@ -170,16 +180,47 @@ mod tests {
             "a".repeat(67),
             "y".repeat(80)
         );
-        assert_eq!(long_lines(&message), [subject(4, 73)]);
+        assert_eq!(edited(&message), [subject(4, 73)]);
     }
 
     #[test]
     fn stops_at_the_scissors_line() {
         let message = format!(
-            "feat: add\n\n{SCISSORS}\ndiff --git a/x b/x\n+{}\n",
+            "feat: add\n\n#{SCISSORS}\ndiff --git a/x b/x\n+{}\n",
             "a".repeat(80)
         );
-        assert_eq!(long_lines(&message), []);
+        assert_eq!(edited(&message), []);
+    }
+
+    #[test]
+    fn keeps_comment_lines_of_a_message_not_edited() {
+        let message = format!(
+            "#{} subject\n\n# {}\n#{SCISSORS}\n+{}\n",
+            "1".repeat(70),
+            "b".repeat(80),
+            "c".repeat(80)
+        );
+        assert_eq!(
+            long_lines(&message, DEFAULT_COMMENT, false),
+            [subject(1, 79), body(3, 82)]
+        );
+    }
+
+    #[test]
+    fn uses_the_comment_string_given() {
+        let message = format!(
+            "feat: add\n\n# {}\n; {}\n;{SCISSORS}\n+{}\n",
+            "a".repeat(80),
+            "b".repeat(80),
+            "c".repeat(80)
+        );
+        assert_eq!(long_lines(&message, ";", true), [body(3, 82)]);
+        // A comment string may be longer than a character.
+        let slashes = format!("feat: add\n\n// {}\n/ {}\n", "a".repeat(80), "b".repeat(80));
+        assert_eq!(long_lines(&slashes, "//", true), [body(4, 82)]);
+        // The scissors line is only git's when it starts with the comment string.
+        let hash_scissors = format!("feat: add\n\n#{SCISSORS}\n{}\n", "c".repeat(80));
+        assert_eq!(long_lines(&hash_scissors, ";", true), [body(4, 80)]);
     }
 
     #[test]
@@ -189,22 +230,22 @@ mod tests {
             "fix: handle it\n\nSee {url}\n[1]: <{url}>\nftp://{}\n",
             "b".repeat(80)
         );
-        assert_eq!(long_lines(&message), []);
+        assert_eq!(edited(&message), []);
 
         let not_url = format!("fix: handle it\n\nnot a url: :// {}\n", "c".repeat(70));
-        assert_eq!(long_lines(&not_url), [body(3, 85)]);
+        assert_eq!(edited(&not_url), [body(3, 85)]);
     }
 
     #[test]
     fn joins_the_lines_of_the_subject() {
         let long = format!("feat: {}\n{}\n\nbody\n", "a".repeat(40), "b".repeat(40));
-        assert_eq!(long_lines(&long), [subject(1, 87)]);
+        assert_eq!(edited(&long), [subject(1, 87)]);
         let short = format!(
             "\nfeat: {}\n# comment\n{}\n",
             "a".repeat(30),
             "b".repeat(30)
         );
-        assert_eq!(long_lines(&short), []);
+        assert_eq!(edited(&short), []);
     }
 
     #[test]
@@ -213,15 +254,15 @@ mod tests {
             "Merge branch 'dev' of https://example.com/{} into dev\n",
             "a".repeat(60)
         );
-        assert_eq!(long_lines(&merge), []);
+        assert_eq!(edited(&merge), []);
         let body_line = format!("Merge branch 'dev'\n\n{}\n", "b".repeat(73));
-        assert_eq!(long_lines(&body_line), [body(3, 73)]);
+        assert_eq!(edited(&body_line), [body(3, 73)]);
     }
 
     #[test]
     fn checks_subjects_with_urls() {
         let message = format!("docs: link https://example.com/{}\n", "a".repeat(60));
-        assert_eq!(long_lines(&message), [subject(1, 91)]);
+        assert_eq!(edited(&message), [subject(1, 91)]);
     }
 
     #[test]
@@ -234,16 +275,10 @@ mod tests {
             "fixup! fixup! ",
             "amend! squash! ",
         ] {
-            assert_eq!(long_lines(&format!("{prefix}{original}\n")), [], "{prefix}");
+            assert_eq!(edited(&format!("{prefix}{original}\n")), [], "{prefix}");
         }
-        assert_eq!(
-            long_lines(&format!("fixup! {original}a\n")),
-            [subject(1, 73)]
-        );
+        assert_eq!(edited(&format!("fixup! {original}a\n")), [subject(1, 73)]);
         // Only a prefix git adds is removed.
-        assert_eq!(
-            long_lines(&format!("Fixup! {original}\n")),
-            [subject(1, 79)]
-        );
+        assert_eq!(edited(&format!("Fixup! {original}\n")), [subject(1, 79)]);
     }
 }

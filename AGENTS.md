@@ -108,7 +108,10 @@ any check failed or warned.
 - `git.rs`: reads the project's release tags, for the changelog check, by
   running `git` with the variables that select a repository cleared. Only a
   project at the top of its repository has any, so the fixtures don't see
-  norms' own tags.
+  norms' own tags. It also reads the comment string for `norms commit-msg`,
+  leaving those variables as git set them for the hook. `cli.rs` tells
+  `commit_msg.rs` whether git opened an editor (it runs the hook with
+  `GIT_EDITOR=:` when it didn't), which decides whether comment lines are kept.
 
 CI's `template` job runs `norms verify --deny-warnings` on each render, so a
 render must have no failures or warnings.

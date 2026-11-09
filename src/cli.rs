@@ -3,9 +3,9 @@
 
 //! Command-line interface.
 
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::{env, fs};
 
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
@@ -14,6 +14,7 @@ use serde::Serialize;
 use crate::checks;
 use crate::commit_msg::{self, MAX_LINE_LENGTH};
 use crate::context::ProjectContext;
+use crate::git;
 use crate::models::Language;
 use crate::report::{CheckResult, Report};
 
@@ -170,9 +171,10 @@ fn verify(path: PathBuf, output_json: bool, deny_warnings: bool) -> anyhow::Resu
 }
 
 /// Describes each line of a commit message that is too long, as
-/// `<file>:<line>: <problem>`.
-fn commit_msg_problems(file: &Path, message: &str) -> Vec<String> {
-    commit_msg::long_lines(message)
+/// `<file>:<line>: <problem>`. See [`commit_msg::long_lines`] for `comment`
+/// and `edited`.
+fn commit_msg_problems(file: &Path, message: &str, comment: &str, edited: bool) -> Vec<String> {
+    commit_msg::long_lines(message, comment, edited)
         .into_iter()
         .map(|line| {
             let what = if line.subject { "subject" } else { "body line" };
@@ -188,7 +190,15 @@ fn commit_msg_problems(file: &Path, message: &str) -> Vec<String> {
 
 fn commit_msg(file: &Path) -> anyhow::Result<ExitCode> {
     let message = fs::read(file).with_context(|| format!("Failed to read {}", file.display()))?;
-    let problems = commit_msg_problems(file, &String::from_utf8_lossy(&message));
+    // git runs a commit-msg hook with `GIT_EDITOR=:` when it opens no editor, as for `git commit -m`, and then keeps
+    // comment lines.
+    let edited = env::var_os("GIT_EDITOR").is_none_or(|editor| editor != ":");
+    let problems = commit_msg_problems(
+        file,
+        &String::from_utf8_lossy(&message),
+        &git::comment_string(),
+        edited,
+    );
     if problems.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
@@ -281,7 +291,7 @@ mod tests {
     fn commit_msg_problems_name_the_file_and_line() {
         let message = format!("feat: {}\n\n{}\n", "a".repeat(70), "b".repeat(73));
         assert_eq!(
-            commit_msg_problems(Path::new(".git/COMMIT_EDITMSG"), &message),
+            commit_msg_problems(Path::new(".git/COMMIT_EDITMSG"), &message, "#", true),
             [
                 ".git/COMMIT_EDITMSG:1: subject is 76 characters long, over 72",
                 ".git/COMMIT_EDITMSG:3: body line is 73 characters long, over 72",

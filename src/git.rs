@@ -9,6 +9,8 @@ use std::sync::LazyLock;
 
 use semver::Version;
 
+use crate::commit_msg::DEFAULT_COMMENT;
+
 /// The project's release tags, `vX.Y.Z` with an optional pre-release or build suffix, sorted by name. Only a project
 /// at the top of a git working tree has any: a directory inside another repository, such as a test fixture, doesn't
 /// share its tags. If git isn't installed or won't read the repository, there are none.
@@ -43,6 +45,23 @@ pub(crate) fn release_tags(path: &Path) -> Vec<String> {
     })
     .map(str::to_owned)
     .collect()
+}
+
+/// The comment string of the repository git is committing to, as `core.commentString` or `core.commentChar` sets it
+/// (whichever is set last), or else `#`. Unlike the other commands here, git runs with the environment it gave the
+/// hook, so that it reads the repository's configuration. `auto`, which picks a character the message doesn't use and
+/// is deprecated, is taken as `#`, which it picks for a message that starts out empty.
+pub(crate) fn comment_string() -> String {
+    output(Command::new("git").args(["config", "--get-regexp", r"^core\.comment(char|string)$"]))
+        .as_deref()
+        .and_then(last_comment_string)
+        .unwrap_or_else(|| DEFAULT_COMMENT.to_owned())
+}
+
+/// The comment string the last line of `git config --get-regexp`'s output sets, if any but `auto`.
+fn last_comment_string(output: &str) -> Option<String> {
+    let (_, value) = output.lines().last()?.split_once(' ')?;
+    (!value.is_empty() && value != "auto").then(|| value.to_owned())
 }
 
 /// The output of `git -C <path> <args>`, if git ran and succeeded and its output is UTF-8.
@@ -107,6 +126,27 @@ mod tests {
             .status()
             .unwrap();
         assert!(status.success(), "git {args:?}");
+    }
+
+    #[test]
+    fn the_last_comment_string_set_applies() {
+        assert_eq!(last_comment_string(""), None);
+        assert_eq!(
+            last_comment_string("core.commentchar ;\n").as_deref(),
+            Some(";")
+        );
+        assert_eq!(
+            last_comment_string("core.commentchar ;\ncore.commentstring //\n").as_deref(),
+            Some("//")
+        );
+        assert_eq!(
+            last_comment_string("core.commentstring // \n").as_deref(),
+            Some("// ")
+        );
+        assert_eq!(
+            last_comment_string("core.commentchar ;\ncore.commentchar auto\n"),
+            None
+        );
     }
 
     #[test]
