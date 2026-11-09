@@ -478,10 +478,10 @@ deny --workspace --all-features check -D warnings bans licenses sources` and
 lock file freshness. CI should fail in every case where the pre-commit hooks
 would.
 
-CI checks REUSE compliance, Markdown and the workflows with
-`fsfe/reuse-action`, `DavidAnson/markdownlint-cli2-action` and
-`zizmorcore/zizmor-action` rather than running the tools itself. `norms verify`
-warns on a step that runs a tool instead, without checking its arguments.
+Where this standard names an action for a check, such as
+`zizmorcore/zizmor-action` or `EmbarkStudios/cargo-deny-action`, CI uses that
+action rather than running the tool itself. `norms verify` warns on a step that
+runs the tool instead, without checking its arguments.
 
 Most hooks have a job of their own. A `pre-commit` job runs the rest, such as
 the [common hooks](#common-hooks) from pre-commit-hooks, with `pre-commit run
@@ -1203,7 +1203,8 @@ instead.
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
 reads `rust-toolchain.toml` and caches builds with its built-in
 `Swatinem/rust-cache`, so jobs don't add a separate cache step. Jobs that build
-nothing, such as formatting, set `cache: false`. CI runs cargo-deny with
+nothing, such as formatting, set `cache: false`. CI checks formatting with
+`actions-rust-lang/rustfmt` and runs cargo-deny with
 `EmbarkStudios/cargo-deny-action`. The advisory check runs in `audit.yaml` (see
 [Continuous Integration](#continuous-integration)).
 

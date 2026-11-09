@@ -9,8 +9,8 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, FormatterRun,
-    HIDDEN_CLIPPY_TOML, Workflow, WorkflowJob, WorkflowStep, commands,
+    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, HIDDEN_CLIPPY_TOML, Workflow,
+    WorkflowJob, WorkflowStep, commands, is_program,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -559,11 +559,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.check(
         "rust-ci-rustfmt",
         "Rust CI: format check",
-        if workflow.uses_action("actions-rust-lang/rustfmt") {
-            Ok(())
-        } else {
-            workflow.check_formatter("cargo fmt", rustfmt_run)
-        },
+        rustfmt_in_ci(workflow),
     );
     report.must(
         "rust-ci-clippy",
@@ -575,35 +571,68 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "Rust CI: test",
         workflow.runs_command("cargo test"),
     );
-    report.must(
+    report.check(
         "rust-ci-cargo-deny",
         "Rust CI: cargo deny",
-        workflow.runs_command("cargo deny")
-            || workflow.uses_action("EmbarkStudios/cargo-deny-action"),
+        cargo_deny_in_ci(workflow),
     );
 }
 
-/// Whether a command's words run rustfmt, through `cargo fmt` or as the command itself, and if so how: with `--check`,
-/// which fails on unformatted files instead of rewriting them, or not. `cargo fmt` takes the flag itself or passes it
-/// on after `--`. A command that only names rustfmt, such as `rustup component add rustfmt`, doesn't run it.
-fn rustfmt_run(words: &[&str]) -> Option<FormatterRun> {
-    let args = match cargo_subcommand(words) {
-        Some(("fmt", args)) => args,
-        _ => words
-            .split_first()
-            .filter(|(program, _)| program.rsplit('/').next() == Some("rustfmt"))?
-            .1
-            .to_vec(),
-    };
-    Some(FormatterRun::from_args(&args, &["--check"], &[]))
+/// The action that checks Rust formatting in CI.
+const RUSTFMT_ACTION: &str = "actions-rust-lang/rustfmt";
+
+/// The action that runs cargo-deny in CI and the audit.
+const CARGO_DENY_ACTION: &str = "EmbarkStudios/cargo-deny-action";
+
+/// Whether `workflow` checks formatting with [`RUSTFMT_ACTION`]. With no such step, a step running rustfmt itself
+/// warns.
+fn rustfmt_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    if workflow.uses_action(RUSTFMT_ACTION) {
+        Ok(())
+    } else {
+        Err(workflow.missing_action(RUSTFMT_ACTION, "rustfmt", runs_rustfmt))
+    }
+}
+
+/// Whether `workflow` runs cargo-deny's checks with [`CARGO_DENY_ACTION`]. With no such step, a step running cargo-deny
+/// itself warns.
+fn cargo_deny_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    if workflow.uses_action(CARGO_DENY_ACTION) {
+        Ok(())
+    } else {
+        Err(workflow.missing_action(CARGO_DENY_ACTION, "cargo deny", runs_cargo_deny))
+    }
+}
+
+/// Whether a command's words run the Cargo subcommand `subcommand`, through `cargo` or as the command
+/// `cargo-<subcommand>` itself. A command that only names it, such as `cargo install cargo-deny`, doesn't run it.
+fn runs_cargo_subcommand(words: &[&str], subcommand: &str) -> bool {
+    cargo_subcommand(words).is_some_and(|(name, _)| name == subcommand)
+        || words
+            .first()
+            .is_some_and(|first| is_program(first, &format!("cargo-{subcommand}")))
+}
+
+/// Whether a command's words run rustfmt, through `cargo fmt` or as the command itself. A command that only names
+/// rustfmt, such as `rustup component add rustfmt`, doesn't run it.
+fn runs_rustfmt(words: &[&str]) -> bool {
+    runs_cargo_subcommand(words, "fmt")
+        || words
+            .first()
+            .is_some_and(|first| is_program(first, "rustfmt"))
+}
+
+/// Whether a command's words run cargo-deny, through `cargo deny` or as the command itself.
+fn runs_cargo_deny(words: &[&str]) -> bool {
+    runs_cargo_subcommand(words, "deny")
 }
 
 /// The actions that build no Rust code.
 const NON_BUILDING_ACTIONS: [&str; 5] = [
     "actions/checkout",
-    "actions-rust-lang/rustfmt",
+    RUSTFMT_ACTION,
     "actions-rust-lang/setup-rust-toolchain",
-    "EmbarkStudios/cargo-deny-action",
+    CARGO_DENY_ACTION,
     "taiki-e/install-action",
 ];
 
@@ -726,11 +755,9 @@ fn checks_cargo_lock(line: &str) -> bool {
 /// The checks cargo-deny's `check` command runs: those it names, or every one if it names none.
 const CARGO_DENY_CHECKS: [&str; 4] = ["advisories", "bans", "licenses", "sources"];
 
-/// Whether cargo-deny's arguments, as they follow `cargo deny` or as the action's `command` and `command-arguments`
-/// inputs give them, run its advisories check: `check`, naming either no checks or `advisories` among them. The
-/// arguments end at a shell operator, where another command begins.
+/// Whether cargo-deny's arguments, as the action's `command` and `command-arguments` inputs give them, run its
+/// advisories check: `check`, naming either no checks or `advisories` among them.
 fn cargo_deny_checks_advisories(args: &str) -> bool {
-    let args = args.split(['&', '|', ';']).next().unwrap_or_default();
     let mut words = args.split_whitespace().skip_while(|word| *word != "check");
     if words.next().is_none() {
         return false;
@@ -741,27 +768,28 @@ fn cargo_deny_checks_advisories(args: &str) -> bool {
     checks.is_empty() || checks.contains(&"advisories")
 }
 
-/// Whether `workflow` runs cargo-deny's advisories check, either from a script line or through
-/// `EmbarkStudios/cargo-deny-action`, whose `command` input defaults to `check` and is followed by its
-/// `command-arguments`.
-fn runs_cargo_deny_advisories(workflow: &Workflow) -> bool {
-    let runs = workflow.run_lines().any(|line| {
-        ["cargo deny", "cargo-deny"].iter().any(|command| {
-            line.split_once(command)
-                .is_some_and(|(_, args)| cargo_deny_checks_advisories(args))
-        })
-    });
-    runs || workflow
-        .steps_using("EmbarkStudios/cargo-deny-action")
-        .any(|step| {
-            let command = step.input("command");
-            let arguments = step.input("command-arguments");
-            cargo_deny_checks_advisories(&format!(
-                "{} {}",
-                command.as_deref().unwrap_or("check"),
-                arguments.as_deref().unwrap_or_default()
-            ))
-        })
+/// Whether `workflow` runs cargo-deny's advisories check through [`CARGO_DENY_ACTION`], whose `command` input defaults
+/// to `check` and is followed by its `command-arguments`.
+fn cargo_deny_advisories_in(workflow: &Workflow) -> Result<(), Issue> {
+    let mut steps = workflow.steps_using(CARGO_DENY_ACTION).peekable();
+    if steps.peek().is_none() {
+        return Err(workflow.missing_action(CARGO_DENY_ACTION, "cargo deny", runs_cargo_deny));
+    }
+    if steps.any(|step| {
+        let command = step.input("command");
+        let arguments = step.input("command-arguments");
+        cargo_deny_checks_advisories(&format!(
+            "{} {}",
+            command.as_deref().unwrap_or("check"),
+            arguments.as_deref().unwrap_or_default()
+        ))
+    }) {
+        Ok(())
+    } else {
+        Err(Issue::fail(
+            "cargo-deny-action doesn't run the advisories check",
+        ))
+    }
 }
 
 /// Check that `audit.yaml` runs cargo-deny's advisories check.
@@ -770,10 +798,10 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
         return;
     };
 
-    report.must(
+    report.check(
         "rust-audit-cargo-deny",
         "Rust audit: cargo deny advisories",
-        runs_cargo_deny_advisories(workflow),
+        cargo_deny_advisories_in(workflow),
     );
 }
 
@@ -1205,8 +1233,6 @@ jobs:
             "fetch",
             "check bans licenses sources",
             "list advisories",
-            "fetch && echo check",
-            "check bans; echo advisories",
         ] {
             assert!(!cargo_deny_checks_advisories(args), "{args}");
         }
@@ -1214,52 +1240,134 @@ jobs:
 
     #[test]
     fn audit_runs_cargo_deny_advisories() {
-        let runs = |steps: &str| {
+        let audit = |steps: &str| {
             let yaml = format!("jobs:\n  audit:\n    steps:\n{steps}");
-            runs_cargo_deny_advisories(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+            cargo_deny_advisories_in(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
         };
         let action = "      - uses: EmbarkStudios/cargo-deny-action@abc # v2.1.1\n";
         for steps in [
-            "      - run: cargo deny --workspace check -D warnings advisories\n".to_owned(),
-            "      - run: |\n          cargo deny --workspace --all-features \\\n            check -D warnings advisories\n".to_owned(),
             action.to_owned(),
             format!("{action}        with:\n          command: check advisories\n"),
-        ] {
-            assert!(runs(&steps), "{steps}");
-        }
-        for steps in [
-            "      - run: cargo deny check bans\n".to_owned(),
-            "      - run: cargo build\n".to_owned(),
             format!(
-                "{action}        with:\n          command: check\n          command-arguments: bans licenses\n"
+                "{action}        with:\n          command: check\n          command-arguments: bans\n{action}"
             ),
         ] {
-            assert!(!runs(&steps), "{steps}");
+            assert_eq!(audit(&steps), Ok(()), "{steps}");
+        }
+        assert_eq!(
+            audit(&format!(
+                "{action}        with:\n          command: check\n          command-arguments: bans licenses\n"
+            )),
+            Err(Issue::fail(
+                "cargo-deny-action doesn't run the advisories check"
+            ))
+        );
+        // Running cargo-deny itself works, but isn't the template's form, so its arguments aren't read.
+        for run in [
+            "cargo deny --workspace check -D warnings advisories",
+            "cargo deny check bans",
+            "~/.cargo/bin/cargo-deny check",
+        ] {
+            assert_eq!(
+                audit(&format!("      - run: {run}\n")),
+                Err(Issue::warn(
+                    "A step runs cargo deny rather than using EmbarkStudios/cargo-deny-action"
+                )),
+                "{run}"
+            );
+        }
+        assert_eq!(
+            audit("      - run: cargo build\n"),
+            Err(Issue::fail("No step uses EmbarkStudios/cargo-deny-action"))
+        );
+    }
+
+    #[test]
+    fn cargo_deny_in_ci_needs_the_action() {
+        let ci = |steps: &str| {
+            let yaml = format!("jobs:\n  cargo-deny:\n    steps:\n{steps}");
+            cargo_deny_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        assert_eq!(
+            ci("      - uses: EmbarkStudios/cargo-deny-action@abc # v2.1.1\n"),
+            Ok(())
+        );
+        assert_eq!(
+            ci(
+                "      - run: cargo deny --workspace --all-features check -D warnings bans licenses sources\n"
+            ),
+            Err(Issue::warn(
+                "A step runs cargo deny rather than using EmbarkStudios/cargo-deny-action"
+            ))
+        );
+        // rustfmt's own run doesn't count as cargo-deny's.
+        assert_eq!(
+            ci("      - run: cargo fmt --all --check\n"),
+            Err(Issue::fail("No step uses EmbarkStudios/cargo-deny-action"))
+        );
+    }
+
+    #[test]
+    fn rustfmt_in_ci_needs_the_action() {
+        let ci = |steps: &str| {
+            let yaml = format!("jobs:\n  rustfmt:\n    steps:\n{steps}");
+            rustfmt_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        assert_eq!(
+            ci("      - uses: actions-rust-lang/rustfmt@abc # v1.1.2\n"),
+            Ok(())
+        );
+        // Running rustfmt itself works, but isn't the template's form, so its arguments aren't read: a run that
+        // rewrites files rather than failing on them warns too.
+        for run in ["cargo fmt --all --check", "cargo fmt --all"] {
+            assert_eq!(
+                ci(&format!("      - run: {run}\n")),
+                Err(Issue::warn(
+                    "A step runs rustfmt rather than using actions-rust-lang/rustfmt"
+                )),
+                "{run}"
+            );
+        }
+        // cargo-deny's own run doesn't count as rustfmt's.
+        assert_eq!(
+            ci("      - run: cargo deny check\n"),
+            Err(Issue::fail("No step uses actions-rust-lang/rustfmt"))
+        );
+    }
+
+    #[test]
+    fn rustfmt_runs_through_cargo_fmt_or_itself() {
+        let runs = |line: &str| runs_rustfmt(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "cargo fmt --all --check",
+            "cargo +nightly fmt",
+            "rustfmt --check src/main.rs",
+            "~/.cargo/bin/rustfmt src/main.rs",
+            "cargo-fmt --check",
+        ] {
+            assert!(runs(line), "{line}");
+        }
+        for line in [
+            "cargo clippy --check",
+            "echo cargo-fmt --check",
+            "rustup component add rustfmt",
+        ] {
+            assert!(!runs(line), "{line}");
         }
     }
 
     #[test]
-    fn rustfmt_in_ci_checks_rather_than_writes() {
-        let checks = |line: &str| rustfmt_run(&line.split_whitespace().collect::<Vec<_>>());
+    fn cargo_deny_runs_through_cargo_or_itself() {
+        let runs = |line: &str| runs_cargo_deny(&line.split_whitespace().collect::<Vec<_>>());
         for line in [
-            "cargo fmt --all --check",
-            "cargo +nightly fmt --check",
-            "cargo fmt --all -- --check",
-            "rustfmt --check src/main.rs",
+            "cargo deny check",
+            "cargo-deny check bans",
+            "/usr/bin/cargo-deny",
         ] {
-            assert_eq!(checks(line), Some(FormatterRun::Checks), "{line}");
+            assert!(runs(line), "{line}");
         }
-        for line in ["cargo fmt --all", "cargo fmt", "rustfmt src/main.rs"] {
-            assert_eq!(checks(line), Some(FormatterRun::Rewrites), "{line}");
-        }
-        for line in [
-            "cargo clippy --check",
-            "cargo test",
-            "echo cargo-fmt --check",
-            "rustup component add rustfmt",
-            "rustup component add rustfmt clippy",
-        ] {
-            assert_eq!(checks(line), None, "{line}");
+        for line in ["cargo install cargo-deny", "cargo denylist"] {
+            assert!(!runs(line), "{line}");
         }
     }
 }

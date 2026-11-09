@@ -160,10 +160,11 @@ fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
       No cargo-deny hook
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
-      No step runs cargo fmt
+      No step uses actions-rust-lang/rustfmt
 fail  rust-ci-clippy  Rust CI: clippy check
 fail  rust-ci-test  Rust CI: test
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
+      No step uses EmbarkStudios/cargo-deny-action
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
