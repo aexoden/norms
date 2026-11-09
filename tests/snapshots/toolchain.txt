@@ -31,7 +31,7 @@ pass  cargo-toml-valid  [backend] Cargo.toml: valid
 warn  cargo-toml-license  [backend] Cargo.toml: has license
 warn  cargo-toml-description  [backend] Cargo.toml: has description
 warn  cargo-toml-repository  [backend] Cargo.toml: has repository
-pass  cargo-toml-edition  [backend] Cargo.toml: has edition
+pass  cargo-toml-edition  [backend] Cargo.toml: edition 2024
 pass  rust-toolchain-toml-exists  [backend] rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [backend] rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [backend] rust-toolchain.toml: exact channel
@@ -48,7 +48,7 @@ pass  cargo-toml-valid  [tools/cli] Cargo.toml: valid
 warn  cargo-toml-license  [tools/cli] Cargo.toml: has license
 warn  cargo-toml-description  [tools/cli] Cargo.toml: has description
 warn  cargo-toml-repository  [tools/cli] Cargo.toml: has repository
-pass  cargo-toml-edition  [tools/cli] Cargo.toml: has edition
+pass  cargo-toml-edition  [tools/cli] Cargo.toml: edition 2024
 pass  rust-toolchain-toml-exists  [tools/cli] ../../rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [tools/cli] ../../rust-toolchain.toml: valid
 warn  rust-toolchain-toml-channel  [tools/cli] ../../rust-toolchain.toml: exact channel

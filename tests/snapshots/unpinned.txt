@@ -99,7 +99,7 @@ pass  cargo-toml-valid  [.] Cargo.toml: valid
 warn  cargo-toml-license  [.] Cargo.toml: has license
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
-pass  cargo-toml-edition  [.] Cargo.toml: has edition
+pass  cargo-toml-edition  [.] Cargo.toml: edition 2024
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: dependencies.serde ("1.0"), dev-dependencies.tempfile ("^3.27")
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists

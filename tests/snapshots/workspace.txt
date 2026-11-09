@@ -42,7 +42,7 @@ fail  cargo-toml-license-texts  [.] crates/cli/Cargo.toml: license has its texts
       No text in LICENSES/ for: MIT
 pass  cargo-toml-description  [.] crates/cli/Cargo.toml: has description
 pass  cargo-toml-repository  [.] crates/cli/Cargo.toml: has repository
-pass  cargo-toml-edition  [.] crates/cli/Cargo.toml: has edition
+pass  cargo-toml-edition  [.] crates/cli/Cargo.toml: edition 2024
 pass  cargo-toml-exists  [.] crates/core/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/core/Cargo.toml: valid
 pass  cargo-toml-license  [.] crates/core/Cargo.toml: has license
@@ -50,7 +50,8 @@ fail  cargo-toml-license-texts  [.] crates/core/Cargo.toml: license has its text
       No text in LICENSES/ for: MIT
 warn  cargo-toml-description  [.] crates/core/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
-pass  cargo-toml-edition  [.] crates/core/Cargo.toml: has edition
+warn  cargo-toml-edition  [.] crates/core/Cargo.toml: edition 2024
+      edition is 2021, not 2024
 pass  cargo-toml-exists  [.] tools/helper/Cargo.toml: exists
 pass  cargo-toml-valid  [.] tools/helper/Cargo.toml: valid
 pass  cargo-toml-license  [.] tools/helper/Cargo.toml: has license
@@ -58,7 +59,7 @@ fail  cargo-toml-license-texts  [.] tools/helper/Cargo.toml: license has its tex
       No text in LICENSES/ for: MIT
 pass  cargo-toml-description  [.] tools/helper/Cargo.toml: has description
 pass  cargo-toml-repository  [.] tools/helper/Cargo.toml: has repository
-pass  cargo-toml-edition  [.] tools/helper/Cargo.toml: has edition
+pass  cargo-toml-edition  [.] tools/helper/Cargo.toml: edition 2024
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: workspace.dependencies.serde ("1.0")
 warn  cargo-toml-dependencies-exact  [.] crates/cli/Cargo.toml: dependencies pinned exactly (application)

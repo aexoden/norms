@@ -77,6 +77,19 @@ pub(crate) fn check_cargo(ctx: &ComponentContext, report: &mut Report) {
     }
 }
 
+/// The latest Rust edition, which the standards require. It changes with the template's `Cargo.toml` when a new
+/// edition ships.
+const RUST_EDITION: &str = "2024";
+
+/// Check that a package's `edition` is [`RUST_EDITION`].
+fn check_edition(edition: Option<&str>) -> Result<(), String> {
+    match edition {
+        Some(RUST_EDITION) => Ok(()),
+        Some(edition) => Err(format!("edition is {edition}, not {RUST_EDITION}")),
+        None => Err("Missing edition".to_owned()),
+    }
+}
+
 /// Check the metadata of the package whose manifest, labeled `label`, is `manifest`, with the fields it inherits
 /// resolved from `workspace`.
 fn check_package_metadata(
@@ -116,8 +129,8 @@ fn check_package_metadata(
 
     report.should(
         "cargo-toml-edition",
-        format!("{label}: has edition"),
-        package.edition.is_some(),
+        format!("{label}: edition {RUST_EDITION}"),
+        check_edition(package.edition),
     );
 }
 
@@ -1516,6 +1529,25 @@ jobs:
         assert_eq!(
             ci("      - run: cargo fmt --all --check\n"),
             Err(Issue::fail("No step uses EmbarkStudios/cargo-deny-action"))
+        );
+    }
+
+    #[test]
+    fn edition_is_the_latest() {
+        assert_eq!(check_edition(Some("2024")), Ok(()));
+        assert_eq!(
+            check_edition(Some("2021")),
+            Err("edition is 2021, not 2024".to_owned())
+        );
+        assert_eq!(check_edition(None), Err("Missing edition".to_owned()));
+
+        // The template's packages use the edition the check requires.
+        let template = include_str!("../../template/{{ rust_dir }}/Cargo.toml.jinja");
+        assert!(
+            template
+                .lines()
+                .any(|line| line == format!("edition = \"{RUST_EDITION}\"")),
+            "{template}"
         );
     }
 

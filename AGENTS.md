@@ -169,7 +169,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   excludes its pin.
   `workspace` is a virtual Cargo workspace with a binary and a library member
   matched by a glob, an excluded crate, a malformed member, a member found
-  only as a path dependency, and an unrelated crate that isn't a member.
+  only as a path dependency, and an unrelated crate that isn't a member. The
+  library matched by the glob is on the 2021 edition, while the binary and the
+  path dependency inherit 2024.
   `msrv` is a virtual Cargo workspace of libraries whose members set
   `rust-version` themselves, inherit it from `[workspace.package]`, or lack it.
   `workflows` breaks the Actions standards: a zizmor hook that doesn't run its

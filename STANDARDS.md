@@ -1035,10 +1035,10 @@ global-min-publish-age = "3 days"
 #### Package Metadata
 
 `Cargo.toml` sets `description`, `repository`, `license` and `edition` (the
-latest edition). A package that may be published also sets `keywords` and
-`categories`, which Clippy's `cargo_common_metadata` lint, in the `cargo` group
-(see [Lints](#lints)), requires of it. In a workspace, a package may inherit
-these fields from `[workspace.package]` instead, with
+latest edition, currently 2024). A package that may be published also sets
+`keywords` and `categories`, which Clippy's `cargo_common_metadata` lint, in the
+`cargo` group (see [Lints](#lints)), requires of it. In a workspace, a package
+may inherit these fields from `[workspace.package]` instead, with
 `license.workspace = true` and so on.
 
 #### Lints

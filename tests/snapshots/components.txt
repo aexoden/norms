@@ -72,14 +72,16 @@ pass  cargo-toml-valid  [.] Cargo.toml: valid
 warn  cargo-toml-license  [.] Cargo.toml: has license
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
-warn  cargo-toml-edition  [.] Cargo.toml: has edition
+warn  cargo-toml-edition  [.] Cargo.toml: edition 2024
+      Missing edition
 pass  cargo-workspace-members  [.] Cargo.toml: workspace members found
 pass  cargo-toml-exists  [.] crates/core/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/core/Cargo.toml: valid
 warn  cargo-toml-license  [.] crates/core/Cargo.toml: has license
 warn  cargo-toml-description  [.] crates/core/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
-warn  cargo-toml-edition  [.] crates/core/Cargo.toml: has edition
+warn  cargo-toml-edition  [.] crates/core/Cargo.toml: edition 2024
+      Missing edition
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)

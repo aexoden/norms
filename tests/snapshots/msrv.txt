@@ -34,19 +34,22 @@ pass  cargo-toml-valid  [.] crates/inherits/Cargo.toml: valid
 warn  cargo-toml-license  [.] crates/inherits/Cargo.toml: has license
 warn  cargo-toml-description  [.] crates/inherits/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/inherits/Cargo.toml: has repository
-warn  cargo-toml-edition  [.] crates/inherits/Cargo.toml: has edition
+warn  cargo-toml-edition  [.] crates/inherits/Cargo.toml: edition 2024
+      Missing edition
 pass  cargo-toml-exists  [.] crates/missing/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/missing/Cargo.toml: valid
 warn  cargo-toml-license  [.] crates/missing/Cargo.toml: has license
 warn  cargo-toml-description  [.] crates/missing/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/missing/Cargo.toml: has repository
-warn  cargo-toml-edition  [.] crates/missing/Cargo.toml: has edition
+warn  cargo-toml-edition  [.] crates/missing/Cargo.toml: edition 2024
+      Missing edition
 pass  cargo-toml-exists  [.] crates/own/Cargo.toml: exists
 pass  cargo-toml-valid  [.] crates/own/Cargo.toml: valid
 warn  cargo-toml-license  [.] crates/own/Cargo.toml: has license
 warn  cargo-toml-description  [.] crates/own/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/own/Cargo.toml: has repository
-warn  cargo-toml-edition  [.] crates/own/Cargo.toml: has edition
+warn  cargo-toml-edition  [.] crates/own/Cargo.toml: edition 2024
+      Missing edition
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 pass  cargo-toml-rust-version  [.] crates/inherits/Cargo.toml: MSRV set (rust-version, library)

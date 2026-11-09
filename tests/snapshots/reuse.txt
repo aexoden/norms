@@ -134,7 +134,7 @@ fail  cargo-toml-license-texts  [.] Cargo.toml: license has its texts in LICENSE
       No text in LICENSES/ for: BSD-3-Clause
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
-pass  cargo-toml-edition  [.] Cargo.toml: has edition
+pass  cargo-toml-edition  [.] Cargo.toml: edition 2024
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
