@@ -775,14 +775,17 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     );
 
     // Format script
-    report.should(
+    report.check(
         "package-json-script-format",
-        "Scripts: has 'format'",
-        if config.has_script("format") {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Missing 'format' script")
-        },
+        "Scripts: has 'format' (prettier --check)",
+        config
+            .scripts
+            .as_ref()
+            .and_then(|scripts| scripts.get("format"))
+            .map_or_else(
+                || Err(Issue::warn("Missing 'format' script")),
+                |script| format_script_checks(script),
+            ),
     );
 
     // Type check script
@@ -840,8 +843,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "typescript-precommit-prettier",
-        "Pre-commit: has Prettier hook",
-        precommit.check_commit_hook("prettier"),
+        "Pre-commit: has Prettier hook (--check)",
+        precommit.check_formatter_hook("prettier", "prettier", prettier_run),
     );
     report.check(
         "typescript-precommit-tsc",
@@ -926,14 +929,19 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
 }
 
 /// Whether a command's words run `prettier`, and if so how: with `--check`, which fails on unformatted files instead
-/// of rewriting them, with its short form `-c` or with `--list-different` (or `-l`), which fail on them too, or with
-/// none of them.
+/// of rewriting them, with its short form `-c` or with `--list-different` (or `-l`), which fail on them too, with
+/// `--write` (or `-w`), which rewrites them, or with none of them, when Prettier only prints the formatted files.
 fn prettier_run(words: &[&str]) -> Option<FormatterRun> {
-    Some(FormatterRun::from_args(
-        program_args(words, "prettier")?,
-        &["--check"],
-        &["-c", "--list-different", "-l"],
-    ))
+    let args = program_args(words, "prettier")?;
+    let run = FormatterRun::from_args(args, &["--check"], &["-c", "--list-different", "-l"]);
+    Some(
+        if run == FormatterRun::Rewrites && !args.iter().any(|&arg| arg == "--write" || arg == "-w")
+        {
+            FormatterRun::Prints
+        } else {
+            run
+        },
+    )
 }
 
 /// Whether a command's words run `eslint`, and if so, whether with `--max-warnings 0`, which fails on warnings as well as
@@ -963,6 +971,20 @@ fn lint_script_strict(script: &str) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// Whether a `format` script checks the formatting rather than rewriting files: each command of it that runs
+/// `prettier` does so with `--check`. A script that doesn't run `prettier` itself, such as one running another script,
+/// isn't judged.
+fn format_script_checks(script: &str) -> Result<(), Issue> {
+    let runs: Vec<_> = commands(script)
+        .filter_map(|words| prettier_run(&words))
+        .collect();
+    FormatterRun::check_each(
+        &runs,
+        "prettier",
+        Issue::warn("The format script runs prettier without --check, so it rewrites files"),
+    )
 }
 
 /// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args pre-commit appends to it. A hook without
@@ -1322,6 +1344,33 @@ mod tests {
     }
 
     #[test]
+    fn format_script_checks_with_check() {
+        for script in [
+            "prettier --check .",
+            "prettier --check . && prettier --check docs",
+            "pnpm run format:all",
+        ] {
+            assert_eq!(format_script_checks(script), Ok(()), "{script}");
+        }
+        assert_eq!(
+            format_script_checks("prettier --write ."),
+            Err(Issue::warn(
+                "The format script runs prettier without --check, so it rewrites files"
+            ))
+        );
+        assert_eq!(
+            format_script_checks("prettier --check . && prettier -l docs"),
+            Err(Issue::warn("prettier runs with -l rather than --check"))
+        );
+        assert_eq!(
+            format_script_checks("prettier ."),
+            Err(Issue::fail(
+                "prettier runs without --check or --write, so it only prints the formatted files and fails on none"
+            ))
+        );
+    }
+
+    #[test]
     fn prettier_in_ci_checks_rather_than_writes() {
         let checks = |line: &str| prettier_run(&line.split_whitespace().collect::<Vec<_>>());
         for line in [
@@ -1342,9 +1391,24 @@ mod tests {
             checks("pnpm exec prettier -l ."),
             Some(FormatterRun::ChecksWith("-l"))
         );
-        for line in ["pnpm exec prettier --write .", "prettier ."] {
+        for line in ["pnpm exec prettier --write .", "prettier -w src"] {
             assert_eq!(checks(line), Some(FormatterRun::Rewrites), "{line}");
         }
+        assert_eq!(checks("prettier ."), Some(FormatterRun::Prints));
+        assert_eq!(
+            FormatterRun::check(&[FormatterRun::Prints], "prettier", Issue::warn("rewrites")),
+            Err(Issue::fail(
+                "prettier runs without --check or --write, so it only prints the formatted files and fails on none"
+            ))
+        );
+        assert_eq!(
+            FormatterRun::check(
+                &[FormatterRun::Prints, FormatterRun::Rewrites],
+                "prettier",
+                Issue::warn("rewrites")
+            ),
+            Err(Issue::warn("rewrites"))
+        );
         for line in [
             "pnpm format",
             "pnpm exec eslint --check .",

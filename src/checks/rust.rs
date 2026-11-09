@@ -9,8 +9,9 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, HIDDEN_CLIPPY_TOML,
-    Workflow, WorkflowJob, WorkflowStep, commands, is_other_deny_toml, is_program,
+    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, FormatterRun,
+    HIDDEN_CLIPPY_TOML, Workflow, WorkflowJob, WorkflowStep, commands, is_other_deny_toml,
+    is_program,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -530,8 +531,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "rust-precommit-rustfmt",
-        "Rust pre-commit: rustfmt hook",
-        config.check_commit_hook("rustfmt"),
+        "Rust pre-commit: rustfmt hook (--check)",
+        config.check_formatter_hook("rustfmt", "rustfmt", rustfmt_run),
     );
 
     report.check(
@@ -686,6 +687,13 @@ fn runs_rustfmt(words: &[&str]) -> bool {
         || words
             .first()
             .is_some_and(|first| is_program(first, "rustfmt"))
+}
+
+/// Whether a command's words run rustfmt, as [`runs_rustfmt`] tells, and if so how: with `--check`, which fails on
+/// unformatted files instead of rewriting them, or without it. `cargo fmt` takes the flag itself or passes it on to
+/// rustfmt after `--`.
+fn rustfmt_run(words: &[&str]) -> Option<FormatterRun> {
+    runs_rustfmt(words).then(|| FormatterRun::from_args(words, &["--check"], &[]))
 }
 
 /// Whether a command's words run cargo-deny, through `cargo deny` or as the command itself.
@@ -1558,6 +1566,20 @@ jobs:
         ] {
             assert!(!runs(line), "{line}");
         }
+    }
+
+    #[test]
+    fn rustfmt_checks_with_the_check_flag() {
+        let run = |line: &str| rustfmt_run(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "cargo fmt --all --check",
+            "cargo fmt --all -- --check",
+            "rustfmt --check src/main.rs",
+        ] {
+            assert_eq!(run(line), Some(FormatterRun::Checks), "{line}");
+        }
+        assert_eq!(run("cargo fmt --all"), Some(FormatterRun::Rewrites));
+        assert_eq!(run("cargo clippy --check"), None);
     }
 
     #[test]

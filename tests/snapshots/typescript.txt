@@ -137,13 +137,13 @@ pass  prettier-plugin-packagejson  [.] Prettier: formats package.json with prett
 pass  package-json-scripts  [.] package.json: has scripts
 pass  package-json-script-build  [.] Scripts: has 'build'
 pass  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
-pass  package-json-script-format  [.] Scripts: has 'format'
+pass  package-json-script-format  [.] Scripts: has 'format' (prettier --check)
 pass  package-json-script-typecheck  [.] Scripts: has 'typecheck'
 pass  package-json-script-test  [.] Scripts: has 'test'
 pass  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook
 pass  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
-pass  typescript-precommit-prettier  Pre-commit: has Prettier hook
+pass  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
 pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
 pass  typescript-precommit-vite-build  Pre-commit: has vite-build hook
 pass  typescript-precommit-vitest  Pre-commit: has vitest hook

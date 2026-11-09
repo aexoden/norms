@@ -112,7 +112,7 @@ pass  mypy-strict  [.] mypy: strict mode
 pass  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
 pass  python-precommit-ruff-check  Python pre-commit: ruff-check
-pass  python-precommit-ruff-format  Python pre-commit: ruff-format
+pass  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
 pass  python-precommit-mypy  Python pre-commit: Mypy hook
 pass  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
@@ -149,7 +149,7 @@ pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid
 pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)
 pass  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
-pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
+pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook
 pass  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook

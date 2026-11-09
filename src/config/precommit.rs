@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
+use crate::config::FormatterRun;
 use crate::report::Issue;
 
 /// The hook types pre-commit can install, from its `clientlib.HOOK_TYPES`.
@@ -312,6 +313,36 @@ impl PrecommitConfig {
     pub(crate) fn check_commit_hook(&self, id: &str) -> Result<(), Issue> {
         self.commit_hooks(id).map(|_| ())
     }
+
+    /// Check that a hook with ID `id` runs before each commit, and that each such hook runs the formatter `name` so
+    /// that it fails on unformatted files rather than rewriting them, as `runs` tells from a command's words. A hook
+    /// without an entry, as a remote hook may leave it to the hook's repository, is taken to run `name`. pre-commit
+    /// fails a hook that changes files, so a formatter that rewrites them still stops the commit, but leaves them
+    /// changed: a warning, as is a hook that doesn't run the formatter where norms can see it. One that only prints
+    /// the formatted files passes every commit, so it fails.
+    pub(crate) fn check_formatter_hook(
+        &self,
+        id: &str,
+        name: &str,
+        mut runs: impl FnMut(&[&str]) -> Option<FormatterRun>,
+    ) -> Result<(), Issue> {
+        let runs: Vec<_> = self
+            .commit_hooks(id)?
+            .into_iter()
+            .flat_map(|hook| hook.filter_map_commands(name, &mut runs))
+            .collect();
+        if runs.is_empty() {
+            Err(Issue::warn(format!("The {id} hook doesn't run {name}")))
+        } else {
+            FormatterRun::check_each(
+                &runs,
+                name,
+                Issue::warn(format!(
+                    "{name} runs without --check, so it rewrites files rather than only failing on them"
+                )),
+            )
+        }
+    }
 }
 
 /// A YAML value as a message names it: a string as itself, anything else as JSON writes it.
@@ -488,6 +519,48 @@ mod tests {
         ] {
             assert_eq!(hook_commands(entry, args), expected, "{entry:?}");
         }
+    }
+
+    #[test]
+    fn formatter_hooks_check_rather_than_rewrite() {
+        let runs = |words: &[&str]| {
+            let (_, args) = words.split_first()?;
+            Some(FormatterRun::from_args(args, &["--check"], &["-c"]))
+        };
+        let hook = |hooks: &str| {
+            serde_saphyr::from_str::<PrecommitConfig>(&format!(
+                "repos:\n  - repo: local\n    hooks: {hooks}\n"
+            ))
+            .unwrap()
+            .check_formatter_hook("fmt", "fmt", runs)
+        };
+        assert_eq!(hook("[{id: fmt, entry: fmt --check .}]"), Ok(()));
+        assert_eq!(hook("[{id: fmt, args: [--check]}]"), Ok(()));
+        assert_eq!(
+            hook("[{id: fmt, entry: fmt --check .}, {id: fmt, entry: fmt --check, alias: b}]"),
+            Ok(())
+        );
+        assert_eq!(
+            hook("[{id: fmt, entry: fmt --check .}, {id: fmt, entry: fmt --write, alias: b}]"),
+            Err(Issue::warn(
+                "fmt runs without --check, so it rewrites files rather than only failing on them"
+            ))
+        );
+        assert_eq!(
+            hook("[{id: fmt, entry: fmt -c .}]"),
+            Err(Issue::warn("fmt runs with -c rather than --check"))
+        );
+        assert_eq!(
+            hook("[{id: fmt, entry: fmt --write .}]"),
+            Err(Issue::warn(
+                "fmt runs without --check, so it rewrites files rather than only failing on them"
+            ))
+        );
+        assert_eq!(
+            hook("[{id: fmt, entry: \"fmt 'unbalanced\"}]"),
+            Err(Issue::warn("The fmt hook doesn't run fmt"))
+        );
+        assert_eq!(hook("[]"), Err(Issue::fail("No fmt hook")));
     }
 
     fn commit_hook(yaml: &str) -> Result<(), Issue> {

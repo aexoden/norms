@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - env:
-          SKIP: uv-lock,pnpm-peer-dependencies,vitest
+          SKIP: uv-lock,pnpm-peer-dependencies,vitest,ruff-format,prettier
         run: uvx pre-commit@4.3.0 run --all-files
 
   uv-lock:

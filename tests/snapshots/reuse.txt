@@ -113,7 +113,7 @@ fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook
       No uv-lock hook
 fail  python-precommit-ruff-check  Python pre-commit: ruff-check
       No ruff-check hook
-fail  python-precommit-ruff-format  Python pre-commit: ruff-format
+fail  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
       No ruff-format hook
 fail  python-precommit-mypy  Python pre-commit: Mypy hook
       No mypy hook
@@ -150,7 +150,7 @@ fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
 fail  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
       No cargo-lock hook
-fail  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook
+fail  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
       No rustfmt hook
 fail  rust-precommit-clippy  Rust pre-commit: clippy hook
       No clippy hook
@@ -205,7 +205,7 @@ fail  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dep
       No pnpm-peer-dependencies hook
 fail  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
       No eslint hook
-fail  typescript-precommit-prettier  Pre-commit: has Prettier hook
+fail  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
       No prettier hook
 fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
       No tsc hook

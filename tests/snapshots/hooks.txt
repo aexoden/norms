@@ -105,8 +105,8 @@ fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python 
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
 fail  python-precommit-ruff-check  Python pre-commit: ruff-check
       No ruff-check hook
-fail  python-precommit-ruff-format  Python pre-commit: ruff-format
-      No ruff-format hook
+warn  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
+      ruff format runs with --diff rather than --check
 fail  python-precommit-mypy  Python pre-commit: Mypy hook
       No mypy hook
 warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
@@ -154,8 +154,8 @@ warn  package-json-script-build  [.] Scripts: has 'build'
       Missing 'build' script
 warn  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
       The lint script runs eslint without --max-warnings 0
-warn  package-json-script-format  [.] Scripts: has 'format'
-      Missing 'format' script
+warn  package-json-script-format  [.] Scripts: has 'format' (prettier --check)
+      The format script runs prettier without --check, so it rewrites files
 warn  package-json-script-typecheck  [.] Scripts: has 'typecheck'
       Missing 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
@@ -165,8 +165,8 @@ fail  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook
 warn  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
       The ESLint hook doesn't pass --max-warnings 0
-fail  typescript-precommit-prettier  Pre-commit: has Prettier hook
-      No prettier hook
+warn  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
+      prettier runs without --check, so it rewrites files rather than only failing on them
 fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
       No tsc hook
 fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook

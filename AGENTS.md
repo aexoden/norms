@@ -217,8 +217,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   through `pnpm --dir . exec`; and the `eslint` hook passes `--max-warnings 10`
   while CI lints through the `lint` script, which runs plain `eslint .`. Its
   `ruff-format` and `prettier` jobs run the formatters without `--check`, so
-  they rewrite files rather than fail. Its `pre-commit` job's `SKIP` lists some
-  of the hooks with jobs of their own, but not `pytest` or `eslint`.
+  they rewrite files rather than fail, as do its `prettier` hook and `format`
+  script, while its `ruff-format` hook checks with `--diff`. Its `pre-commit`
+  job's `SKIP` lists some of the hooks with jobs of their own, but not `pytest`
+  or `eslint`.
   `typescript-config` breaks the TypeScript configuration standards: its
   `package.json` sets `private` to the string `"true"`, and its two
   referenced tsconfigs lack, turn off or set to another value some of the

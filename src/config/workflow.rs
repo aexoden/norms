@@ -532,21 +532,16 @@ impl Workflow {
         runs: impl FnMut(&[&str]) -> Option<FormatterRun>,
     ) -> Result<(), Issue> {
         let runs = self.filter_map_commands(runs);
-        if runs.contains(&FormatterRun::Checks) {
-            Ok(())
-        } else if let Some(flag) = runs.iter().find_map(|run| match run {
-            FormatterRun::ChecksWith(flag) => Some(flag),
-            FormatterRun::Checks | FormatterRun::Rewrites => None,
-        }) {
-            Err(Issue::warn(format!(
-                "{name} runs with {flag} rather than --check"
-            )))
-        } else if runs.is_empty() {
+        if runs.is_empty() {
             Err(Issue::fail(format!("No step runs {name}")))
         } else {
-            Err(Issue::fail(format!(
-                "{name} runs without --check, so it rewrites files instead of failing on them"
-            )))
+            FormatterRun::check(
+                &runs,
+                name,
+                Issue::fail(format!(
+                    "{name} runs without --check, so it rewrites files instead of failing on them"
+                )),
+            )
         }
     }
 
@@ -666,9 +661,43 @@ pub(crate) enum FormatterRun {
     ChecksWith(&'static str),
     /// It rewrites unformatted files.
     Rewrites,
+    /// It only prints the formatted files, as Prettier does without `--check` or `--write`, so it neither fails on
+    /// unformatted files nor rewrites them.
+    Prints,
 }
 
 impl FormatterRun {
+    /// Whether `runs`, the runs of the formatter `name` in one place, such as a workflow, include one that checks with
+    /// `--check`: if not, a warning if one checks with another flag, `rewrites`, the issue of a formatter that rewrites
+    /// files, if one does, or else a failure, since a formatter that only prints passes every file.
+    pub(crate) fn check(runs: &[Self], name: &str, rewrites: Issue) -> Result<(), Issue> {
+        if runs.contains(&Self::Checks) {
+            Ok(())
+        } else if let Some(flag) = runs.iter().find_map(|run| match run {
+            Self::ChecksWith(flag) => Some(flag),
+            Self::Checks | Self::Rewrites | Self::Prints => None,
+        }) {
+            Err(Issue::warn(format!(
+                "{name} runs with {flag} rather than --check"
+            )))
+        } else if runs.contains(&Self::Rewrites) {
+            Err(rewrites)
+        } else {
+            Err(Issue::fail(format!(
+                "{name} runs without --check or --write, so it only prints the formatted files and fails on none"
+            )))
+        }
+    }
+
+    /// Whether each of `runs`, the runs of the formatter `name` in a place that must check wherever it runs it, such as
+    /// a script or a hook's copies, checks with `--check`: if not, the issue of the first that doesn't, as for
+    /// [`check`](Self::check).
+    pub(crate) fn check_each(runs: &[Self], name: &str, rewrites: Issue) -> Result<(), Issue> {
+        runs.iter()
+            .find(|&&run| run != Self::Checks)
+            .map_or(Ok(()), |&run| Self::check(&[run], name, rewrites))
+    }
+
     /// How a formatter given `args` runs: it checks if they include one of `checks`, checks otherwise if they include
     /// one of `others`, and rewrites if neither.
     pub(crate) fn from_args(args: &[&str], checks: &[&str], others: &[&'static str]) -> Self {

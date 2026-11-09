@@ -1,6 +1,7 @@
 {
   "name": "hooks",
   "scripts": {
+    "format": "prettier --write .",
     "lint": "eslint ."
   }
 }

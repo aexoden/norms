@@ -573,8 +573,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "python-precommit-ruff-format",
-        "Python pre-commit: ruff-format",
-        config.check_commit_hook("ruff-format"),
+        "Python pre-commit: ruff-format (--check)",
+        config.check_formatter_hook("ruff-format", "ruff format", ruff_format_run),
     );
 
     // Mypy hook

@@ -26,3 +26,13 @@ repos:
         entry: pnpm exec eslint . --max-warnings 10
         language: system
         pass_filenames: false
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --diff
+        language: system
+        pass_filenames: false
+      - id: prettier
+        name: prettier
+        entry: pnpm exec prettier --write .
+        language: system
+        pass_filenames: false
