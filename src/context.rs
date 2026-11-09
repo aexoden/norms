@@ -42,9 +42,9 @@ use pep508_rs::pep440_rs::Version;
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DenyToml, DevboxConfig, GIT_ARCHIVAL,
-    MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION, PackageJson, PnpmWorkspace,
-    PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml, RustToolchain,
-    TsConfig, Workflow, parse_python_version,
+    HIDDEN_CLIPPY_TOML, MarkdownlintCli2Config, NormsConfig, PYTHON_VERSION, PackageJson,
+    PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml, RenovateConfig, ReuseToml,
+    RustToolchain, TsConfig, Workflow, parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -449,12 +449,12 @@ impl ComponentContext {
 
     /// The Clippy configuration that applies to the component's package (cached): the nearest `.clippy.toml` or
     /// `clippy.toml` in the component's directory or a parent, up to the project root, with its path relative to the
-    /// component. If there is neither, the path is the bare `clippy.toml`.
+    /// component. If there is neither, the path is the bare `clippy.toml`. A `.clippy.toml` is reported as `NotFound`,
+    /// since only `clippy.toml` is read.
     pub(crate) fn clippy_toml(&self) -> &(String, ConfigStatus<ClippyToml>) {
         self.clippy_toml.get_or_init(|| {
             let Some(found) = nearest_clippy_toml(&self.root, &self.component.path) else {
-                let [_, name] = CLIPPY_TOML;
-                return (name.to_owned(), ConfigStatus::NotFound);
+                return (CLIPPY_TOML.to_owned(), ConfigStatus::NotFound);
             };
             let depth = self
                 .component
@@ -465,7 +465,7 @@ impl ComponentContext {
             let name = found.file_name().unwrap_or_default().to_string_lossy();
             (
                 format!("{}{name}", "../".repeat(depth)),
-                parse_toml_file::<ClippyToml>(&self.root.join(&found)),
+                read_clippy_toml(&self.root, &found),
             )
         })
     }
@@ -491,10 +491,7 @@ impl ComponentContext {
                 .filter_map(|found| {
                     let label = found.strip_prefix(&self.component.path).ok()?;
                     let label: Vec<_> = label.iter().map(|part| part.to_string_lossy()).collect();
-                    Some((
-                        label.join("/"),
-                        parse_toml_file::<ClippyToml>(&self.root.join(&found)),
-                    ))
+                    Some((label.join("/"), read_clippy_toml(&self.root, &found)))
                 })
                 .collect()
         })
@@ -632,11 +629,24 @@ fn read_text_file(path: &Path) -> ConfigStatus<String> {
 /// `.clippy.toml` when a directory has both.
 fn nearest_clippy_toml(root: &Path, dir: &Path) -> Option<PathBuf> {
     dir.ancestors().find_map(|dir| {
-        CLIPPY_TOML
+        [HIDDEN_CLIPPY_TOML, CLIPPY_TOML]
             .into_iter()
             .map(|name| dir.join(name))
             .find(|path| root.join(path).is_file())
     })
+}
+
+/// Parse the Clippy configuration file `found`, relative to the project root `root`, unless it is a `.clippy.toml`,
+/// which is reported as `NotFound`, since only `clippy.toml` is read.
+fn read_clippy_toml(root: &Path, found: &Path) -> ConfigStatus<ClippyToml> {
+    if found
+        .file_name()
+        .is_some_and(|name| name == HIDDEN_CLIPPY_TOML)
+    {
+        ConfigStatus::NotFound
+    } else {
+        parse_toml_file(&root.join(found))
+    }
 }
 
 /// Parse a TOML file into the given type.

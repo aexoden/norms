@@ -441,12 +441,13 @@ mod tests {
         let conforming = "absolute-paths-max-segments = 3\nallow-expect-in-tests = true\n\
                           allow-panic-in-tests = true\nallow-unwrap-in-tests = true\n";
         let project = TempProject::new("clippy-toml", None);
-        for component in ["both", "nested/app"] {
+        for component in ["both", "hidden/app", "nested/app"] {
             fs::create_dir_all(project.0.join(component)).unwrap();
             fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
         }
-        fs::write(project.0.join("both/.clippy.toml"), conforming).unwrap();
-        fs::write(project.0.join("both/clippy.toml"), "[broken\n").unwrap();
+        fs::write(project.0.join("both/.clippy.toml"), "[broken\n").unwrap();
+        fs::write(project.0.join("both/clippy.toml"), conforming).unwrap();
+        fs::write(project.0.join("hidden/.clippy.toml"), conforming).unwrap();
         fs::write(
             project.0.join("clippy.toml"),
             "allow-panic-in-tests = true\n",
@@ -461,20 +462,23 @@ mod tests {
         };
 
         let both = |name: &str| (Some("both".to_owned()), format!(".clippy.toml: {name}"));
+        let hidden = |name: &str| {
+            (
+                Some("hidden/app".to_owned()),
+                format!("../.clippy.toml: {name}"),
+            )
+        };
         let nested = |name: &str| {
             (
                 Some("nested/app".to_owned()),
                 format!("../../clippy.toml: {name}"),
             )
         };
+        // Clippy prefers `.clippy.toml` to the `clippy.toml` beside it. norms finds the `.clippy.toml` Clippy uses, here
+        // or in a parent, and warns that it should be renamed, but doesn't parse it, so a malformed one doesn't fail.
         let expected: Vec<_> = [
-            (both("exists"), Status::Pass),
-            (both("valid"), Status::Pass),
-            (
-                both("unwrap, expect and panic allowed in tests"),
-                Status::Pass,
-            ),
-            (both("absolute paths limited to 3 segments"), Status::Pass),
+            (both("exists"), Status::Warn),
+            (hidden("exists"), Status::Warn),
             (nested("exists"), Status::Pass),
             (nested("valid"), Status::Pass),
             (
@@ -535,13 +539,7 @@ mod tests {
             .filter(|r| r.id.starts_with("clippy-toml-"))
             .map(|r| (r.name, r.status))
             .collect();
-        let expected: Vec<_> = [
-            ("../clippy.toml", Status::Pass),
-            ("crates/b/.clippy.toml", Status::Pass),
-            ("crates/clippy.toml", Status::Warn),
-        ]
-        .into_iter()
-        .flat_map(|(label, status)| {
+        let checked = |label: &str, status| {
             [
                 (format!("{label}: exists"), Status::Pass),
                 (format!("{label}: valid"), Status::Pass),
@@ -554,8 +552,12 @@ mod tests {
                     status,
                 ),
             ]
-        })
-        .collect();
+        };
+        let expected: Vec<_> = checked("../clippy.toml", Status::Pass)
+            .into_iter()
+            .chain([("crates/b/.clippy.toml: exists".to_owned(), Status::Warn)])
+            .chain(checked("crates/clippy.toml", Status::Warn))
+            .collect();
         assert_eq!(clippy, expected);
     }
 

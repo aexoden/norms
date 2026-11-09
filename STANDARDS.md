@@ -1149,10 +1149,11 @@ allow-panic-in-tests = true
 allow-unwrap-in-tests = true
 ```
 
-Clippy uses the nearest `clippy.toml` (or `.clippy.toml`) in the package's
-directory or a parent, so a Rust component in a subdirectory shares the root's
-file unless it has its own, and so does a workspace member. Whichever file a
-package uses must meet these rules.
+Clippy uses the nearest `clippy.toml` in the package's directory or a parent, so
+a Rust component in a subdirectory shares the root's file unless it has its own,
+and so does a workspace member. Whichever file a package uses must meet these
+rules. The file is named `clippy.toml`, not `.clippy.toml`, which Clippy also
+reads.
 
 The hooks and CI pass `-D warnings`, so any warning fails the check.
 

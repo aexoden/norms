@@ -24,7 +24,7 @@ mod workflow;
 
 pub(crate) use cargo::{CargoDependency, CargoToml, CargoWorkspace};
 pub(crate) use cargoconfig::CargoConfig;
-pub(crate) use clippy::{CLIPPY_TOML, ClippyToml};
+pub(crate) use clippy::{CLIPPY_TOML, ClippyToml, HIDDEN_CLIPPY_TOML};
 pub(crate) use deny::DenyToml;
 pub(crate) use devbox::DevboxConfig;
 pub(crate) use gitattributes::{AttributeState, GIT_ARCHIVAL, attribute, sets_attribute};

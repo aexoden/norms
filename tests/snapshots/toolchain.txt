@@ -39,10 +39,8 @@ pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy and 
 warn  cargo-toml-rust-version  [backend] Cargo.toml: MSRV set (rust-version, library)
 fail  clippy-lints  [backend] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
-pass  clippy-toml-exists  [backend] .clippy.toml: exists
-pass  clippy-toml-valid  [backend] .clippy.toml: valid
-pass  clippy-toml-allow-in-tests  [backend] .clippy.toml: unwrap, expect and panic allowed in tests
-pass  clippy-toml-absolute-paths  [backend] .clippy.toml: absolute paths limited to 3 segments
+warn  clippy-toml-exists  [backend] .clippy.toml: exists
+      Clippy uses .clippy.toml, which should be named clippy.toml
 fail  deny-toml-exists  [backend] deny.toml: exists
       File not found
 pass  cargo-toml-exists  [tools/cli] Cargo.toml: exists

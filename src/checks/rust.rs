@@ -9,8 +9,8 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CargoConfig, CargoToml, CargoWorkspace, ClippyToml, FormatterRun, Workflow, WorkflowJob,
-    WorkflowStep, commands,
+    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, FormatterRun,
+    HIDDEN_CLIPPY_TOML, Workflow, WorkflowJob, WorkflowStep, commands,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -284,7 +284,15 @@ fn check_package_lints(
 /// segments.
 pub(crate) fn check_clippy_toml(ctx: &ComponentContext, report: &mut Report) {
     for (label, status) in std::iter::once(ctx.clippy_toml()).chain(ctx.member_clippy_tomls()) {
-        if let Some(config) = report.require_parsed("clippy-toml", label, status) {
+        if label.rsplit('/').next() == Some(HIDDEN_CLIPPY_TOML) {
+            report.should(
+                "clippy-toml-exists",
+                format!("{label}: exists"),
+                Outcome::fail(format!(
+                    "Clippy uses {label}, which should be named {CLIPPY_TOML}"
+                )),
+            );
+        } else if let Some(config) = report.require_parsed("clippy-toml", label, status) {
             check_clippy_toml_settings(label, config, report);
         }
     }

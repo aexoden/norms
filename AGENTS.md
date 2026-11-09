@@ -149,9 +149,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   that don't run `reuse lint` on the whole project, and a Rust, Python and
   TypeScript manifest whose licenses lack a text or aren't SPDX expressions.
   `toolchain` has two Rust components in subdirectories, one with a
-  conforming `rust-toolchain.toml` and `.clippy.toml` of its own and one using
-  the root's, whose toolchain pins no exact channel and lacks clippy, and whose
-  `clippy.toml` doesn't allow `panic` in tests and allows four path segments.
+  conforming `rust-toolchain.toml` of its own and a `.clippy.toml`, which
+  should be named `clippy.toml`, and one using the root's, whose toolchain
+  pins no exact channel and lacks clippy, and whose `clippy.toml` doesn't
+  allow `panic` in tests and allows four path segments.
   `classifiers` has Python components whose classifiers are checked against
   `requires-python`: an application and a library with gaps in its range,
   each with its own `.python-version`, one capped by `requires-python`

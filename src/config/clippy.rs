@@ -5,8 +5,12 @@
 
 use serde::Deserialize;
 
-/// The names Clippy reads its configuration from, in the order it prefers them within one directory.
-pub(crate) const CLIPPY_TOML: [&str; 2] = [".clippy.toml", "clippy.toml"];
+/// The file that holds Clippy's configuration.
+pub(crate) const CLIPPY_TOML: &str = "clippy.toml";
+
+/// The hidden name Clippy also reads its configuration from, and prefers to [`CLIPPY_TOML`] within one directory. The
+/// standard doesn't use it.
+pub(crate) const HIDDEN_CLIPPY_TOML: &str = ".clippy.toml";
 
 /// The limit on an absolute path's segments that the standard sets.
 const ABSOLUTE_PATHS_MAX_SEGMENTS: i64 = 3;
