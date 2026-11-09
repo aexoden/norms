@@ -819,6 +819,10 @@ age.
 
 ## Language-Specific Standards
 
+Python, Rust and TypeScript have the standards below. `norms verify` also
+detects C++ components, by their `CMakeLists.txt`, but their standards, and so
+its checks of them, are still to come.
+
 ### Python
 
 #### Project Layout

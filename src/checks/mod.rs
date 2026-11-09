@@ -56,9 +56,8 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
         }
 
         match language {
-            Language::Cpp => {
-                // Placeholder
-            }
+            // C++ components are detected, but their standards, and so their checks, are still to come.
+            Language::Cpp => {}
             Language::Python => {
                 python::check_precommit_hooks(ctx, report);
                 python::check_ci(ctx, report);
@@ -93,9 +92,8 @@ fn check_component(
     report: &mut Report,
 ) {
     match language {
-        Language::Cpp => {
-            // Placeholder
-        }
+        // C++ has no standards yet (see `run_all_checks`).
+        Language::Cpp => {}
         Language::Python => {
             python::check_pyproject(ctx, report);
             python::check_python_version(ctx, report);
