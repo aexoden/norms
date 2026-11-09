@@ -847,7 +847,7 @@ its checks of them, are still to come.
 #### Project Layout
 
 Use [uv](https://docs.astral.sh/uv/) for all Python projects, with a `src/`
-layout:
+layout, in which `src/` holds the package, a directory with an `__init__.py`:
 
 ```txt
 project/
@@ -1254,6 +1254,9 @@ versions automatically:
 
 Corepack's `packageManager` field is not set. Corepack and some CI actions read
 it, so it would be a second pnpm pin that can drift from `devEngines`.
+
+pnpm is the only package manager, so there is no `package-lock.json` or
+`yarn.lock` beside `pnpm-lock.yaml`.
 
 `package.json` defines these scripts:
 
