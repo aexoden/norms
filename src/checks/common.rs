@@ -15,7 +15,7 @@ use serde_json::Value;
 use crate::checks::{python, rust};
 use crate::config::{
     AttributeState, DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook,
-    SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands,
+    SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands, is_program,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -610,58 +610,37 @@ fn other_markdownlint_configs(
 /// The globs that lint every Markdown file in the project, rather than only those at its root.
 const MARKDOWN_GLOBS: [&str; 2] = ["**/*.md", "**/*.{md,markdown}"];
 
-/// Whether `workflow` runs markdownlint-cli2 on every Markdown file: a `DavidAnson/markdownlint-cli2-action` step whose
-/// `globs` include `**/*.md`, since the action otherwise lints only the files at the root, or a script running
-/// `markdownlint-cli2` with that glob, quoted so that the shell leaves it to markdownlint-cli2.
-fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
-    let mut runs = false;
+/// The action that runs markdownlint-cli2 in CI.
+const MARKDOWNLINT_ACTION: &str = "DavidAnson/markdownlint-cli2-action";
 
-    for step in workflow.steps_using("DavidAnson/markdownlint-cli2-action") {
-        runs = true;
+/// Whether `workflow` runs markdownlint-cli2 on every Markdown file: a [`MARKDOWNLINT_ACTION`] step whose `globs`
+/// include `**/*.md`, since the action otherwise lints only the files at the root. With no such step, a step running
+/// markdownlint-cli2 itself warns.
+fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    let mut steps = workflow.steps_using(MARKDOWNLINT_ACTION).peekable();
+    if steps.peek().is_none() {
+        return Err(
+            workflow.missing_action(MARKDOWNLINT_ACTION, "markdownlint-cli2", |words| {
+                words
+                    .iter()
+                    .any(|word| is_program(word, "markdownlint-cli2"))
+            }),
+        );
+    }
+
+    if steps.any(|step| {
         let separator = step.input("separator");
         let separator = separator.as_deref().unwrap_or("\n");
-        if step.input("globs").is_some_and(|globs| {
+        step.input("globs").is_some_and(|globs| {
             globs
                 .split(separator)
                 .any(|glob| MARKDOWN_GLOBS.contains(&glob.trim()))
-        }) {
-            return Ok(());
-        }
-    }
-
-    let quoted = |word: &str| {
-        ['"', '\''].into_iter().any(|quote| {
-            word.strip_prefix(quote)
-                .and_then(|word| word.strip_suffix(quote))
-                .is_some_and(|glob| MARKDOWN_GLOBS.contains(&glob))
         })
-    };
-    for args in workflow.filter_map_commands(|words| {
-        let start = words.iter().position(|word| {
-            let name = word.rsplit('/').next().unwrap_or(word);
-            name == "markdownlint-cli2" || name.starts_with("markdownlint-cli2@")
-        })?;
-        Some(
-            words
-                .get(start + 1..)
-                .unwrap_or_default()
-                .iter()
-                .any(|word| quoted(word)),
-        )
     }) {
-        runs = true;
-        if args {
-            return Ok(());
-        }
-    }
-
-    if runs {
+        Ok(())
+    } else {
         Err(Issue::warn(
             "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
-        ))
-    } else {
-        Err(Issue::fail(
-            "No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2",
         ))
     }
 }
@@ -1180,7 +1159,7 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
 
 /// Whether the words of a command run zizmor with its pedantic persona, passing `--pedantic`.
 fn zizmor_command_pedantic(words: &[&str]) -> Option<bool> {
-    let start = words.iter().position(|word| is_zizmor_command(word))?;
+    let start = words.iter().position(|word| is_program(word, "zizmor"))?;
     Some(words.iter().skip(start + 1).any(|arg| *arg == "--pedantic"))
 }
 
@@ -1191,29 +1170,16 @@ fn zizmor_hook_pedantic(hook: &PrecommitHook) -> bool {
         .contains(&true)
 }
 
-/// Whether a word of a shell command invokes zizmor: `zizmor`, a path to it, or a versioned `zizmor@x.y.z` as uvx
-/// takes it.
-fn is_zizmor_command(word: &str) -> bool {
-    let name = word.rsplit('/').next().unwrap_or(word);
-    name == "zizmor" || name.starts_with("zizmor@") || name.starts_with("zizmor==")
-}
+/// The action that runs zizmor in CI.
+const ZIZMOR_ACTION: &str = "zizmorcore/zizmor-action";
 
-/// Whether `workflow` runs zizmor's pedantic persona so that its findings fail the job: either a `run` script line
-/// invoking it with `--pedantic`, or a `zizmorcore/zizmor-action` step setting `persona: pedantic` and turning off
-/// `advanced-security`, whose default uploads findings to code scanning and passes the job.
+/// Whether `workflow` runs zizmor's pedantic persona so that its findings fail the job: a [`ZIZMOR_ACTION`] step setting
+/// `persona: pedantic` and turning off `advanced-security`, whose default uploads findings to code scanning and passes
+/// the job.
 fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut issues = Vec::new();
 
-    for line in workflow.run_lines() {
-        let words: Vec<&str> = line.split_whitespace().collect();
-        match zizmor_command_pedantic(&words) {
-            Some(true) => return Ok(()),
-            Some(false) => issues.push(Issue::warn("A step runs zizmor without --pedantic")),
-            None => {}
-        }
-    }
-
-    for step in workflow.steps_using("zizmorcore/zizmor-action") {
+    for step in workflow.steps_using(ZIZMOR_ACTION) {
         let strict = step.input("persona").as_deref() == Some("pedantic");
         let gating = step.input("advanced-security").as_deref() == Some("false");
         match (strict, gating) {
@@ -1234,9 +1200,9 @@ fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     }
 
     if issues.is_empty() {
-        Err(Issue::fail(
-            "No step runs zizmor or uses zizmorcore/zizmor-action",
-        ))
+        Err(workflow.missing_action(ZIZMOR_ACTION, "zizmor", |words| {
+            words.iter().any(|word| is_program(word, "zizmor"))
+        }))
     } else {
         issues.dedup();
         // Each issue is a step's, and the best of them decides: one that fails the job on findings, only with another
@@ -1274,11 +1240,25 @@ pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
 // Continuous integration
 //
 
-/// `reuse lint` in a CI script, but not `reuse lint-file`, which lints only the files it's given.
-static REUSE_LINT: LazyLock<Regex> = LazyLock::new(|| {
-    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
-    Regex::new(r"(?m)\breuse\s+lint(?:$|[^\w-])").unwrap()
-});
+/// The action that checks REUSE compliance in CI.
+const REUSE_ACTION: &str = "fsfe/reuse-action";
+
+/// Whether `workflow` checks REUSE compliance with [`REUSE_ACTION`]. With no such step, a step running `reuse lint`
+/// itself warns, but `reuse lint-file`, which lints only the files it's given, doesn't count, nor does `lint` after
+/// reuse's own options.
+fn reuse_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    if workflow.uses_action(REUSE_ACTION) {
+        Ok(())
+    } else {
+        Err(
+            workflow.missing_action(REUSE_ACTION, "reuse lint", |words| {
+                words
+                    .windows(2)
+                    .any(|pair| matches!(pair, [program, "lint"] if is_program(program, "reuse")))
+            }),
+        )
+    }
+}
 
 /// The action that installs uv.
 pub(crate) const SETUP_UV: &str = "astral-sh/setup-uv";
@@ -1422,11 +1402,7 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
 /// Check `ci.yaml`, `workflow`: the common hooks' jobs, its triggers and its gate job.
 fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Report) {
-    report.must(
-        "ci-reuse",
-        "CI: REUSE compliance",
-        workflow.uses_action("fsfe/reuse-action") || workflow.runs_matching(&REUSE_LINT),
-    );
+    report.check("ci-reuse", "CI: REUSE compliance", reuse_in_ci(workflow));
     report.check(
         "ci-markdownlint",
         "CI: Markdown linting (every file)",
@@ -2041,21 +2017,43 @@ jobs:
     }
 
     #[test]
-    fn reuse_lint_excludes_lint_file() {
+    fn reuse_in_ci_needs_the_action() {
+        let ci = |steps: &str| {
+            reuse_in_ci(
+                &serde_saphyr::from_str(&format!("jobs:\n  reuse:\n    steps:\n{steps}")).unwrap(),
+            )
+        };
+        assert_eq!(
+            ci(
+                "      - uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0\n"
+            ),
+            Ok(())
+        );
         for run in [
             "reuse lint",
             "uvx reuse lint --json",
-            "reuse  lint\necho done",
-            "reuse lint; echo",
+            "uvx reuse@6.0.0 lint",
+            "uvx --from reuse reuse lint",
+            "echo; reuse  lint",
         ] {
-            assert!(REUSE_LINT.is_match(run), "{run}");
+            assert_eq!(
+                ci(&format!("      - run: {run}\n")),
+                Err(Issue::warn(
+                    "A step runs reuse lint rather than using fsfe/reuse-action"
+                )),
+                "{run}"
+            );
         }
         for run in [
             "reuse lint-file src/main.rs",
-            "reuse --root . lint",
             "nonreuse lint",
+            "reuse --root . lint",
         ] {
-            assert!(!REUSE_LINT.is_match(run), "{run}");
+            assert_eq!(
+                ci(&format!("      - run: {run}\n")),
+                Err(Issue::fail("No step uses fsfe/reuse-action")),
+                "{run}"
+            );
         }
     }
 
@@ -2190,34 +2188,25 @@ jobs:
     }
 
     #[test]
-    fn zizmor_runs_in_ci() {
+    fn zizmor_in_ci_needs_the_action() {
         let script = |run: &str| format!("jobs:\n  z:\n    steps:\n      - run: \"{run}\"\n");
+        // Running zizmor itself works, but isn't the template's form, so its arguments aren't read.
         for run in [
             "zizmor --pedantic .",
-            "uvx zizmor@1.32.0 --pedantic --format github .",
-            "echo start\\n  ~/.cargo/bin/zizmor --pedantic .",
-            "zizmor --format github \\\\\\n  --pedantic .",
-        ] {
-            assert_eq!(zizmor_in(&script(run)), Ok(()), "{run}");
-        }
-        for run in [
-            "zizmor .",
-            "zizmor -p .",
-            "uvx zizmor@1.32.0 --persona=pedantic .",
-            "zizmor --persona auditor .",
-            "zizmor --pedantic-ish .",
+            "uvx zizmor@1.32.0 .",
+            "echo start\\n  ~/.cargo/bin/zizmor --persona auditor .",
         ] {
             assert_eq!(
                 zizmor_in(&script(run)),
-                Err(Issue::warn("A step runs zizmor without --pedantic")),
+                Err(Issue::warn(
+                    "A step runs zizmor rather than using zizmorcore/zizmor-action"
+                )),
                 "{run}"
             );
         }
         assert_eq!(
             zizmor_in(&script("echo zizmorish --pedantic")),
-            Err(Issue::fail(
-                "No step runs zizmor or uses zizmorcore/zizmor-action"
-            ))
+            Err(Issue::fail("No step uses zizmorcore/zizmor-action"))
         );
     }
 
@@ -2260,11 +2249,21 @@ jobs:
         // A step that fails the job on findings decides, though another uploads them instead.
         assert_eq!(
             zizmor_in(&format!(
-                "{}      - run: zizmor .\n",
+                "{}      - uses: zizmorcore/zizmor-action@abc # v0.8.1\n        with: {{advanced-security: false}}\n",
                 step("persona: pedantic")
             )),
             Err(Issue::warn(
-                "A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false"
+                "zizmor-action doesn't set advanced-security: false; zizmor-action doesn't set persona: pedantic"
+            ))
+        );
+        // The action decides, whatever another step runs.
+        assert_eq!(
+            zizmor_in(&format!(
+                "{}      - run: zizmor --pedantic .\n",
+                step("persona: pedantic")
+            )),
+            Err(Issue::fail(
+                "zizmor-action doesn't set advanced-security: false"
             ))
         );
     }
@@ -2499,18 +2498,34 @@ jobs:
             format!(
                 "{ACTION}        with:\n          globs: 'README.md;**/*.{{md,markdown}}'\n          separator: ';'\n"
             ),
-            "      - run: npx markdownlint-cli2 '**/*.md'\n".to_owned(),
-            "      - run: pnpm exec markdownlint-cli2@0.24.0 \"**/*.md\" --fix\n".to_owned(),
             // A step that lints only the root files doesn't hide one that lints them all.
-            format!("{ACTION}      - run: markdownlint-cli2 '**/*.md'\n"),
+            format!("{ACTION}{ACTION}        with:\n          globs: '**/*.md'\n"),
         ] {
             assert_eq!(markdownlint(&steps), Ok(()), "{steps}");
         }
         for (steps, issue) in [
             (
-                "      - run: echo\n".to_owned(),
-                Issue::fail(
-                    "No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2",
+                "      - run: echo markdownlint\n".to_owned(),
+                Issue::fail("No step uses DavidAnson/markdownlint-cli2-action"),
+            ),
+            // Running markdownlint-cli2 itself works, but isn't the template's form, so its arguments aren't read.
+            (
+                "      - run: npx markdownlint-cli2 '**/*.md'\n".to_owned(),
+                Issue::warn(
+                    "A step runs markdownlint-cli2 rather than using DavidAnson/markdownlint-cli2-action",
+                ),
+            ),
+            (
+                "      - run: pnpm exec markdownlint-cli2@0.24.0 \"*.md\"\n".to_owned(),
+                Issue::warn(
+                    "A step runs markdownlint-cli2 rather than using DavidAnson/markdownlint-cli2-action",
+                ),
+            ),
+            // The action decides, whatever another step runs.
+            (
+                format!("{ACTION}      - run: markdownlint-cli2 '**/*.md'\n"),
+                Issue::warn(
+                    "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
                 ),
             ),
             (
@@ -2527,13 +2542,6 @@ jobs:
             ),
             (
                 format!("{ACTION}        with:\n          globs: '**/*.md,docs'\n"),
-                Issue::warn(
-                    "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
-                ),
-            ),
-            // Unquoted, the shell expands the glob itself.
-            (
-                "      - run: markdownlint-cli2 **/*.md\n".to_owned(),
                 Issue::warn(
                     "markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root",
                 ),

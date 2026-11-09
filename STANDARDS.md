@@ -292,7 +292,8 @@ Files that cannot carry a comment header, such as JSON files, lock files, images
 and generated caches, are annotated in a `REUSE.toml` at the repository root
 instead.
 
-`reuse lint` checks all of this, in both the pre-commit hooks and CI.
+`reuse lint` checks all of this, in both the pre-commit hooks and CI, where it
+runs through `fsfe/reuse-action`.
 
 ## Version Control
 
@@ -477,6 +478,11 @@ deny --workspace --all-features check -D warnings bans licenses sources` and
 lock file freshness. CI should fail in every case where the pre-commit hooks
 would.
 
+CI checks REUSE compliance, Markdown and the workflows with
+`fsfe/reuse-action`, `DavidAnson/markdownlint-cli2-action` and
+`zizmorcore/zizmor-action` rather than running the tools itself. `norms verify`
+warns on a step that runs a tool instead, without checking its arguments.
+
 Most hooks have a job of their own. A `pre-commit` job runs the rest, such as
 the [common hooks](#common-hooks) from pre-commit-hooks, with `pre-commit run
 --all-files --show-diff-on-failure` at a pinned pre-commit version, installed
@@ -621,9 +627,9 @@ expression.
 
 `norms verify` leaves these rules to zizmor's pedantic persona, which flags
 unpinned actions, missing or broad permissions and persisted credentials. It
-checks only that the hook and the CI job run zizmor with that persona, written
-as `--pedantic` on a command line and `persona: pedantic` for the action, and
-that the action sets `advanced-security: false`.
+checks only that the hook and the CI job run zizmor with that persona, the hook
+with `--pedantic` and the job through `zizmorcore/zizmor-action` with `persona:
+pedantic`, and that the action sets `advanced-security: false`.
 
 ## Pre-Commit Hooks
 

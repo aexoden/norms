@@ -55,11 +55,12 @@ warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
 fail  ci-reuse  CI: REUSE compliance
+      No step uses fsfe/reuse-action
 fail  ci-markdownlint  CI: Markdown linting (every file)
-      No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
+      No step uses DavidAnson/markdownlint-cli2-action
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
-      No step runs zizmor or uses zizmorcore/zizmor-action
+      No step uses zizmorcore/zizmor-action
 warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)
 pass  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own

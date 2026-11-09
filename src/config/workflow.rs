@@ -581,6 +581,25 @@ impl Workflow {
         }
     }
 
+    /// The issue of a workflow with no step using `action`, the form in which the standard runs `tool`: a warning if a
+    /// step runs the tool itself instead, as `runs` tells from a command's words, since that works but isn't the
+    /// template's form, or a failure if none does. The step running it isn't checked further.
+    pub(crate) fn missing_action(
+        &self,
+        action: &str,
+        tool: &str,
+        mut runs: impl FnMut(&[&str]) -> bool,
+    ) -> Issue {
+        if self
+            .run_lines()
+            .any(|line| commands(&line).any(|words| runs(&words)))
+        {
+            Issue::warn(format!("A step runs {tool} rather than using {action}"))
+        } else {
+            Issue::fail(format!("No step uses {action}"))
+        }
+    }
+
     /// Whether any step's `run` script contains `command`. Commands that reach a script only through an expression,
     /// such as `${{ matrix.command }}`, are not seen.
     pub(crate) fn runs_command(&self, command: &str) -> bool {
@@ -700,6 +719,15 @@ pub(crate) fn commands(line: &str) -> impl Iterator<Item = Vec<&str>> {
         .map(|command| command.split_whitespace().collect())
 }
 
+/// Whether a word of a command names the program `name`: the program itself, a path to it, or a version of it as uvx
+/// or npx takes it (`name@x.y.z` or `name==x.y.z`).
+pub(crate) fn is_program(word: &str, name: &str) -> bool {
+    let program = word.rsplit('/').next().unwrap_or(word);
+    program.strip_prefix(name).is_some_and(|version| {
+        version.is_empty() || version.starts_with('@') || version.starts_with("==")
+    })
+}
+
 /// The arguments that follow the first word of a command that runs the program `name`, itself or through a path to it.
 pub(crate) fn program_args<'a, 'b>(words: &'b [&'a str], name: &str) -> Option<&'b [&'a str]> {
     let start = words
@@ -792,6 +820,21 @@ jobs:
     }
 
     #[test]
+    fn programs_are_named_by_path_or_version() {
+        for word in [
+            "zizmor",
+            "~/.cargo/bin/zizmor",
+            "zizmor@1.32.0",
+            "zizmor==1.32.0",
+        ] {
+            assert!(is_program(word, "zizmor"), "{word}");
+        }
+        for word in ["zizmorish", "zizmor-pre-commit", "pre-zizmor", "zizmor/bin"] {
+            assert!(!is_program(word, "zizmor"), "{word}");
+        }
+    }
+
+    #[test]
     fn program_args_follow_the_program_or_a_path_to_it() {
         assert_eq!(
             program_args(&["uv", "run", "pytest"], "pytest"),
@@ -817,6 +860,24 @@ jobs:
         assert!(!workflow.runs_command("cargo fmt"));
         assert!(!workflow.runs_command("cargo deny"));
         assert!(!workflow.runs_command("actions/checkout"));
+    }
+
+    #[test]
+    fn a_missing_action_warns_on_a_step_running_the_tool() {
+        let workflow = workflow();
+        assert_eq!(
+            workflow.missing_action("owner/test-action", "cargo test", |words| {
+                words.starts_with(&["cargo", "test"])
+            }),
+            Issue::warn("A step runs cargo test rather than using owner/test-action")
+        );
+        // Only commands count: the step's name and the comment mention cargo deny, but no script runs it.
+        assert_eq!(
+            workflow.missing_action("EmbarkStudios/cargo-deny-action", "cargo deny", |words| {
+                words.starts_with(&["cargo", "deny"])
+            }),
+            Issue::fail("No step uses EmbarkStudios/cargo-deny-action")
+        );
     }
 
     #[test]

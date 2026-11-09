@@ -51,11 +51,12 @@ fail  audit-yaml-exists  CI: audit.yaml: exists
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 fail  ci-reuse  CI: REUSE compliance
+      No step uses fsfe/reuse-action
 warn  ci-markdownlint  CI: Markdown linting (every file)
       markdownlint-cli2 doesn't lint '**/*.md', so it checks only the files at the root
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
-      No step runs zizmor or uses zizmorcore/zizmor-action
+      No step uses zizmorcore/zizmor-action
 fail  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request

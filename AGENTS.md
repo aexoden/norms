@@ -168,8 +168,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   only as a path dependency, and an unrelated crate that isn't a member.
   `msrv` is a virtual Cargo workspace of libraries whose members set
   `rust-version` themselves, inherit it from `[workspace.package]`, or lack it.
-  `workflows` breaks the Actions standards: a zizmor hook and CI steps that
-  don't run its pedantic persona or don't fail on findings; a job without
+  `workflows` breaks the Actions standards: a zizmor hook that doesn't run its
+  pedantic persona, and a CI step running zizmor itself beside a zizmor-action
+  step that doesn't fail on findings, which decides; a job without
   `timeout-minutes`, beside a call to a reusable workflow, which can't set one;
   workflows whose `concurrency` is missing or doesn't cancel; a `ci.yaml` that
   filters pull requests by branch and path and runs on pushes to `main` but not

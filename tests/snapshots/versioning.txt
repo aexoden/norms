@@ -39,11 +39,12 @@ pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 warn  workflow-setup-uv-version  CI: ci.yaml: setup-uv pins an exact uv version in jobs running uv
       setup-uv doesn't pin an exact uv version in: uv-lock (no version)
 fail  ci-reuse  CI: REUSE compliance
+      No step uses fsfe/reuse-action
 fail  ci-markdownlint  CI: Markdown linting (every file)
-      No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
+      No step uses DavidAnson/markdownlint-cli2-action
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
-      No step runs zizmor or uses zizmorcore/zizmor-action
+      No step uses zizmorcore/zizmor-action
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev

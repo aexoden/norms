@@ -57,11 +57,12 @@ pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
       concurrency doesn't set cancel-in-progress: true
 fail  ci-reuse  CI: REUSE compliance
+      No step uses fsfe/reuse-action
 fail  ci-markdownlint  CI: Markdown linting (every file)
-      No step uses DavidAnson/markdownlint-cli2-action or runs markdownlint-cli2
+      No step uses DavidAnson/markdownlint-cli2-action
 fail  ci-tombi  CI: TOML formatting
-warn  ci-zizmor  CI: zizmor (pedantic)
-      A step runs zizmor without --pedantic; zizmor-action doesn't set advanced-security: false
+fail  ci-zizmor  CI: zizmor (pedantic)
+      zizmor-action doesn't set advanced-security: false
 fail  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
