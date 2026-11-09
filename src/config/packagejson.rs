@@ -247,11 +247,6 @@ impl PackageJson {
     pub(crate) fn has_script(&self, name: &str) -> bool {
         self.scripts.as_ref().is_some_and(|s| s.contains_key(name))
     }
-
-    /// Whether any script name matches one of the given alternatives.
-    pub(crate) fn has_any_script(&self, names: &[&str]) -> bool {
-        names.iter().any(|n| self.has_script(n))
-    }
 }
 
 #[cfg(test)]

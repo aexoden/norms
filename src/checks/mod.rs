@@ -621,6 +621,41 @@ mod tests {
     }
 
     #[test]
+    fn format_script_is_named_format() {
+        let project = TempProject::new("format-script", None);
+        for (component, script) in [
+            ("format", "format"),
+            ("fmt", "fmt"),
+            ("prettier", "prettier"),
+        ] {
+            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::write(
+                project.0.join(component).join("package.json"),
+                format!("{{ \"scripts\": {{ \"{script}\": \"prettier --check .\" }} }}\n"),
+            )
+            .unwrap();
+        }
+
+        let format: Vec<_> = find(&project.verify(), "package-json-script-format")
+            .into_iter()
+            .map(|r| {
+                (
+                    r.component.as_deref().unwrap_or_default().to_owned(),
+                    r.status,
+                )
+            })
+            .collect();
+        assert_eq!(
+            format,
+            [
+                ("fmt".to_owned(), Status::Warn),
+                ("format".to_owned(), Status::Pass),
+                ("prettier".to_owned(), Status::Warn),
+            ]
+        );
+    }
+
+    #[test]
     fn unreadable_eslint_config_fails() {
         let project = TempProject::new("eslint", None);
         fs::write(project.0.join("package.json"), "{}\n").unwrap();

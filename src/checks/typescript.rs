@@ -651,11 +651,10 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     );
 
     // Format script
-    let has_format = config.has_any_script(&["format", "fmt", "prettier"]);
     report.should(
         "package-json-script-format",
         "Scripts: has 'format'",
-        if has_format {
+        if config.has_script("format") {
             Outcome::Pass
         } else {
             Outcome::fail("Missing 'format' script")
