@@ -174,4 +174,4 @@ fail  rust-ci-cargo-deny  Rust CI: cargo deny
 warn  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
       These jobs build nothing, but setup-rust-toolchain caches their build: release.yaml: rustfmt
 fail  rust-audit-cargo-deny  Rust audit: cargo deny advisories
-      cargo-deny-action doesn't run the advisories check
+      cargo-deny-action runs cargo deny --all-features check bans licenses sources, which skips the advisories check

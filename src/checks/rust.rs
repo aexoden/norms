@@ -588,6 +588,9 @@ const CARGO_DENY_ACTION: &str = "EmbarkStudios/cargo-deny-action";
 const CARGO_DENY_CI_ARGS: &str =
     "--workspace --all-features check -D warnings bans licenses sources";
 
+/// The arguments the audit passes to cargo-deny, as the standard's audit tools give them.
+const CARGO_DENY_AUDIT_ARGS: &str = "--workspace --all-features check -D warnings advisories";
+
 /// The arguments a [`CARGO_DENY_ACTION`] step passes to cargo-deny after its own options: its `arguments`, `command`
 /// and `command-arguments` inputs, each defaulting as the action's does, joined with single spaces, since the action
 /// passes them on unquoted.
@@ -606,18 +609,21 @@ fn cargo_deny_action_args(step: &WorkflowStep) -> String {
     .join(" ")
 }
 
-/// Whether `workflow` runs cargo-deny's checks through [`CARGO_DENY_ACTION`] with the arguments the standard gives,
-/// [`CARGO_DENY_CI_ARGS`]. A step passing others works, but differs from the standard, so it warns.
-fn cargo_deny_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+/// Whether `workflow` runs cargo-deny through [`CARGO_DENY_ACTION`] with the arguments `expected`. A step passing
+/// others gives the issue `other` returns for its arguments, as [`cargo_deny_action_args`] gives them; the least
+/// severe of these decides, since one step with the right arguments is enough.
+fn cargo_deny_action_in(
+    workflow: &Workflow,
+    expected: &str,
+    other: impl Fn(&str) -> Issue,
+) -> Result<(), Issue> {
     let mut issues = Vec::new();
     for step in workflow.steps_using(CARGO_DENY_ACTION) {
         let args = cargo_deny_action_args(step);
-        if args == CARGO_DENY_CI_ARGS {
+        if args == expected {
             return Ok(());
         }
-        issues.push(Issue::warn(format!(
-            "cargo-deny-action runs cargo deny {args} rather than {CARGO_DENY_CI_ARGS}"
-        )));
+        issues.push(other(&args));
     }
     if issues.is_empty() {
         Err(workflow.missing_action(CARGO_DENY_ACTION, "cargo deny", runs_cargo_deny))
@@ -625,6 +631,22 @@ fn cargo_deny_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         issues.dedup();
         Issue::alternatives(issues)
     }
+}
+
+/// The warning for a [`CARGO_DENY_ACTION`] step passing `args` rather than the standard's `expected`: it works, but
+/// differs from the standard.
+fn cargo_deny_args_differ(args: &str, expected: &str) -> Issue {
+    Issue::warn(format!(
+        "cargo-deny-action runs cargo deny {args} rather than {expected}"
+    ))
+}
+
+/// Whether `workflow` runs cargo-deny's checks through [`CARGO_DENY_ACTION`] with the arguments the standard gives,
+/// [`CARGO_DENY_CI_ARGS`]. A step passing others works, but differs from the standard, so it warns.
+fn cargo_deny_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    cargo_deny_action_in(workflow, CARGO_DENY_CI_ARGS, |args| {
+        cargo_deny_args_differ(args, CARGO_DENY_CI_ARGS)
+    })
 }
 
 /// Whether `workflow` checks formatting with [`RUSTFMT_ACTION`]. With no such step, a step running rustfmt itself
@@ -801,22 +823,22 @@ fn cargo_deny_checks_advisories(args: &str) -> bool {
     checks.is_empty() || checks.contains(&"advisories")
 }
 
-/// Whether `workflow` runs cargo-deny's advisories check through [`CARGO_DENY_ACTION`].
+/// Whether `workflow` runs cargo-deny's advisories check through [`CARGO_DENY_ACTION`] with the arguments the standard
+/// gives, [`CARGO_DENY_AUDIT_ARGS`]. A step passing others warns if it still runs the advisories check, and fails if
+/// it doesn't.
 fn cargo_deny_advisories_in(workflow: &Workflow) -> Result<(), Issue> {
-    let mut steps = workflow.steps_using(CARGO_DENY_ACTION).peekable();
-    if steps.peek().is_none() {
-        return Err(workflow.missing_action(CARGO_DENY_ACTION, "cargo deny", runs_cargo_deny));
-    }
-    if steps.any(|step| cargo_deny_checks_advisories(&cargo_deny_action_args(step))) {
-        Ok(())
-    } else {
-        Err(Issue::fail(
-            "cargo-deny-action doesn't run the advisories check",
-        ))
-    }
+    cargo_deny_action_in(workflow, CARGO_DENY_AUDIT_ARGS, |args| {
+        if cargo_deny_checks_advisories(args) {
+            cargo_deny_args_differ(args, CARGO_DENY_AUDIT_ARGS)
+        } else {
+            Issue::fail(format!(
+                "cargo-deny-action runs cargo deny {args}, which skips the advisories check"
+            ))
+        }
+    })
 }
 
-/// Check that `audit.yaml` runs cargo-deny's advisories check.
+/// Check that `audit.yaml` runs cargo-deny's advisories check with the standard's arguments.
 pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(workflow) = ctx.audit_workflow() else {
         return;
@@ -1269,24 +1291,68 @@ jobs:
             cargo_deny_advisories_in(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
         };
         let action = "      - uses: EmbarkStudios/cargo-deny-action@abc # v2.1.1\n";
+        let with = |inputs: &str| format!("{action}        with:\n{inputs}");
         for steps in [
-            action.to_owned(),
-            format!("{action}        with:\n          command: check advisories\n"),
-            format!(
-                "{action}        with:\n          arguments: --workspace --all-features\n          command: check -D warnings advisories\n"
+            with(
+                "          arguments: --workspace --all-features\n          command: check -D warnings advisories\n          manifest-path: rust/Cargo.toml\n",
             ),
+            // The action joins its inputs, so the arguments may be split between them.
+            with(
+                "          arguments: --workspace --all-features\n          command: check\n          command-arguments: -D warnings advisories\n",
+            ),
+            // One step with the standard's arguments is enough.
             format!(
-                "{action}        with:\n          command: check\n          command-arguments: bans\n{action}"
+                "{}{}",
+                with("          command: check bans\n"),
+                with(
+                    "          arguments: --workspace --all-features\n          command: check -D warnings advisories\n"
+                )
             ),
         ] {
             assert_eq!(audit(&steps), Ok(()), "{steps}");
         }
+        // A step running the advisories check with other arguments works, but differs from the standard.
+        for (steps, args) in [
+            (action.to_owned(), "--all-features check"),
+            (
+                with("          command: check advisories\n"),
+                "--all-features check advisories",
+            ),
+            (
+                with(
+                    "          arguments: --workspace --all-features\n          command: check -D warnings advisories bans\n",
+                ),
+                "--workspace --all-features check -D warnings advisories bans",
+            ),
+        ] {
+            assert_eq!(
+                audit(&steps),
+                Err(Issue::warn(format!(
+                    "cargo-deny-action runs cargo deny {args} rather than \
+                     --workspace --all-features check -D warnings advisories"
+                ))),
+                "{steps}"
+            );
+        }
+        // The step that runs the advisories check decides.
         assert_eq!(
             audit(&format!(
-                "{action}        with:\n          command: check\n          command-arguments: bans licenses\n"
+                "{}{action}",
+                with("          command: check\n          command-arguments: bans\n")
+            )),
+            Err(Issue::warn(
+                "cargo-deny-action runs cargo deny --all-features check bans, which skips the advisories check; \
+                 cargo-deny-action runs cargo deny --all-features check rather than \
+                 --workspace --all-features check -D warnings advisories"
+            ))
+        );
+        assert_eq!(
+            audit(&with(
+                "          command: check\n          command-arguments: bans licenses\n"
             )),
             Err(Issue::fail(
-                "cargo-deny-action doesn't run the advisories check"
+                "cargo-deny-action runs cargo deny --all-features check bans licenses, \
+                 which skips the advisories check"
             ))
         );
         // Running cargo-deny itself works, but isn't the template's form, so its arguments aren't read.

@@ -1208,7 +1208,9 @@ nothing, such as formatting, set `cache: false`. CI checks formatting with
 `EmbarkStudios/cargo-deny-action`, passing the arguments in the table above as
 `arguments: --workspace --all-features` and `command: check -D warnings bans
 licenses sources`. The advisory check runs in `audit.yaml` (see
-[Continuous Integration](#continuous-integration)).
+[Continuous Integration](#continuous-integration)), through the same action
+with `arguments: --workspace --all-features` and `command: check -D warnings
+advisories`.
 
 ### TypeScript
 
