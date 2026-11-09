@@ -741,16 +741,17 @@ itself, rather than rely on the hook's defaults, which a release may change.
 
 ### Language Hooks
 
-Language hooks are `local` hooks with `language: system` and `pass_filenames:
-false`. They invoke the project's tools directly (for example, `cargo clippy` or
-`uv run ruff check`), never through Devbox. Each one checks without modifying
-files, so the hooks and CI produce the same results. The language sections below
-list the required hooks. Hook IDs are unique, across languages too (for
-example, `pytest`, `cargo-test` and `vitest` rather than `test`), so that
-`SKIP` can target one. `SKIP` and `pre-commit run` also match a hook's
-`alias`, so a hook that runs twice under one ID, such as a remote hook run for
-two components, gives each copy an alias of its own (`ruff-check-api`,
-`ruff-check-worker`).
+Language hooks are `local` hooks with `language: unsupported` and
+`pass_filenames: false`. (`unsupported` is pre-commit 4.4's name for `system`,
+which it still accepts but means to deprecate.) They invoke the project's tools
+directly (for example, `cargo clippy` or `uv run ruff check`), never through
+Devbox. Each one checks without modifying files, so the hooks and CI produce the
+same results. The language sections below list the required hooks. Hook IDs are
+unique, across languages too (for example, `pytest`, `cargo-test` and `vitest`
+rather than `test`), so that `SKIP` can target one. `SKIP` and `pre-commit run`
+also match a hook's `alias`, so a hook that runs twice under one ID, such as a
+remote hook run for two components, gives each copy an alias of its own
+(`ruff-check-api`, `ruff-check-worker`).
 
 ## Dependency Management
 

@@ -87,7 +87,7 @@ mod tests {
                 "{id}"
             );
             assert_eq!(get(hook, "language"), "rust", "{id}");
-            assert_eq!(get(copy, "language"), "system", "{id}");
+            assert_eq!(get(copy, "language"), "unsupported", "{id}");
         }
 
         // norms treats its own warnings as failures.

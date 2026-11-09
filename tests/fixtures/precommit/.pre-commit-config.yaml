@@ -41,19 +41,19 @@ repos:
         alias: eslint-admin
         name: eslint (admin)
         entry: pnpm --dir admin exec eslint . --max-warnings 0
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: eslint
         name: eslint (web)
         entry: pnpm --dir web exec eslint . --max-warnings 0
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: vitest
         entry: pnpm --dir web exec vitest run
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: test
         alias: vitest
         entry: pnpm --dir admin exec vitest run
-        language: system
+        language: unsupported
         pass_filenames: false

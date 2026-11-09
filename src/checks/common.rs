@@ -2396,7 +2396,7 @@ jobs:
         ] {
             let hook = format!(
                 "{{id: conventional-pre-commit, entry: {entry} feat fix perf refactor style test docs build ci revert \
-                 chore, language: system, stages: [commit-msg]}}"
+                 chore, language: unsupported, stages: [commit-msg]}}"
             );
             assert_eq!(conventional("local", &hook), Ok(()), "{entry}");
         }
@@ -2429,7 +2429,7 @@ jobs:
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: .venv/bin/conventional-pre-commit --strict, language: system, \
+                "{id: conventional-pre-commit, entry: .venv/bin/conventional-pre-commit --strict, language: unsupported, \
                  stages: [commit-msg, prepare-commit-msg], args: [feat, fix, perf, refactor, style, test, docs, build, \
                  ci, revert, chore]}",
             ),
@@ -2469,7 +2469,7 @@ jobs:
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: conventional-pre-commit feat, language: system}",
+                "{id: conventional-pre-commit, entry: conventional-pre-commit feat, language: unsupported}",
                 Issue::fail(
                     "conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow fix, perf, refactor, \
                  style, test, docs, build, ci, revert, chore",

@@ -68,41 +68,41 @@ repos:
         name: pnpm lock
         description: Check that pnpm-lock.yaml is up to date
         entry: pnpm install --frozen-lockfile
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: pnpm-peer-dependencies
         name: pnpm peer dependencies
         description: Check for missing or invalid peer dependencies
         entry: pnpm peers check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: prettier
         name: prettier
         description: Check formatting using Prettier
         entry: pnpm exec prettier --check .
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: eslint
         name: eslint
         description: Lint TypeScript code using ESLint
         entry: pnpm exec eslint . --max-warnings 0
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: tsc
         name: tsc
         description: Type check TypeScript code using tsc
         entry: pnpm exec tsc -b --noEmit
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: vite-build
         name: vite build
         description: Build the TypeScript application using Vite
         entry: pnpm exec vite build
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: vitest
         name: vitest
         description: Run TypeScript tests using Vitest
         entry: pnpm exec vitest run
-        language: system
+        language: unsupported
         pass_filenames: false

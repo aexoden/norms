@@ -4,35 +4,35 @@ repos:
       - id: uv-lock
         name: uv lock
         entry: uv --directory . lock --check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: pytest
         name: pytest
         entry: uv run pytest --cov-report=term-missing
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: pnpm-peer-dependencies
         name: pnpm peer dependencies
         entry: pnpm --dir . exec pnpm peers check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: vitest
         name: vitest
         entry: pnpm exec vitest run
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: eslint
         name: eslint
         entry: pnpm exec eslint . --max-warnings 10
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: ruff-format
         name: ruff format
         entry: uv run ruff format --diff
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: prettier
         name: prettier
         entry: pnpm exec prettier --write .
-        language: system
+        language: unsupported
         pass_filenames: false

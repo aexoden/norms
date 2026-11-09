@@ -66,29 +66,29 @@ repos:
         name: uv lock
         description: Check that uv.lock is up to date
         entry: uv lock --check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: ruff-format
         name: ruff format
         description: Check Python formatting using Ruff
         entry: uv run ruff format --check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: ruff-check
         name: ruff check
         description: Lint Python code using Ruff
         entry: uv run ruff check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: mypy
         name: mypy
         description: Type check Python code using mypy
         entry: uv run mypy .
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: pytest
         name: pytest
         description: Run Python tests using pytest
         entry: uv run pytest --cov=src/demo_python --cov-report=term-missing
-        language: system
+        language: unsupported
         pass_filenames: false

@@ -66,31 +66,31 @@ repos:
         name: cargo lock
         description: Check that Cargo.lock is up to date
         entry: cargo update --manifest-path rust/Cargo.toml --workspace --locked
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: rustfmt
         name: rustfmt
         description: Format Rust code using rustfmt
         entry: cargo fmt --all --check --manifest-path rust/Cargo.toml
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: clippy
         name: clippy
         description: Lint Rust code using clippy
         entry: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features -- -D warnings
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: cargo-test
         name: cargo test
         description: Run Rust tests using cargo test
         entry: cargo test --manifest-path rust/Cargo.toml --workspace --all-features
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: cargo-deny
         name: cargo-deny
         description: Check Rust dependency bans, licenses and sources using cargo-deny
         entry: cargo deny --manifest-path rust/Cargo.toml --workspace --all-features check -D warnings bans licenses sources
-        language: system
+        language: unsupported
         pass_filenames: false
 
   # Python
@@ -100,29 +100,29 @@ repos:
         name: uv lock
         description: Check that uv.lock is up to date
         entry: uv lock --check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: ruff-format
         name: ruff format
         description: Check Python formatting using Ruff
         entry: uv run ruff format --check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: ruff-check
         name: ruff check
         description: Lint Python code using Ruff
         entry: uv run ruff check
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: mypy
         name: mypy
         description: Type check Python code using mypy
         entry: uv run mypy .
-        language: system
+        language: unsupported
         pass_filenames: false
       - id: pytest
         name: pytest
         description: Run Python tests using pytest
         entry: uv run pytest --cov=src/demo_library --cov-report=term-missing
-        language: system
+        language: unsupported
         pass_filenames: false
