@@ -43,19 +43,11 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
     }
 
     // ESM module type
-    if config.is_esm() {
-        report.should(
-            "package-json-esm",
-            "package.json: uses ESM (type: module)",
-            Outcome::Pass,
-        );
-    } else {
-        report.should(
-            "package-json-esm",
-            "package.json: uses ESM (type: module)",
-            Outcome::fail("Consider setting \"type\": \"module\" for ESM support"),
-        );
-    }
+    report.should(
+        "package-json-esm",
+        "package.json: uses ESM (type: module)",
+        config.check_module_type(),
+    );
 
     // Every TypeScript component is an application, which npm mustn't publish.
     report.should(
@@ -117,7 +109,7 @@ pub(crate) fn check_pnpm(ctx: &ComponentContext, report: &mut Report) {
                 id,
                 format!("pnpm: no {manager} lock file"),
                 Outcome::fail(format!(
-                    "Found {lockfile}; consider removing if pnpm is the intended package manager"
+                    "Found {lockfile}, though pnpm is the package manager"
                 )),
             );
         }
@@ -296,14 +288,12 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
     );
 
     // noUncheckedIndexedAccess
-    report.should(
+    check_enabled(
         "tsconfig-no-unchecked-indexed-access",
-        format!("{label}: noUncheckedIndexedAccess enabled"),
-        if opts.no_unchecked_indexed_access == Some(true) {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider enabling noUncheckedIndexedAccess for safer index access")
-        },
+        label,
+        "noUncheckedIndexedAccess",
+        opts.no_unchecked_indexed_access,
+        report,
     );
 
     // Module setting
@@ -321,16 +311,12 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
     );
 
     // verbatimModuleSyntax
-    report.should(
+    check_enabled(
         "tsconfig-verbatim-module-syntax",
-        format!("{label}: verbatimModuleSyntax enabled"),
-        if opts.verbatim_module_syntax == Some(true) {
-            Outcome::Pass
-        } else {
-            Outcome::fail(
-                "Consider enabling verbatimModuleSyntax for explicit import/export syntax",
-            )
-        },
+        label,
+        "verbatimModuleSyntax",
+        opts.verbatim_module_syntax,
+        report,
     );
 
     // Checks of unused code and unsafe imports and switches
@@ -356,15 +342,7 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
             opts.no_unused_parameters,
         ),
     ] {
-        report.should(
-            id,
-            format!("{label}: {option} enabled"),
-            match value {
-                Some(true) => Ok(()),
-                Some(false) => Err(format!("{option} is false")),
-                None => Err(format!("Missing {option}")),
-            },
-        );
+        check_enabled(id, label, option, value, report);
     }
 
     report.should(
@@ -374,15 +352,31 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
     );
 
     // isolatedModules (important for bundler compatibility)
-    report.should(
+    check_enabled(
         "tsconfig-isolated-modules",
-        format!("{label}: isolatedModules enabled"),
-        if opts.isolated_modules == Some(true) {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Consider enabling isolatedModules for bundler compatibility")
-        },
+        label,
+        "isolatedModules",
+        opts.isolated_modules,
+        report,
     );
+}
+
+/// Check that the boolean compiler option `option`, whose value in the config labeled `label` is `value`, is enabled.
+fn check_enabled(id: &str, label: &str, option: &str, value: Option<bool>, report: &mut Report) {
+    report.should(
+        id,
+        format!("{label}: {option} enabled"),
+        option_enabled(option, value),
+    );
+}
+
+/// Whether the boolean compiler option `option`, whose value is `value`, is enabled.
+fn option_enabled(option: &str, value: Option<bool>) -> Result<(), String> {
+    match value {
+        Some(true) => Ok(()),
+        Some(false) => Err(format!("{option} is false")),
+        None => Err(format!("Missing {option}")),
+    }
 }
 
 /// Check that `moduleDetection` is `force`, so that every file is a module. TypeScript reads the value
@@ -638,7 +632,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
         if config.has_script("build") {
             Outcome::Pass
         } else {
-            Outcome::fail("Consider adding a 'build' script")
+            Outcome::fail("Missing 'build' script")
         },
     );
 
@@ -651,7 +645,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
             .as_ref()
             .and_then(|scripts| scripts.get("lint"))
             .map_or_else(
-                || Err("Consider adding a 'lint' script".to_owned()),
+                || Err("Missing 'lint' script".to_owned()),
                 |script| lint_script_strict(script),
             ),
     );
@@ -664,7 +658,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
         if has_format {
             Outcome::Pass
         } else {
-            Outcome::fail("Consider adding a 'format' script")
+            Outcome::fail("Missing 'format' script")
         },
     );
 
@@ -675,7 +669,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
         if config.has_script("typecheck") {
             Outcome::Pass
         } else {
-            Outcome::fail("Consider adding a 'typecheck' script")
+            Outcome::fail("Missing 'typecheck' script")
         },
     );
 
@@ -686,7 +680,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
         if config.has_script("test") {
             Outcome::Pass
         } else {
-            Outcome::fail("Consider adding a 'test' script")
+            Outcome::fail("Missing 'test' script")
         },
     );
 }
@@ -894,6 +888,19 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn boolean_compiler_options_are_enabled() {
+        assert_eq!(option_enabled("isolatedModules", Some(true)), Ok(()));
+        assert_eq!(
+            option_enabled("isolatedModules", Some(false)),
+            Err("isolatedModules is false".to_owned())
+        );
+        assert_eq!(
+            option_enabled("isolatedModules", None),
+            Err("Missing isolatedModules".to_owned())
+        );
+    }
 
     #[test]
     fn module_detection_is_force_in_any_case() {

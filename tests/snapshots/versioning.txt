@@ -68,7 +68,7 @@ pass  uv-cache-keys  [api] uv: reinstalls the project when pyproject.toml, HEAD 
 pass  python-git-archival  [api] Python: .git_archival.txt (node and describe-name)
 pass  gitattributes-git-archival  [api] .gitattributes: .git_archival.txt marked export-subst
 warn  python-src-layout  [api] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [api] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [api] uv: release age of 3 days (exclude-newer)
@@ -76,7 +76,7 @@ warn  uv-exclude-newer  [api] uv: release age of 3 days (exclude-newer)
 pass  uv-required-version  [api] uv: required-version sets the oldest uv needed (>=)
 pass  uv-required-version-ci  [api] uv: CI's pinned uv satisfies required-version
 warn  python-dependency-groups  [api] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [api] Ruff: configured
       Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [api] Ruff lint: configured
@@ -93,7 +93,7 @@ fail  python-version-exists  [service] Python: .python-version
 warn  pyproject-python-classifiers  [service] pyproject.toml: Python classifiers match requires-python
       pyproject.toml sets no requires-python
 warn  python-src-layout  [service] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [service] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [service] uv: release age of 3 days (exclude-newer)
@@ -102,7 +102,7 @@ warn  uv-required-version  [service] uv: required-version sets the oldest uv nee
       [tool.uv] required-version (==0.9.5) isn't a single >= minimum
 pass  uv-required-version-ci  [service] uv: CI's pinned uv satisfies required-version
 warn  python-dependency-groups  [service] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [service] Ruff: configured
       Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [service] Ruff lint: configured
@@ -130,7 +130,7 @@ warn  python-git-archival  [tool] Python: .git_archival.txt (node and describe-n
 warn  gitattributes-git-archival  [tool] .gitattributes: .git_archival.txt marked export-subst
       No line marks tool/.git_archival.txt export-subst
 warn  python-src-layout  [tool] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [tool] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [tool] uv: release age of 3 days (exclude-newer)
@@ -139,7 +139,7 @@ pass  uv-required-version  [tool] uv: required-version sets the oldest uv needed
 fail  uv-required-version-ci  [tool] uv: CI's pinned uv satisfies required-version
       required-version (>=0.10.0) rejects the uv pinned in ci.yaml: pytest (0.9.5)
 warn  python-dependency-groups  [tool] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [tool] Ruff: configured
       Missing [tool.ruff] in pyproject.toml
 fail  ruff-lint-configured  [tool] Ruff lint: configured

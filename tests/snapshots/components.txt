@@ -52,7 +52,7 @@ warn  uv-cache-keys  [tools] uv: reinstalls the project when pyproject.toml, HEA
 fail  python-git-archival  [tools] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [tools] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [tools] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [tools] uv: release age of 3 days (exclude-newer)
@@ -60,7 +60,7 @@ warn  uv-exclude-newer  [tools] uv: release age of 3 days (exclude-newer)
 warn  uv-required-version  [tools] uv: required-version sets the oldest uv needed (>=)
       [tool.uv] sets no required-version
 warn  python-dependency-groups  [tools] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [tools] Ruff: configured
       No [tool] section in pyproject.toml
 fail  ruff-lint-configured  [tools] Ruff lint: configured
@@ -98,7 +98,7 @@ pass  package-json-exists  [apps/admin] package.json: exists
 pass  package-json-valid  [apps/admin] package.json: valid
 pass  package-json-name  [apps/admin] package.json: has name
 warn  package-json-esm  [apps/admin] package.json: uses ESM (type: module)
-      Consider setting "type": "module" for ESM support
+      Missing "type": "module"
 warn  package-json-private  [apps/admin] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [apps/admin] package.json: dependencies pinned exactly (application)
@@ -129,7 +129,7 @@ pass  package-json-exists  [apps/web] package.json: exists
 pass  package-json-valid  [apps/web] package.json: valid
 pass  package-json-name  [apps/web] package.json: has name
 warn  package-json-esm  [apps/web] package.json: uses ESM (type: module)
-      Consider setting "type": "module" for ESM support
+      Missing "type": "module"
 warn  package-json-private  [apps/web] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [apps/web] package.json: dependencies pinned exactly (application)

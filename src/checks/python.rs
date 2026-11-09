@@ -298,7 +298,7 @@ pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "python-src-layout",
             "Python: src/ directory",
-            Outcome::fail("Consider using a src/ layout"),
+            Outcome::fail("No src/ directory"),
         );
 
         return;
@@ -386,7 +386,7 @@ pub(crate) fn check_dependency_groups(ctx: &ComponentContext, report: &mut Repor
         report.should(
             "python-dependency-groups",
             "Python: has dependency-groups",
-            Outcome::fail("Consider using dependency-groups for dev dependencies"),
+            Outcome::fail("Missing [dependency-groups]"),
         );
     }
 }
@@ -441,7 +441,7 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "ruff-format-configured",
             "Ruff format: configured",
-            Outcome::fail("Consider configuring [tool.ruff.format]"),
+            Outcome::fail("Missing [tool.ruff.format]"),
         );
     }
 }

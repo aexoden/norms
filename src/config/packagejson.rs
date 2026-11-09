@@ -216,9 +216,13 @@ impl PackageJson {
         }
     }
 
-    /// Whether `type` is set to `"module"` (ESM).
-    pub(crate) fn is_esm(&self) -> bool {
-        self.module_type.as_deref() == Some("module")
+    /// Check that `type` is `"module"`, so that Node.js loads the package's files as ES modules.
+    pub(crate) fn check_module_type(&self) -> Result<(), String> {
+        match self.module_type.as_deref() {
+            Some("module") => Ok(()),
+            Some(value) => Err(format!("type is {value:?}, not \"module\"")),
+            None => Err("Missing \"type\": \"module\"".to_owned()),
+        }
     }
 
     /// Whether a given package name appears in any dependency list.
@@ -447,6 +451,19 @@ mod tests {
                 "{json}"
             );
         }
+    }
+
+    #[test]
+    fn requires_module_type() {
+        assert_eq!(parse(r#"{ "type": "module" }"#).check_module_type(), Ok(()));
+        assert_eq!(
+            parse("{}").check_module_type(),
+            Err("Missing \"type\": \"module\"".to_owned())
+        );
+        assert_eq!(
+            parse(r#"{ "type": "commonjs" }"#).check_module_type(),
+            Err(r#"type is "commonjs", not "module""#.to_owned())
+        );
     }
 
     #[test]

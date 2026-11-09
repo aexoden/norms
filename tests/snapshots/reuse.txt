@@ -91,7 +91,7 @@ warn  uv-cache-keys  [py] uv: reinstalls the project when pyproject.toml, HEAD o
 fail  python-git-archival  [py] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [py] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [py] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [py] uv: release age of 3 days (exclude-newer)
@@ -99,7 +99,7 @@ warn  uv-exclude-newer  [py] uv: release age of 3 days (exclude-newer)
 warn  uv-required-version  [py] uv: required-version sets the oldest uv needed (>=)
       [tool.uv] sets no required-version
 warn  python-dependency-groups  [py] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [py] Ruff: configured
       No [tool] section in pyproject.toml
 fail  ruff-lint-configured  [py] Ruff lint: configured
@@ -170,7 +170,7 @@ pass  package-json-name  [web] package.json: has name
 warn  package-json-license-texts  [web] package.json: license has its texts in LICENSES/
       Not a valid SPDX expression (invalid character(s)): MIT/Apache-2.0
 warn  package-json-esm  [web] package.json: uses ESM (type: module)
-      Consider setting "type": "module" for ESM support
+      Missing "type": "module"
 warn  package-json-private  [web] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)

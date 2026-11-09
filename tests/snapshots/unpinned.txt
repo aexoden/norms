@@ -44,7 +44,7 @@ warn  uv-cache-keys  [python-app] uv: reinstalls the project when pyproject.toml
 fail  python-git-archival  [python-app] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [python-app] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [python-app] Python: uv.lock
       Not found: uv.lock
 warn  pyproject-dependencies-exact  [python-app] pyproject.toml: dependencies pinned exactly (application)
@@ -79,7 +79,7 @@ warn  uv-cache-keys  [python-lib] uv: reinstalls the project when pyproject.toml
 fail  python-git-archival  [python-lib] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [python-lib] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [python-lib] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [python-lib] uv: release age of 3 days (exclude-newer)
@@ -87,7 +87,7 @@ warn  uv-exclude-newer  [python-lib] uv: release age of 3 days (exclude-newer)
 warn  uv-required-version  [python-lib] uv: required-version sets the oldest uv needed (>=)
       [tool.uv] sets no required-version
 warn  python-dependency-groups  [python-lib] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [python-lib] Ruff: configured
       No [tool] section in pyproject.toml
 fail  ruff-lint-configured  [python-lib] Ruff lint: configured

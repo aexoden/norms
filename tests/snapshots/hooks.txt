@@ -84,7 +84,7 @@ warn  uv-cache-keys  [.] uv: reinstalls the project when pyproject.toml, HEAD or
 fail  python-git-archival  [.] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [.] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [.] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
@@ -92,7 +92,7 @@ warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
 warn  uv-required-version  [.] uv: required-version sets the oldest uv needed (>=)
       [tool.uv] sets no required-version
 warn  python-dependency-groups  [.] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [.] Ruff: configured
       No [tool] section in pyproject.toml
 fail  ruff-lint-configured  [.] Ruff lint: configured
@@ -123,7 +123,7 @@ pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid
 pass  package-json-name  [.] package.json: has name
 warn  package-json-esm  [.] package.json: uses ESM (type: module)
-      Consider setting "type": "module" for ESM support
+      Missing "type": "module"
 warn  package-json-private  [.] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
@@ -150,15 +150,15 @@ fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
 fail  prettier-dependency  [.] Prettier: in dependencies
 pass  package-json-scripts  [.] package.json: has scripts
 warn  package-json-script-build  [.] Scripts: has 'build'
-      Consider adding a 'build' script
+      Missing 'build' script
 warn  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
       The lint script runs eslint without --max-warnings 0
 warn  package-json-script-format  [.] Scripts: has 'format'
-      Consider adding a 'format' script
+      Missing 'format' script
 warn  package-json-script-typecheck  [.] Scripts: has 'typecheck'
-      Consider adding a 'typecheck' script
+      Missing 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
-      Consider adding a 'test' script
+      Missing 'test' script
 fail  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
       No pnpm-lock hook
 pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook

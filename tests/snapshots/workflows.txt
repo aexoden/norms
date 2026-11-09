@@ -98,7 +98,7 @@ warn  uv-cache-keys  [.] uv: reinstalls the project when pyproject.toml, HEAD or
 fail  python-git-archival  [.] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
 warn  python-src-layout  [.] Python: src/ directory
-      Consider using a src/ layout
+      No src/ directory
 fail  uv-lock-exists  [.] Python: uv.lock
       Not found: uv.lock
 warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
@@ -106,7 +106,7 @@ warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
 warn  uv-required-version  [.] uv: required-version sets the oldest uv needed (>=)
       [tool.uv] sets no required-version
 warn  python-dependency-groups  [.] Python: has dependency-groups
-      Consider using dependency-groups for dev dependencies
+      Missing [dependency-groups]
 fail  ruff-configured  [.] Ruff: configured
       No [tool] section in pyproject.toml
 fail  ruff-lint-configured  [.] Ruff lint: configured
