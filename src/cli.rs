@@ -258,7 +258,11 @@ mod tests {
         let mut report = Report::new(PathBuf::new(), vec![frontend.clone()]);
         report.should("readme-exists", "README.md", true);
         report.with_component(&frontend, |report| {
-            report.should("package-json-name", "package.json: has name", true);
+            report.should(
+                "package-json-esm",
+                "package.json: uses ESM (type: module)",
+                true,
+            );
         });
 
         let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();

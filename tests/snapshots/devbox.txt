@@ -84,7 +84,6 @@ fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid
-pass  package-json-name  [.] package.json: has name
 warn  package-json-esm  [.] package.json: uses ESM (type: module)
       Missing "type": "module"
 warn  package-json-private  [.] package.json: private (application)

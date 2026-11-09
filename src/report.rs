@@ -600,7 +600,11 @@ mod tests {
 
         report.should("readme-exists", "README.md", true);
         report.with_component(&frontend, |report| {
-            report.should("package-json-name", "package.json: has name", true);
+            report.should(
+                "package-json-esm",
+                "package.json: uses ESM (type: module)",
+                true,
+            );
         });
         report.should("changelog-exists", "CHANGELOG.md", true);
 

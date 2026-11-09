@@ -168,7 +168,6 @@ fail  rust-ci-cargo-deny  Rust CI: cargo deny
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
-pass  package-json-name  [web] package.json: has name
 warn  package-json-license-texts  [web] package.json: license has its texts in LICENSES/
       Not a valid SPDX expression (invalid character(s)): MIT/Apache-2.0
 warn  package-json-esm  [web] package.json: uses ESM (type: module)

@@ -24,13 +24,6 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         return;
     };
 
-    // Name field
-    report.should(
-        "package-json-name",
-        "package.json: has name",
-        config.name.as_ref().is_some_and(|n| !n.is_empty()),
-    );
-
     if let Some(license) = &config.license {
         report.check(
             "package-json-license-texts",

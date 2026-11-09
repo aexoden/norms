@@ -27,7 +27,6 @@ fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  components-search  Components: every directory searched
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid
-pass  package-json-name  [.] package.json: has name
 pass  package-json-esm  [.] package.json: uses ESM (type: module)
 warn  package-json-private  [.] package.json: private (application)
       private is "true", not true

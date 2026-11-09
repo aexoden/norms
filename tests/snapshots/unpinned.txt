@@ -118,7 +118,6 @@ warn  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-pub
       global-min-publish-age: "7 days" isn't 3 days
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
-pass  package-json-name  [web] package.json: has name
 pass  package-json-esm  [web] package.json: uses ESM (type: module)
 pass  package-json-private  [web] package.json: private (application)
 warn  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)

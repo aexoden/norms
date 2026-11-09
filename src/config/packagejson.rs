@@ -15,7 +15,6 @@ use serde_json::Value;
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub(crate) struct PackageJson {
-    pub name: Option<String>,
     pub description: Option<String>,
 
     /// The license, as an SPDX expression. Kept unparsed, so that one of the wrong type fails only its check.
