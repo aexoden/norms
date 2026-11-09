@@ -531,6 +531,15 @@ fn check_cargo_config_file(status: &ConfigStatus<CargoConfig>, report: &mut Repo
 // Pre-commit integration
 //
 
+/// The IDs of Rust's language hooks, which the standard's hook table lists.
+const LANGUAGE_HOOKS: [&str; 5] = [
+    "cargo-lock",
+    "rustfmt",
+    "clippy",
+    "cargo-test",
+    "cargo-deny",
+];
+
 pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.precommit().as_ref_ok() else {
         return;
@@ -564,6 +573,11 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         "rust-precommit-cargo-deny",
         "Rust pre-commit: cargo-deny hook",
         config.check_commit_hook("cargo-deny"),
+    );
+    report.should(
+        "rust-precommit-local-hooks",
+        "Rust pre-commit: language hooks are local, unsupported and take no file names",
+        config.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }
 

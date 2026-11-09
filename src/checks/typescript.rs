@@ -823,6 +823,17 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
 // Pre-commit integration
 //
 
+/// The IDs of TypeScript's language hooks, which the standard's hook table lists.
+const LANGUAGE_HOOKS: [&str; 7] = [
+    "pnpm-lock",
+    "pnpm-peer-dependencies",
+    "prettier",
+    "eslint",
+    "tsc",
+    "vite-build",
+    "vitest",
+];
+
 pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(precommit) = ctx.precommit().as_ref_ok() else {
         return;
@@ -868,6 +879,11 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
         "typescript-precommit-vitest",
         "Pre-commit: has vitest hook",
         precommit.check_commit_hook("vitest"),
+    );
+    report.should(
+        "typescript-precommit-local-hooks",
+        "TypeScript pre-commit: language hooks are local, unsupported and take no file names",
+        precommit.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }
 

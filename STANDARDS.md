@@ -736,8 +736,9 @@ Every project uses these hooks:
 
 `norms verify` checks that every hook it checks, the language hooks included,
 runs in the `pre-commit` stage (the `conventional-pre-commit` hook in
-`commit-msg`). The `conventional-pre-commit` hook must list the commit types
-itself, rather than rely on the hook's defaults, which a release may change.
+`commit-msg`), and warns when a language hook isn't set up as the next section
+says. The `conventional-pre-commit` hook must list the commit types itself,
+rather than rely on the hook's defaults, which a release may change.
 
 ### Language Hooks
 

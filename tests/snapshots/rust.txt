@@ -101,6 +101,7 @@ pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook
 pass  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, unsupported and take no file names
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check

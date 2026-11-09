@@ -571,6 +571,9 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
 // Pre-commit integration
 //
 
+/// The IDs of Python's language hooks, which the standard's hook table lists.
+const LANGUAGE_HOOKS: [&str; 5] = ["uv-lock", "ruff-format", "ruff-check", "mypy", "pytest"];
+
 pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.precommit().as_ref_ok() else {
         return;
@@ -610,6 +613,11 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
                 Err(Issue::warn("The pytest hook doesn't pass --cov"))
             }
         }),
+    );
+    report.should(
+        "python-precommit-local-hooks",
+        "Python pre-commit: language hooks are local, unsupported and take no file names",
+        config.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }
 

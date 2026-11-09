@@ -3,7 +3,7 @@
 
 //! Type-safe model for `'.pre-commit-config.yaml`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -82,6 +82,14 @@ pub(crate) struct PrecommitHook {
     #[serde(deserialize_with = "not_null")]
     pub stages: Option<Vec<String>>,
     pub args: Vec<String>,
+    /// The language pre-commit runs the hook with, if the configuration sets it, as a local hook must. A null value
+    /// fails parsing, as pre-commit rejects it.
+    #[serde(deserialize_with = "not_null")]
+    pub language: Option<String>,
+    /// Whether pre-commit appends the staged files' names to the hook's command, if the configuration says. pre-commit
+    /// does unless it is `false`. A null value fails parsing, as pre-commit rejects it.
+    #[serde(deserialize_with = "not_null")]
+    pub pass_filenames: Option<bool>,
 }
 
 impl PrecommitHook {
@@ -223,6 +231,45 @@ impl PrecommitConfig {
                 "Hooks with no ID or alias of their own: {}",
                 ambiguous.join(", ")
             ))
+        }
+    }
+
+    /// Whether every hook with one of the IDs `ids`, the language hooks of a language, is set up as the standard's
+    /// Language Hooks section says: a `local` hook with `language: unsupported` and `pass_filenames: false`, so that it
+    /// runs the project's own tools on the whole project. A remote hook's language and file names are its repository's
+    /// to choose, so only its being remote is reported. Hooks that are missing are left to the checks of each hook.
+    pub(crate) fn check_language_hooks(&self, ids: &[&str]) -> Result<(), String> {
+        let mut issues: Vec<String> = Vec::new();
+        for repo in &self.repos {
+            for hook in repo
+                .hooks
+                .iter()
+                .filter(|hook| ids.contains(&hook.id.as_str()))
+            {
+                let name = hook.alias().unwrap_or(&hook.id);
+                if repo.repo != "local" {
+                    issues.push(format!("{name} isn't a local hook"));
+                    continue;
+                }
+                match hook.language.as_deref() {
+                    Some("unsupported") => {}
+                    Some(language) => {
+                        issues.push(format!("{name} has language: {language}, not unsupported"));
+                    }
+                    None => issues.push(format!("{name} has no language")),
+                }
+                if hook.pass_filenames != Some(false) {
+                    issues.push(format!("{name} doesn't set pass_filenames: false"));
+                }
+            }
+        }
+        // Copies of a hook without aliases of their own have the same issues, each worth naming once.
+        let mut seen = HashSet::new();
+        issues.retain(|issue| seen.insert(issue.clone()));
+        if issues.is_empty() {
+            Ok(())
+        } else {
+            Err(issues.join("; "))
         }
     }
 
@@ -521,6 +568,58 @@ mod tests {
         }
     }
 
+    fn language_hooks(repos: &str) -> Result<(), String> {
+        serde_saphyr::from_str::<PrecommitConfig>(&format!("repos: {repos}\n"))
+            .unwrap()
+            .check_language_hooks(&["lint", "test"])
+    }
+
+    #[test]
+    fn language_hooks_are_local_unsupported_and_take_no_file_names() {
+        for repos in [
+            "[]",
+            "[{repo: local, hooks: [{id: lint, language: unsupported, pass_filenames: false}]}]",
+            // Hooks with other IDs aren't language hooks.
+            "[{repo: local, hooks: [{id: other, language: system}]}, {repo: https://example.com/a, hooks: [{id: b}]}]",
+            "[{repo: local, hooks: [{id: lint, alias: lint-a, language: unsupported, pass_filenames: false}, \
+             {id: lint, alias: lint-b, language: unsupported, pass_filenames: false}]}]",
+        ] {
+            assert_eq!(language_hooks(repos), Ok(()), "{repos}");
+        }
+        for (repos, issues) in [
+            (
+                "[{repo: https://example.com/lint, hooks: [{id: lint, language: unsupported, pass_filenames: false}]}]",
+                "lint isn't a local hook",
+            ),
+            (
+                "[{repo: local, hooks: [{id: lint, language: system, pass_filenames: false}]}]",
+                "lint has language: system, not unsupported",
+            ),
+            (
+                "[{repo: local, hooks: [{id: lint, pass_filenames: false}]}]",
+                "lint has no language",
+            ),
+            (
+                "[{repo: local, hooks: [{id: lint, language: unsupported}]}]",
+                "lint doesn't set pass_filenames: false",
+            ),
+            (
+                "[{repo: local, hooks: [{id: lint, language: unsupported, pass_filenames: true}]}]",
+                "lint doesn't set pass_filenames: false",
+            ),
+            (
+                "[{repo: local, hooks: [{id: lint, language: python}, \
+                 {id: test, alias: test-a, language: unsupported, pass_filenames: false}, \
+                 {id: test, alias: test-b, language: unsupported}]}, \
+                 {repo: https://example.com/a, hooks: [{id: test}, {id: test}]}]",
+                "lint has language: python, not unsupported; lint doesn't set pass_filenames: false; \
+                 test-b doesn't set pass_filenames: false; test isn't a local hook",
+            ),
+        ] {
+            assert_eq!(language_hooks(repos), Err(issues.to_owned()), "{repos}");
+        }
+    }
+
     #[test]
     fn formatter_hooks_check_rather_than_rewrite() {
         let runs = |words: &[&str]| {
@@ -670,7 +769,7 @@ mod tests {
     }
 
     #[test]
-    fn null_aliases_and_entries_fail_parsing() {
+    fn null_hook_fields_fail_parsing() {
         let hooks = |yaml: &str| {
             serde_saphyr::from_str::<PrecommitConfig>(&format!(
                 "repos:\n  - repo: local\n    hooks: {yaml}\n"
@@ -684,7 +783,12 @@ mod tests {
                     .collect::<Vec<_>>()
             })
         };
-        for key in ["alias", "entry"] {
+        for (key, value) in [
+            ("alias", "test"),
+            ("entry", "test"),
+            ("language", "unsupported"),
+            ("pass_filenames", "false"),
+        ] {
             assert!(
                 hooks(&format!("[{{id: test, {key}: ~}}]")).is_err(),
                 "{key}"
@@ -699,7 +803,7 @@ mod tests {
                 "{key}"
             );
             assert!(
-                hooks(&format!("\n      - id: test\n        {key}: test")).is_ok(),
+                hooks(&format!("\n      - id: test\n        {key}: {value}")).is_ok(),
                 "{key}"
             );
         }

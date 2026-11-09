@@ -126,6 +126,7 @@ fail  python-precommit-mypy  Python pre-commit: Mypy hook
       No mypy hook
 fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       No pytest hook
+pass  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
 fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
@@ -165,6 +166,7 @@ fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
       No cargo-test hook
 fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
       No cargo-deny hook
+pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, unsupported and take no file names
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt

@@ -58,7 +58,7 @@ fail  ci-zizmor  CI: zizmor (pedantic)
       No step uses zizmorcore/zizmor-action
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
 warn  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
-      SKIP in pre-commit doesn't list these hooks, which have jobs of their own: pytest, eslint
+      SKIP in pre-commit doesn't list these hooks, which have jobs of their own: pytest, eslint, mypy, ruff-check
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
       Doesn't run on push
@@ -103,14 +103,14 @@ fail  mypy-configured  [.] mypy: configured
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-fail  python-precommit-ruff-check  Python pre-commit: ruff-check
-      No ruff-check hook
+pass  python-precommit-ruff-check  Python pre-commit: ruff-check
 warn  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
       ruff format runs with --diff rather than --check
-fail  python-precommit-mypy  Python pre-commit: Mypy hook
-      No mypy hook
+pass  python-precommit-mypy  Python pre-commit: Mypy hook
 warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       The pytest hook doesn't pass --cov
+warn  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
+      mypy has language: system, not unsupported; ruff-check isn't a local hook
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 warn  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
       Jobs that uv run without uv sync --locked first: pytest, ruff-check
@@ -166,11 +166,12 @@ warn  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0
       The ESLint hook doesn't pass --max-warnings 0
 warn  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
       prettier runs without --check, so it rewrites files rather than only failing on them
-fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
-      No tsc hook
+pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
 fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
       No vite-build hook
 pass  typescript-precommit-vitest  Pre-commit: has vitest hook
+warn  typescript-precommit-local-hooks  TypeScript pre-commit: language hooks are local, unsupported and take no file names
+      tsc doesn't set pass_filenames: false
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       CI runs the lint script rather than eslint with --max-warnings 0

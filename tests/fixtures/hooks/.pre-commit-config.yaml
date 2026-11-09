@@ -36,3 +36,16 @@ repos:
         entry: pnpm exec prettier --write .
         language: unsupported
         pass_filenames: false
+      - id: tsc
+        name: tsc
+        entry: pnpm exec tsc -b --noEmit
+        language: unsupported
+      - id: mypy
+        name: mypy
+        entry: uv run mypy .
+        language: system
+        pass_filenames: false
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.0
+    hooks:
+      - id: ruff-check

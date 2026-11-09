@@ -114,6 +114,7 @@ pass  python-precommit-ruff-check  Python pre-commit: ruff-check
 pass  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
 pass  python-precommit-mypy  Python pre-commit: Mypy hook
 pass  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
+pass  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 pass  python-ci-ruff-format  Python CI: format check
