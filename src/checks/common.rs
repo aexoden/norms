@@ -15,7 +15,8 @@ use serde_json::Value;
 use crate::checks::{python, rust};
 use crate::config::{
     AttributeState, DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook,
-    SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands, is_program,
+    SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands, current_stage_name,
+    is_program,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -926,12 +927,24 @@ fn is_pre_commit_command(word: &str) -> bool {
     name == "pre-commit" || name.starts_with("pre-commit@")
 }
 
-/// Whether `workflow` runs every pre-commit hook it doesn't skip: a script runs `pre-commit run` with `--all-files`
-/// (or `-a`), with a pinned pre-commit. The pin belongs to that command, as `uvx pre-commit@x.y.z` or `uvx --from
-/// pre-commit==x.y.z pre-commit`, or, for a plain `pre-commit run`, to an earlier command of the same job that
-/// installs it, such as `pip install pre-commit==x.y.z`.
+/// Whether a word of a shell command assigns a variable for the command it precedes, as `SKIP=clippy` does.
+fn is_assignment(word: &str) -> bool {
+    word.split_once('=').is_some_and(|(name, _)| {
+        name.chars()
+            .next()
+            .is_some_and(|first| first.is_ascii_alphabetic() || first == '_')
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    })
+}
+
+/// Whether `workflow` runs every pre-commit hook it doesn't skip: a script runs `pre-commit run` for every hook of the
+/// `pre-commit` stage (naming no hook, and with no `--hook-stage` or that stage's) with `--all-files` (or `-a`), with a
+/// pinned pre-commit. The pin belongs to that command, as `uvx pre-commit@x.y.z` or `uvx --from pre-commit==x.y.z
+/// pre-commit`, or, for a plain `pre-commit run`, perhaps after variable assignments such as `SKIP=...`, to an earlier
+/// command of the same job that installs it, such as `pip install pre-commit==x.y.z`.
 fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut runs = false;
+    let mut runs_all = false;
     let mut all_files = false;
     let mut pinned = false;
 
@@ -939,26 +952,31 @@ fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         let mut installed = false;
         for line in job.run_lines() {
             for words in commands(&line) {
-                let Some(start) = words.windows(2).position(
-                    |pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)),
-                ) else {
+                if !words
+                    .windows(2)
+                    .any(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))
+                {
                     installed |= words.iter().any(|word| is_pre_commit_pin(word));
                     continue;
-                };
+                }
                 runs = true;
-                if !words
-                    .iter()
-                    .skip(start + 2)
-                    .any(|arg| matches!(*arg, "--all-files" | "-a"))
-                {
+                let Some(run) = pre_commit_run_all(&words) else {
+                    continue;
+                };
+                if current_stage_name(run.stage) != "pre-commit" {
+                    continue;
+                }
+                runs_all = true;
+                if !run.all_files {
                     continue;
                 }
                 all_files = true;
+                let prefix = run.prefix;
                 pinned |= words
                     .iter()
-                    .take(start + 1)
+                    .take(prefix.len() + 1)
                     .any(|word| is_pre_commit_pin(word))
-                    || (start == 0 && installed);
+                    || (installed && prefix.iter().all(|word| is_assignment(word)));
             }
         }
     }
@@ -972,6 +990,10 @@ fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         } else {
             Issue::fail("No step runs pre-commit run")
         })
+    } else if !runs_all {
+        Err(Issue::fail(
+            "pre-commit run only runs named hooks or another --hook-stage's, not every pre-commit hook",
+        ))
     } else if !all_files {
         // CI has no staged files, so without --all-files every hook is skipped and the job passes.
         Err(Issue::fail(
@@ -1010,15 +1032,25 @@ const PRE_COMMIT_RUN_VALUE_OPTIONS: [&str; 20] = [
     "-s",
 ];
 
-/// The words before pre-commit in a command, as its words, that runs `pre-commit run` for every hook of a stage,
-/// however pre-commit is invoked, and that stage, `--hook-stage`'s value or else `pre-commit`, or `None` if the
-/// command doesn't run it or names the one hook it runs. Option values aren't hook IDs, and the words after `--files`
-/// are files.
-fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<(&'b [&'a str], &'a str)> {
+/// A command that runs `pre-commit run` for every hook of a stage, as [`pre_commit_run_all`] reads it.
+struct PreCommitRun<'a, 'b> {
+    /// The words before pre-commit, such as `uvx` or `SKIP=...`.
+    prefix: &'b [&'a str],
+    /// The stage, `--hook-stage`'s value or else `pre-commit`, without quotes around it.
+    stage: &'a str,
+    /// Whether it passes `--all-files` (or `-a`).
+    all_files: bool,
+}
+
+/// The command, as its words, if it runs `pre-commit run` for every hook of a stage, however pre-commit is invoked, or
+/// `None` if it doesn't run it or names the one hook it runs. Option values aren't hook IDs or other options, the words
+/// after `--files` are files, and those after a `#` are a comment.
+fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PreCommitRun<'a, 'b>> {
     let start = words
         .windows(2)
         .position(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))?;
     let mut stage = "pre-commit";
+    let mut all_files = false;
     let mut args = words.iter().skip(start + 2);
     while let Some(arg) = args.next() {
         if *arg == "--files" || arg.starts_with('#') {
@@ -1027,7 +1059,9 @@ fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<(&'b [&'a str], &'
         if !arg.starts_with('-') {
             return None;
         }
-        if let Some(value) = arg.strip_prefix("--hook-stage=") {
+        if matches!(*arg, "--all-files" | "-a") {
+            all_files = true;
+        } else if let Some(value) = arg.strip_prefix("--hook-stage=") {
             stage = value;
         } else if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
             let value = args.next();
@@ -1038,7 +1072,11 @@ fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<(&'b [&'a str], &'
             }
         }
     }
-    Some((words.get(..start)?, stage.trim_matches(['"', '\''])))
+    Some(PreCommitRun {
+        prefix: words.get(..start)?,
+        stage: stage.trim_matches(['"', '\'']),
+        all_files,
+    })
 }
 
 /// The value a word of a shell command assigns to `SKIP`, as `SKIP=<value>` does, without quotes around it.
@@ -1110,7 +1148,8 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
             let mut shell_skip: Option<String> = None;
             for line in step.run_lines() {
                 for words in commands(&line) {
-                    let Some((prefix, stage)) = pre_commit_run_all(&words) else {
+                    let Some(PreCommitRun { prefix, stage, .. }) = pre_commit_run_all(&words)
+                    else {
                         let assignment = match words.as_slice() {
                             ["export", word] | [word] => skip_assignment(word),
                             _ => None,
@@ -1943,6 +1982,25 @@ jobs:
     }
 
     #[test]
+    fn pre_commit_runs_every_hook_of_the_pre_commit_stage() {
+        for run in [
+            "uvx pre-commit@4.3.0 run cargo-test; echo --all-files",
+            "uvx pre-commit@4.3.0 run cargo-test --all-files",
+            "uvx pre-commit@4.3.0 run --hook-stage manual --all-files",
+            "uvx pre-commit@4.3.0 run --hook-stage=pre-push -a",
+            "uvx pre-commit@4.3.0 run -a --hook-stage manual",
+        ] {
+            assert_eq!(
+                pre_commit(run),
+                Err(Issue::fail(
+                    "pre-commit run only runs named hooks or another --hook-stage's, not every pre-commit hook"
+                )),
+                "{run}"
+            );
+        }
+    }
+
+    #[test]
     fn pre_commit_runs_every_file_pinned() {
         for run in [
             "uvx pre-commit@4.3.0 run --all-files --show-diff-on-failure",
@@ -1951,6 +2009,13 @@ jobs:
             "pip install pre-commit==4.3.0\npre-commit run --show-diff-on-failure --all-files",
             "uv tool install 'pre-commit==4.3.0' && pre-commit run \\\n  --all-files",
             "uvx --from=pre-commit==4.3.0rc1 pre-commit run -a",
+            // The pre-commit stage, by its current or old name, is every hook's that runs at each commit.
+            "uvx pre-commit@4.3.0 run --hook-stage pre-commit --all-files",
+            "uvx pre-commit@4.3.0 run --hook-stage='commit' -a",
+            // A run of another stage's hooks beside it doesn't matter.
+            "uvx pre-commit@4.3.0 run --hook-stage manual --all-files\nuvx pre-commit@4.3.0 run -a",
+            // Variables assigned for pre-commit don't hide the pin of an earlier install.
+            "pip install pre-commit==4.3.0\nSKIP=clippy pre-commit run -a",
         ] {
             assert_eq!(pre_commit(run), Ok(()), "{run}");
         }
@@ -1968,7 +2033,16 @@ jobs:
                 Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
             ),
             (
-                "uvx pre-commit@4.3.0 run cargo-test; echo --all-files",
+                "uvx pre-commit@4.3.0 run --hook-stage manual --all-files\nuvx pre-commit@4.3.0 run",
+                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
+            ),
+            // An option's value or a comment isn't an option.
+            (
+                "uvx pre-commit@4.3.0 run -c -a",
+                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
+            ),
+            (
+                "uvx pre-commit@4.3.0 run # --all-files",
                 Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
             ),
             (

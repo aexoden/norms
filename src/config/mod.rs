@@ -32,7 +32,7 @@ pub(crate) use markdownlint::MarkdownlintCli2Config;
 pub(crate) use norms::{NormsConfig, Waiver};
 pub(crate) use packagejson::{PackageJson, check_dev_engine};
 pub(crate) use pnpmworkspace::PnpmWorkspace;
-pub(crate) use precommit::{PrecommitConfig, PrecommitHook};
+pub(crate) use precommit::{PrecommitConfig, PrecommitHook, current_stage_name};
 pub(crate) use prettier::PrettierConfig;
 pub(crate) use pyproject::PyprojectToml;
 pub(crate) use python_version::{

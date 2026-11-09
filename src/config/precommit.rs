@@ -327,7 +327,7 @@ fn is_stage(stage: &str) -> bool {
 }
 
 /// The current name of a pre-commit stage, given by its current or its old name, which pre-commit still accepts.
-fn current_stage_name(stage: &str) -> &str {
+pub(crate) fn current_stage_name(stage: &str) -> &str {
     match stage {
         "commit" => "pre-commit",
         "merge-commit" => "pre-merge-commit",
