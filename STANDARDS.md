@@ -1205,7 +1205,9 @@ reads `rust-toolchain.toml` and caches builds with its built-in
 `Swatinem/rust-cache`, so jobs don't add a separate cache step. Jobs that build
 nothing, such as formatting, set `cache: false`. CI checks formatting with
 `actions-rust-lang/rustfmt` and runs cargo-deny with
-`EmbarkStudios/cargo-deny-action`. The advisory check runs in `audit.yaml` (see
+`EmbarkStudios/cargo-deny-action`, passing the arguments in the table above as
+`arguments: --workspace --all-features` and `command: check -D warnings bans
+licenses sources`. The advisory check runs in `audit.yaml` (see
 [Continuous Integration](#continuous-integration)).
 
 ### TypeScript
