@@ -965,8 +965,9 @@ lines-between-types = 1
 convention = "google"
 ```
 
-The two ignored rules conflict with the Ruff formatter. Any further ignore needs
-a comment in `pyproject.toml` explaining why.
+`line-length` is 120, as is Prettier's `printWidth`. The two ignored rules
+conflict with the Ruff formatter. Any further ignore needs a comment in
+`pyproject.toml` explaining why.
 
 #### Type Checking
 

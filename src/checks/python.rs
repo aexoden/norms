@@ -395,6 +395,18 @@ pub(crate) fn check_dependency_groups(ctx: &ComponentContext, report: &mut Repor
 // Ruff
 //
 
+/// The line length the standards set for Ruff, as for Prettier's `printWidth`.
+const RUFF_LINE_LENGTH: u32 = 120;
+
+/// Check that `length`, Ruff's `line-length`, is [`RUFF_LINE_LENGTH`].
+fn check_line_length(length: Option<u32>) -> Result<(), String> {
+    match length {
+        Some(RUFF_LINE_LENGTH) => Ok(()),
+        Some(length) => Err(format!("line-length is {length}, not {RUFF_LINE_LENGTH}")),
+        None => Err("Missing line-length".to_owned()),
+    }
+}
+
 pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
@@ -421,8 +433,8 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
     report.must("ruff-configured", "Ruff: configured", Outcome::Pass);
     report.should(
         "ruff-line-length",
-        "Ruff: line-length set",
-        ruff.line_length.is_some(),
+        format!("Ruff: line-length is {RUFF_LINE_LENGTH}"),
+        check_line_length(ruff.line_length),
     );
 
     // Format settings
@@ -833,6 +845,19 @@ pub(crate) fn check_min_python_job(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ruff_line_length_is_120() {
+        assert_eq!(check_line_length(Some(120)), Ok(()));
+        assert_eq!(
+            check_line_length(Some(88)),
+            Err("line-length is 88, not 120".to_owned())
+        );
+        assert_eq!(
+            check_line_length(None),
+            Err("Missing line-length".to_owned())
+        );
+    }
 
     #[test]
     fn git_archival_has_node_and_describe_name() {
