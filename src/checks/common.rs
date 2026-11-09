@@ -721,7 +721,9 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         "Pre-commit: default_install_hook_types includes pre-commit and commit-msg",
         config.check_default_install_hook_types(),
     );
-    report.should(
+    // With any other list, hooks without stages of their own run in other stages than once before each commit, and
+    // pre-commit rejects a list it can't read, so it runs no hooks at all.
+    report.check(
         "precommit-default-stages",
         "Pre-commit: default_stages is [pre-commit]",
         config.check_default_stages(),

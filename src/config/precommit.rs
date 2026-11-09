@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
 use crate::report::Issue;
@@ -29,12 +29,20 @@ const HOOK_TYPES: [&str; 10] = [
 #[serde(default)]
 pub(crate) struct PrecommitConfig {
     /// The hook types a plain `pre-commit install` installs, kept as YAML wrote it, so that a malformed value fails
-    /// only the check reading it.
+    /// only the check reading it. A null value is `Some(Value::Null)`, which pre-commit rejects, unlike a missing one.
+    #[serde(deserialize_with = "present")]
     pub default_install_hook_types: Option<Value>,
     /// The stages a hook runs in when it doesn't list its own, kept as YAML wrote it, so that a malformed value fails
-    /// only the check reading it.
+    /// only the check reading it. A null value is `Some(Value::Null)`, which pre-commit rejects, unlike a missing one.
+    #[serde(deserialize_with = "present")]
     pub default_stages: Option<Value>,
     pub repos: Vec<PrecommitRepo>,
+}
+
+/// A value that is present, even if null, so that it can be told apart from a missing one, which `#[serde(default)]`
+/// leaves `None`.
+fn present<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Value>, D::Error> {
+    Value::deserialize(deserializer).map(Some)
 }
 
 /// A single repo entry in the pre-commit config.
@@ -99,24 +107,34 @@ impl PrecommitHook {
 
 impl PrecommitConfig {
     /// Whether `default_stages` is exactly `[pre-commit]`, so that hooks without stages of their own run once per
-    /// commit, and not again on its message.
-    pub(crate) fn check_default_stages(&self) -> Result<(), String> {
+    /// commit, and not again on its message: a failure if pre-commit would reject it, as anything but a list of the
+    /// stages it knows, and a warning if it is missing or lists other stages.
+    pub(crate) fn check_default_stages(&self) -> Result<(), Issue> {
         match &self.default_stages {
-            None | Some(Value::Null) => Err(
-                "No default_stages, so hooks without stages of their own run in every installed stage".to_owned(),
-            ),
-            Some(Value::Array(stages)) if matches!(stages.as_slice(), [stage] if stage == "pre-commit") => {
-                Ok(())
-            }
-            Some(Value::Array(stages)) => Err(format!(
-                "default_stages is [{}], not [pre-commit]",
-                stages
-                    .iter()
-                    .map(|stage| stage.as_str().map_or_else(|| stage.to_string(), str::to_owned))
-                    .collect::<Vec<_>>()
-                    .join(", ")
+            None => Err(Issue::warn(
+                "No default_stages, so hooks without stages of their own run in every installed stage",
             )),
-            Some(_) => Err("default_stages isn't a list".to_owned()),
+            Some(Value::Array(stages)) => {
+                let unknown: Vec<_> = stages
+                    .iter()
+                    .filter(|stage| !stage.as_str().is_some_and(is_stage))
+                    .map(value_name)
+                    .collect();
+                if !unknown.is_empty() {
+                    Err(Issue::fail(format!(
+                        "default_stages lists {}, which pre-commit doesn't know",
+                        unknown.join(", ")
+                    )))
+                } else if matches!(stages.as_slice(), [stage] if stage == "pre-commit") {
+                    Ok(())
+                } else {
+                    Err(Issue::warn(format!(
+                        "default_stages is [{}], not [pre-commit]",
+                        stages.iter().map(value_name).collect::<Vec<_>>().join(", ")
+                    )))
+                }
+            }
+            Some(_) => Err(Issue::fail("default_stages isn't a list")),
         }
     }
 
@@ -125,7 +143,7 @@ impl PrecommitConfig {
     pub(crate) fn check_default_install_hook_types(&self) -> Result<(), String> {
         const REQUIRED: [&str; 2] = ["pre-commit", "commit-msg"];
         match &self.default_install_hook_types {
-            None | Some(Value::Null) => Err(
+            None => Err(
                 "No default_install_hook_types, so pre-commit install installs only the pre-commit hook".to_owned(),
             ),
             Some(Value::Array(types)) => {
@@ -136,7 +154,7 @@ impl PrecommitConfig {
                 let unknown: Vec<_> = types
                     .iter()
                     .filter(|hook_type| !hook_type.as_str().is_some_and(|name| HOOK_TYPES.contains(&name)))
-                    .map(|hook_type| hook_type.as_str().map_or_else(|| hook_type.to_string(), str::to_owned))
+                    .map(value_name)
                     .collect();
                 if !unknown.is_empty() {
                     Err(format!(
@@ -284,6 +302,18 @@ impl PrecommitConfig {
     }
 }
 
+/// A YAML value as a message names it: a string as itself, anything else as JSON writes it.
+fn value_name(value: &Value) -> String {
+    value
+        .as_str()
+        .map_or_else(|| value.to_string(), str::to_owned)
+}
+
+/// Whether pre-commit knows `stage` as a stage, by its current or its old name: a hook type, or `manual`.
+fn is_stage(stage: &str) -> bool {
+    stage == "manual" || HOOK_TYPES.contains(&current_stage_name(stage))
+}
+
 /// The current name of a pre-commit stage, given by its current or its old name, which pre-commit still accepts.
 fn current_stage_name(stage: &str) -> &str {
     match stage {
@@ -298,7 +328,7 @@ fn current_stage_name(stage: &str) -> &str {
 mod tests {
     use super::*;
 
-    fn default_stages(yaml: &str) -> Result<(), String> {
+    fn default_stages(yaml: &str) -> Result<(), Issue> {
         serde_saphyr::from_str::<PrecommitConfig>(yaml)
             .unwrap()
             .check_default_stages()
@@ -326,7 +356,11 @@ mod tests {
             ),
             (
                 "default_install_hook_types:\n",
-                "No default_install_hook_types, so pre-commit install installs only the pre-commit hook",
+                "default_install_hook_types isn't a list",
+            ),
+            (
+                "default_install_hook_types: ~\n",
+                "default_install_hook_types isn't a list",
             ),
             (
                 "default_install_hook_types: [pre-commit]\n",
@@ -555,25 +589,65 @@ mod tests {
 
     #[test]
     fn default_stages_must_be_pre_commit_alone() {
-        assert_eq!(
-            default_stages("default_stages: [pre-commit]\nrepos: []\n"),
-            Ok(())
-        );
-        assert_eq!(
-            default_stages("repos: []\n"),
-            Err("No default_stages, so hooks without stages of their own run in every installed stage".to_owned())
-        );
-        assert_eq!(
-            default_stages("default_stages: [commit]\n"),
-            Err("default_stages is [commit], not [pre-commit]".to_owned())
-        );
-        assert_eq!(
-            default_stages("default_stages: [pre-commit, pre-push]\n"),
-            Err("default_stages is [pre-commit, pre-push], not [pre-commit]".to_owned())
-        );
-        assert_eq!(
-            default_stages("default_stages: pre-commit\n"),
-            Err("default_stages isn't a list".to_owned())
-        );
+        for yaml in [
+            "default_stages: [pre-commit]\nrepos: []\n",
+            "default_stages: ['pre-commit']\n",
+        ] {
+            assert_eq!(default_stages(yaml), Ok(()), "{yaml}");
+        }
+        for (yaml, issue) in [
+            (
+                "repos: []\n",
+                Issue::warn(
+                    "No default_stages, so hooks without stages of their own run in every installed stage",
+                ),
+            ),
+            (
+                "default_stages: [commit]\n",
+                Issue::warn("default_stages is [commit], not [pre-commit]"),
+            ),
+            // pre-commit still knows each stage by its old name.
+            (
+                "default_stages: [merge-commit, push]\n",
+                Issue::warn("default_stages is [merge-commit, push], not [pre-commit]"),
+            ),
+            (
+                "default_stages: [pre-commit, pre-push]\n",
+                Issue::warn("default_stages is [pre-commit, pre-push], not [pre-commit]"),
+            ),
+            (
+                "default_stages: [manual]\n",
+                Issue::warn("default_stages is [manual], not [pre-commit]"),
+            ),
+            (
+                "default_stages: []\n",
+                Issue::warn("default_stages is [], not [pre-commit]"),
+            ),
+            // pre-commit rejects each of these, and so runs no hooks at all.
+            (
+                "default_stages: pre-commit\n",
+                Issue::fail("default_stages isn't a list"),
+            ),
+            (
+                "default_stages:\n",
+                Issue::fail("default_stages isn't a list"),
+            ),
+            (
+                "default_stages: ~\n",
+                Issue::fail("default_stages isn't a list"),
+            ),
+            (
+                "default_stages: [pre-commit, pre_push, 3, ~]\n",
+                Issue::fail(
+                    "default_stages lists pre_push, 3, null, which pre-commit doesn't know",
+                ),
+            ),
+            (
+                "default_stages: [[pre-commit]]\n",
+                Issue::fail("default_stages lists [\"pre-commit\"], which pre-commit doesn't know"),
+            ),
+        ] {
+            assert_eq!(default_stages(yaml), Err(issue), "{yaml}");
+        }
     }
 }
