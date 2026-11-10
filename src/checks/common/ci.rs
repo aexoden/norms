@@ -13,7 +13,7 @@ use serde_json::Value;
 
 use crate::config::{
     GATE_JOB, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands, current_stage_name,
-    is_program,
+    is_program, program_name,
 };
 use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -81,7 +81,7 @@ fn is_pre_commit_pin(word: &str) -> bool {
 /// it, or a versioned `pre-commit@x.y.z` as uvx takes it.
 fn is_pre_commit_command(word: &str) -> bool {
     let word = word.trim_matches(['"', '\'']);
-    let name = word.rsplit('/').next().unwrap_or(word);
+    let name = program_name(word);
     name == "pre-commit" || name.starts_with("pre-commit@")
 }
 
@@ -440,11 +440,7 @@ pub(crate) fn is_exact_uv_version(version: &str) -> bool {
 /// doesn't run it.
 fn job_runs_uv(job: &WorkflowJob) -> bool {
     job.run_lines().any(|line| {
-        commands(&line).any(|words| {
-            words
-                .first()
-                .is_some_and(|word| word.rsplit('/').next() == Some("uv"))
-        })
+        commands(&line).any(|words| words.first().is_some_and(|word| program_name(word) == "uv"))
     })
 }
 

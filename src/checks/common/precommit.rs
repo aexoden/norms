@@ -7,7 +7,7 @@
 use std::collections::BTreeSet;
 
 use super::ci::zizmor_command_pedantic;
-use crate::config::{PrecommitConfig, PrecommitHook};
+use crate::config::{PrecommitConfig, PrecommitHook, program_name};
 use crate::context::ProjectContext;
 use crate::report::{Issue, Report};
 
@@ -197,7 +197,7 @@ fn conventional_pre_commit_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a
     }
     let start = words
         .iter()
-        .rposition(|word| word.rsplit('/').next() == Some("conventional-pre-commit"))?;
+        .rposition(|word| program_name(word) == "conventional-pre-commit")?;
     words.get(start + 1..)
 }
 

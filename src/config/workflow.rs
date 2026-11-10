@@ -756,20 +756,24 @@ pub(crate) fn commands(line: &str) -> impl Iterator<Item = Vec<&str>> {
         .map(|command| command.split_whitespace().collect())
 }
 
+/// The program a word of a command runs: the word itself, or the last part of a path to it.
+pub(crate) fn program_name(word: &str) -> &str {
+    word.rsplit_once('/').map_or(word, |(_, name)| name)
+}
+
 /// Whether a word of a command names the program `name`: the program itself, a path to it, or a version of it as uvx
 /// or npx takes it (`name@x.y.z` or `name==x.y.z`).
 pub(crate) fn is_program(word: &str, name: &str) -> bool {
-    let program = word.rsplit('/').next().unwrap_or(word);
-    program.strip_prefix(name).is_some_and(|version| {
-        version.is_empty() || version.starts_with('@') || version.starts_with("==")
-    })
+    program_name(word)
+        .strip_prefix(name)
+        .is_some_and(|version| {
+            version.is_empty() || version.starts_with('@') || version.starts_with("==")
+        })
 }
 
 /// The arguments that follow the first word of a command that runs the program `name`, itself or through a path to it.
 pub(crate) fn program_args<'a, 'b>(words: &'b [&'a str], name: &str) -> Option<&'b [&'a str]> {
-    let start = words
-        .iter()
-        .position(|word| word.rsplit('/').next() == Some(name))?;
+    let start = words.iter().position(|word| program_name(word) == name)?;
     words.get(start + 1..)
 }
 
@@ -869,6 +873,12 @@ jobs:
         for word in ["zizmorish", "zizmor-pre-commit", "pre-zizmor", "zizmor/bin"] {
             assert!(!is_program(word, "zizmor"), "{word}");
         }
+        assert_eq!(program_name("uv"), "uv");
+        assert_eq!(program_name("/usr/local/bin/uv"), "uv");
+        assert_eq!(program_name("./node_modules/.bin/eslint"), "eslint");
+        assert_eq!(program_name("zizmor@1.32.0"), "zizmor@1.32.0");
+        // A trailing slash names a directory, not a program.
+        assert_eq!(program_name("zizmor/"), "");
     }
 
     #[test]
