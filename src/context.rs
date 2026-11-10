@@ -91,6 +91,19 @@ impl<T> ConfigStatus<T> {
             Self::NotFound | Self::ParseError { .. } => None,
         }
     }
+
+    /// Parse the value of a file that was read with `parse`, which describes what is wrong with it if it fails. A file
+    /// that wasn't found or couldn't be read stays so.
+    fn parse_with<U>(self, parse: impl FnOnce(T) -> Result<U, String>) -> ConfigStatus<U> {
+        match self {
+            Self::Ok(value) => match parse(value) {
+                Ok(parsed) => ConfigStatus::Ok(parsed),
+                Err(error) => ConfigStatus::ParseError { error },
+            },
+            Self::NotFound => ConfigStatus::NotFound,
+            Self::ParseError { error } => ConfigStatus::ParseError { error },
+        }
+    }
 }
 
 /// Lazy-loading project context.
@@ -265,18 +278,13 @@ impl ProjectContext {
 
     /// Parsed `.editorconfig` (cached).
     pub(crate) fn editorconfig(&self) -> &ConfigStatus<EditorConfig> {
-        self.editorconfig
-            .get_or_init(|| match read_text_file(&self.path.join(".editorconfig")) {
-                ConfigStatus::Ok(text) => match EditorConfig::parse(&text) {
-                    Ok(config) => ConfigStatus::Ok(config),
-                    Err(error) => ConfigStatus::ParseError { error },
-                },
-                ConfigStatus::NotFound => ConfigStatus::NotFound,
-                ConfigStatus::ParseError { error } => ConfigStatus::ParseError { error },
-            })
+        self.editorconfig.get_or_init(|| {
+            read_text_file(&self.path.join(".editorconfig"))
+                .parse_with(|text| EditorConfig::parse(&text))
+        })
     }
 
-    // Raw `.gitattributes` content (cached).
+    /// Raw `.gitattributes` content (cached).
     pub(crate) fn gitattributes(&self) -> &ConfigStatus<String> {
         self.gitattributes
             .get_or_init(|| read_text_file(&self.path.join(".gitattributes")))
@@ -317,16 +325,19 @@ impl ProjectContext {
 
     /// Parsed `.github/workflows/ci.yaml`, from [`workflows`](Self::workflows).
     pub(crate) fn ci_workflow(&self) -> &ConfigStatus<Workflow> {
-        static NOT_FOUND: ConfigStatus<Workflow> = ConfigStatus::NotFound;
-
-        self.workflows().get(CI_WORKFLOW).unwrap_or(&NOT_FOUND)
+        self.workflow(CI_WORKFLOW)
     }
 
     /// Parsed `.github/workflows/audit.yaml`, from [`workflows`](Self::workflows).
     pub(crate) fn audit_workflow(&self) -> &ConfigStatus<Workflow> {
+        self.workflow(AUDIT_WORKFLOW)
+    }
+
+    /// Parsed `.github/workflows/<name>`, from [`workflows`](Self::workflows).
+    fn workflow(&self, name: &str) -> &ConfigStatus<Workflow> {
         static NOT_FOUND: ConfigStatus<Workflow> = ConfigStatus::NotFound;
 
-        self.workflows().get(AUDIT_WORKFLOW).unwrap_or(&NOT_FOUND)
+        self.workflows().get(name).unwrap_or(&NOT_FOUND)
     }
 }
 
@@ -531,15 +542,10 @@ impl ComponentContext {
     /// Parsed `.python-version` in the component's own directory (cached). uv reads it only at the root of the
     /// project's workspace, which a Python component always is, since nested Python markers are folded into it.
     pub(crate) fn python_version(&self) -> &ConfigStatus<Version> {
-        self.python_version
-            .get_or_init(|| match read_text_file(&self.path.join(PYTHON_VERSION)) {
-                ConfigStatus::Ok(raw) => match parse_python_version(&raw) {
-                    Ok(version) => ConfigStatus::Ok(version),
-                    Err(error) => ConfigStatus::ParseError { error },
-                },
-                ConfigStatus::ParseError { error } => ConfigStatus::ParseError { error },
-                ConfigStatus::NotFound => ConfigStatus::NotFound,
-            })
+        self.python_version.get_or_init(|| {
+            read_text_file(&self.path.join(PYTHON_VERSION))
+                .parse_with(|raw| parse_python_version(&raw))
+        })
     }
 
     /// The text of `.git_archival.txt` in the component's own directory (cached), beside `pyproject.toml`, where
@@ -685,69 +691,50 @@ fn read_clippy_toml(root: &Path, found: &Path) -> ConfigStatus<ClippyToml> {
 
 /// Parse a TOML file into the given type.
 pub(crate) fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
-    if !path.exists() {
-        return ConfigStatus::NotFound;
-    }
-
-    let raw = match fs::read_to_string(path) {
-        Ok(s) => s,
-        Err(e) => {
-            return ConfigStatus::ParseError {
-                error: format!("Could not read file: {e}"),
-            };
-        }
-    };
-
-    match toml::from_str::<T>(&raw) {
-        Ok(value) => ConfigStatus::Ok(value),
-        Err(e) => ConfigStatus::ParseError {
-            error: format!("Invalid TOML: {e}"),
-        },
-    }
+    read_text_file(path)
+        .parse_with(|raw| toml::from_str(&raw).map_err(|e| format!("Invalid TOML: {e}")))
 }
 
 /// Parse a JSON/JSON5 file into the given type.
 fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
-    if !path.exists() {
-        return ConfigStatus::NotFound;
-    }
-
-    let raw = match fs::read_to_string(path) {
-        Ok(s) => s,
-        Err(e) => {
-            return ConfigStatus::ParseError {
-                error: format!("Could not read file: {e}"),
-            };
-        }
-    };
-
-    match json5::from_str(&raw) {
-        Ok(value) => ConfigStatus::Ok(value),
-        Err(e) => ConfigStatus::ParseError {
-            error: format!("Invalid JSON: {e}"),
-        },
-    }
+    read_text_file(path)
+        .parse_with(|raw| json5::from_str(&raw).map_err(|e| format!("Invalid JSON: {e}")))
 }
 
 /// Parse a YAML file into the given type.
 fn parse_yaml_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
-    if !path.exists() {
-        return ConfigStatus::NotFound;
-    }
+    read_text_file(path)
+        .parse_with(|raw| serde_saphyr::from_str(&raw).map_err(|e| format!("Invalid YAML: {e}")))
+}
 
-    let raw = match fs::read_to_string(path) {
-        Ok(s) => s,
-        Err(e) => {
-            return ConfigStatus::ParseError {
-                error: format!("Could not read file: {e}"),
-            };
-        }
-    };
+#[cfg(test)]
+mod tests {
+    use std::fs;
 
-    match serde_saphyr::from_str(&raw) {
-        Ok(value) => ConfigStatus::Ok(value),
-        Err(e) => ConfigStatus::ParseError {
-            error: format!("Invalid YAML: {e}"),
-        },
+    use super::*;
+
+    #[test]
+    fn parse_with_parses_only_what_was_read() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("number"), "42").unwrap();
+        fs::write(dir.path().join("word"), "forty-two").unwrap();
+        fs::create_dir_all(dir.path().join("directory")).unwrap();
+        let parse = |name: &str| {
+            read_text_file(&dir.path().join(name)).parse_with(|text| {
+                text.parse::<u32>()
+                    .map_err(|e| format!("Not a number: {e}"))
+            })
+        };
+
+        assert!(matches!(parse("number"), ConfigStatus::Ok(42)));
+        assert!(matches!(
+            parse("word"),
+            ConfigStatus::ParseError { error } if error.starts_with("Not a number: ")
+        ));
+        assert!(matches!(parse("missing"), ConfigStatus::NotFound));
+        assert!(matches!(
+            parse("directory"),
+            ConfigStatus::ParseError { error } if error.starts_with("Could not read file: ")
+        ));
     }
 }
