@@ -78,19 +78,21 @@ use crate::models::{Component, Language, Status};
 
 /// The outcome of a single check evaluation.
 ///
-/// Checks produce an `Outcome` indicating success or failure with a message.
+/// Checks produce an `Outcome` indicating that they passed or found an issue, with a message. Whether the issue fails
+/// or warns is up to the check recording it, with [`Report::must`] or [`Report::should`].
+///
 /// Various `From` implementations allow ergonomic conversion from common types.
 #[derive(Debug, Clone)]
 pub(crate) enum Outcome {
     /// The check passed.
     Pass,
-    /// The check failed with an explanation.
+    /// The check found an issue, with an explanation.
     Issue(String),
 }
 
 impl Outcome {
-    /// Create a failing outcome with the given message.
-    pub(crate) fn fail(msg: impl Into<String>) -> Self {
+    /// Create an issue with the given message, which fails or warns as the check recording it does.
+    pub(crate) fn issue(msg: impl Into<String>) -> Self {
         Self::Issue(msg.into())
     }
 }
@@ -189,7 +191,7 @@ pub(crate) fn file_exists(path: &Path) -> Outcome {
     if path.exists() {
         Outcome::Pass
     } else {
-        Outcome::fail(format!(
+        Outcome::issue(format!(
             "Not found: {}",
             path.file_name().unwrap_or_default().to_string_lossy()
         ))
@@ -359,12 +361,12 @@ impl Report {
 
         match status {
             ConfigStatus::NotFound => {
-                self.must(exists, exists_name, Outcome::fail("File not found"));
+                self.must(exists, exists_name, Outcome::issue("File not found"));
                 None
             }
             ConfigStatus::ParseError { error } => {
                 self.must(exists, exists_name, Outcome::Pass);
-                self.must(valid, valid_name, Outcome::fail(error.clone()));
+                self.must(valid, valid_name, Outcome::issue(error.clone()));
                 None
             }
             ConfigStatus::Ok(value) => {
@@ -391,7 +393,7 @@ impl Report {
                 self.must(
                     "norms-toml-waiver-needed",
                     name,
-                    Outcome::fail("norms.toml's own checks can't be waived"),
+                    Outcome::issue("norms.toml's own checks can't be waived"),
                 );
                 continue;
             }
@@ -419,9 +421,9 @@ impl Report {
             let outcome = if needed {
                 Outcome::Pass
             } else if matched {
-                Outcome::fail("The check passes without it")
+                Outcome::issue("The check passes without it")
             } else {
-                Outcome::fail("No check with this ID ran")
+                Outcome::issue("No check with this ID ran")
             };
 
             self.should("norms-toml-waiver-needed", name, outcome);

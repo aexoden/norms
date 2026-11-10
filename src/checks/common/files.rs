@@ -87,7 +87,7 @@ pub(crate) fn check_norms_config(ctx: &ProjectContext, report: &mut Report) {
             if ctx.path().join(&path).is_dir() {
                 Outcome::Pass
             } else {
-                Outcome::fail("No such directory")
+                Outcome::issue("No such directory")
             },
         );
     }
@@ -214,7 +214,7 @@ pub(crate) fn check_changelog(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "changelog-exists",
         "CHANGELOG.md",
-        Outcome::fail(format!(
+        Outcome::issue(format!(
             "Not found: CHANGELOG.md, which the project needs because {releases}"
         )),
     );
@@ -235,7 +235,7 @@ pub(crate) fn check_licenses(ctx: &ProjectContext, report: &mut Report) {
         "licenses-dir-exists",
         "LICENSES/: holds the license texts",
         if files.texts.is_empty() {
-            Outcome::fail("No license texts in LICENSES/")
+            Outcome::issue("No license texts in LICENSES/")
         } else {
             Outcome::Pass
         },

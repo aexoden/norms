@@ -148,9 +148,9 @@ pub(crate) fn check_cargo_workspace(ctx: &ComponentContext, report: &mut Report)
         "cargo-workspace-members",
         "Cargo.toml: workspace members found",
         if !members.errors.is_empty() {
-            Outcome::fail(members.errors.join("; "))
+            Outcome::issue(members.errors.join("; "))
         } else if is_empty {
-            Outcome::fail("The virtual workspace has no members, so no package is checked")
+            Outcome::issue("The virtual workspace has no members, so no package is checked")
         } else {
             Outcome::Pass
         },
@@ -201,7 +201,7 @@ pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) 
         report.should(
             "rust-toolchain-toml-exists",
             format!("{label}: exists"),
-            Outcome::fail(format!(
+            Outcome::issue(format!(
                 "rustup uses the legacy {label}, which should be named {RUST_TOOLCHAIN}"
             )),
         );
@@ -326,7 +326,7 @@ fn check_package_lints(
             }
         }
         Err(error) => {
-            report.must("clippy-lints", name, Outcome::fail(error));
+            report.must("clippy-lints", name, Outcome::issue(error));
         }
     }
 
@@ -356,7 +356,7 @@ pub(crate) fn check_clippy_toml(ctx: &ComponentContext, report: &mut Report) {
             report.should(
                 "clippy-toml-exists",
                 format!("{label}: exists"),
-                Outcome::fail(format!(
+                Outcome::issue(format!(
                     "Clippy uses {label}, which should be named {CLIPPY_TOML}"
                 )),
             );
@@ -391,7 +391,7 @@ pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "deny-toml-exists",
             format!("{label}: exists"),
-            Outcome::fail(format!(
+            Outcome::issue(format!(
                 "cargo-deny uses {label}, which should be named {DENY_TOML}"
             )),
         );
@@ -1024,7 +1024,7 @@ pub(crate) fn check_toolchain_cache(ctx: &ProjectContext, report: &mut Report) {
         if caching.is_empty() {
             Outcome::Pass
         } else {
-            Outcome::fail(format!(
+            Outcome::issue(format!(
                 "These jobs build nothing, but setup-rust-toolchain caches their build: {}",
                 caching.join(", ")
             ))

@@ -302,7 +302,7 @@ pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "python-src-layout",
             "Python: src/ directory",
-            Outcome::fail("No src/ directory"),
+            Outcome::issue("No src/ directory"),
         );
 
         return;
@@ -322,7 +322,7 @@ pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
         if has_packages {
             Outcome::Pass
         } else {
-            Outcome::fail("src/ holds no package, a directory with an __init__.py")
+            Outcome::issue("src/ holds no package, a directory with an __init__.py")
         },
     );
 }
@@ -397,7 +397,7 @@ pub(crate) fn check_dependency_groups(ctx: &ComponentContext, report: &mut Repor
         report.should(
             "python-dependency-groups",
             "Python: has dependency-groups",
-            Outcome::fail("Missing [dependency-groups]"),
+            Outcome::issue("Missing [dependency-groups]"),
         );
     }
 }
@@ -458,7 +458,7 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "ruff-configured",
             "Ruff: configured",
-            Outcome::fail(format!(
+            Outcome::issue(format!(
                 "Ruff uses {name}, which takes the place of [tool.ruff] in pyproject.toml"
             )),
         );
@@ -469,7 +469,7 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
         report.must(
             "ruff-configured",
             "Ruff: configured",
-            Outcome::fail("No [tool] section in pyproject.toml"),
+            Outcome::issue("No [tool] section in pyproject.toml"),
         );
         return;
     };
@@ -478,7 +478,7 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
         report.must(
             "ruff-configured",
             "Ruff: configured",
-            Outcome::fail("Missing [tool.ruff] in pyproject.toml"),
+            Outcome::issue("Missing [tool.ruff] in pyproject.toml"),
         );
         return;
     };
@@ -506,7 +506,7 @@ pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "ruff-format-configured",
             "Ruff format: configured",
-            Outcome::fail("Missing [tool.ruff.format]"),
+            Outcome::issue("Missing [tool.ruff.format]"),
         );
     }
 }
@@ -530,7 +530,7 @@ pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
         report.must(
             "ruff-lint-configured",
             "Ruff lint: configured",
-            Outcome::fail("Missing [tool.ruff.lint] in pyproject.toml"),
+            Outcome::issue("Missing [tool.ruff.lint] in pyproject.toml"),
         );
         return;
     };
@@ -605,7 +605,7 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "mypy-configured",
             "mypy: configured",
-            Outcome::fail(format!(
+            Outcome::issue(format!(
                 "mypy uses {name}, which takes the place of [tool.mypy] in pyproject.toml"
             )),
         );
@@ -618,7 +618,7 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
         report.must(
             "mypy-configured",
             "mypy: configured",
-            Outcome::fail("Missing [tool.mypy] in pyproject.toml"),
+            Outcome::issue("Missing [tool.mypy] in pyproject.toml"),
         );
         return;
     };

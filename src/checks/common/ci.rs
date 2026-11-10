@@ -525,8 +525,8 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
             "workflow-valid",
             format!("CI: {name}: valid"),
             match status {
-                ConfigStatus::NotFound => Outcome::fail("File not found"),
-                ConfigStatus::ParseError { error } => Outcome::fail(error.clone()),
+                ConfigStatus::NotFound => Outcome::issue("File not found"),
+                ConfigStatus::ParseError { error } => Outcome::issue(error.clone()),
                 ConfigStatus::Ok(_) => Outcome::Pass,
             },
         );
@@ -709,7 +709,7 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
         report.must(
             "ci-gate-exists",
             format!("CI: gate job {GATE_JOB}"),
-            Outcome::fail(format!("No {GATE_JOB} job")),
+            Outcome::issue(format!("No {GATE_JOB} job")),
         );
         return;
     };

@@ -102,7 +102,7 @@ pub(crate) fn check_pnpm(ctx: &ComponentContext, report: &mut Report) {
             report.should(
                 id,
                 format!("pnpm: no {manager} lock file"),
-                Outcome::fail(format!(
+                Outcome::issue(format!(
                     "Found {lockfile}, though pnpm is the package manager"
                 )),
             );
@@ -168,7 +168,7 @@ fn check_tsconfig_single(config: &TsConfig, report: &mut Report) {
     report.should(
         "tsconfig-project-references",
         "tsconfig.json: uses project references",
-        Outcome::fail(
+        Outcome::issue(
             "tsconfig.json has no references: it should reference tsconfig.app.json and tsconfig.node.json",
         ),
     );
@@ -177,7 +177,7 @@ fn check_tsconfig_single(config: &TsConfig, report: &mut Report) {
         report.must(
             "tsconfig-compiler-options",
             "tsconfig.json: has compilerOptions",
-            Outcome::fail("Missing compilerOptions section"),
+            Outcome::issue("Missing compilerOptions section"),
         );
         return;
     };
@@ -208,7 +208,7 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, report: &mut Report) {
                 report.must(
                     "tsconfig-reference-exists",
                     format!("{name}: exists"),
-                    Outcome::fail("Referenced config not found"),
+                    Outcome::issue("Referenced config not found"),
                 );
             }
             ConfigStatus::ParseError { error } => {
@@ -220,7 +220,7 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, report: &mut Report) {
                 report.must(
                     "tsconfig-reference-valid",
                     format!("{name}: valid"),
-                    Outcome::fail(error.clone()),
+                    Outcome::issue(error.clone()),
                 );
             }
             ConfigStatus::Ok(ref_config) => {
@@ -242,7 +242,7 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, report: &mut Report) {
                     report.must(
                         "tsconfig-reference-compiler-options",
                         format!("{name}: has compilerOptions"),
-                        Outcome::fail("Missing compilerOptions section"),
+                        Outcome::issue("Missing compilerOptions section"),
                     );
                 }
             }
@@ -253,7 +253,7 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, report: &mut Report) {
         report.must(
             "tsconfig-reference-any-compiler-options",
             "tsconfig: at least one reference has compilerOptions",
-            Outcome::fail("No referenced config has a compilerOptions section"),
+            Outcome::issue("No referenced config has a compilerOptions section"),
         );
     }
 }
@@ -614,7 +614,7 @@ pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "eslint-config-exists",
             format!("{ESLINT_CONFIG}: exists"),
-            Outcome::fail(format!("ESLint uses {name} rather than {ESLINT_CONFIG}")),
+            Outcome::issue(format!("ESLint uses {name} rather than {ESLINT_CONFIG}")),
         );
         return;
     }
@@ -722,7 +722,7 @@ pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "prettier-config-exists",
             ".prettierrc: exists",
-            Outcome::fail(format!(
+            Outcome::issue(format!(
                 "Prettier uses {other} rather than {PRETTIER_CONFIG}"
             )),
         );
@@ -775,7 +775,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
         report.should(
             "package-json-scripts",
             "package.json: has scripts",
-            Outcome::fail("No scripts defined in package.json"),
+            Outcome::issue("No scripts defined in package.json"),
         );
         return;
     }
@@ -835,7 +835,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
         if config.has_script("test") {
             Outcome::Pass
         } else {
-            Outcome::fail("Missing 'test' script")
+            Outcome::issue("Missing 'test' script")
         },
     );
 }
