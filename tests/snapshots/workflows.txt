@@ -123,11 +123,11 @@ fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python 
       No job sets setup-uv's python-version input and runs pytest
 fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook
       No uv-lock hook
-fail  python-precommit-ruff-check  Python pre-commit: ruff-check
+fail  python-precommit-ruff-check  Python pre-commit: ruff-check hook
       No ruff-check hook
-fail  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
+fail  python-precommit-ruff-format  Python pre-commit: ruff-format hook (--check)
       No ruff-format hook
-fail  python-precommit-mypy  Python pre-commit: Mypy hook
+fail  python-precommit-mypy  Python pre-commit: mypy hook
       No mypy hook
 fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       No pytest hook
@@ -179,7 +179,7 @@ fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt
 fail  rust-ci-clippy  Rust CI: clippy check (-D warnings)
       No step runs cargo clippy
-fail  rust-ci-test  Rust CI: test
+fail  rust-ci-test  Rust CI: tests
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
       No step uses EmbarkStudios/cargo-deny-action
 warn  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false

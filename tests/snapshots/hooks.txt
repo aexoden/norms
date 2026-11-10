@@ -106,10 +106,10 @@ warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-pass  python-precommit-ruff-check  Python pre-commit: ruff-check
-warn  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
+pass  python-precommit-ruff-check  Python pre-commit: ruff-check hook
+warn  python-precommit-ruff-format  Python pre-commit: ruff-format hook (--check)
       ruff format runs with --diff rather than --check
-pass  python-precommit-mypy  Python pre-commit: Mypy hook
+pass  python-precommit-mypy  Python pre-commit: mypy hook
 warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
       The pytest hook doesn't pass --cov
 warn  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
@@ -158,17 +158,17 @@ warn  package-json-script-typecheck  [.] Scripts: has 'typecheck' (tsc -b)
       Missing 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
       Missing 'test' script
-fail  typescript-precommit-pnpm-lock  Pre-commit: has pnpm-lock hook
+fail  typescript-precommit-pnpm-lock  TypeScript pre-commit: pnpm-lock hook
       No pnpm-lock hook
-pass  typescript-precommit-pnpm-peer-dependencies  Pre-commit: has pnpm-peer-dependencies hook
-warn  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0)
-      The ESLint hook doesn't pass --max-warnings 0
-warn  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
+pass  typescript-precommit-pnpm-peer-dependencies  TypeScript pre-commit: pnpm-peer-dependencies hook
+warn  typescript-precommit-eslint  TypeScript pre-commit: eslint hook (--max-warnings 0)
+      The eslint hook doesn't pass --max-warnings 0
+warn  typescript-precommit-prettier  TypeScript pre-commit: prettier hook (--check)
       prettier runs without --check, so it rewrites files rather than only failing on them
-pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook (tsc -b)
-fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
+pass  typescript-precommit-tsc  TypeScript pre-commit: tsc hook (tsc -b)
+fail  typescript-precommit-vite-build  TypeScript pre-commit: vite-build hook
       No vite-build hook
-warn  typescript-precommit-vitest  Pre-commit: has vitest hook (with coverage)
+warn  typescript-precommit-vitest  TypeScript pre-commit: vitest hook (with coverage)
       The vitest hook doesn't pass --coverage
 warn  typescript-precommit-local-hooks  TypeScript pre-commit: language hooks are local, unsupported and take no file names
       tsc doesn't set pass_filenames: false

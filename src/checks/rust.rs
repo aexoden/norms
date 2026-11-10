@@ -666,7 +666,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
     report.must(
         "rust-ci-test",
-        "Rust CI: test",
+        "Rust CI: tests",
         workflow.runs_command("cargo test"),
     );
     report.check(

@@ -111,7 +111,7 @@ pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, uns
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check (-D warnings)
-pass  rust-ci-test  Rust CI: test
+pass  rust-ci-test  Rust CI: tests
 pass  rust-ci-cargo-deny  Rust CI: cargo deny
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  rust-audit-cargo-deny  Rust audit: cargo deny advisories

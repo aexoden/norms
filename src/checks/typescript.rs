@@ -862,43 +862,43 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "typescript-precommit-pnpm-lock",
-        "Pre-commit: has pnpm-lock hook",
+        "TypeScript pre-commit: pnpm-lock hook",
         precommit.check_commit_hook("pnpm-lock"),
     );
     report.check(
         "typescript-precommit-pnpm-peer-dependencies",
-        "Pre-commit: has pnpm-peer-dependencies hook",
+        "TypeScript pre-commit: pnpm-peer-dependencies hook",
         precommit.check_commit_hook("pnpm-peer-dependencies"),
     );
     report.check(
         "typescript-precommit-eslint",
-        "Pre-commit: has ESLint hook (--max-warnings 0)",
+        "TypeScript pre-commit: eslint hook (--max-warnings 0)",
         precommit.commit_hooks("eslint").and_then(|hooks| {
             if hooks.into_iter().any(eslint_hook_strict) {
                 Ok(())
             } else {
-                Err(Issue::warn("The ESLint hook doesn't pass --max-warnings 0"))
+                Err(Issue::warn("The eslint hook doesn't pass --max-warnings 0"))
             }
         }),
     );
     report.check(
         "typescript-precommit-prettier",
-        "Pre-commit: has Prettier hook (--check)",
+        "TypeScript pre-commit: prettier hook (--check)",
         precommit.check_formatter_hook("prettier", "prettier", prettier_run),
     );
     report.check(
         "typescript-precommit-tsc",
-        "Pre-commit: has TypeScript type check hook (tsc -b)",
+        "TypeScript pre-commit: tsc hook (tsc -b)",
         tsc_hooks(precommit, every_tsconfig_solution_style(ctx)),
     );
     report.check(
         "typescript-precommit-vite-build",
-        "Pre-commit: has vite-build hook",
+        "TypeScript pre-commit: vite-build hook",
         precommit.check_commit_hook("vite-build"),
     );
     report.check(
         "typescript-precommit-vitest",
-        "Pre-commit: has vitest hook (with coverage)",
+        "TypeScript pre-commit: vitest hook (with coverage)",
         vitest_hooks(precommit),
     );
     report.should(

@@ -115,9 +115,9 @@ pass  mypy-strict  [.] mypy: strict mode
 pass  mypy-optional-checks  [.] mypy: the checks strict mode leaves out enabled
 pass  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-pass  python-precommit-ruff-check  Python pre-commit: ruff-check
-pass  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)
-pass  python-precommit-mypy  Python pre-commit: Mypy hook
+pass  python-precommit-ruff-check  Python pre-commit: ruff-check hook
+pass  python-precommit-ruff-format  Python pre-commit: ruff-format hook (--check)
+pass  python-precommit-mypy  Python pre-commit: mypy hook
 pass  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
 pass  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
