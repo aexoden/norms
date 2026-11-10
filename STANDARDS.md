@@ -22,7 +22,7 @@ norms, which renders the files these standards describe for the chosen
 languages:
 
 ```sh
-uvx copier copy --trust --vcs-ref main gh:aexoden/norms <path>
+uvx copier copy --trust gh:aexoden/norms <path>
 ```
 
 The template asks for the primary language, which lives at the repository root,
@@ -30,11 +30,9 @@ any secondary languages and their subdirectories, and whether the project is an
 application or a library. Copying needs `--trust` because the template runs
 each language's tool to generate any missing lock files.
 
-Existing projects stay current with `uvx copier update --trust --vcs-ref main`,
-which merges the changes between the template version recorded in
-`.copier-answers.yml` and the latest one. Template versions are norms release
-tags (`vX.Y.Z`), but no release includes the template yet, so for now
-`--vcs-ref main` selects the latest commit instead.
+Existing projects stay current with `uvx copier update --trust`, which merges
+the changes between the template version recorded in `.copier-answers.yml` and
+the latest one. Template versions are norms release tags (`vX.Y.Z`).
 
 ## norms Configuration
 
@@ -771,8 +769,7 @@ Every project uses these hooks:
         args: [--deny-warnings]
   ```
 
-  No norms release includes the hooks yet, so the template doesn't add them or
-  the `pr-title.yaml` workflow.
+  The template doesn't add them or the `pr-title.yaml` workflow yet.
 
 `norms verify` checks that every hook it checks, the language hooks included,
 runs in the `pre-commit` stage (the `conventional-pre-commit` hook in

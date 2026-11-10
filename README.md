@@ -16,16 +16,12 @@ renders a new project following the standards, for Rust, Python and TypeScript
 in any combination:
 
 ```sh
-uvx copier copy --trust --vcs-ref main gh:aexoden/norms <path>
+uvx copier copy --trust gh:aexoden/norms <path>
 ```
 
-Run `uvx copier update --trust --vcs-ref main` in a project to bring it up to
-date with the latest template. Every version the template uses is kept in
+Run `uvx copier update --trust` in a project to bring it up to date with the
+template of the latest norms release. Every version the template uses is kept in
 `versions.yml`.
-
-The `--vcs-ref main` option is needed until norms tags a release that includes
-the template; without it, Copier uses the latest tag, `v0.1.0`, which predates
-the template.
 
 ## Versioning
 

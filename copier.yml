@@ -2,9 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 # Copier template for projects following STANDARDS.md.
-# New project: uvx copier copy --trust --vcs-ref main gh:aexoden/norms <path>
-# Update: uvx copier update --trust --vcs-ref main
-# --vcs-ref main is needed until a norms release that includes the template.
+# New project: uvx copier copy --trust gh:aexoden/norms <path>
+# Update: uvx copier update --trust
 
 _subdirectory: template
 _min_copier_version: "9.10"
