@@ -58,6 +58,8 @@ breaking either, since `copier update` presents them for review.
 Before 1.0, as is common in Rust, a minor release (`0.X.0`) takes the place of a
 major release, and a patch release takes the place of the others.
 
+`CHANGELOG.md` marks each breaking change with **Breaking:**.
+
 ## Development
 
 Install [pre-commit](https://pre-commit.com/#install), then the hooks:

@@ -299,4 +299,17 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 - Dependencies in `Cargo.toml` are pinned exactly (`=x.y.z`). New dependencies
   must have licenses allowed by `deny.toml`.
 - `CHANGELOG.md` is maintained by hand in Keep a Changelog format, as the
-  Changelog section of `STANDARDS.md` describes.
+- `CHANGELOG.md` is maintained by hand in Keep a Changelog format, as the
+  Changelog section of `STANDARDS.md` describes. A change that users of norms
+  or the template would notice gets an entry under `Unreleased`, in the commit
+  that makes it and under the type of change it is, written for those users
+  rather than as the commit's subject. When a later change alters or reverts
+  something still under `Unreleased`, update or drop its entry; a released
+  version's entries stay as they are, and the later change gets an entry of its
+  own. A change that breaks what the version numbers cover (see `README.md`)
+  starts with `**Breaking:**` and says briefly how to upgrade.
+- At a release, check `Unreleased` against the commits since the last tag for
+  anything it missed, rename it to the new version with the date, add an empty
+  `Unreleased` above it, and update the link definitions: the new version
+  compares the previous tag with the new one, and `Unreleased` the new tag with
+  `HEAD`.
