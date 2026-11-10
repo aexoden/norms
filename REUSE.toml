@@ -5,7 +5,7 @@
 version = 1
 
 [[annotations]]
-path = ["**/*.md", "Cargo.lock", "renovate.json", "tests/snapshots/*.txt"]
+path = ["**/*.md", "Cargo.lock", "pyrightconfig.json", "renovate.json", "tests/snapshots/*.txt"]
 SPDX-FileCopyrightText = "2026 Jason Lynch <jason@aexoden.com>"
 SPDX-License-Identifier = "MIT OR Apache-2.0"
 
