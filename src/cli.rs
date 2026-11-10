@@ -20,7 +20,11 @@ use crate::models::Language;
 use crate::report::{CheckResult, Report};
 
 #[derive(Parser)]
-#[command(name = "norms", about = "Verify and enforce project coding standards.")]
+#[command(
+    name = "norms",
+    version,
+    about = "Verify and enforce project coding standards."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -316,6 +320,16 @@ mod tests {
                 ".git/COMMIT_EDITMSG:1: subject is 76 characters long, over 72",
                 ".git/COMMIT_EDITMSG:3: body line is 73 characters long, over 72",
             ]
+        );
+    }
+
+    #[test]
+    fn version_option_prints_the_package_version() {
+        let error = Cli::try_parse_from(["norms", "--version"]).err().unwrap();
+        assert_eq!(error.kind(), clap::error::ErrorKind::DisplayVersion);
+        assert_eq!(
+            error.to_string(),
+            format!("norms {}\n", env!("CARGO_PKG_VERSION"))
         );
     }
 }
