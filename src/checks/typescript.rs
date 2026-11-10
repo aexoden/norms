@@ -8,10 +8,11 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::{
-    FormatterRun, PrecommitHook, TsCompilerOptions, TsConfig, Workflow, check_dev_engine, commands,
-    program_args,
+    FormatterRun, PrecommitConfig, PrecommitHook, TsCompilerOptions, TsConfig, Workflow,
+    check_dev_engine, commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
+use crate::models::Language;
 use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
@@ -707,14 +708,10 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     );
 
     // Build script
-    report.should(
+    report.check(
         "package-json-script-build",
-        "Scripts: has 'build'",
-        if config.has_script("build") {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Missing 'build' script")
-        },
+        "Scripts: has 'build' (tsc -b)",
+        script_type_checks(config.script("build"), "build", solution_style(ctx)),
     );
 
     // Lint script
@@ -746,14 +743,10 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     );
 
     // Type check script
-    report.should(
+    report.check(
         "package-json-script-typecheck",
-        "Scripts: has 'typecheck'",
-        if config.has_script("typecheck") {
-            Outcome::Pass
-        } else {
-            Outcome::fail("Missing 'typecheck' script")
-        },
+        "Scripts: has 'typecheck' (tsc -b)",
+        script_type_checks(config.script("typecheck"), "typecheck", solution_style(ctx)),
     );
 
     // Test script
@@ -816,8 +809,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "typescript-precommit-tsc",
-        "Pre-commit: has TypeScript type check hook",
-        precommit.check_commit_hook("tsc"),
+        "Pre-commit: has TypeScript type check hook (tsc -b)",
+        tsc_hooks(precommit, every_tsconfig_solution_style(ctx)),
     );
     report.check(
         "typescript-precommit-vite-build",
@@ -878,10 +871,10 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Type check
-    report.must(
+    report.check(
         "typescript-ci-tsc",
-        "TypeScript CI: type check",
-        workflow.runs_command("tsc"),
+        "TypeScript CI: type check (tsc -b)",
+        tsc_in_ci(workflow, every_tsconfig_solution_style(ctx)),
     );
 
     // Tests
@@ -981,6 +974,90 @@ fn eslint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         ))
     } else {
         Err(Issue::fail("No step runs eslint"))
+    }
+}
+
+/// Whether a command's words run `tsc`, and if so, whether in build mode, with `-b` (or `--build`). Only build mode
+/// follows the references of a solution-style `tsconfig.json`, which lists no files of its own, so `tsc` without it
+/// checks nothing.
+fn tsc_builds(words: &[&str]) -> Option<bool> {
+    program_args(words, "tsc").map(|args| args.iter().any(|arg| matches!(*arg, "-b" | "--build")))
+}
+
+/// The issue of a `tsc` run outside build mode: a failure if `solution_style`, when the `tsconfig.json` it reads
+/// references the configs and lists no files of its own, so that it checks nothing, and otherwise a warning, since a
+/// single config is still checked, though not as the standard runs it.
+fn tsc_without_build(solution_style: bool) -> Issue {
+    if solution_style {
+        Issue::fail(
+            "tsc runs without -b, so it checks none of the configs tsconfig.json references",
+        )
+    } else {
+        Issue::warn("tsc runs without -b, the build mode the standard runs it in")
+    }
+}
+
+/// Whether the component's `tsconfig.json` is solution-style, as the standard's is.
+fn solution_style(ctx: &ComponentContext) -> bool {
+    ctx.tsconfig()
+        .as_ref_ok()
+        .is_some_and(TsConfig::is_solution_style)
+}
+
+/// Whether the project has TypeScript components and every one's `tsconfig.json` is solution-style, so that a hook or
+/// CI step running `tsc` outside build mode checks nothing, whichever component it runs in.
+fn every_tsconfig_solution_style(ctx: &ProjectContext) -> bool {
+    let mut components = ctx
+        .component_contexts()
+        .iter()
+        .filter(|component| component.component().language == Language::TypeScript)
+        .peekable();
+    components.peek().is_some() && components.all(solution_style)
+}
+
+/// Check that a script, named `name`, exists, a warning if not, and that each command of it that runs `tsc` does so in
+/// build mode, as [`tsc_builds`] tells. `solution_style` tells whether the component's `tsconfig.json` is.
+fn script_type_checks(script: Option<&str>, name: &str, solution_style: bool) -> Result<(), Issue> {
+    let script = script.ok_or_else(|| Issue::warn(format!("Missing '{name}' script")))?;
+    if commands(script).any(|words| tsc_builds(&words) == Some(false)) {
+        Err(tsc_without_build(solution_style))
+    } else {
+        Ok(())
+    }
+}
+
+/// Check that each `tsc` hook runs `tsc` in build mode, as [`tsc_builds`] tells. A hook that runs it nowhere norms can
+/// see warns, as does one without an entry of its own, as a remote hook may leave it to the hook's repository.
+/// `solution_style` tells whether every component's `tsconfig.json` is.
+fn tsc_hooks(config: &PrecommitConfig, solution_style: bool) -> Result<(), Issue> {
+    let issues = config.commit_hooks("tsc")?.into_iter().map(|hook| {
+        if hook.entry.is_none() {
+            return Err(Issue::warn(
+                "The tsc hook sets no entry, so norms can't see whether it runs in build mode",
+            ));
+        }
+        let runs = hook.filter_map_commands("tsc", tsc_builds);
+        if runs.is_empty() {
+            Err(Issue::warn("The tsc hook doesn't run tsc"))
+        } else if runs.contains(&false) {
+            Err(tsc_without_build(solution_style))
+        } else {
+            Ok(())
+        }
+    });
+    Issue::combine(issues.filter_map(Result::err))
+}
+
+/// Check that some step runs `tsc`, and that each that does runs it in build mode, as [`tsc_builds`] tells, since each
+/// may check another component. `solution_style` tells whether every component's `tsconfig.json` is.
+fn tsc_in_ci(workflow: &Workflow, solution_style: bool) -> Result<(), Issue> {
+    let runs = workflow.filter_map_commands(tsc_builds);
+    if runs.is_empty() {
+        Err(Issue::fail("No step runs tsc"))
+    } else if runs.contains(&false) {
+        Err(tsc_without_build(solution_style))
+    } else {
+        Ok(())
     }
 }
 
@@ -1425,5 +1502,126 @@ mod tests {
         ] {
             assert_eq!(checks(line), None, "{line}");
         }
+    }
+
+    #[test]
+    fn tsc_runs_in_build_mode() {
+        let builds = |line: &str| tsc_builds(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "pnpm exec tsc -b --noEmit",
+            "pnpm --dir frontend exec tsc --build --noEmit",
+            "node_modules/.bin/tsc -b",
+        ] {
+            assert_eq!(builds(line), Some(true), "{line}");
+        }
+        for line in ["pnpm exec tsc --noEmit", "tsc -p tsconfig.app.json"] {
+            assert_eq!(builds(line), Some(false), "{line}");
+        }
+        for line in ["pnpm typecheck", "echo tsconfig"] {
+            assert_eq!(builds(line), None, "{line}");
+        }
+
+        assert_eq!(
+            script_type_checks(Some("tsc -b --noEmit"), "typecheck", true),
+            Ok(())
+        );
+        assert_eq!(
+            script_type_checks(Some("tsc -b && vite build"), "build", true),
+            Ok(())
+        );
+        // A script that doesn't run tsc itself isn't judged.
+        assert_eq!(
+            script_type_checks(Some("vite build"), "build", true),
+            Ok(())
+        );
+        // Outside build mode, tsc checks nothing of a solution-style tsconfig.json, but all of a single one.
+        assert_eq!(
+            script_type_checks(Some("tsc && vite build"), "build", true),
+            Err(tsc_without_build(true))
+        );
+        assert_eq!(
+            script_type_checks(Some("tsc --noEmit"), "typecheck", false),
+            Err(Issue::warn(
+                "tsc runs without -b, the build mode the standard runs it in"
+            ))
+        );
+        assert_eq!(
+            script_type_checks(None, "typecheck", true),
+            Err(Issue::warn("Missing 'typecheck' script"))
+        );
+    }
+
+    #[test]
+    fn tsc_hooks_and_ci_run_in_build_mode() {
+        let hooks = |entries: &[&str]| {
+            let hooks = entries
+                .iter()
+                .map(|entry| format!("      - id: tsc\n        entry: {entry}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!(
+                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
+            );
+            tsc_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"), true)
+        };
+        assert_eq!(hooks(&["pnpm exec tsc -b --noEmit"]), Ok(()));
+        // Every copy of the hook must build.
+        assert_eq!(
+            hooks(&[
+                "pnpm exec tsc -b --noEmit",
+                "pnpm --dir web exec tsc --noEmit"
+            ]),
+            Err(tsc_without_build(true))
+        );
+        assert_eq!(
+            hooks(&["pnpm typecheck"]),
+            Err(Issue::warn("The tsc hook doesn't run tsc"))
+        );
+        // A hook without an entry runs its repository's, which norms can't see.
+        assert_eq!(
+            tsc_hooks(
+                &serde_saphyr::from_str(
+                    "default_stages: [pre-commit]\nrepos:\n  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: tsc\n"
+                )
+                .expect("config parses"),
+                true
+            ),
+            Err(Issue::warn(
+                "The tsc hook sets no entry, so norms can't see whether it runs in build mode"
+            ))
+        );
+
+        let ci = |runs: &[&str], solution_style: bool| {
+            let steps = runs
+                .iter()
+                .map(|run| format!("      - run: {run}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!("jobs:\n  tsc:\n    steps:\n{steps}");
+            tsc_in_ci(
+                &serde_saphyr::from_str(&yaml).expect("workflow parses"),
+                solution_style,
+            )
+        };
+        assert_eq!(ci(&["pnpm exec tsc -b --noEmit"], true), Ok(()));
+        // Each step may check another component, so each must build.
+        assert_eq!(
+            ci(
+                &[
+                    "pnpm --dir web exec tsc --noEmit",
+                    "pnpm exec tsc -b --noEmit"
+                ],
+                true
+            ),
+            Err(tsc_without_build(true))
+        );
+        assert_eq!(
+            ci(&["pnpm exec tsc --noEmit"], false),
+            Err(tsc_without_build(false))
+        );
+        assert_eq!(
+            ci(&["pnpm typecheck"], true),
+            Err(Issue::fail("No step runs tsc"))
+        );
     }
 }

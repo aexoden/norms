@@ -145,13 +145,13 @@ fail  prettier-config-exists  [.] .prettierrc: exists
 fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
       Not found: .prettierignore
 pass  package-json-scripts  [.] package.json: has scripts
-warn  package-json-script-build  [.] Scripts: has 'build'
+warn  package-json-script-build  [.] Scripts: has 'build' (tsc -b)
       Missing 'build' script
 warn  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
       The lint script runs eslint without --max-warnings 0
 warn  package-json-script-format  [.] Scripts: has 'format' (prettier --check)
       The format script runs prettier without --check, so it rewrites files
-warn  package-json-script-typecheck  [.] Scripts: has 'typecheck'
+warn  package-json-script-typecheck  [.] Scripts: has 'typecheck' (tsc -b)
       Missing 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
       Missing 'test' script
@@ -162,7 +162,7 @@ warn  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0
       The ESLint hook doesn't pass --max-warnings 0
 warn  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
       prettier runs without --check, so it rewrites files rather than only failing on them
-pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
+pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook (tsc -b)
 fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
       No vite-build hook
 pass  typescript-precommit-vitest  Pre-commit: has vitest hook
@@ -173,6 +173,7 @@ warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       CI runs the lint script rather than eslint with --max-warnings 0
 fail  typescript-ci-format  TypeScript CI: format check
       prettier runs without --check, so it rewrites files instead of failing on them
-fail  typescript-ci-tsc  TypeScript CI: type check
+fail  typescript-ci-tsc  TypeScript CI: type check (tsc -b)
+      No step runs tsc
 fail  typescript-ci-test  TypeScript CI: tests
 fail  typescript-ci-vite-build  TypeScript CI: Vite build

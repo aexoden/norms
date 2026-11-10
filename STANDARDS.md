@@ -1442,6 +1442,13 @@ sets the job's working directory instead:
 | `vite-build`             | `pnpm exec vite build`                |
 | `vitest`                 | `pnpm exec vitest run`                |
 
+`tsc` runs in build mode (`-b`), here and in the `build` and `typecheck`
+scripts, since only build mode follows the references of the solution-style
+`tsconfig.json`, which lists no files of its own: without it, `tsc` checks
+nothing, so `norms verify` fails a hook, CI step or script that runs it so. A
+component whose `tsconfig.json` isn't solution-style is still checked without
+`-b`, so there, and in hooks and CI when any component's isn't, it warns.
+
 `vite-build` catches errors that only bundling reveals, such as a missing
 stylesheet or asset, which `tsc` accepts through Vite's module declarations, or
 a broken script in `index.html`. It writes the build to `dist/`, which is

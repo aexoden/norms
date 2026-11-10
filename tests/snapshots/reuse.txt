@@ -205,7 +205,7 @@ fail  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0
       No eslint hook
 fail  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
       No prettier hook
-fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook
+fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook (tsc -b)
       No tsc hook
 fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
       No vite-build hook
@@ -217,6 +217,7 @@ fail  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       No step runs eslint
 fail  typescript-ci-format  TypeScript CI: format check
       No step runs prettier
-fail  typescript-ci-tsc  TypeScript CI: type check
+fail  typescript-ci-tsc  TypeScript CI: type check (tsc -b)
+      No step runs tsc
 fail  typescript-ci-test  TypeScript CI: tests
 fail  typescript-ci-vite-build  TypeScript CI: Vite build
