@@ -42,10 +42,10 @@ use pep508_rs::pep440_rs::Version;
 use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DENY_TOML, DenyToml, DevboxConfig,
-    GIT_ARCHIVAL, HIDDEN_CLIPPY_TOML, MarkdownlintCli2Config, NormsConfig, OTHER_DENY_TOMLS,
-    PYTHON_VERSION, PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig, PyprojectToml,
-    RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow, is_other_deny_toml,
-    parse_python_version,
+    EditorConfig, GIT_ARCHIVAL, HIDDEN_CLIPPY_TOML, MarkdownlintCli2Config, NormsConfig,
+    OTHER_DENY_TOMLS, PYTHON_VERSION, PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig,
+    PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
+    is_other_deny_toml, parse_python_version,
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
@@ -113,7 +113,7 @@ pub(crate) struct ProjectContext {
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
     reuse_toml: OnceLock<ConfigStatus<ReuseToml>>,
     precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
-    editorconfig: OnceLock<ConfigStatus<String>>,
+    editorconfig: OnceLock<ConfigStatus<EditorConfig>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
     claude_md: OnceLock<ConfigStatus<String>>,
     workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
@@ -263,10 +263,17 @@ impl ProjectContext {
         })
     }
 
-    // Raw `.editorconfig` content (cached).
-    pub(crate) fn editorconfig(&self) -> &ConfigStatus<String> {
+    /// Parsed `.editorconfig` (cached).
+    pub(crate) fn editorconfig(&self) -> &ConfigStatus<EditorConfig> {
         self.editorconfig
-            .get_or_init(|| read_text_file(&self.path.join(".editorconfig")))
+            .get_or_init(|| match read_text_file(&self.path.join(".editorconfig")) {
+                ConfigStatus::Ok(text) => match EditorConfig::parse(&text) {
+                    Ok(config) => ConfigStatus::Ok(config),
+                    Err(error) => ConfigStatus::ParseError { error },
+                },
+                ConfigStatus::NotFound => ConfigStatus::NotFound,
+                ConfigStatus::ParseError { error } => ConfigStatus::ParseError { error },
+            })
     }
 
     // Raw `.gitattributes` content (cached).

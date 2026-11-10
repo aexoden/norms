@@ -173,7 +173,20 @@ trim_trailing_whitespace = true
 indent_size = 2
 ```
 
+A project with TypeScript also indents Prettier's `.prettierrc` by two spaces,
+since Prettier reads `.editorconfig` and `.prettierrc` has no extension:
+
+```ini
+[.prettierrc]
+indent_size = 2
+```
+
 Additional project-specific options can be included if required.
+
+`norms verify` reads the file as editors do, and checks the properties it gives
+every file, YAML, JSON and TOML files, and, with TypeScript, `.prettierrc`,
+whichever sections set them, so other sections may change them for other
+files.
 
 ## Documentation
 

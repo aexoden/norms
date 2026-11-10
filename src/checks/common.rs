@@ -14,9 +14,9 @@ use serde_json::Value;
 
 use crate::checks::{python, rust};
 use crate::config::{
-    AttributeState, DevboxConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig, PrecommitHook,
-    SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands, current_stage_name,
-    is_program,
+    AttributeState, DevboxConfig, EditorConfig, GATE_JOB, MarkdownlintCli2Config, PrecommitConfig,
+    PrecommitHook, SHARED_PRESET, Workflow, WorkflowJob, WorkflowStep, attribute, commands,
+    current_stage_name, is_program,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG,
@@ -370,48 +370,99 @@ fn diff_driver_set(
 // Editor configuration
 //
 
+/// The properties the standard's `[*]` section sets, with the IDs of their checks.
+const EDITORCONFIG_SETTINGS: [(&str, &str, &str); 6] = [
+    ("editorconfig-charset", "charset", "utf-8"),
+    ("editorconfig-end-of-line", "end_of_line", "lf"),
+    ("editorconfig-indent-style", "indent_style", "space"),
+    ("editorconfig-indent-size", "indent_size", "4"),
+    (
+        "editorconfig-insert-final-newline",
+        "insert_final_newline",
+        "true",
+    ),
+    (
+        "editorconfig-trim-trailing-whitespace",
+        "trim_trailing_whitespace",
+        "true",
+    ),
+];
+
+/// Files the standard indents by two spaces, as a file of each such extension: YAML, JSON and TOML.
+const TWO_SPACE_FILES: [&str; 4] = ["file.yml", "file.yaml", "file.json", "file.toml"];
+
+/// The file without an extension that stands for every file, which the `[*]` section covers.
+const ANY_FILE: &str = "file";
+
+/// Check `.editorconfig` by the properties it gives files, as editors resolve its sections: [`ANY_FILE`] for every file,
+/// [`TWO_SPACE_FILES`] for the files the standard indents by two spaces, and, in a project with TypeScript, Prettier's
+/// `.prettierrc`, which has no extension. Each gets the `[*]` section's settings, with an `indent_size` of 2 rather
+/// than 4 for those indented by two spaces. Other sections may set more, or change these for other files.
 pub(crate) fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
     let status = ctx.editorconfig();
-    let Some(content) = report.require_parsed("editorconfig", ".editorconfig", status) else {
+    let Some(config) = report.require_parsed("editorconfig", ".editorconfig", status) else {
         return;
     };
 
-    let settings = [
-        ("editorconfig-root", "root=true", "root = true"),
-        ("editorconfig-charset", "charset=utf-8", "charset = utf-8"),
-        (
-            "editorconfig-end-of-line",
-            "end_of_line=lf",
-            "end_of_line = lf",
-        ),
-        (
-            "editorconfig-indent-style",
-            "indent_style=space",
-            "indent_style = space",
-        ),
-        (
-            "editorconfig-indent-size",
-            "indent_size=4",
-            "indent_size = 4",
-        ),
-        (
-            "editorconfig-insert-final-newline",
-            "insert_final_newline=true",
-            "insert_final_newline = true",
-        ),
-        (
-            "editorconfig-trim-trailing-whitespace",
-            "trim_trailing_whitespace=true",
-            "trim_trailing_whitespace = true",
-        ),
-    ];
+    let mut two_space = TWO_SPACE_FILES.to_vec();
+    if ctx.languages().contains(&Language::TypeScript) {
+        two_space.push(".prettierrc");
+    }
+    let every: Vec<&str> = std::iter::once(ANY_FILE)
+        .chain(two_space.iter().copied())
+        .collect();
 
-    for (id, label, needle) in settings {
+    report.should(
+        "editorconfig-root",
+        ".editorconfig: root=true",
+        config.is_root(),
+    );
+    for (id, key, expected) in EDITORCONFIG_SETTINGS {
+        let paths = if key == "indent_size" {
+            &[ANY_FILE][..]
+        } else {
+            &every
+        };
         report.should(
             id,
-            format!(".editorconfig: {label}"),
-            matches_regex(content, &regex::escape(needle)),
+            format!(".editorconfig: {key}={expected}"),
+            editorconfig_values_are(config, paths, key, expected),
         );
+    }
+    report.should(
+        "editorconfig-indent-size-data",
+        ".editorconfig: indent_size=2 for YAML, JSON and TOML",
+        editorconfig_values_are(config, &two_space, "indent_size", "2"),
+    );
+}
+
+/// Whether `config` gives each file at `paths` the value `expected` for `key`: if not, every one that it doesn't.
+fn editorconfig_values_are(
+    config: &EditorConfig,
+    paths: &[&str],
+    key: &str,
+    expected: &str,
+) -> Result<(), String> {
+    let issues: Vec<String> = paths
+        .iter()
+        .filter_map(|path| {
+            let subject = if *path == ANY_FILE {
+                "every file".to_owned()
+            } else {
+                path.strip_prefix("file.")
+                    .map_or_else(|| (*path).to_owned(), |extension| format!("*.{extension}"))
+            };
+            match config.value(path, key) {
+                Some(value) if value == expected => None,
+                Some(value) => Some(format!("{key} is {value} for {subject}, not {expected}")),
+                None => Some(format!("{key} isn't set for {subject}")),
+            }
+        })
+        .collect();
+    if issues.is_empty() {
+        Ok(())
+    } else {
+        Err(issues.join("; "))
     }
 }
 
@@ -2684,6 +2735,97 @@ jobs:
         ] {
             assert!(!TOMBI_FORMAT_CHECK.is_match(run), "{run}");
         }
+    }
+
+    #[test]
+    fn editorconfig_values_are_resolved_through_sections() {
+        let standard = EditorConfig::parse(
+            "root = true\n\n[*]\nindent_size = 4\nend_of_line = lf\n\n[*.{yml,yaml,json,toml}]\nindent_size = 2\n",
+        )
+        .unwrap();
+        assert_eq!(
+            editorconfig_values_are(&standard, &[ANY_FILE], "indent_size", "4"),
+            Ok(())
+        );
+        assert_eq!(
+            editorconfig_values_are(&standard, &TWO_SPACE_FILES, "indent_size", "2"),
+            Ok(())
+        );
+        assert_eq!(
+            editorconfig_values_are(&standard, &[ANY_FILE, "file.json"], "end_of_line", "lf"),
+            Ok(())
+        );
+
+        // A setting in another section than [*] doesn't reach every file, and one the 2-space section lacks is
+        // inherited from [*]. Every file that differs is named.
+        let other = EditorConfig::parse(
+            "[*.py]\nindent_size = 4\n\n[*.json]\nindent_size = 2\nend_of_line = crlf\n",
+        )
+        .unwrap();
+        assert_eq!(
+            editorconfig_values_are(&other, &[ANY_FILE], "indent_size", "4"),
+            Err("indent_size isn't set for every file".to_owned())
+        );
+        assert_eq!(
+            editorconfig_values_are(
+                &other,
+                &["file.json", "file.toml", ".prettierrc"],
+                "end_of_line",
+                "lf"
+            ),
+            Err(
+                "end_of_line is crlf for *.json, not lf; end_of_line isn't set for *.toml; \
+                 end_of_line isn't set for .prettierrc"
+                    .to_owned()
+            )
+        );
+    }
+
+    #[test]
+    fn editorconfig_checks_report_what_files_get() {
+        // The editorconfig results for a project with the given .editorconfig and files.
+        let results = |editorconfig: &str, files: &[&str]| {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(dir.path().join(".editorconfig"), editorconfig).unwrap();
+            for file in files {
+                std::fs::write(dir.path().join(file), "{}").unwrap();
+            }
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_editorconfig(&project, &mut report);
+            report
+                .results
+                .iter()
+                .filter(|result| result.status != Status::Pass)
+                .map(|result| (result.id.clone(), result.message.clone()))
+                .collect::<Vec<_>>()
+        };
+        let standard = "root = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\nindent_style = space\nindent_size = 4\n\
+                        insert_final_newline = true\ntrim_trailing_whitespace = true\n\n[*.{yml,yaml,json,toml}]\nindent_size = 2\n";
+        assert_eq!(results(standard, &[]), []);
+        // root = true counts only in the preamble, before any section.
+        assert_eq!(
+            results(
+                &standard.replacen("root = true\n\n[*]\n", "[*]\nroot = true\n", 1),
+                &[]
+            ),
+            [("editorconfig-root".to_owned(), String::new())]
+        );
+        // A project with TypeScript indents Prettier's .prettierrc by two spaces too.
+        assert_eq!(
+            results(standard, &["package.json"]),
+            [(
+                "editorconfig-indent-size-data".to_owned(),
+                "indent_size is 4 for .prettierrc, not 2".to_owned()
+            )]
+        );
+        assert_eq!(
+            results(
+                &format!("{standard}\n[.prettierrc]\nindent_size = 2\n"),
+                &["package.json"]
+            ),
+            []
+        );
     }
 
     fn devbox(json: &str) -> Result<(), String> {

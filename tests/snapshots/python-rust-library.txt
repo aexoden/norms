@@ -27,6 +27,7 @@ pass  editorconfig-indent-style  .editorconfig: indent_style=space
 pass  editorconfig-indent-size  .editorconfig: indent_size=4
 pass  editorconfig-insert-final-newline  .editorconfig: insert_final_newline=true
 pass  editorconfig-trim-trailing-whitespace  .editorconfig: trim_trailing_whitespace=true
+pass  editorconfig-indent-size-data  .editorconfig: indent_size=2 for YAML, JSON and TOML
 pass  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
 pass  markdownlint-cli2-valid  .markdownlint-cli2.jsonc: valid
 pass  markdownlint-cli2-rules  .markdownlint-cli2.jsonc: every default rule enabled
