@@ -69,7 +69,7 @@ any check failed or warned.
   (also given the `ProjectContext` when a repository-wide file applies to that
   component alone, such as the CI job testing a library's MSRV).
   Registration is explicit: a new check must be added to the list in
-  `checks/mod.rs`. `common.rs` runs for every project. For each detected
+  `checks/runner.rs`. `common.rs` runs for every project. For each detected
   language, the component checks run once per component of that language
   (inside `Report::with_component`, which labels their results with the
   component's path), then the checks of the language's place in repository-wide
