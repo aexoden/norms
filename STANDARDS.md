@@ -960,7 +960,7 @@ line-ending = "lf"
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
-ignore = ["missing-trailing-comma", "single-line-implicit-string-concatenation"]
+ignore = ["missing-trailing-comma"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = "(?i)SPDX-FileCopyrightText: \\d{4}"
@@ -975,9 +975,9 @@ lines-between-types = 1
 convention = "google"
 ```
 
-`line-length` is 120, as is Prettier's `printWidth`. The two ignored rules
-conflict with the Ruff formatter. Any further ignore needs a comment in
-`pyproject.toml` explaining why.
+`line-length` is 120, as is Prettier's `printWidth`. The ignored rule conflicts
+with the Ruff formatter, which warns when it is enabled. Any further ignore
+needs a comment in `pyproject.toml` explaining why.
 
 #### Type Checking
 

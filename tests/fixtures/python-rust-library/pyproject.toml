@@ -48,7 +48,7 @@ line-ending = "lf"
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
-ignore = ["missing-trailing-comma", "single-line-implicit-string-concatenation"]
+ignore = ["missing-trailing-comma"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = "(?i)SPDX-FileCopyrightText: \\d{4}"
