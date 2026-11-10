@@ -1362,7 +1362,11 @@ Use [ESLint](https://eslint.org/) for linting, configured in `eslint.config.ts`.
 The configuration includes the `strictTypeChecked` and `stylisticTypeChecked`
 configs from [typescript-eslint](https://typescript-eslint.io/), with
 `projectService` enabled for type-aware rules, and `eslint-config-prettier` to
-disable rules that conflict with Prettier.
+disable rules that conflict with Prettier. ESLint loads `eslint.config.ts`
+through [jiti](https://github.com/unjs/jiti), a development dependency. ESLint
+uses Node's own type stripping only behind its experimental
+`unstable_native_nodejs_ts_config` flag, which every place ESLint runs, editors
+included, would have to pass.
 
 #### Testing
 
