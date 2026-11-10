@@ -1169,9 +1169,15 @@ unused_qualifications = "warn"
 Groups are set to priority -1 so that individual lints, which default to 0, can
 override them.
 
-In a workspace, the lints may be set once in `[workspace.lints.clippy]`. Cargo
-applies them only to packages that inherit them with `[lints] workspace = true`,
-including the package in the root manifest, if there is one.
+`norms verify` warns when a package doesn't set the `pedantic`, `nursery` and
+`cargo` groups to `warn` or stricter, or any of the `[lints.rust]` entries
+above to its level or stricter. The restriction lints aren't checked while the
+selection is interim.
+
+In a workspace, the lints may be set once in `[workspace.lints.clippy]` and
+`[workspace.lints.rust]`. Cargo applies them only to packages that inherit them
+with `[lints] workspace = true`, which inherits both tables, including the
+package in the root manifest, if there is one.
 
 `multiple_crate_versions` is allowed because transitive dependencies routinely
 pull in several versions of the same crate, which a project cannot fix.

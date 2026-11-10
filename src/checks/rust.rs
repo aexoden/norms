@@ -3,14 +3,14 @@
 
 //! Rust-specific checks.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
 use semver::Comparator;
 
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, FormatterRun,
-    HIDDEN_CLIPPY_TOML, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands,
+    HIDDEN_CLIPPY_TOML, LintLevel, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands,
     is_other_deny_toml, is_program,
 };
 use crate::context::{
@@ -249,11 +249,11 @@ pub(crate) fn check_rust_version(ctx: &ComponentContext, report: &mut Report) {
 }
 
 //
-// Clippy lints
+// Clippy and compiler lints
 //
 
-/// Check the Clippy lints of the component's package and of each member of its workspace. A virtual manifest has no
-/// package of its own to lint.
+/// Check the Clippy and compiler lints of the component's package and of each member of its workspace. A virtual
+/// manifest has no package of its own to lint.
 pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
         return;
@@ -268,8 +268,45 @@ pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
     }
 }
 
-/// Check the Clippy lints of the package whose manifest, labeled `label`, is `manifest`, with any it inherits resolved
-/// from `workspace`.
+/// The Clippy lint groups the standard enables, with the IDs of their checks.
+const CLIPPY_GROUPS: [(&str, &str); 3] = [
+    ("clippy-pedantic", "pedantic"),
+    ("clippy-nursery", "nursery"),
+    ("clippy-cargo", "cargo"),
+];
+
+/// The compiler's lints and lint groups the standard sets in `[lints.rust]`, with the least level each needs.
+const RUSTC_LINTS: [(&str, LintLevel); 5] = [
+    ("future_incompatible", LintLevel::Warn),
+    ("let_underscore", LintLevel::Warn),
+    ("unreachable_pub", LintLevel::Warn),
+    ("unsafe_code", LintLevel::Forbid),
+    ("unused_qualifications", LintLevel::Warn),
+];
+
+/// Whether `lints` sets the lint `name` to `level` or a stricter one.
+fn lint_at_least(
+    lints: &HashMap<String, toml::Value>,
+    name: &str,
+    level: LintLevel,
+) -> Result<(), String> {
+    match lints.get(name).map(LintLevel::of) {
+        None => Err(format!("{name} isn't set")),
+        Some(Some(set)) if set >= level => Ok(()),
+        Some(Some(set)) if level == LintLevel::Forbid => {
+            Err(format!("{name} is {}, not forbid", set.name()))
+        }
+        Some(Some(set)) => Err(format!(
+            "{name} is {}, not {} or stricter",
+            set.name(),
+            level.name()
+        )),
+        Some(None) => Err(format!("{name} has no level norms recognizes")),
+    }
+}
+
+/// Check the Clippy and compiler lints of the package whose manifest, labeled `label`, is `manifest`, with any it
+/// inherits resolved from `workspace`.
 fn check_package_lints(
     label: &str,
     manifest: &CargoToml,
@@ -277,19 +314,36 @@ fn check_package_lints(
     report: &mut Report,
 ) {
     let name = format!("{label}: Clippy lints configured");
-    let lints = match manifest.clippy_lints(workspace) {
-        Ok(lints) => lints,
+    match manifest.clippy_lints(workspace) {
+        Ok(lints) => {
+            report.must("clippy-lints", name, Outcome::Pass);
+            for (id, group) in CLIPPY_GROUPS {
+                report.should(
+                    id,
+                    format!("{label}: Clippy {group} enabled"),
+                    lint_at_least(lints, group, LintLevel::Warn),
+                );
+            }
+        }
         Err(error) => {
             report.must("clippy-lints", name, Outcome::fail(error));
-            return;
         }
-    };
+    }
 
-    report.must("clippy-lints", name, Outcome::Pass);
     report.should(
-        "clippy-pedantic",
-        format!("{label}: Clippy pedantic enabled"),
-        lints.contains_key("pedantic"),
+        "rustc-lints",
+        format!("{label}: compiler lints configured ([lints.rust])"),
+        manifest.lints("rust", workspace).and_then(|lints| {
+            let issues: Vec<String> = RUSTC_LINTS
+                .into_iter()
+                .filter_map(|(lint, level)| lint_at_least(lints, lint, level).err())
+                .collect();
+            if issues.is_empty() {
+                Ok(())
+            } else {
+                Err(issues.join("; "))
+            }
+        }),
     );
 }
 
@@ -1960,5 +2014,84 @@ jobs:
             hook("cargo install cargo-deny"),
             Err(Issue::warn("The cargo-deny hook doesn't run cargo deny"))
         );
+    }
+
+    #[test]
+    fn lints_are_set_at_least_to_their_level() {
+        let lints: HashMap<String, toml::Value> = toml::from_str(
+            "pedantic = { level = \"warn\", priority = -1 }\nnursery = \"allow\"\nunsafe_code = \"deny\"\nunused = 1\n",
+        )
+        .unwrap();
+        assert_eq!(lint_at_least(&lints, "pedantic", LintLevel::Warn), Ok(()));
+        assert_eq!(
+            lint_at_least(&lints, "nursery", LintLevel::Warn),
+            Err("nursery is allow, not warn or stricter".to_owned())
+        );
+        assert_eq!(
+            lint_at_least(&lints, "unsafe_code", LintLevel::Forbid),
+            Err("unsafe_code is deny, not forbid".to_owned())
+        );
+        assert_eq!(
+            lint_at_least(&lints, "cargo", LintLevel::Warn),
+            Err("cargo isn't set".to_owned())
+        );
+
+        // A package's lints are reported together, every compiler lint's issue in one result.
+        let manifest: CargoToml = toml::from_str(
+            "[package]\nname = \"x\"\n\n[lints.clippy]\npedantic = \"warn\"\nnursery = \"allow\"\ncargo = \"deny\"\n\n[lints.rust]\nfuture_incompatible = \"warn\"\nlet_underscore = \"warn\"\nunsafe_code = \"deny\"\nunused_qualifications = \"warn\"\n",
+        )
+        .unwrap();
+        let mut report = Report::new(PathBuf::new(), Vec::new());
+        check_package_lints("Cargo.toml", &manifest, None, &mut report);
+        let results: Vec<_> = report
+            .results
+            .iter()
+            .map(|result| (result.id.as_str(), result.status, result.message.as_str()))
+            .collect();
+        assert_eq!(
+            results,
+            [
+                ("clippy-lints", Status::Pass, ""),
+                ("clippy-pedantic", Status::Pass, ""),
+                (
+                    "clippy-nursery",
+                    Status::Warn,
+                    "nursery is allow, not warn or stricter"
+                ),
+                ("clippy-cargo", Status::Pass, ""),
+                (
+                    "rustc-lints",
+                    Status::Warn,
+                    "unreachable_pub isn't set; unsafe_code is deny, not forbid"
+                ),
+            ]
+        );
+        assert_eq!(
+            lint_at_least(&lints, "unused", LintLevel::Warn),
+            Err("unused has no level norms recognizes".to_owned())
+        );
+
+        // The template's lints meet the standard.
+        let template: CargoToml = toml::from_str(
+            &include_str!("../../template/{{ rust_dir }}/Cargo.toml.jinja")
+                .lines()
+                .filter(|line| !line.contains("{{") && !line.contains("{%"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+        .unwrap();
+        let template_lints = template.lints.unwrap();
+        let clippy = template_lints.clippy.unwrap();
+        for (_, group) in CLIPPY_GROUPS {
+            assert_eq!(
+                lint_at_least(&clippy, group, LintLevel::Warn),
+                Ok(()),
+                "{group}"
+            );
+        }
+        let rust = template_lints.rust.unwrap();
+        for (lint, level) in RUSTC_LINTS {
+            assert_eq!(lint_at_least(&rust, lint, level), Ok(()), "{lint}");
+        }
     }
 }

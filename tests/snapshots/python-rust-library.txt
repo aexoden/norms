@@ -138,6 +138,9 @@ pass  rust-toolchain-toml-components  [rust] ../rust-toolchain.toml: clippy and 
 pass  cargo-toml-rust-version  [rust] Cargo.toml: MSRV set (rust-version, library)
 pass  clippy-lints  [rust] Cargo.toml: Clippy lints configured
 pass  clippy-pedantic  [rust] Cargo.toml: Clippy pedantic enabled
+pass  clippy-nursery  [rust] Cargo.toml: Clippy nursery enabled
+pass  clippy-cargo  [rust] Cargo.toml: Clippy cargo enabled
+pass  rustc-lints  [rust] Cargo.toml: compiler lints configured ([lints.rust])
 pass  clippy-toml-exists  [rust] clippy.toml: exists
 pass  clippy-toml-valid  [rust] clippy.toml: valid
 pass  clippy-toml-allow-in-tests  [rust] clippy.toml: unwrap, expect and panic allowed in tests

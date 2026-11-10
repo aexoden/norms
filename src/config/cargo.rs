@@ -214,6 +214,17 @@ pub(crate) struct CargoLints {
     pub workspace: bool,
 }
 
+impl CargoLints {
+    /// The lints of `tool`: `clippy`, or `rust` for the compiler's own.
+    fn tool(&self, tool: &str) -> Option<&HashMap<String, toml::Value>> {
+        match tool {
+            "clippy" => self.clippy.as_ref(),
+            "rust" => self.rust.as_ref(),
+            _ => None,
+        }
+    }
+}
+
 /// The `[workspace]` table (subset).
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -340,37 +351,90 @@ impl CargoToml {
             .is_none_or(CargoPublish::allowed)
     }
 
-    /// The Clippy lints that apply, resolved against `workspace`, the `[workspace]` table of the workspace's root
-    /// manifest.
-    ///
-    /// A package's lints are its own `[lints.clippy]`, or the workspace's `[workspace.lints.clippy]` if it inherits
-    /// them with `[lints] workspace = true`; Cargo doesn't apply the workspace's lints otherwise, even to the package in
-    /// the root manifest. A manifest without a package has no lints. The error says why there are none.
+    /// The Clippy lints that apply, resolved against `workspace`. See [`lints`](Self::lints).
     pub(crate) fn clippy_lints<'a>(
         &'a self,
         workspace: Option<&'a CargoWorkspace>,
     ) -> Result<&'a HashMap<String, toml::Value>, String> {
+        self.lints("clippy", workspace)
+    }
+
+    /// The lints of `tool` (`clippy`, or `rust` for the compiler's own) that apply, resolved against `workspace`, the
+    /// `[workspace]` table of the workspace's root manifest.
+    ///
+    /// A package's lints are its own `[lints.<tool>]`, or the workspace's `[workspace.lints.<tool>]` if it inherits
+    /// them with `[lints] workspace = true`; Cargo doesn't apply the workspace's lints otherwise, even to the package in
+    /// the root manifest. A manifest without a package has no lints. The error says why there are none.
+    pub(crate) fn lints<'a>(
+        &'a self,
+        tool: &str,
+        workspace: Option<&'a CargoWorkspace>,
+    ) -> Result<&'a HashMap<String, toml::Value>, String> {
         let workspace_lints = workspace
             .and_then(|workspace| workspace.lints.as_ref())
-            .and_then(|lints| lints.clippy.as_ref());
+            .and_then(|lints| lints.tool(tool));
 
         if self.package.is_none() {
             return Err("No [package] section, so no lints apply".to_owned());
         }
 
-        match &self.lints {
-            Some(CargoLints { workspace: true, .. }) => workspace_lints.ok_or_else(|| {
-                "Inherits the workspace's lints, but there is no [workspace.lints.clippy] section".to_owned()
-            }),
-            Some(CargoLints {
-                clippy: Some(lints),
-                ..
-            }) => Ok(lints),
-            _ if workspace_lints.is_some() => Err(
-                "No [lints.clippy] section, and [workspace.lints.clippy] isn't inherited ([lints] workspace = true)"
-                    .to_owned(),
-            ),
-            _ => Err("No [lints.clippy] section".to_owned()),
+        let own = self.lints.as_ref();
+        if own.is_some_and(|lints| lints.workspace) {
+            return workspace_lints.ok_or_else(|| {
+                format!("Inherits the workspace's lints, but there is no [workspace.lints.{tool}] section")
+            });
+        }
+        if let Some(lints) = own.and_then(|lints| lints.tool(tool)) {
+            return Ok(lints);
+        }
+        Err(if workspace_lints.is_some() {
+            format!(
+                "No [lints.{tool}] section, and [workspace.lints.{tool}] isn't inherited ([lints] workspace = true)"
+            )
+        } else {
+            format!("No [lints.{tool}] section")
+        })
+    }
+}
+
+/// A lint level, in the order of strictness.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum LintLevel {
+    Allow,
+    Warn,
+    Deny,
+    Forbid,
+}
+
+impl LintLevel {
+    /// The level a `[lints]` entry sets: its value, as a string or a table's `level`. An entry that sets none, or one
+    /// Cargo doesn't know, is none.
+    pub(crate) fn of(value: &toml::Value) -> Option<Self> {
+        let level = match value {
+            toml::Value::String(level) => level.as_str(),
+            toml::Value::Table(table) => table.get("level")?.as_str()?,
+            toml::Value::Integer(_)
+            | toml::Value::Float(_)
+            | toml::Value::Boolean(_)
+            | toml::Value::Datetime(_)
+            | toml::Value::Array(_) => return None,
+        };
+        match level {
+            "allow" => Some(Self::Allow),
+            "warn" => Some(Self::Warn),
+            "deny" => Some(Self::Deny),
+            "forbid" => Some(Self::Forbid),
+            _ => None,
+        }
+    }
+
+    /// The level's name, as the `[lints]` table spells it.
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            Self::Allow => "allow",
+            Self::Warn => "warn",
+            Self::Deny => "deny",
+            Self::Forbid => "forbid",
         }
     }
 }
@@ -598,5 +662,47 @@ mod tests {
         assert!(lints("[package]\nname = \"x\"\n\n[lints]\nworkspace = true\n").is_err());
         assert!(lints("[package]\nname = \"x\"\n").is_err());
         assert!(lints(workspace).is_err());
+    }
+
+    #[test]
+    fn lint_levels_are_read_from_strings_and_tables() {
+        let level = |value: &str| {
+            let table: toml::Table = toml::from_str(&format!("x = {value}")).unwrap();
+            LintLevel::of(table.get("x").unwrap())
+        };
+        assert_eq!(level("\"warn\""), Some(LintLevel::Warn));
+        assert_eq!(level("\"forbid\""), Some(LintLevel::Forbid));
+        assert_eq!(
+            level("{ level = \"deny\", priority = -1 }"),
+            Some(LintLevel::Deny)
+        );
+        assert_eq!(level("{ priority = -1 }"), None);
+        assert_eq!(level("\"loud\""), None);
+        assert_eq!(level("1"), None);
+        assert!(LintLevel::Allow < LintLevel::Warn && LintLevel::Deny < LintLevel::Forbid);
+    }
+
+    #[test]
+    fn rust_lints_resolve_like_clippy_lints() {
+        let lints = |manifest: &str| {
+            let manifest = parse(manifest);
+            manifest
+                .lints("rust", manifest.workspace.as_ref())
+                .map(|lints| lints.keys().cloned().collect::<Vec<_>>())
+        };
+        assert_eq!(
+            lints("[package]\nname = \"x\"\n\n[lints.rust]\nunsafe_code = \"forbid\"\n"),
+            Ok(vec!["unsafe_code".to_owned()])
+        );
+        assert_eq!(
+            lints(
+                "[package]\nname = \"x\"\n\n[lints]\nworkspace = true\n\n[workspace.lints.rust]\nunsafe_code = \"forbid\"\n"
+            ),
+            Ok(vec!["unsafe_code".to_owned()])
+        );
+        assert_eq!(
+            lints("[package]\nname = \"x\"\n\n[lints.clippy]\npedantic = \"warn\"\n"),
+            Err("No [lints.rust] section".to_owned())
+        );
     }
 }

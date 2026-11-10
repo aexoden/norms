@@ -88,8 +88,12 @@ warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
 warn  cargo-toml-rust-version  [.] crates/core/Cargo.toml: MSRV set (rust-version, library)
 fail  clippy-lints  [.] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  rustc-lints  [.] Cargo.toml: compiler lints configured ([lints.rust])
+      No [lints.rust] section
 fail  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  rustc-lints  [.] crates/core/Cargo.toml: compiler lints configured ([lints.rust])
+      No [lints.rust] section
 fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
 fail  deny-toml-exists  [.] deny.toml: exists

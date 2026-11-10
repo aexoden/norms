@@ -39,6 +39,8 @@ pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy and 
 warn  cargo-toml-rust-version  [backend] Cargo.toml: MSRV set (rust-version, library)
 fail  clippy-lints  [backend] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  rustc-lints  [backend] Cargo.toml: compiler lints configured ([lints.rust])
+      No [lints.rust] section
 warn  clippy-toml-exists  [backend] .clippy.toml: exists
       Clippy uses .clippy.toml, which should be named clippy.toml
 warn  deny-toml-exists  [backend] .deny.toml: exists
@@ -58,6 +60,8 @@ warn  rust-toolchain-toml-components  [tools/cli] ../../rust-toolchain.toml: cli
 warn  cargo-toml-rust-version  [tools/cli] Cargo.toml: MSRV set (rust-version, library)
 fail  clippy-lints  [tools/cli] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
+warn  rustc-lints  [tools/cli] Cargo.toml: compiler lints configured ([lints.rust])
+      No [lints.rust] section
 pass  clippy-toml-exists  [tools/cli] ../../clippy.toml: exists
 pass  clippy-toml-valid  [tools/cli] ../../clippy.toml: valid
 warn  clippy-toml-allow-in-tests  [tools/cli] ../../clippy.toml: unwrap, expect and panic allowed in tests
