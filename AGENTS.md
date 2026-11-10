@@ -217,16 +217,16 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `uv-lock` hook and CI step run through uv's global options, and of the jobs
   that `uv run`, one syncs with `--frozen`, one syncs with `--locked` only
   afterwards, and the others sync or run with `--locked`; neither the `pytest`
-  hook nor the job running pytest passes `--cov`; `pnpm peers check` runs
-  through `pnpm --dir . exec`; and the `eslint` hook passes `--max-warnings 10`
-  while CI lints through the `lint` script, which runs plain `eslint .`. Its
-  `ruff-format` and `prettier` jobs run the formatters without `--check`, so
-  they rewrite files rather than fail, as do its `prettier` hook and `format`
-  script, while its `ruff-format` hook checks with `--diff`. Its `ruff-check`
-  hook is remote, its `mypy` hook has `language: system` and its `tsc` hook
-  doesn't set `pass_filenames: false`. Its `pre-commit` job's `SKIP` lists some
-  of the hooks with jobs of their own, but not `pytest`, `eslint`, `mypy` or
-  `ruff-check`.
+  hook nor the job running pytest passes `--cov`, nor the `vitest` hook
+  `--coverage`; `pnpm peers check` runs through `pnpm --dir . exec`; and the
+  `eslint` hook passes `--max-warnings 10` while CI lints through the `lint`
+  script, which runs plain `eslint .`. Its `ruff-format` and `prettier` jobs
+  run the formatters without `--check`, so they rewrite files rather than fail,
+  as do its `prettier` hook and `format` script, while its `ruff-format` hook
+  checks with `--diff`. Its `ruff-check` hook is remote, its `mypy` hook has
+  `language: system` and its `tsc` hook doesn't set `pass_filenames: false`.
+  Its `pre-commit` job's `SKIP` lists some of the hooks with jobs of their own,
+  but not `pytest`, `eslint`, `mypy` or `ruff-check`.
   `typescript-config` breaks the TypeScript configuration standards: its
   `package.json` sets `private` to the string `"true"`, and its two
   referenced tsconfigs lack, turn off or set to another value some of the

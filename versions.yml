@@ -202,3 +202,8 @@ npm_vite:
 npm_vitest:
   default: "5.1.0"
   when: false
+
+# renovate: datasource=npm depName=@vitest/coverage-v8
+npm_vitest_coverage_v8:
+  default: "5.1.0"
+  when: false

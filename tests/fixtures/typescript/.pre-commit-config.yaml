@@ -105,6 +105,6 @@ repos:
       - id: vitest
         name: vitest
         description: Run TypeScript tests using Vitest
-        entry: pnpm exec vitest run
+        entry: pnpm exec vitest run --coverage
         language: unsupported
         pass_filenames: false

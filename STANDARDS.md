@@ -497,7 +497,7 @@ following workflows:
 ### Checks
 
 `ci.yaml` runs formatting checks, linting, type checking, tests (with coverage
-where the language supports it) and dependency policy checks, such as `cargo
+for Python and TypeScript) and dependency policy checks, such as `cargo
 deny --workspace --all-features check -D warnings bans licenses sources` and
 lock file freshness. CI should fail in every case where the pre-commit hooks
 would.
@@ -1478,7 +1478,26 @@ contents.
 
 #### Testing
 
-Use [Vitest](https://vitest.dev/).
+Use [Vitest](https://vitest.dev/), with
+[@vitest/coverage-v8](https://vitest.dev/guide/coverage.html), a development
+dependency, reporting missing lines: `pnpm exec vitest run --coverage`. The
+`test` script leaves coverage out, for a quick run; the hook and CI report it.
+`vite.config.ts` includes every source file in the report, not only those the
+tests import, and prints it rather than writing it to files:
+
+```ts
+/// <reference types="vitest/config" />
+import { defineConfig } from "vite";
+
+export default defineConfig({
+    test: {
+        coverage: {
+            include: ["src/**"],
+            reporter: ["text"],
+        },
+    },
+});
+```
 
 #### Hooks and CI
 
@@ -1494,7 +1513,7 @@ sets the job's working directory instead:
 | `eslint`                 | `pnpm exec eslint . --max-warnings 0` |
 | `tsc`                    | `pnpm exec tsc -b --noEmit`           |
 | `vite-build`             | `pnpm exec vite build`                |
-| `vitest`                 | `pnpm exec vitest run`                |
+| `vitest`                 | `pnpm exec vitest run --coverage`     |
 
 `tsc` runs in build mode (`-b`), here and in the `build` and `typecheck`
 scripts, since only build mode follows the references of the solution-style

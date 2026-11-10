@@ -189,12 +189,12 @@ pass  typescript-precommit-eslint  Pre-commit: has ESLint hook (--max-warnings 0
 pass  typescript-precommit-prettier  Pre-commit: has Prettier hook (--check)
 pass  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook (tsc -b)
 pass  typescript-precommit-vite-build  Pre-commit: has vite-build hook
-pass  typescript-precommit-vitest  Pre-commit: has vitest hook
+pass  typescript-precommit-vitest  Pre-commit: has vitest hook (with coverage)
 pass  typescript-precommit-local-hooks  TypeScript pre-commit: language hooks are local, unsupported and take no file names
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 pass  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
 pass  typescript-ci-format  TypeScript CI: format check
 pass  typescript-ci-tsc  TypeScript CI: type check (tsc -b)
-pass  typescript-ci-test  TypeScript CI: tests
+pass  typescript-ci-test  TypeScript CI: tests (with coverage)
 pass  typescript-ci-vite-build  TypeScript CI: Vite build
 pass  typescript-audit-pnpm  TypeScript audit: pnpm audit

@@ -214,7 +214,7 @@ fail  typescript-precommit-tsc  Pre-commit: has TypeScript type check hook (tsc 
       No tsc hook
 fail  typescript-precommit-vite-build  Pre-commit: has vite-build hook
       No vite-build hook
-fail  typescript-precommit-vitest  Pre-commit: has vitest hook
+fail  typescript-precommit-vitest  Pre-commit: has vitest hook (with coverage)
       No vitest hook
 pass  typescript-precommit-local-hooks  TypeScript pre-commit: language hooks are local, unsupported and take no file names
 fail  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
@@ -224,5 +224,6 @@ fail  typescript-ci-format  TypeScript CI: format check
       No step runs prettier
 fail  typescript-ci-tsc  TypeScript CI: type check (tsc -b)
       No step runs tsc
-fail  typescript-ci-test  TypeScript CI: tests
+fail  typescript-ci-test  TypeScript CI: tests (with coverage)
+      No step runs vitest
 fail  typescript-ci-vite-build  TypeScript CI: Vite build

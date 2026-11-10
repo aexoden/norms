@@ -898,8 +898,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "typescript-precommit-vitest",
-        "Pre-commit: has vitest hook",
-        precommit.check_commit_hook("vitest"),
+        "Pre-commit: has vitest hook (with coverage)",
+        vitest_hooks(precommit),
     );
     report.should(
         "typescript-precommit-local-hooks",
@@ -957,12 +957,10 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
 
     // Tests
-    report.must(
+    report.check(
         "typescript-ci-test",
-        "TypeScript CI: tests",
-        workflow.runs_command("vitest")
-            || workflow.runs_command("pnpm test")
-            || workflow.runs_command("pnpm run test"),
+        "TypeScript CI: tests (with coverage)",
+        vitest_in_ci(workflow),
     );
 
     // Build
@@ -1053,6 +1051,50 @@ fn eslint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         ))
     } else {
         Err(Issue::fail("No step runs eslint"))
+    }
+}
+
+/// Whether a command's words run `vitest`, and if so, whether with `--coverage`, which reports the lines the tests
+/// miss.
+fn vitest_coverage(words: &[&str]) -> Option<bool> {
+    program_args(words, "vitest").map(|args| args.contains(&"--coverage"))
+}
+
+/// Check that some `vitest` hook runs `vitest` with `--coverage`, in its entry or the args pre-commit appends to it. A
+/// hook without an entry of its own, as a remote hook may leave it to the hook's repository, warns, since norms can't
+/// see its arguments.
+fn vitest_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+    let hooks = config.commit_hooks("vitest")?;
+    if hooks.iter().any(|hook| {
+        hook.entry.is_some()
+            && hook
+                .filter_map_commands("vitest", vitest_coverage)
+                .contains(&true)
+    }) {
+        Ok(())
+    } else if hooks.iter().any(|hook| hook.entry.is_none()) {
+        Err(Issue::warn(
+            "The vitest hook sets no entry, so norms can't see whether it reports coverage",
+        ))
+    } else {
+        Err(Issue::warn("The vitest hook doesn't pass --coverage"))
+    }
+}
+
+/// Check that some step runs `vitest` with `--coverage`. A step running the `test` script doesn't count, since the flag
+/// would have to be found in the script of the right component.
+fn vitest_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    let runs = workflow.filter_map_commands(vitest_coverage);
+    if runs.contains(&true) {
+        Ok(())
+    } else if !runs.is_empty() {
+        Err(Issue::warn("No step runs vitest with --coverage"))
+    } else if workflow.runs_command("pnpm test") || workflow.runs_command("pnpm run test") {
+        Err(Issue::warn(
+            "CI runs the test script rather than vitest with --coverage",
+        ))
+    } else {
+        Err(Issue::fail("No step runs vitest"))
     }
 }
 
@@ -1581,6 +1623,64 @@ mod tests {
         ] {
             assert_eq!(checks(line), None, "{line}");
         }
+    }
+
+    #[test]
+    fn vitest_reports_coverage() {
+        let coverage = |line: &str| vitest_coverage(&line.split_whitespace().collect::<Vec<_>>());
+        assert_eq!(coverage("pnpm exec vitest run --coverage"), Some(true));
+        assert_eq!(
+            coverage("pnpm --dir web exec vitest run --coverage"),
+            Some(true)
+        );
+        assert_eq!(coverage("pnpm exec vitest run"), Some(false));
+        assert_eq!(coverage("pnpm test"), None);
+
+        let ci = |run: &str| {
+            let yaml = format!("jobs:\n  vitest:\n    steps:\n      - run: {run}\n");
+            vitest_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        assert_eq!(ci("pnpm exec vitest run --coverage"), Ok(()));
+        assert_eq!(
+            ci("pnpm exec vitest run"),
+            Err(Issue::warn("No step runs vitest with --coverage"))
+        );
+        assert_eq!(
+            ci("pnpm run test"),
+            Err(Issue::warn(
+                "CI runs the test script rather than vitest with --coverage"
+            ))
+        );
+        assert_eq!(ci("pnpm build"), Err(Issue::fail("No step runs vitest")));
+
+        let hooks = |hooks: &str| {
+            let yaml = format!("default_stages: [pre-commit]\nrepos:\n{hooks}");
+            vitest_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+        };
+        let local = |rest: &str| format!("  - repo: local\n    hooks:\n      - id: vitest\n{rest}");
+        assert_eq!(
+            hooks(&local("        entry: pnpm exec vitest run --coverage\n")),
+            Ok(())
+        );
+        // pre-commit appends the args to the entry.
+        assert_eq!(
+            hooks(&local(
+                "        entry: pnpm exec vitest run\n        args: [--coverage]\n"
+            )),
+            Ok(())
+        );
+        assert_eq!(
+            hooks(&local("        entry: pnpm exec vitest run\n")),
+            Err(Issue::warn("The vitest hook doesn't pass --coverage"))
+        );
+        assert_eq!(
+            hooks(
+                "  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: vitest\n"
+            ),
+            Err(Issue::warn(
+                "The vitest hook sets no entry, so norms can't see whether it reports coverage"
+            ))
+        );
     }
 
     #[test]

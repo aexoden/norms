@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: {{ license }}
 // SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
 
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
-export default defineConfig({});
+export default defineConfig({
+    test: {
+        coverage: {
+            // Report every source file, even those no test imports, and print the report rather than write files.
+            include: ["src/**"],
+            reporter: ["text"],
+        },
+    },
+});

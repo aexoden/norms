@@ -350,4 +350,4 @@ jobs:
           working-directory: frontend
 
       - name: Run TypeScript tests
-        run: pnpm exec vitest run
+        run: pnpm exec vitest run --coverage
