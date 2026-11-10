@@ -35,6 +35,10 @@ fail  precommit-tombi  Pre-commit: tombi-format hook
       The tombi-format hook runs only in the manual stage, so it never runs on its own
 fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
       conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow perf, refactor, style, test, build, ci, revert and also allows wip
+fail  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+      The norms-commit-msg hook doesn't run in the commit-msg stage
+warn  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
+      The norms-verify hook doesn't pass --deny-warnings, so it passes a project that warns
 fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
 fail  renovate-exists  renovate.json: exists

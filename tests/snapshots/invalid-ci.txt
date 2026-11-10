@@ -35,6 +35,8 @@ fail  ci-yaml-valid  CI: ci.yaml: valid
         |   ^ duplicate mapping key: test, set DuplicateKeyPolicy in Options if acceptable
       7 |     steps: []
         |
+fail  pr-title-yaml-exists  CI: pr-title.yaml: exists
+      File not found
 fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 fail  workflow-valid  CI: audit.yml: valid

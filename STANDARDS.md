@@ -461,6 +461,11 @@ so editing a pull request doesn't rerun CI, and advisory: the
 [gate job](#gate-job) doesn't depend on it, and
 [branch protection](#branch-protection) doesn't require it.
 
+`norms verify` fails a project without `pr-title.yaml`, or whose
+`pr-title.yaml` doesn't run on pull requests or doesn't run `pre-commit run
+--hook-stage commit-msg`, and warns when its `pull_request` types leave out
+`opened`, `reopened` or `edited`.
+
 ### Branch Protection
 
 A repository ruleset named `Default` protects the default branch. It is active,
@@ -538,7 +543,10 @@ The `norms-verify` hook's job runs it as `pre-commit run norms-verify
 --all-files`, so that pre-commit builds the norms that the hook's `rev` pins.
 Its checkout fetches the whole history (`fetch-depth: 0`), since without
 `CHANGELOG.md`, `norms verify` looks for release tags (see
-[Changelog](#changelog)).
+[Changelog](#changelog)). `norms verify` fails a `ci.yaml` in which no job runs
+it, as the hook or itself, and warns when that job's checkout lacks
+`fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook runs
+only in the `pre-commit` job.
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -776,11 +784,16 @@ Every project uses these hooks:
         args: [--deny-warnings]
   ```
 
+  `norms verify` fails a project without the `norms-commit-msg` hook in the
+  `commit-msg` stage or the `norms-verify` hook, and warns when `norms-verify`
+  doesn't pass `--deny-warnings`.
+
 `norms verify` checks that every hook it checks, the language hooks included,
-runs in the `pre-commit` stage (the `conventional-pre-commit` hook in
-`commit-msg`), and warns when a language hook isn't set up as the next section
-says. The `conventional-pre-commit` hook must list the commit types itself,
-rather than rely on the hook's defaults, which a release may change.
+runs in the `pre-commit` stage (the `conventional-pre-commit` and
+`norms-commit-msg` hooks in `commit-msg`), and warns when a language hook isn't
+set up as the next section says. The `conventional-pre-commit` hook must list
+the commit types itself, rather than rely on the hook's defaults, which a
+release may change.
 
 ### Language Hooks
 

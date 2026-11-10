@@ -36,6 +36,10 @@ fail  precommit-tombi  Pre-commit: tombi-format hook
       No tombi-format hook
 fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
+fail  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+      No norms-commit-msg hook
+fail  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
+      No norms-verify hook
 warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       The zizmor hook doesn't pass --pedantic
 fail  renovate-exists  renovate.json: exists
@@ -43,6 +47,11 @@ fail  renovate-exists  renovate.json: exists
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
+pass  pr-title-yaml-exists  CI: pr-title.yaml: exists
+pass  pr-title-yaml-valid  CI: pr-title.yaml: valid
+warn  pr-title-yaml-trigger  CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled
+      pull_request types omit edited
+fail  pr-title-yaml-commit-msg  CI: pr-title.yaml: runs the commit-msg hooks (pre-commit run --hook-stage commit-msg)
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
 fail  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
@@ -55,6 +64,8 @@ warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: zizmor-run
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
+pass  workflow-job-timeouts  CI: pr-title.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: pr-title.yaml: concurrency cancels superseded runs
 pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
       concurrency doesn't set cancel-in-progress: true
@@ -66,7 +77,9 @@ fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
       zizmor-action doesn't set advanced-security: false
 fail  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
-      No step runs pre-commit run
+      pre-commit run only runs named hooks or another --hook-stage's, not every pre-commit hook
+warn  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
+      norms-verify runs norms verify from a checkout without the whole history (fetch-depth: 0), so it sees no release tags
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       pull_request filters by branches, paths-ignore
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
@@ -79,7 +92,7 @@ pass  ci-gate-exists  CI: gate job ci-success
 fail  ci-gate-always  CI: the gate runs whatever the other jobs' results
       ci-success doesn't set if: always(), so it's skipped when a job fails, which passes a required check
 fail  ci-gate-needs  CI: the gate needs every other job
-      ci-success doesn't need zizmor-action
+      ci-success doesn't need norms-verify, zizmor-action
 fail  ci-gate-results  CI: the gate fails unless every job succeeded
       No step of ci-success exits with an error when a job's result is cancelled or skipped, as one with if: contains(needs.*.result, '<result>') does
 pass  components-search  Components: every directory searched

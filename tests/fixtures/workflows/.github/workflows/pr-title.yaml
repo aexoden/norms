@@ -1,0 +1,18 @@
+name: Pull Request Title
+
+on: pull_request
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  pr-title:
+    name: Check the pull request title
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Run the pre-commit hooks rather than the commit-msg ones
+        run: uvx pre-commit@4.7.0 run --all-files

@@ -57,3 +57,9 @@ repos:
         entry: pnpm --dir admin exec vitest run
         language: unsupported
         pass_filenames: false
+  - repo: https://github.com/aexoden/norms
+    rev: v0.2.0
+    hooks:
+      - id: norms-commit-msg
+        stages: [pre-commit]
+      - id: norms-verify

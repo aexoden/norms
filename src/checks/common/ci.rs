@@ -15,7 +15,9 @@ use crate::config::{
     GATE_JOB, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands, current_stage_name,
     is_program, program_name,
 };
-use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
+use crate::context::{
+    AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, PR_TITLE_WORKFLOW, ProjectContext,
+};
 use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
@@ -110,10 +112,7 @@ fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         let mut installed = false;
         for line in job.run_lines() {
             for words in commands(&line) {
-                if !words
-                    .windows(2)
-                    .any(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))
-                {
+                if pre_commit_run_start(&words).is_none() {
                     installed |= words.iter().any(|word| is_pre_commit_pin(word));
                     continue;
                 }
@@ -200,13 +199,19 @@ struct PreCommitRun<'a, 'b> {
     all_files: bool,
 }
 
+/// The position of the word that invokes pre-commit in the words of a command that runs `pre-commit run`, however
+/// pre-commit is invoked.
+fn pre_commit_run_start(words: &[&str]) -> Option<usize> {
+    words
+        .windows(2)
+        .position(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))
+}
+
 /// The command, as its words, if it runs `pre-commit run` for every hook of a stage, however pre-commit is invoked, or
 /// `None` if it doesn't run it or names the one hook it runs. Option values aren't hook IDs or other options, the words
 /// after `--files` are files, and those after a `#` are a comment.
 fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PreCommitRun<'a, 'b>> {
-    let start = words
-        .windows(2)
-        .position(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))?;
+    let start = pre_commit_run_start(words)?;
     let mut stage = "pre-commit";
     let mut all_files = false;
     let mut args = words.iter().skip(start + 2);
@@ -289,14 +294,21 @@ fn hooks_not_skipped<'a>(
     missing
 }
 
-/// Check that each command of `workflow` that runs `pre-commit run` for every hook of a stage at the repository's
-/// root, where `config` applies, lists in its `SKIP` every hook of `config` that runs in that stage and has a job of
-/// its own, or
-/// `None` if no command runs it. `SKIP` is read from the command's own `SKIP=` prefix, or else an earlier command of
-/// the step that sets it (`SKIP=...` or `export SKIP=...`), or else the step's, job's or workflow's `env`.
-fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Result<(), String>> {
-    let mut found = false;
-    let mut issues = Vec::new();
+/// A command of a workflow that runs `pre-commit run` for every hook of a stage at the repository's root, where its
+/// `.pre-commit-config.yaml` applies.
+struct RootPreCommitRun<'w> {
+    /// The ID of the job that runs it.
+    job_id: &'w str,
+    /// The stage whose hooks it runs, as [`PreCommitRun`] gives it.
+    stage: String,
+    /// The `SKIP` it runs with: from the command's own `SKIP=` prefix, or else an earlier command of the step that sets
+    /// it (`SKIP=...` or `export SKIP=...`), or else the step's, job's or workflow's `env`.
+    skip: String,
+}
+
+/// Every command of `workflow` that runs `pre-commit run` for every hook of a stage at the repository's root.
+fn root_pre_commit_runs(workflow: &Workflow) -> Vec<RootPreCommitRun<'_>> {
+    let mut runs = Vec::new();
     for (job_id, job) in &workflow.jobs {
         for step in job
             .steps
@@ -317,7 +329,6 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
                         }
                         continue;
                     };
-                    found = true;
                     let skip = prefix
                         .iter()
                         .find_map(|word| skip_assignment(word))
@@ -325,25 +336,182 @@ fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Resu
                         .or_else(|| shell_skip.clone())
                         .or_else(|| workflow.env(job, step, "SKIP").map(Cow::into_owned))
                         .unwrap_or_default();
-                    let missing = hooks_not_skipped(config, workflow, job_id, stage, &skip);
-                    let issue = format!(
-                        "SKIP in {job_id} doesn't list these hooks, which have jobs of their own: {}",
-                        missing.join(", ")
-                    );
-                    if !missing.is_empty() && !issues.contains(&issue) {
-                        issues.push(issue);
-                    }
+                    runs.push(RootPreCommitRun {
+                        job_id,
+                        stage: stage.to_owned(),
+                        skip,
+                    });
                 }
             }
         }
     }
-    found.then(|| {
+    runs
+}
+
+/// Check that each command of `workflow` that runs `pre-commit run` for every hook of a stage at the repository's
+/// root, where `config` applies, lists in its `SKIP` every hook of `config` that runs in that stage and has a job of
+/// its own, or `None` if no command runs it.
+fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Result<(), String>> {
+    let runs = root_pre_commit_runs(workflow);
+    let mut issues = Vec::new();
+    for run in &runs {
+        let missing = hooks_not_skipped(config, workflow, run.job_id, &run.stage, &run.skip);
+        let issue = format!(
+            "SKIP in {} doesn't list these hooks, which have jobs of their own: {}",
+            run.job_id,
+            missing.join(", ")
+        );
+        if !missing.is_empty() && !issues.contains(&issue) {
+            issues.push(issue);
+        }
+    }
+    (!runs.is_empty()).then(|| {
         if issues.is_empty() {
             Ok(())
         } else {
             Err(issues.join("; "))
         }
     })
+}
+
+//
+// norms
+//
+
+/// The norms hook that checks the whole project.
+const NORMS_VERIFY_HOOK: &str = "norms-verify";
+
+/// The arguments of `norms verify`, if the words of a command run it: `norms`, or a path to it, quoted or not, then
+/// `verify`.
+fn norms_verify_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
+    let start = words.windows(2).position(|pair| {
+        matches!(pair, [program, "verify"] if program_name(program.trim_matches(['"', '\''])) == "norms")
+    })?;
+    words.get(start + 2..)
+}
+
+/// Whether the words of a command run `pre-commit run` for the hook `id` alone, naming it.
+fn pre_commit_runs_hook(words: &[&str], id: &str) -> bool {
+    let Some(start) = pre_commit_run_start(words) else {
+        return false;
+    };
+    let mut args = words.iter().skip(start + 2);
+    while let Some(arg) = args.next() {
+        if *arg == "--files" || arg.starts_with('#') {
+            return false;
+        }
+        if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
+            args.next();
+        } else if arg.trim_matches(['"', '\'']) == id {
+            return true;
+        }
+    }
+    false
+}
+
+/// Whether `job` checks out the repository with its whole history (`fetch-depth: 0`), and so its release tags.
+fn checks_out_history(job: &WorkflowJob) -> bool {
+    job.steps_using("actions/checkout")
+        .any(|step| step.input("fetch-depth").as_deref() == Some("0"))
+}
+
+/// Whether `workflow` runs `norms verify` on the project as the standards require: in a job that runs it, as the
+/// norms-verify hook (`pre-commit run norms-verify`) or as `norms verify --deny-warnings`, with the whole history,
+/// which the changelog check reads release tags from. A job that runs it otherwise warns, as does the pre-commit job
+/// running every hook of `config`, its norms-verify hook among them, at the repository's root, from a shallow
+/// checkout. With none, it fails.
+fn norms_verify_in_ci(config: Option<&PrecommitConfig>, workflow: &Workflow) -> Result<(), Issue> {
+    let mut issues = Vec::new();
+    for (job_id, job) in &workflow.jobs {
+        for line in job.run_lines() {
+            for words in commands(&line) {
+                let mut problems = Vec::new();
+                if let Some(args) = norms_verify_args(&words) {
+                    if !args.contains(&"--deny-warnings") {
+                        problems.push("without --deny-warnings");
+                    }
+                } else if !pre_commit_runs_hook(&words, NORMS_VERIFY_HOOK) {
+                    continue;
+                }
+                if !checks_out_history(job) {
+                    problems.push("from a checkout without the whole history (fetch-depth: 0), so it sees no release tags");
+                }
+                if problems.is_empty() {
+                    return Ok(());
+                }
+                issues.push(Issue::warn(format!(
+                    "{job_id} runs norms verify {}",
+                    problems.join(" and ")
+                )));
+            }
+        }
+    }
+
+    let hook = config.is_some_and(|config| {
+        config
+            .hooks_in("pre-commit")
+            .any(|hook| hook.id == NORMS_VERIFY_HOOK)
+    });
+    for run in root_pre_commit_runs(workflow) {
+        if hook
+            && current_stage_name(&run.stage) == "pre-commit"
+            && !run
+                .skip
+                .split(',')
+                .any(|name| name.trim() == NORMS_VERIFY_HOOK)
+        {
+            issues.push(Issue::warn(format!(
+                "norms-verify runs only among the hooks of {}, rather than in a job of its own with the whole history",
+                run.job_id
+            )));
+        }
+    }
+
+    issues.dedup();
+    if issues.is_empty() {
+        Err(Issue::fail(
+            "No job runs norms verify, as the norms-verify hook or itself",
+        ))
+    } else {
+        Issue::alternatives(issues)
+    }
+}
+
+/// Check `pr-title.yaml`, `workflow`: it runs when a pull request is opened or reopened and when its title is edited,
+/// and runs the `commit-msg` hooks. One that runs on no pull request, or no hooks, never checks a title, so it fails.
+fn check_pr_title_workflow(workflow: &Workflow, report: &mut Report) {
+    const TYPES: [&str; 3] = ["opened", "reopened", "edited"];
+
+    report.check(
+        "pr-title-yaml-trigger",
+        "CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled",
+        if workflow.runs_on("pull_request") {
+            let missing: Vec<_> = TYPES
+                .into_iter()
+                .filter(|activity| !workflow.runs_on_pull_request_activity(activity))
+                .collect();
+            if missing.is_empty() {
+                Ok(())
+            } else {
+                Err(Issue::warn(format!(
+                    "pull_request types omit {}",
+                    missing.join(", ")
+                )))
+            }
+        } else {
+            Err(Issue::fail("Doesn't run on pull_request"))
+        },
+    );
+    report.must(
+        "pr-title-yaml-commit-msg",
+        "CI: pr-title.yaml: runs the commit-msg hooks (pre-commit run --hook-stage commit-msg)",
+        workflow.run_lines().any(|line| {
+            commands(&line).any(|words| {
+                pre_commit_run_all(&words)
+                    .is_some_and(|run| current_stage_name(run.stage) == "commit-msg")
+            })
+        }),
+    );
 }
 
 //
@@ -497,6 +665,14 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
     report.require_parsed("ci-yaml", "CI: ci.yaml", ctx.ci_workflow());
 
+    if let Some(pr_title) = report.require_parsed(
+        "pr-title-yaml",
+        "CI: pr-title.yaml",
+        ctx.pr_title_workflow(),
+    ) {
+        check_pr_title_workflow(pr_title, report);
+    }
+
     if let Some(audit) = report.require_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
     {
         report.check(
@@ -511,12 +687,10 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 
-    // Every other workflow must parse too. The checks above already cover ci.yaml and audit.yaml.
-    for (name, status) in ctx
-        .workflows()
-        .iter()
-        .filter(|(name, _)| *name != CI_WORKFLOW && *name != AUDIT_WORKFLOW)
-    {
+    // Every other workflow must parse too. The checks above already cover ci.yaml, audit.yaml and pr-title.yaml.
+    for (name, status) in ctx.workflows().iter().filter(|(name, _)| {
+        ![CI_WORKFLOW, AUDIT_WORKFLOW, PR_TITLE_WORKFLOW].contains(&name.as_str())
+    }) {
         report.must(
             "workflow-valid",
             format!("CI: {name}: valid"),
@@ -580,6 +754,11 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
         "ci-pre-commit",
         "CI: remaining pre-commit hooks (pinned, --all-files)",
         pre_commit_in_ci(workflow),
+    );
+    report.check(
+        "ci-norms-verify",
+        "CI: norms verify (--deny-warnings, whole history)",
+        norms_verify_in_ci(ctx.precommit().as_ref_ok(), workflow),
     );
     if let ConfigStatus::Ok(config) = ctx.precommit()
         && let Some(skip) = pre_commit_skip(config, workflow)
@@ -764,12 +943,204 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Status;
 
     fn skip(precommit: &str, workflow: &str) -> Option<Result<(), String>> {
         pre_commit_skip(
             &serde_saphyr::from_str(precommit).unwrap(),
             &serde_saphyr::from_str(workflow).unwrap(),
         )
+    }
+
+    fn norms_verify(workflow: &str) -> Result<(), Issue> {
+        let config: PrecommitConfig = serde_saphyr::from_str(
+            "default_stages: [pre-commit]\nrepos:\n  - repo: https://github.com/aexoden/norms\n    hooks:\n      \
+             - {id: norms-verify, args: [--deny-warnings]}\n",
+        )
+        .unwrap();
+        norms_verify_in_ci(Some(&config), &serde_saphyr::from_str(workflow).unwrap())
+    }
+
+    /// A job that checks out the repository, with `with` as the checkout's inputs, and runs `run`.
+    fn norms_job(with: &str, run: &str) -> String {
+        format!(
+            "jobs:\n  norms-verify:\n    steps:\n      - uses: actions/checkout@v7\n        with: {with}\n      \
+             - run: {run}\n"
+        )
+    }
+
+    #[test]
+    fn norms_verify_runs_as_the_hook_or_itself_with_history() {
+        for run in [
+            "uvx pre-commit@4.7.0 run norms-verify --all-files",
+            "uvx pre-commit@4.7.0 run --all-files norms-verify",
+            "'\"$RUNNER_TEMP/norms/norms\" verify --deny-warnings .'",
+            "norms verify --deny-warnings .",
+        ] {
+            assert_eq!(
+                norms_verify(&norms_job("{fetch-depth: 0}", run)),
+                Ok(()),
+                "{run}"
+            );
+        }
+    }
+
+    #[test]
+    fn norms_verify_warns_without_history_or_deny_warnings() {
+        assert_eq!(
+            norms_verify(&norms_job(
+                "{persist-credentials: false}",
+                "uvx pre-commit@4.7.0 run norms-verify --all-files"
+            )),
+            Err(Issue::warn(
+                "norms-verify runs norms verify from a checkout without the whole history (fetch-depth: 0), so it \
+                 sees no release tags"
+            ))
+        );
+        assert_eq!(
+            norms_verify(&norms_job("{fetch-depth: 1}", "norms verify .")),
+            Err(Issue::warn(
+                "norms-verify runs norms verify without --deny-warnings and from a checkout without the whole \
+                 history (fetch-depth: 0), so it sees no release tags"
+            ))
+        );
+        // Named hooks other than norms-verify, and option values, don't run it.
+        assert_eq!(
+            norms_verify(&norms_job(
+                "{fetch-depth: 0}",
+                "uvx pre-commit run --hook-stage norms-verify clippy"
+            )),
+            Err(Issue::fail(
+                "No job runs norms verify, as the norms-verify hook or itself"
+            ))
+        );
+    }
+
+    #[test]
+    fn pre_commit_runs_a_hook_it_names_before_any_files() {
+        for (run, runs) in [
+            ("uvx pre-commit@4.7.0 run norms-verify --all-files", true),
+            ("uvx pre-commit@4.7.0 run 'norms-verify' --all-files", true),
+            ("uvx pre-commit@4.7.0 run --color always norms-verify", true),
+            ("uvx pre-commit@4.7.0 run --files norms-verify", false),
+            ("uvx pre-commit@4.7.0 run --color norms-verify", false),
+            ("uvx pre-commit@4.7.0 run # norms-verify", false),
+            ("echo norms-verify", false),
+        ] {
+            let words: Vec<_> = run.split_whitespace().collect();
+            assert_eq!(
+                pre_commit_runs_hook(&words, NORMS_VERIFY_HOOK),
+                runs,
+                "{run}"
+            );
+        }
+    }
+
+    #[test]
+    fn norms_verify_in_the_pre_commit_job_warns() {
+        let workflow = |skip: &str| {
+            format!(
+                "jobs:\n  pre-commit:\n    steps:\n      - uses: actions/checkout@v7\n      - run: SKIP={skip} uvx \
+                 pre-commit@4.7.0 run --all-files\n"
+            )
+        };
+        assert_eq!(
+            norms_verify(&workflow("clippy")),
+            Err(Issue::warn(
+                "norms-verify runs only among the hooks of pre-commit, rather than in a job of its own with the whole \
+                 history"
+            ))
+        );
+        // Even with the whole history, the hook belongs in a job of its own.
+        assert_eq!(
+            norms_verify(&workflow("clippy").replace(
+                "actions/checkout@v7\n",
+                "actions/checkout@v7\n        with: {fetch-depth: 0}\n"
+            )),
+            Err(Issue::warn(
+                "norms-verify runs only among the hooks of pre-commit, rather than in a job of its own with the whole \
+                 history"
+            ))
+        );
+        assert_eq!(
+            norms_verify(&workflow("clippy,norms-verify")),
+            Err(Issue::fail(
+                "No job runs norms verify, as the norms-verify hook or itself"
+            ))
+        );
+        // Without the hook, the pre-commit job doesn't run norms.
+        assert_eq!(
+            norms_verify_in_ci(None, &serde_saphyr::from_str(&workflow("clippy")).unwrap()),
+            Err(Issue::fail(
+                "No job runs norms verify, as the norms-verify hook or itself"
+            ))
+        );
+        // A job of its own decides.
+        assert_eq!(
+            norms_verify(&format!(
+                "{}  pre-commit:\n    steps:\n      - run: uvx pre-commit@4.7.0 run --all-files\n",
+                norms_job(
+                    "{fetch-depth: 0}",
+                    "uvx pre-commit@4.7.0 run norms-verify --all-files"
+                )
+            )),
+            Ok(())
+        );
+    }
+
+    /// The statuses of the checks of `pr-title.yaml`, `workflow`: its trigger and its run of the commit-msg hooks.
+    fn pr_title(workflow: &str) -> Vec<(String, Status)> {
+        let mut report = Report::new(std::path::PathBuf::new(), Vec::new());
+        check_pr_title_workflow(&serde_saphyr::from_str(workflow).unwrap(), &mut report);
+        report
+            .results
+            .iter()
+            .map(|result| (result.id.clone(), result.status))
+            .collect()
+    }
+
+    /// The results of [`pr_title`] with the statuses `trigger` and `commit_msg`.
+    fn pr_title_results(trigger: Status, commit_msg: Status) -> Vec<(String, Status)> {
+        vec![
+            ("pr-title-yaml-trigger".to_owned(), trigger),
+            ("pr-title-yaml-commit-msg".to_owned(), commit_msg),
+        ]
+    }
+
+    const PR_TITLE_RUN: &str = "jobs:\n  pr-title:\n    steps:\n      - run: |\n          uvx pre-commit@4.7.0 run \
+                                --hook-stage commit-msg \\\n            --commit-msg-filename subject.txt\n";
+
+    #[test]
+    fn pr_title_runs_on_title_edits_and_the_commit_msg_hooks() {
+        assert_eq!(
+            pr_title(&format!(
+                "on:\n  pull_request:\n    types: [opened, reopened, edited]\n{PR_TITLE_RUN}"
+            )),
+            pr_title_results(Status::Pass, Status::Pass)
+        );
+        // The default types leave out edited.
+        assert_eq!(
+            pr_title(&format!("on: [pull_request]\n{PR_TITLE_RUN}")),
+            pr_title_results(Status::Warn, Status::Pass)
+        );
+        assert_eq!(
+            pr_title(&format!(
+                "on:\n  pull_request:\n    types: edited\n{PR_TITLE_RUN}"
+            )),
+            pr_title_results(Status::Warn, Status::Pass)
+        );
+        assert_eq!(
+            pr_title(&format!("on: [push]\n{PR_TITLE_RUN}")),
+            pr_title_results(Status::Fail, Status::Pass)
+        );
+        // Every pre-commit hook, rather than the commit-msg ones, never checks the title.
+        assert_eq!(
+            pr_title(
+                "on:\n  pull_request:\n    types: [opened, reopened, edited]\njobs:\n  pr-title:\n    steps:\n      \
+                 - run: uvx pre-commit@4.7.0 run --all-files\n"
+            ),
+            pr_title_results(Status::Pass, Status::Fail)
+        );
     }
 
     #[test]

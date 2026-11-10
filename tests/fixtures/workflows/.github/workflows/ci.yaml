@@ -29,6 +29,18 @@ jobs:
         with:
           persona: pedantic
 
+  norms-verify:
+    name: Verify the project with norms
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository without the release tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify the project with norms
+        run: uvx pre-commit@4.7.0 run norms-verify --all-files
+
   ci-success:
     name: CI success
     needs: zizmor-run

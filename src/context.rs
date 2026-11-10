@@ -60,6 +60,9 @@ pub(crate) const CI_WORKFLOW: &str = "ci.yaml";
 /// The file name of the scheduled advisory audit workflow in `.github/workflows/`.
 pub(crate) const AUDIT_WORKFLOW: &str = "audit.yaml";
 
+/// The file name of the workflow that checks pull request titles in `.github/workflows/`.
+pub(crate) const PR_TITLE_WORKFLOW: &str = "pr-title.yaml";
+
 /// The file that pins a Rust component's toolchain.
 pub(crate) const RUST_TOOLCHAIN: &str = "rust-toolchain.toml";
 
@@ -331,6 +334,11 @@ impl ProjectContext {
     /// Parsed `.github/workflows/audit.yaml`, from [`workflows`](Self::workflows).
     pub(crate) fn audit_workflow(&self) -> &ConfigStatus<Workflow> {
         self.workflow(AUDIT_WORKFLOW)
+    }
+
+    /// Parsed `.github/workflows/pr-title.yaml`, from [`workflows`](Self::workflows).
+    pub(crate) fn pr_title_workflow(&self) -> &ConfigStatus<Workflow> {
+        self.workflow(PR_TITLE_WORKFLOW)
     }
 
     /// Parsed `.github/workflows/<name>`, from [`workflows`](Self::workflows).

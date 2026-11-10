@@ -192,7 +192,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `dev`, among its push branches; a gate job and a zizmor-action job on
   `ubuntu-latest`, the gate without `if: always()` that misses a job and doesn't
   fail on every result, and that, like another job, sets `continue-on-error`;
-  and an unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
+  a `norms-verify` job running the hook from a shallow checkout; a
+  `pr-title.yaml` on the default `pull_request` types, which leave out
+  `edited`, that runs the `pre-commit` stage's hooks rather than `commit-msg`'s;
+  an unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
   advisories check; and a `release.yaml` job that only checks formatting but
   leaves setup-rust-toolchain's cache on, beside jobs that build or turn it off,
   and stub `Cargo.toml` and `pyproject.toml` files.
@@ -201,8 +204,10 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   some of the pre-commit-hooks set, its `reuse` hook runs in the wrong stage
   and its `tombi-format` hook only in the `manual` one, its
   conventional-pre-commit hook runs in the wrong stage with other commit types
-  than the standard's, and among remote and local hooks whose IDs or aliases
-  collide, some have aliases of their own and some can't be selected alone.
+  than the standard's, its `norms-commit-msg` hook runs in the `pre-commit`
+  stage and its `norms-verify` hook without `--deny-warnings`, and among remote
+  and local hooks whose IDs or aliases collide, some have aliases of their own
+  and some can't be selected alone.
   `markdown` breaks the Markdown standards: its `.markdownlint-cli2.jsonc`
   names rules by alias and tag, turns some off and lets others only warn, and
   sets other options than the standard's; its markdownlint-cli2 hook has

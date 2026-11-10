@@ -39,6 +39,10 @@ fail  precommit-tombi  Pre-commit: tombi-format hook
       No tombi-format hook
 fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
+fail  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+      No norms-commit-msg hook
+fail  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
+      No norms-verify hook
 fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
       No zizmor hook
 fail  renovate-exists  renovate.json: exists
@@ -46,6 +50,8 @@ fail  renovate-exists  renovate.json: exists
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
+fail  pr-title-yaml-exists  CI: pr-title.yaml: exists
+      File not found
 fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
@@ -59,6 +65,8 @@ fail  ci-zizmor  CI: zizmor (pedantic)
       No step uses zizmorcore/zizmor-action
 fail  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
       No step runs pre-commit run
+fail  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
+      No job runs norms verify, as the norms-verify hook or itself
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
       Doesn't run on push

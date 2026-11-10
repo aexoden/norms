@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the `norms-commit-msg` and `norms-verify` hooks to the template, with a
   `norms-verify` CI job that runs the pinned hook and a `pr-title.yaml` workflow
   that checks pull request titles with the commit message hooks.
+- **Breaking:** Check that projects run norms: the `norms-commit-msg` and
+  `norms-verify` hooks, the latter with `--deny-warnings`, a CI job running
+  `norms verify` with the whole history, and a `pr-title.yaml` workflow running
+  the commit message hooks on pull request titles. Add them as the template
+  does.
 
 ## [0.2.0] - 2026-11-10
 

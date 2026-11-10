@@ -7,7 +7,7 @@
 use std::collections::BTreeSet;
 
 use super::ci::zizmor_command_pedantic;
-use crate::config::{PrecommitConfig, PrecommitHook, program_name};
+use crate::config::{PrecommitConfig, PrecommitHook, PrecommitRepo, program_name};
 use crate::context::ProjectContext;
 use crate::report::{Issue, Report};
 
@@ -113,6 +113,16 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
         conventional_hook_in(config),
     );
     report.check(
+        "precommit-norms-commit-msg",
+        "Pre-commit: norms-commit-msg hook (commit-msg stage)",
+        norms_commit_msg_hook_in(config),
+    );
+    report.check(
+        "precommit-norms-verify",
+        "Pre-commit: norms-verify hook (--deny-warnings)",
+        norms_verify_hook_in(config),
+    );
+    report.check(
         "precommit-zizmor",
         "Pre-commit: zizmor hook (pedantic)",
         config.commit_hooks("zizmor").and_then(|hooks| {
@@ -123,6 +133,68 @@ pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
             }
         }),
     );
+}
+
+//
+// norms
+//
+
+/// The repository of norms, whose hooks set their stages themselves.
+const NORMS_REPO: &str = "github.com/aexoden/norms";
+
+/// Whether `hook`, from `repo`, runs on commit messages, in the `commit-msg` stage: by the stages it lists, or, if it
+/// lists none, by `repo` being `hook_repo`, whose manifest sets that stage for the hook, which `default_stages` doesn't
+/// override. A local hook, or one from another repository, lists the stage itself.
+fn runs_on_commit_messages(repo: &PrecommitRepo, hook: &PrecommitHook, hook_repo: &str) -> bool {
+    hook.stages.as_ref().map_or_else(
+        || repo.repo.contains(hook_repo),
+        |stages| stages.iter().any(|stage| stage == "commit-msg"),
+    )
+}
+
+/// Whether a norms-commit-msg hook checks each commit message: it runs in the `commit-msg` stage, which the norms
+/// repository's hook sets for it unless the configuration lists other stages, and a local hook lists itself. In any
+/// other stage, it never sees a commit message.
+fn norms_commit_msg_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
+    let mut found = false;
+    for (repo, hook) in config
+        .repos
+        .iter()
+        .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+        .filter(|(_, hook)| hook.id == "norms-commit-msg")
+    {
+        found = true;
+        if runs_on_commit_messages(repo, hook, NORMS_REPO) {
+            return Ok(());
+        }
+    }
+    Err(Issue::fail(if found {
+        "The norms-commit-msg hook doesn't run in the commit-msg stage"
+    } else {
+        "No norms-commit-msg hook"
+    }))
+}
+
+/// Whether a norms-verify hook runs before each commit with `--deny-warnings`, in its entry or the args pre-commit
+/// appends to it, as the standards require. A hook without an entry, as the norms repository's leaves it, runs
+/// `norms verify .`.
+fn norms_verify_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
+    if config
+        .commit_hooks("norms-verify")?
+        .into_iter()
+        .any(|hook| {
+            hook.filter_map_commands("norms verify .", |words| {
+                Some(words.contains(&"--deny-warnings"))
+            })
+            .contains(&true)
+        })
+    {
+        Ok(())
+    } else {
+        Err(Issue::warn(
+            "The norms-verify hook doesn't pass --deny-warnings, so it passes a project that warns",
+        ))
+    }
 }
 
 //
@@ -241,10 +313,7 @@ fn conventional_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
     {
         let mut hook_issues = Vec::new();
 
-        let commit_msg = hook.stages.as_ref().map_or_else(
-            || repo.repo.contains(CONVENTIONAL_PRE_COMMIT_REPO),
-            |stages| stages.iter().any(|stage| stage == "commit-msg"),
-        );
+        let commit_msg = runs_on_commit_messages(repo, hook, CONVENTIONAL_PRE_COMMIT_REPO);
         // In any other stage, it never sees a commit message: pre-commit passes it the staged files instead, or, in
         // the manual stage, doesn't run it at all.
         if !commit_msg {
@@ -493,6 +562,85 @@ mod tests {
             Err(Issue::fail(
                 "Missing: check-toml; The check-yaml hook doesn't run in the pre-commit stage"
             ))
+        );
+    }
+
+    fn config(repos: &str) -> PrecommitConfig {
+        serde_saphyr::from_str(&format!("default_stages: [pre-commit]\nrepos:\n{repos}")).unwrap()
+    }
+
+    const NORMS: &str = "  - repo: https://github.com/aexoden/norms\n    rev: v0.2.0\n    hooks:\n";
+
+    #[test]
+    fn norms_commit_msg_hook_runs_in_the_commit_msg_stage() {
+        // The norms repository's hook sets the stage, which default_stages doesn't override.
+        assert_eq!(
+            norms_commit_msg_hook_in(&config(&format!("{NORMS}      - id: norms-commit-msg\n"))),
+            Ok(())
+        );
+        assert_eq!(
+            norms_commit_msg_hook_in(&config(
+                "  - repo: local\n    hooks:\n      - {id: norms-commit-msg, entry: cargo run -- commit-msg, \
+                 language: unsupported, stages: [commit-msg]}\n"
+            )),
+            Ok(())
+        );
+        // A local hook without stages gets default_stages.
+        assert_eq!(
+            norms_commit_msg_hook_in(&config(
+                "  - repo: local\n    hooks:\n      - {id: norms-commit-msg, entry: norms commit-msg, \
+                 language: unsupported}\n"
+            )),
+            Err(Issue::fail(
+                "The norms-commit-msg hook doesn't run in the commit-msg stage"
+            ))
+        );
+        assert_eq!(
+            norms_commit_msg_hook_in(&config(&format!(
+                "{NORMS}      - {{id: norms-commit-msg, stages: [pre-commit]}}\n"
+            ))),
+            Err(Issue::fail(
+                "The norms-commit-msg hook doesn't run in the commit-msg stage"
+            ))
+        );
+        assert_eq!(
+            norms_commit_msg_hook_in(&config(&format!("{NORMS}      - id: norms-verify\n"))),
+            Err(Issue::fail("No norms-commit-msg hook"))
+        );
+    }
+
+    #[test]
+    fn norms_verify_hook_denies_warnings() {
+        assert_eq!(
+            norms_verify_hook_in(&config(&format!(
+                "{NORMS}      - {{id: norms-verify, args: [--deny-warnings]}}\n"
+            ))),
+            Ok(())
+        );
+        assert_eq!(
+            norms_verify_hook_in(&config(
+                "  - repo: local\n    hooks:\n      - {id: norms-verify, entry: cargo run -- verify --deny-warnings ., \
+                 language: unsupported, pass_filenames: false}\n"
+            )),
+            Ok(())
+        );
+        assert_eq!(
+            norms_verify_hook_in(&config(&format!("{NORMS}      - id: norms-verify\n"))),
+            Err(Issue::warn(
+                "The norms-verify hook doesn't pass --deny-warnings, so it passes a project that warns"
+            ))
+        );
+        assert_eq!(
+            norms_verify_hook_in(&config(&format!(
+                "{NORMS}      - {{id: norms-verify, args: [--deny-warnings], stages: [manual]}}\n"
+            ))),
+            Err(Issue::fail(
+                "The norms-verify hook runs only in the manual stage, so it never runs on its own"
+            ))
+        );
+        assert_eq!(
+            norms_verify_hook_in(&config(&format!("{NORMS}      - id: norms-commit-msg\n"))),
+            Err(Issue::fail("No norms-verify hook"))
         );
     }
 

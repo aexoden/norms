@@ -41,6 +41,8 @@ pass  precommit-reuse  Pre-commit: reuse hook
 pass  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
 pass  precommit-tombi  Pre-commit: tombi-format hook
 pass  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+pass  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+pass  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
 pass  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
 pass  renovate-exists  renovate.json: exists
 pass  renovate-valid  renovate.json: valid
@@ -49,11 +51,14 @@ pass  renovate-extends-preset  renovate.json: extends the shared preset
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
+pass  pr-title-yaml-exists  CI: pr-title.yaml: exists
+pass  pr-title-yaml-valid  CI: pr-title.yaml: valid
+pass  pr-title-yaml-trigger  CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled
+pass  pr-title-yaml-commit-msg  CI: pr-title.yaml: runs the commit-msg hooks (pre-commit run --hook-stage commit-msg)
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
 pass  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
 pass  audit-yaml-dispatch  CI: audit.yaml: runs on manual dispatch (workflow_dispatch)
-pass  workflow-valid  CI: pr-title.yaml: valid
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
@@ -65,6 +70,7 @@ pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
 pass  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev

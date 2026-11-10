@@ -472,6 +472,27 @@ impl Workflow {
         }
     }
 
+    /// Whether the workflow runs on the `pull_request` activity type `activity`: one its `types` list, or, if it lists
+    /// none, one of `opened`, `synchronize` and `reopened`, which it runs for by default.
+    pub(crate) fn runs_on_pull_request_activity(&self, activity: &str) -> bool {
+        const DEFAULT_TYPES: [&str; 3] = ["opened", "synchronize", "reopened"];
+
+        if !self.runs_on("pull_request") {
+            return false;
+        }
+        match self
+            .on
+            .as_ref()
+            .and_then(|on| on.get("pull_request"))
+            .and_then(|config| config.get("types"))
+        {
+            None => DEFAULT_TYPES.contains(&activity),
+            Some(Value::String(listed)) => listed == activity,
+            Some(Value::Array(listed)) => listed.iter().any(|listed| listed == activity),
+            Some(_) => false,
+        }
+    }
+
     /// Whether `on` names the event `event`: as itself, in a list, or as a key of a mapping.
     pub(crate) fn runs_on(&self, event: &str) -> bool {
         match &self.on {
