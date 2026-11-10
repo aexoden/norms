@@ -129,42 +129,35 @@ fn check_component(
 mod tests {
     use std::collections::HashSet;
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
+
+    use tempfile::TempDir;
 
     use super::*;
     use crate::models::Status;
     use crate::report::{CheckResult, is_valid_check_id};
 
     /// A scratch project directory, removed when dropped.
-    struct TempProject(PathBuf);
+    struct TempProject(TempDir);
 
     impl TempProject {
-        fn new(name: &str, norms_toml: Option<&str>) -> Self {
-            let dir =
-                std::env::temp_dir().join(format!("norms-test-{}-{name}", std::process::id()));
-            if dir.exists() {
-                fs::remove_dir_all(&dir).unwrap();
-            }
-            fs::create_dir_all(&dir).unwrap();
-
+        fn new(norms_toml: Option<&str>) -> Self {
+            let dir = tempfile::tempdir().unwrap();
             if let Some(content) = norms_toml {
-                fs::write(dir.join("norms.toml"), content).unwrap();
+                fs::write(dir.path().join("norms.toml"), content).unwrap();
             }
-
             Self(dir)
         }
 
+        fn path(&self) -> &Path {
+            self.0.path()
+        }
+
         fn verify(&self) -> Vec<CheckResult> {
-            let ctx = ProjectContext::new(self.0.clone());
-            let mut report = Report::new(self.0.clone(), ctx.components().to_vec());
+            let ctx = ProjectContext::new(self.path().to_path_buf());
+            let mut report = Report::new(self.path().to_path_buf(), ctx.components().to_vec());
             run_all_checks(&ctx, &mut report);
             report.results
-        }
-    }
-
-    impl Drop for TempProject {
-        fn drop(&mut self) {
-            drop(fs::remove_dir_all(&self.0));
         }
     }
 
@@ -174,16 +167,15 @@ mod tests {
 
     #[test]
     fn missing_norms_toml_records_nothing() {
-        let results = TempProject::new("missing", None).verify();
+        let results = TempProject::new(None).verify();
         assert!(!results.iter().any(|r| r.id.starts_with("norms-toml-")));
     }
 
     #[test]
     fn invalid_norms_toml_fails_and_waives_nothing() {
-        let results = TempProject::new(
-            "invalid",
-            Some("[components]\ntypescript = \"frontend\"\n\n[[waivers]]\ncheck = \"readme-exists\"\nreason = \"x\"\n"),
-        )
+        let results = TempProject::new(Some(
+            "[components]\ntypescript = \"frontend\"\n\n[[waivers]]\ncheck = \"readme-exists\"\nreason = \"x\"\n",
+        ))
         .verify();
 
         let valid = find(&results, "norms-toml-valid");
@@ -198,9 +190,13 @@ mod tests {
 
     #[test]
     fn invalid_precommit_config_fails() {
-        let project = TempProject::new("precommit", None);
-        fs::write(project.0.join(".pre-commit-config.yaml"), "repos: [\n").unwrap();
-        fs::write(project.0.join("Cargo.toml"), "[package]\nname = \"demo\"\n").unwrap();
+        let project = TempProject::new(None);
+        fs::write(project.path().join(".pre-commit-config.yaml"), "repos: [\n").unwrap();
+        fs::write(
+            project.path().join("Cargo.toml"),
+            "[package]\nname = \"demo\"\n",
+        )
+        .unwrap();
         let results = project.verify();
 
         let valid = find(&results, "precommit-config-valid");
@@ -214,11 +210,11 @@ mod tests {
 
     #[test]
     fn license_copies_fail_only_when_one_is_missing() {
-        let project = TempProject::new("copies", None);
-        fs::create_dir_all(project.0.join("LICENSES")).unwrap();
-        fs::write(project.0.join("LICENSES/MIT.txt"), "mit").unwrap();
-        fs::write(project.0.join("LICENSES/Apache-2.0.txt"), "apache").unwrap();
-        fs::write(project.0.join("LICENSE-MIT"), "mit").unwrap();
+        let project = TempProject::new(None);
+        fs::create_dir_all(project.path().join("LICENSES")).unwrap();
+        fs::write(project.path().join("LICENSES/MIT.txt"), "mit").unwrap();
+        fs::write(project.path().join("LICENSES/Apache-2.0.txt"), "apache").unwrap();
+        fs::write(project.path().join("LICENSE-MIT"), "mit").unwrap();
 
         let copies = |results: &[CheckResult]| -> Vec<(Status, String)> {
             find(results, "license-copies")
@@ -234,7 +230,7 @@ mod tests {
             )]
         );
 
-        fs::write(project.0.join("LICENSE-APACHE-2.0"), "apache, edited").unwrap();
+        fs::write(project.path().join("LICENSE-APACHE-2.0"), "apache, edited").unwrap();
         assert_eq!(
             copies(&project.verify()),
             [(
@@ -248,10 +244,9 @@ mod tests {
 
     #[test]
     fn waivers_apply_after_every_check() {
-        let results = TempProject::new(
-            "waived",
-            Some("[[waivers]]\ncheck = \"readme-exists\"\nreason = \"No readme.\"\n"),
-        )
+        let results = TempProject::new(Some(
+            "[[waivers]]\ncheck = \"readme-exists\"\nreason = \"No readme.\"\n",
+        ))
         .verify();
 
         let readme = find(&results, "readme-exists");
@@ -273,13 +268,12 @@ mod tests {
 
     #[test]
     fn excluded_directories_hold_no_components() {
-        let project = TempProject::new(
-            "excluded",
-            Some("[components]\nexclude = [\"tests/fixtures\", \"missing\", \"../up\"]\n"),
-        );
-        fs::create_dir_all(project.0.join("tests/fixtures/web")).unwrap();
-        fs::write(project.0.join("tests/fixtures/web/package.json"), "{}").unwrap();
-        fs::write(project.0.join("Cargo.toml"), "").unwrap();
+        let project = TempProject::new(Some(
+            "[components]\nexclude = [\"tests/fixtures\", \"missing\", \"../up\"]\n",
+        ));
+        fs::create_dir_all(project.path().join("tests/fixtures/web")).unwrap();
+        fs::write(project.path().join("tests/fixtures/web/package.json"), "{}").unwrap();
+        fs::write(project.path().join("Cargo.toml"), "").unwrap();
         let results = project.verify();
 
         assert!(
@@ -315,13 +309,13 @@ mod tests {
 
     #[test]
     fn component_contexts_are_shared() {
-        let project = TempProject::new("contexts", None);
+        let project = TempProject::new(None);
         for component in ["api", "web"] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
         }
-        fs::write(project.0.join("api/Cargo.toml"), "").unwrap();
-        fs::write(project.0.join("web/package.json"), "{}").unwrap();
-        let ctx = ProjectContext::new(project.0.clone());
+        fs::write(project.path().join("api/Cargo.toml"), "").unwrap();
+        fs::write(project.path().join("web/package.json"), "{}").unwrap();
+        let ctx = ProjectContext::new(project.path().to_path_buf());
 
         let contexts = ctx.component_contexts();
         assert!(std::ptr::eq(contexts, ctx.component_contexts()));
@@ -340,20 +334,20 @@ mod tests {
 
     #[test]
     fn component_cargo_configs_are_checked_too() {
-        let project = TempProject::new("cargo-config", None);
-        fs::create_dir_all(project.0.join(".cargo")).unwrap();
+        let project = TempProject::new(None);
+        fs::create_dir_all(project.path().join(".cargo")).unwrap();
         fs::write(
-            project.0.join(".cargo/config.toml"),
+            project.path().join(".cargo/config.toml"),
             "[registry]\nglobal-min-publish-age = \"3 days\"\n",
         )
         .unwrap();
         for component in ["backend", "tools"] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
-            fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
+            fs::write(project.path().join(component).join("Cargo.toml"), "").unwrap();
         }
-        fs::create_dir_all(project.0.join("backend/.cargo")).unwrap();
+        fs::create_dir_all(project.path().join("backend/.cargo")).unwrap();
         fs::write(
-            project.0.join("backend/.cargo/config.toml"),
+            project.path().join("backend/.cargo/config.toml"),
             "[registry]\nglobal-min-publish-age = \"0\"\n",
         )
         .unwrap();
@@ -371,18 +365,22 @@ mod tests {
 
     #[test]
     fn components_use_the_nearest_toolchain_file() {
-        let project = TempProject::new("toolchain", None);
+        let project = TempProject::new(None);
         for component in ["legacy/app", "broken/app", "plain"] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
-            fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
+            fs::write(project.path().join(component).join("Cargo.toml"), "").unwrap();
         }
-        fs::write(project.0.join("legacy/rust-toolchain"), "1.99.1\n").unwrap();
+        fs::write(project.path().join("legacy/rust-toolchain"), "1.99.1\n").unwrap();
         fs::write(
-            project.0.join("rust-toolchain.toml"),
+            project.path().join("rust-toolchain.toml"),
             "[toolchain]\nchannel = \"1.99.1\"\n",
         )
         .unwrap();
-        fs::write(project.0.join("broken/rust-toolchain.toml"), "[toolchain\n").unwrap();
+        fs::write(
+            project.path().join("broken/rust-toolchain.toml"),
+            "[toolchain\n",
+        )
+        .unwrap();
         let results = project.verify();
 
         let toolchain: Vec<_> = results
@@ -429,16 +427,16 @@ mod tests {
     fn components_use_the_nearest_clippy_config() {
         let conforming = "absolute-paths-max-segments = 3\nallow-expect-in-tests = true\n\
                           allow-panic-in-tests = true\nallow-unwrap-in-tests = true\n";
-        let project = TempProject::new("clippy-toml", None);
+        let project = TempProject::new(None);
         for component in ["both", "hidden/app", "nested/app"] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
-            fs::write(project.0.join(component).join("Cargo.toml"), "").unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
+            fs::write(project.path().join(component).join("Cargo.toml"), "").unwrap();
         }
-        fs::write(project.0.join("both/.clippy.toml"), "[broken\n").unwrap();
-        fs::write(project.0.join("both/clippy.toml"), conforming).unwrap();
-        fs::write(project.0.join("hidden/.clippy.toml"), conforming).unwrap();
+        fs::write(project.path().join("both/.clippy.toml"), "[broken\n").unwrap();
+        fs::write(project.path().join("both/clippy.toml"), conforming).unwrap();
+        fs::write(project.path().join("hidden/.clippy.toml"), conforming).unwrap();
         fs::write(
-            project.0.join("clippy.toml"),
+            project.path().join("clippy.toml"),
             "allow-panic-in-tests = true\n",
         )
         .unwrap();
@@ -481,7 +479,7 @@ mod tests {
         .collect();
         assert_eq!(clippy(&project.verify()), expected);
 
-        fs::remove_file(project.0.join("clippy.toml")).unwrap();
+        fs::remove_file(project.path().join("clippy.toml")).unwrap();
         let missing: Vec<_> = clippy(&project.verify())
             .into_iter()
             .filter(|(component, ..)| component.as_deref() == Some("nested/app"))
@@ -500,27 +498,27 @@ mod tests {
     fn workspace_members_use_their_own_clippy_configs() {
         let conforming = "absolute-paths-max-segments = 3\nallow-expect-in-tests = true\n\
                           allow-panic-in-tests = true\nallow-unwrap-in-tests = true\n";
-        let project = TempProject::new("member-clippy-toml", None);
+        let project = TempProject::new(None);
         for member in ["ws/crates/a", "ws/crates/b", "ws/tools/x"] {
-            fs::create_dir_all(project.0.join(member)).unwrap();
+            fs::create_dir_all(project.path().join(member)).unwrap();
             fs::write(
-                project.0.join(member).join("Cargo.toml"),
+                project.path().join(member).join("Cargo.toml"),
                 "[package]\nname = \"member\"\n",
             )
             .unwrap();
         }
         fs::write(
-            project.0.join("ws/Cargo.toml"),
+            project.path().join("ws/Cargo.toml"),
             "[workspace]\nmembers = [\"crates/*\", \"tools/x\"]\n",
         )
         .unwrap();
-        fs::write(project.0.join("clippy.toml"), conforming).unwrap();
+        fs::write(project.path().join("clippy.toml"), conforming).unwrap();
         fs::write(
-            project.0.join("ws/crates/clippy.toml"),
+            project.path().join("ws/crates/clippy.toml"),
             "allow-panic-in-tests = true\n",
         )
         .unwrap();
-        fs::write(project.0.join("ws/crates/b/.clippy.toml"), conforming).unwrap();
+        fs::write(project.path().join("ws/crates/b/.clippy.toml"), conforming).unwrap();
 
         let clippy: Vec<_> = project
             .verify()
@@ -552,15 +550,19 @@ mod tests {
 
     #[test]
     fn prettier_loads_the_packagejson_plugin() {
-        let project = TempProject::new("prettier", None);
+        let project = TempProject::new(None);
         for (component, prettierrc) in [
             ("listed", "plugins: [prettier-plugin-packagejson]\n"),
             ("unlisted", "{ \"printWidth\": 120 }\n"),
             ("malformed", "plugins: [\n"),
         ] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
-            fs::write(project.0.join(component).join("package.json"), "{}\n").unwrap();
-            fs::write(project.0.join(component).join(".prettierrc"), prettierrc).unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
+            fs::write(project.path().join(component).join("package.json"), "{}\n").unwrap();
+            fs::write(
+                project.path().join(component).join(".prettierrc"),
+                prettierrc,
+            )
+            .unwrap();
         }
         let results = project.verify();
 
@@ -607,15 +609,15 @@ mod tests {
 
     #[test]
     fn format_script_is_named_format() {
-        let project = TempProject::new("format-script", None);
+        let project = TempProject::new(None);
         for (component, script) in [
             ("format", "format"),
             ("fmt", "fmt"),
             ("prettier", "prettier"),
         ] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
             fs::write(
-                project.0.join(component).join("package.json"),
+                project.path().join(component).join("package.json"),
                 format!("{{ \"scripts\": {{ \"{script}\": \"prettier --check .\" }} }}\n"),
             )
             .unwrap();
@@ -642,9 +644,9 @@ mod tests {
 
     #[test]
     fn unreadable_eslint_config_fails() {
-        let project = TempProject::new("eslint", None);
-        fs::write(project.0.join("package.json"), "{}\n").unwrap();
-        fs::create_dir_all(project.0.join("eslint.config.ts")).unwrap();
+        let project = TempProject::new(None);
+        fs::write(project.path().join("package.json"), "{}\n").unwrap();
+        fs::create_dir_all(project.path().join("eslint.config.ts")).unwrap();
         let results = project.verify();
 
         let eslint: Vec<_> = results
@@ -663,7 +665,7 @@ mod tests {
 
     #[test]
     fn unpublished_libraries_need_no_changelog() {
-        let project = TempProject::new("changelog", None);
+        let project = TempProject::new(None);
         for (component, manifest, file) in [
             (
                 "crates",
@@ -681,8 +683,8 @@ mod tests {
                 "pyproject.toml",
             ),
         ] {
-            fs::create_dir_all(project.0.join(component)).unwrap();
-            fs::write(project.0.join(component).join(file), manifest).unwrap();
+            fs::create_dir_all(project.path().join(component)).unwrap();
+            fs::write(project.path().join(component).join(file), manifest).unwrap();
         }
         let unpublished = project.verify();
         assert!(matches!(
@@ -691,7 +693,7 @@ mod tests {
         ));
 
         fs::write(
-            project.0.join("crates/core/Cargo.toml"),
+            project.path().join("crates/core/Cargo.toml"),
             "[package]\nname = \"core\"\n",
         )
         .unwrap();
@@ -707,10 +709,9 @@ mod tests {
 
     #[test]
     fn changelog_waivers_in_applications_are_unneeded() {
-        let results = TempProject::new(
-            "changelog-waiver",
-            Some("[[waivers]]\ncheck = \"changelog-exists\"\nreason = \"Deployed from main.\"\n"),
-        )
+        let results = TempProject::new(Some(
+            "[[waivers]]\ncheck = \"changelog-exists\"\nreason = \"Deployed from main.\"\n",
+        ))
         .verify();
 
         let needed = find(&results, "norms-toml-waiver-needed");
@@ -722,7 +723,7 @@ mod tests {
 
     #[test]
     fn other_markdownlint_configs_are_reported() {
-        let project = TempProject::new("markdownlint-configs", None);
+        let project = TempProject::new(None);
         let config = r#"{
             "config": {
                 "MD004": { "style": "dash" },
@@ -731,12 +732,12 @@ mod tests {
             },
             "ignores": ["{vendor,third_party}/**", "**/*.json"]
         }"#;
-        fs::write(project.0.join(".markdownlint-cli2.jsonc"), config).unwrap();
+        fs::write(project.path().join(".markdownlint-cli2.jsonc"), config).unwrap();
         for dir in ["vendor/lib", "third_party", "docs", ".github"] {
-            fs::create_dir_all(project.0.join(dir)).unwrap();
+            fs::create_dir_all(project.path().join(dir)).unwrap();
         }
-        fs::write(project.0.join("vendor/lib/.markdownlint.json"), "{}").unwrap();
-        fs::write(project.0.join("third_party/.markdownlint.json"), "{}").unwrap();
+        fs::write(project.path().join("vendor/lib/.markdownlint.json"), "{}").unwrap();
+        fs::write(project.path().join("third_party/.markdownlint.json"), "{}").unwrap();
         let statuses = |results: &[CheckResult]| -> Vec<(String, Status, String)> {
             results
                 .iter()
@@ -753,10 +754,10 @@ mod tests {
                 .all(|(_, status, _)| *status == Status::Pass)
         );
 
-        fs::write(project.0.join(".markdownlint.yaml"), "MD013: false\n").unwrap();
-        fs::write(project.0.join("docs/.markdownlint-cli2.jsonc"), "{}").unwrap();
+        fs::write(project.path().join(".markdownlint.yaml"), "MD013: false\n").unwrap();
+        fs::write(project.path().join("docs/.markdownlint-cli2.jsonc"), "{}").unwrap();
         // Ignoring a config file doesn't stop it applying to the other files of its directory.
-        fs::write(project.0.join(".github/.markdownlint.json"), "{}").unwrap();
+        fs::write(project.path().join(".github/.markdownlint.json"), "{}").unwrap();
         let message = "Other markdownlint configuration that norms doesn't read: .github/.markdownlint.json, \
                        .markdownlint.yaml, docs/.markdownlint-cli2.jsonc";
         assert_eq!(
