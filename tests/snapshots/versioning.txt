@@ -18,7 +18,7 @@ pass  gitattributes-valid  .gitattributes: valid
 pass  gitattributes-text-auto  .gitattributes: text=auto
 pass  gitattributes-eol-lf  .gitattributes: eol=lf
 warn  gitattributes-binary  .gitattributes: binary markers
-      Pattern not found: (?m)^\*\.[a-zA-Z0-9]+\s+binary
+      No line marks a file type binary, such as *.png binary
 warn  gitattributes-diff-python  .gitattributes: Python files use diff=python
       diff=python isn't set on *.pyi
 fail  editorconfig-exists  .editorconfig: exists

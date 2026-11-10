@@ -196,15 +196,6 @@ pub(crate) fn file_exists(path: &Path) -> Outcome {
     }
 }
 
-/// Check whether a regex pattern matches anywhere in the string.
-pub(crate) fn matches_regex(haystack: &str, pattern: &str) -> Outcome {
-    match regex::Regex::new(pattern) {
-        Ok(re) if re.is_match(haystack) => Outcome::Pass,
-        Ok(_) => Outcome::fail(format!("Pattern not found: {pattern}")),
-        Err(e) => Outcome::fail(format!("Invalid regex: {e}")),
-    }
-}
-
 /// Whether `id` is a well-formed check ID: lowercase ASCII words of letters
 /// and digits, joined by single hyphens.
 pub(crate) fn is_valid_check_id(id: &str) -> bool {

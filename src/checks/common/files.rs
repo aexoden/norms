@@ -16,7 +16,7 @@ use crate::config::{
 };
 use crate::context::{ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG, ProjectContext};
 use crate::models::Language;
-use crate::report::{Issue, Outcome, Report, file_exists, matches_regex};
+use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
 // norms configuration
@@ -282,6 +282,12 @@ pub(crate) fn check_gitignore(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// A line of `.gitattributes` marking the files of an extension binary, such as `*.png binary`.
+static BINARY_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"(?m)^\*\.[a-zA-Z0-9]+\s+binary").unwrap()
+});
+
 pub(crate) fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
     let status = ctx.gitattributes();
     let Some(content) = report.require_parsed("gitattributes", ".gitattributes", status) else {
@@ -303,7 +309,11 @@ pub(crate) fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "gitattributes-binary",
         ".gitattributes: binary markers",
-        matches_regex(content, r"(?m)^\*\.[a-zA-Z0-9]+\s+binary"),
+        if BINARY_MARKER.is_match(content) {
+            Ok(())
+        } else {
+            Err("No line marks a file type binary, such as *.png binary".to_owned())
+        },
     );
 
     for (language, id, driver, extensions) in DIFF_DRIVERS {
