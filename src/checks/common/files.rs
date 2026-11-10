@@ -291,13 +291,13 @@ pub(crate) fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
     report.should(
         "gitattributes-text-auto",
         ".gitattributes: text=auto",
-        matches_regex(content, r"(?m)^\*\s.+text=auto"),
+        every_file_gets(content, ctx.path(), "text", "auto"),
     );
 
     report.should(
         "gitattributes-eol-lf",
         ".gitattributes: eol=lf",
-        matches_regex(content, r"(?m)^\*\s.+eol=lf"),
+        every_file_gets(content, ctx.path(), "eol", "lf"),
     );
 
     report.should(
@@ -315,6 +315,26 @@ pub(crate) fn check_gitattributes(ctx: &ProjectContext, report: &mut Report) {
             format!(".gitattributes: {language} files use diff={driver}"),
             diff_driver_set(content, ctx.path(), driver, extensions),
         );
+    }
+}
+
+/// Check that the root `.gitattributes`, whose text is `content`, sets the attribute `name` to `value` on every file,
+/// as the line `* name=value` does. It is tested on a file without an extension at the root and on one in a
+/// subdirectory, so that a pattern matching only the root's files, such as `/*`, doesn't count.
+fn every_file_gets(content: &str, root: &Path, name: &str, value: &str) -> Result<(), String> {
+    let files = [
+        root.join("file"),
+        root.join("src").join("module").join("file"),
+    ];
+    if files
+        .iter()
+        .all(|file| attribute(content, root, file, name) == AttributeState::Value(value))
+    {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name}={value} isn't set on every file, as * {name}={value} sets it"
+        ))
     }
 }
 
@@ -754,6 +774,48 @@ mod tests {
         std::fs::rename(&agents, &claude).unwrap();
         symlink("CLAUDE.md", &agents).unwrap();
         assert_eq!(check(), linked);
+    }
+
+    #[test]
+    fn text_and_eol_apply_to_every_file() {
+        let root = Path::new("/project");
+        for content in [
+            "* text=auto eol=lf\n",
+            "*       text=auto eol=lf\n",
+            "*\ttext=auto\n*\teol=lf\n",
+        ] {
+            assert_eq!(
+                every_file_gets(content, root, "text", "auto"),
+                Ok(()),
+                "{content}"
+            );
+            assert_eq!(
+                every_file_gets(content, root, "eol", "lf"),
+                Ok(()),
+                "{content}"
+            );
+        }
+        for content in [
+            "",
+            "*.rs text=auto eol=lf\n",
+            "* text eol=crlf\n",
+            "# * text=auto eol=lf\n",
+            "* text=auto eol=lf\n* -text !eol\n",
+            "/* text=auto eol=lf\n",
+        ] {
+            assert!(
+                every_file_gets(content, root, "text", "auto").is_err(),
+                "{content}"
+            );
+            assert!(
+                every_file_gets(content, root, "eol", "lf").is_err(),
+                "{content}"
+            );
+        }
+        assert_eq!(
+            every_file_gets("", root, "text", "auto"),
+            Err("text=auto isn't set on every file, as * text=auto sets it".to_owned())
+        );
     }
 
     #[test]
