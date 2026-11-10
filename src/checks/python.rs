@@ -238,6 +238,9 @@ pub(crate) fn check_uv_required_version(
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
+    if uses_uv_toml(ctx) {
+        return;
+    }
 
     report.should(
         "uv-required-version",
@@ -353,6 +356,9 @@ pub(crate) fn check_uv_exclude_newer(ctx: &ComponentContext, report: &mut Report
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
+    if uses_uv_toml(ctx) {
+        return;
+    }
 
     let exclude_newer = config
         .tool
@@ -411,10 +417,52 @@ fn check_line_length(length: Option<u32>) -> Result<(), String> {
     }
 }
 
+/// The configuration files Ruff prefers to `[tool.ruff]` in a `pyproject.toml` beside them, in its order.
+const RUFF_CONFIGS: [&str; 2] = [".ruff.toml", "ruff.toml"];
+
+/// The configuration files mypy prefers to `[tool.mypy]` in a `pyproject.toml` beside them, in its order.
+const MYPY_CONFIGS: [&str; 2] = ["mypy.ini", ".mypy.ini"];
+
+/// uv's configuration file, which takes the place of `[tool.uv]` in a `pyproject.toml` beside it.
+const UV_TOML: &str = "uv.toml";
+
+/// Check that uv reads its settings from `[tool.uv]`: a `uv.toml` beside `pyproject.toml` takes the place of its
+/// settings, such as `exclude-newer` and `required-version`, so the checks of those are left out. uv still reads the
+/// project's own fields from `[tool.uv]`, such as `cache-keys` and `package`.
+pub(crate) fn check_uv_config(ctx: &ComponentContext, report: &mut Report) {
+    report.should(
+        "uv-config",
+        "uv: settings in [tool.uv], without a uv.toml",
+        if uses_uv_toml(ctx) {
+            Err(format!(
+                "uv uses {UV_TOML}, which takes the place of the settings in [tool.uv] in pyproject.toml"
+            ))
+        } else {
+            Ok(())
+        },
+    );
+}
+
+/// Whether uv reads its settings from a `uv.toml` in the component, rather than from `[tool.uv]`.
+fn uses_uv_toml(ctx: &ComponentContext) -> bool {
+    ctx.first_existing(&[UV_TOML]).is_some()
+}
+
 pub(crate) fn check_ruff(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
+
+    if let Some(name) = ctx.first_existing(&RUFF_CONFIGS) {
+        report.should(
+            "ruff-configured",
+            "Ruff: configured",
+            Outcome::fail(format!(
+                "Ruff uses {name}, which takes the place of [tool.ruff] in pyproject.toml"
+            )),
+        );
+        return;
+    }
 
     let Some(tool) = &config.tool else {
         report.must(
@@ -466,6 +514,10 @@ pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
+    // check_ruff reports the file Ruff uses instead.
+    if ctx.first_existing(&RUFF_CONFIGS).is_some() {
+        return;
+    }
 
     let lint = config
         .tool
@@ -547,6 +599,17 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
+
+    if let Some(name) = ctx.first_existing(&MYPY_CONFIGS) {
+        report.should(
+            "mypy-configured",
+            "mypy: configured",
+            Outcome::fail(format!(
+                "mypy uses {name}, which takes the place of [tool.mypy] in pyproject.toml"
+            )),
+        );
+        return;
+    }
 
     let mypy = config.tool.as_ref().and_then(|t| t.mypy.as_ref());
 
@@ -862,6 +925,7 @@ pub(crate) fn check_min_python_job(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::{Component, Language};
 
     #[test]
     fn ruff_line_length_is_120() {
@@ -1039,6 +1103,60 @@ jobs:
         for line in ["uv run pytest-benchmark", "uv run mypy ."] {
             assert!(!runs_pytest(line), "{line}");
         }
+    }
+
+    #[test]
+    fn tool_config_files_are_found_as_the_tools_find_them() {
+        // The ruff-configured, mypy-configured and uv-config messages for a component, given its files.
+        let messages = |files: &[&str]| {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(
+                dir.path().join("pyproject.toml"),
+                "[project]\nname = \"x\"\n",
+            )
+            .unwrap();
+            for file in files {
+                std::fs::write(dir.path().join(file), "").unwrap();
+            }
+            let component = Component {
+                language: Language::Python,
+                path: std::path::PathBuf::new(),
+            };
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let ctx = ComponentContext::new(&project, &component);
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_ruff(&ctx, &mut report);
+            check_mypy(&ctx, &mut report);
+            check_uv_config(&ctx, &mut report);
+            report
+                .results
+                .iter()
+                .map(|result| result.message.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            messages(&[
+                "ruff.toml",
+                ".ruff.toml",
+                "mypy.ini",
+                ".mypy.ini",
+                "uv.toml"
+            ]),
+            [
+                "Ruff uses .ruff.toml, which takes the place of [tool.ruff] in pyproject.toml",
+                "mypy uses mypy.ini, which takes the place of [tool.mypy] in pyproject.toml",
+                "uv uses uv.toml, which takes the place of the settings in [tool.uv] in pyproject.toml",
+            ]
+        );
+        assert_eq!(
+            messages(&[".mypy.ini"]),
+            [
+                "No [tool] section in pyproject.toml".to_owned(),
+                "mypy uses .mypy.ini, which takes the place of [tool.mypy] in pyproject.toml"
+                    .to_owned(),
+                String::new(),
+            ]
+        );
     }
 
     #[test]

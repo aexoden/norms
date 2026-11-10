@@ -49,6 +49,7 @@ fail  uv-lock-exists  [python-app] Python: uv.lock
       Not found: uv.lock
 warn  pyproject-dependencies-exact  [python-app] pyproject.toml: dependencies pinned exactly (application)
       Not pinned with ==: project.dependencies "httpx>=0.28" (not a single == version), dependency-groups.dev "ruff" (no version)
+pass  uv-config  [python-app] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [python-app] uv: release age of 3 days (exclude-newer)
       "1 day" isn't 3 days
 warn  uv-required-version  [python-app] uv: required-version sets the oldest uv needed (>=)
@@ -82,6 +83,7 @@ warn  python-src-layout  [python-lib] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [python-lib] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [python-lib] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [python-lib] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [python-lib] uv: required-version sets the oldest uv needed (>=)

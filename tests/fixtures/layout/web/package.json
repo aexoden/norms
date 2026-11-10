@@ -1,5 +1,8 @@
 {
   "name": "web",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "prettier": {
+    "printWidth": 80
+  }
 }

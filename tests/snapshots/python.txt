@@ -90,6 +90,7 @@ pass  python-src-layout  [.] Python: src/ directory
 pass  python-src-packages  [.] Python: src/ contains packages
 pass  uv-lock-exists  [.] Python: uv.lock
 pass  pyproject-dependencies-exact  [.] pyproject.toml: dependencies pinned exactly (application)
+pass  uv-config  [.] uv: settings in [tool.uv], without a uv.toml
 pass  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
 pass  uv-required-version  [.] uv: required-version sets the oldest uv needed (>=)
 pass  uv-required-version-ci  [.] uv: CI's pinned uv satisfies required-version

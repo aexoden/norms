@@ -542,6 +542,15 @@ impl ComponentContext {
             .get_or_init(|| read_text_file(&self.path.join(GIT_ARCHIVAL)))
     }
 
+    /// The first of `names` that exists in the component's directory: of the files a tool reads its configuration
+    /// from, in the order it looks for them, the one it uses.
+    pub(crate) fn first_existing(&self, names: &[&'static str]) -> Option<&'static str> {
+        names
+            .iter()
+            .copied()
+            .find(|name| self.path.join(name).exists())
+    }
+
     /// The text of `eslint.config.ts` (cached), which is code rather than data, so checks match its text.
     pub(crate) fn eslint_config(&self) -> &ConfigStatus<String> {
         self.eslint_config

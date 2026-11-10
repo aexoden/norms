@@ -72,6 +72,7 @@ warn  python-src-layout  [api] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [api] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [api] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [api] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 pass  uv-required-version  [api] uv: required-version sets the oldest uv needed (>=)
@@ -97,6 +98,7 @@ warn  python-src-layout  [service] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [service] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [service] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [service] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [service] uv: required-version sets the oldest uv needed (>=)
@@ -134,6 +136,7 @@ warn  python-src-layout  [tool] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [tool] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [tool] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [tool] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 pass  uv-required-version  [tool] uv: required-version sets the oldest uv needed (>=)

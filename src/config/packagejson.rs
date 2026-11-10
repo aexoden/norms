@@ -50,6 +50,9 @@ pub(crate) struct PackageJson {
 
     /// Dependencies whose installation may fail without failing the install.
     pub optional_dependencies: Option<HashMap<String, String>>,
+
+    /// Prettier's configuration, which Prettier reads in place of any configuration file beside it.
+    pub prettier: Option<Value>,
 }
 
 /// One dependency in `devEngines`, such as `{ "name": "node", "version":
@@ -227,6 +230,17 @@ impl PackageJson {
     /// Whether a script with the given name exists.
     pub(crate) fn has_script(&self, name: &str) -> bool {
         self.scripts.as_ref().is_some_and(|s| s.contains_key(name))
+    }
+
+    /// Whether Prettier takes its configuration from the `prettier` key, as it does when the key's value is truthy.
+    pub(crate) fn configures_prettier(&self) -> bool {
+        self.prettier.as_ref().is_some_and(|value| match value {
+            Value::Null => false,
+            Value::Bool(value) => *value,
+            Value::Number(number) => number.as_f64().is_some_and(|number| number != 0.0),
+            Value::String(value) => !value.is_empty(),
+            Value::Array(_) | Value::Object(_) => true,
+        })
     }
 
     /// The script with the given name, if it exists.
@@ -507,6 +521,32 @@ mod tests {
                 Err(expected.to_owned()),
                 "{runtime}"
             );
+        }
+    }
+
+    #[test]
+    fn prettier_key_counts_when_truthy() {
+        let configures = |json: &str| {
+            serde_json::from_str::<PackageJson>(json)
+                .unwrap()
+                .configures_prettier()
+        };
+        for json in [
+            r#"{"prettier": "@acme/prettier-config"}"#,
+            r#"{"prettier": {}}"#,
+            r#"{"prettier": true}"#,
+            r#"{"prettier": 1}"#,
+        ] {
+            assert!(configures(json), "{json}");
+        }
+        for json in [
+            "{}",
+            r#"{"prettier": null}"#,
+            r#"{"prettier": false}"#,
+            r#"{"prettier": 0}"#,
+            r#"{"prettier": ""}"#,
+        ] {
+            assert!(!configures(json), "{json}");
         }
     }
 }

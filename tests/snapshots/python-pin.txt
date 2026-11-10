@@ -49,6 +49,7 @@ warn  python-src-layout  [app-other] Python: src/ directory
 fail  uv-lock-exists  [app-other] Python: uv.lock
       Not found: uv.lock
 pass  pyproject-dependencies-exact  [app-other] pyproject.toml: dependencies pinned exactly (application)
+pass  uv-config  [app-other] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [app-other] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [app-other] uv: required-version sets the oldest uv needed (>=)
@@ -84,6 +85,7 @@ warn  python-src-layout  [app-range] Python: src/ directory
 fail  uv-lock-exists  [app-range] Python: uv.lock
       Not found: uv.lock
 pass  pyproject-dependencies-exact  [app-range] pyproject.toml: dependencies pinned exactly (application)
+pass  uv-config  [app-range] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [app-range] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [app-range] uv: required-version sets the oldest uv needed (>=)
@@ -118,6 +120,7 @@ warn  python-src-layout  [lib-below] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [lib-below] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [lib-below] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [lib-below] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [lib-below] uv: required-version sets the oldest uv needed (>=)
@@ -151,6 +154,7 @@ warn  python-src-layout  [minor] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [minor] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [minor] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [minor] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [minor] uv: required-version sets the oldest uv needed (>=)

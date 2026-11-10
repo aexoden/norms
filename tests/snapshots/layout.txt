@@ -48,18 +48,14 @@ warn  python-src-packages  [py] Python: src/ contains packages
       src/ holds no package, a directory with an __init__.py
 fail  uv-lock-exists  [py] Python: uv.lock
       Not found: uv.lock
-warn  uv-exclude-newer  [py] uv: release age of 3 days (exclude-newer)
-      Missing [tool.uv] exclude-newer
-warn  uv-required-version  [py] uv: required-version sets the oldest uv needed (>=)
-      [tool.uv] sets no required-version
+warn  uv-config  [py] uv: settings in [tool.uv], without a uv.toml
+      uv uses uv.toml, which takes the place of the settings in [tool.uv] in pyproject.toml
 warn  python-dependency-groups  [py] Python: has dependency-groups
       Missing [dependency-groups]
-fail  ruff-configured  [py] Ruff: configured
-      No [tool] section in pyproject.toml
-fail  ruff-lint-configured  [py] Ruff lint: configured
-      Missing [tool.ruff.lint] in pyproject.toml
-fail  mypy-configured  [py] mypy: configured
-      Missing [tool.mypy] in pyproject.toml
+warn  ruff-configured  [py] Ruff: configured
+      Ruff uses ruff.toml, which takes the place of [tool.ruff] in pyproject.toml
+warn  mypy-configured  [py] mypy: configured
+      mypy uses mypy.ini, which takes the place of [tool.mypy] in pyproject.toml
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
 pass  package-json-esm  [web] package.json: uses ESM (type: module)
@@ -79,10 +75,10 @@ fail  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
       File not found
 fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
-fail  eslint-config-exists  [web] eslint.config.ts: exists
-      File not found
-fail  prettier-config-exists  [web] .prettierrc: exists
-      File not found
+warn  eslint-config-exists  [web] eslint.config.ts: exists
+      ESLint uses eslint.config.js rather than eslint.config.ts
+warn  prettier-config-exists  [web] .prettierrc: exists
+      Prettier uses the prettier key in package.json rather than .prettierrc
 fail  prettier-ignore-exists  [web] Prettier: .prettierignore exists
       Not found: .prettierignore
 warn  package-json-scripts  [web] package.json: has scripts

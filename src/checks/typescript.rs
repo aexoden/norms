@@ -8,8 +8,8 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::{
-    FormatterRun, PrecommitConfig, PrecommitHook, TsCompilerOptions, TsConfig, Workflow,
-    check_dev_engine, commands, program_args,
+    FormatterRun, PackageJson, PrecommitConfig, PrecommitHook, TsCompilerOptions, TsConfig,
+    Workflow, check_dev_engine, commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::models::Language;
@@ -592,12 +592,36 @@ fn eslint_config_code(text: &str) -> String {
     code
 }
 
+/// The configuration files `ESLint` looks for, in the order it does.
+const ESLINT_CONFIGS: [&str; 6] = [
+    "eslint.config.js",
+    "eslint.config.mjs",
+    "eslint.config.cjs",
+    ESLINT_CONFIG,
+    "eslint.config.mts",
+    "eslint.config.cts",
+];
+
+/// The `ESLint` configuration file the standard names.
+const ESLINT_CONFIG: &str = "eslint.config.ts";
+
 pub(crate) fn check_eslint(ctx: &ComponentContext, report: &mut Report) {
+    // ESLint uses the first configuration file it finds, so another one before eslint.config.ts takes its place.
+    if let Some(name) = ctx
+        .first_existing(&ESLINT_CONFIGS)
+        .filter(|name| *name != ESLINT_CONFIG)
+    {
+        report.should(
+            "eslint-config-exists",
+            format!("{ESLINT_CONFIG}: exists"),
+            Outcome::fail(format!("ESLint uses {name} rather than {ESLINT_CONFIG}")),
+        );
+        return;
+    }
+
     // An eslint.config.ts that can't be read, such as a directory, fails here, rather than leaving out the checks of
     // its contents.
-    if let Some(text) =
-        report.require_parsed("eslint-config", "eslint.config.ts", ctx.eslint_config())
-    {
+    if let Some(text) = report.require_parsed("eslint-config", ESLINT_CONFIG, ctx.eslint_config()) {
         let code = eslint_config_code(text);
         for (id, name, pattern, message) in [
             (
@@ -648,14 +672,69 @@ const PACKAGEJSON_PLUGIN: &str = "prettier-plugin-packagejson";
 /// The line length the standards set for Prettier, as for Ruff's `line-length`.
 const PRETTIER_PRINT_WIDTH: u64 = 120;
 
-pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
-    let config = report.require_parsed("prettier-config", ".prettierrc", ctx.prettier());
+/// The configuration files Prettier looks for after the `prettier` key in `package.json` and `package.yaml`, in the
+/// order Prettier 3.9 does. norms doesn't read `package.yaml`, which pnpm projects rarely have.
+const PRETTIER_CONFIGS: [&str; 18] = [
+    PRETTIER_CONFIG,
+    ".prettierrc.json",
+    ".prettierrc.yml",
+    ".prettierrc.yaml",
+    ".prettierrc.json5",
+    ".prettierrc.js",
+    "prettier.config.js",
+    ".prettierrc.ts",
+    "prettier.config.ts",
+    ".prettierrc.mjs",
+    "prettier.config.mjs",
+    ".prettierrc.mts",
+    "prettier.config.mts",
+    ".prettierrc.cjs",
+    "prettier.config.cjs",
+    ".prettierrc.cts",
+    "prettier.config.cts",
+    ".prettierrc.toml",
+];
 
+/// The Prettier configuration file the standard names.
+const PRETTIER_CONFIG: &str = ".prettierrc";
+
+/// Where Prettier takes its configuration from, if not the standard's `.prettierrc`: the `prettier` key in
+/// `package.json`, which it reads first, or another configuration file it finds before `.prettierrc`, as the first
+/// that exists when `.prettierrc` doesn't.
+fn other_prettier_config(ctx: &ComponentContext) -> Option<String> {
+    if ctx
+        .package_json()
+        .as_ref_ok()
+        .is_some_and(PackageJson::configures_prettier)
+    {
+        return Some("the prettier key in package.json".to_owned());
+    }
+    ctx.first_existing(&PRETTIER_CONFIGS)
+        .filter(|name| *name != PRETTIER_CONFIG)
+        .map(str::to_owned)
+}
+
+pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
     // .prettierignore
+    let ignore = file_exists(&ctx.path().join(".prettierignore"));
+
+    let config = if let Some(other) = other_prettier_config(ctx) {
+        report.should(
+            "prettier-config-exists",
+            ".prettierrc: exists",
+            Outcome::fail(format!(
+                "Prettier uses {other} rather than {PRETTIER_CONFIG}"
+            )),
+        );
+        None
+    } else {
+        report.require_parsed("prettier-config", PRETTIER_CONFIG, ctx.prettier())
+    };
+
     report.must(
         "prettier-ignore-exists",
         "Prettier: .prettierignore exists",
-        file_exists(&ctx.path().join(".prettierignore")),
+        ignore,
     );
 
     let Some(config) = config else {
@@ -1084,6 +1163,7 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::{Component, Language, Status};
 
     #[test]
     fn boolean_compiler_options_are_enabled() {
@@ -1124,7 +1204,7 @@ mod tests {
         let warned: Vec<_> = report
             .results
             .iter()
-            .filter(|result| result.status == crate::models::Status::Warn)
+            .filter(|result| result.status == Status::Warn)
             .map(|result| result.id.as_str())
             .collect();
         assert!(
@@ -1136,8 +1216,7 @@ mod tests {
             report
                 .results
                 .iter()
-                .any(|result| result.id == "tsconfig-module"
-                    && result.status == crate::models::Status::Pass),
+                .any(|result| result.id == "tsconfig-module" && result.status == Status::Pass),
             "{:?}",
             report.results
         );
@@ -1622,6 +1701,81 @@ mod tests {
         assert_eq!(
             ci(&["pnpm typecheck"], true),
             Err(Issue::fail("No step runs tsc"))
+        );
+    }
+
+    #[test]
+    fn prettier_and_eslint_configs_are_found_as_the_tools_find_them() {
+        // The prettier-config-exists and eslint-config-exists results for a component, given its files.
+        let results = |files: &[(&str, &str)]| {
+            let dir = tempfile::tempdir().unwrap();
+            for (file, content) in files {
+                std::fs::write(dir.path().join(file), content).unwrap();
+            }
+            let component = Component {
+                language: Language::TypeScript,
+                path: std::path::PathBuf::new(),
+            };
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let ctx = ComponentContext::new(&project, &component);
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_prettier(&ctx, &mut report);
+            check_eslint(&ctx, &mut report);
+            report
+                .results
+                .iter()
+                .filter(|result| result.id.ends_with("-config-exists"))
+                .map(|result| (result.status, result.message.clone()))
+                .collect::<Vec<_>>()
+        };
+        let pass = (Status::Pass, String::new());
+
+        assert_eq!(
+            results(&[(".prettierrc", "{}"), ("eslint.config.ts", "")]),
+            [pass.clone(), pass.clone()]
+        );
+        assert_eq!(
+            results(&[(".prettierrc.json", "{}"), ("eslint.config.mts", "")]),
+            [
+                (
+                    Status::Warn,
+                    "Prettier uses .prettierrc.json rather than .prettierrc".to_owned()
+                ),
+                (
+                    Status::Warn,
+                    "ESLint uses eslint.config.mts rather than eslint.config.ts".to_owned()
+                ),
+            ]
+        );
+        // A file Prettier looks for later doesn't take the place of .prettierrc, nor one ESLint looks for later of
+        // eslint.config.ts.
+        assert_eq!(
+            results(&[
+                (".prettierrc", "{}"),
+                ("prettier.config.js", ""),
+                ("eslint.config.ts", ""),
+                ("eslint.config.cts", ""),
+            ]),
+            [pass.clone(), pass]
+        );
+        // The prettier key in package.json comes first, unless its value is falsy.
+        assert_eq!(
+            results(&[
+                (".prettierrc", "{}"),
+                ("package.json", r#"{"prettier": "@acme/prettier-config"}"#)
+            ])
+            .first()
+            .map(|(status, _)| *status),
+            Some(Status::Warn)
+        );
+        assert_eq!(
+            results(&[
+                (".prettierrc", "{}"),
+                ("package.json", r#"{"prettier": null}"#)
+            ])
+            .first()
+            .map(|(status, _)| *status),
+            Some(Status::Pass)
         );
     }
 }

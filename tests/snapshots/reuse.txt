@@ -95,6 +95,7 @@ warn  python-src-layout  [py] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [py] Python: uv.lock
       Not found: uv.lock
+pass  uv-config  [py] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [py] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
 warn  uv-required-version  [py] uv: required-version sets the oldest uv needed (>=)

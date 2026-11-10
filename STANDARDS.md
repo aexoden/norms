@@ -879,6 +879,14 @@ project/
 └── README.md
 ```
 
+Ruff, mypy and uv read their settings from `pyproject.toml`, and nothing takes
+their place: a `ruff.toml` or `.ruff.toml` beside it would replace `[tool.ruff]`,
+a `mypy.ini` or `.mypy.ini` would replace `[tool.mypy]`, and a `uv.toml` would
+replace uv's settings in `[tool.uv]`, such as `exclude-newer` and
+`required-version`, though not the project's own, such as `cache-keys` and
+`package`. `norms verify` warns on such a file and leaves out the checks of the
+settings it replaces.
+
 #### Python and uv Versions
 
 - `.python-version`, beside `pyproject.toml`, names the exact Python version
@@ -1412,6 +1420,10 @@ along with a `.prettierignore`. The `.prettierrc` is:
 }
 ```
 
+Prettier reads a `prettier` key in `package.json` before `.prettierrc`, so
+`package.json` has none, and no other Prettier configuration file takes the
+place of `.prettierrc`.
+
 [prettier-plugin-packagejson](https://github.com/matzkoh/prettier-plugin-packagejson),
 a development dependency, formats `package.json` with
 [sort-package-json](https://github.com/keithamus/sort-package-json): its fields
@@ -1426,7 +1438,12 @@ disable rules that conflict with Prettier. ESLint loads `eslint.config.ts`
 through [jiti](https://github.com/unjs/jiti), a development dependency. ESLint
 uses Node's own type stripping only behind its experimental
 `unstable_native_nodejs_ts_config` flag, which every place ESLint runs, editors
-included, would have to pass.
+included, would have to pass. ESLint looks for `eslint.config.js`, `.mjs` and
+`.cjs` before `eslint.config.ts`, so there is no other `eslint.config.*` file.
+
+`norms verify` warns when Prettier or ESLint would read another file than
+`.prettierrc` or `eslint.config.ts`, and leaves out the checks of their
+contents.
 
 #### Testing
 
