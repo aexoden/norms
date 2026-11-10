@@ -1,14 +1,20 @@
 # SPDX-License-Identifier: {{ license }}
 # SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
-{%- macro checkout() %}
+{%- macro checkout(history=false) %}
+{%- if history %}
+      # Without CHANGELOG.md, norms reads the release tags.
+{%- endif %}
       - name: Checkout repository
         uses: actions/checkout@{{ action_checkout }}
         with:
+{%- if history %}
+          fetch-depth: 0
+{%- endif %}
           persist-credentials: false
 {%- endmacro %}
 {#- Jobs that need no toolchain, the gate, markdownlint, tombi and zizmor, run on ubuntu-slim.
     Jobs that compile, type check or run tests get 30 minutes, the others 10. #}
-{%- macro job(id, name, dir, runner='ubuntu-latest', timeout=10) %}
+{%- macro job(id, name, dir, runner='ubuntu-latest', timeout=10, history=false) %}
   {{ id }}:
     name: {{ name }}
     runs-on: {{ runner }}
@@ -21,7 +27,7 @@
         working-directory: {{ dir }}
 {%- endif %}
     steps:
-{{- checkout() }}
+{{- checkout(history) }}
 {%- endmacro %}
 {%- macro setup_rust() %}
 
@@ -59,7 +65,7 @@
           working-directory: {{ typescript_dir }}
 {%- endif %}
 {%- endmacro %}
-{%- set jobs = ['markdownlint', 'pre-commit', 'reuse', 'tombi', 'zizmor'] %}
+{%- set jobs = ['markdownlint', 'norms-verify', 'pre-commit', 'reuse', 'tombi', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vite-build', 'vitest'] %}{% endif %}
@@ -103,6 +109,16 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@{{ action_markdownlint_cli2 }}
         with:
           globs: '**/*.md'
+{{ job('norms-verify', 'Verify the project with norms', '', timeout=30, history=true) }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@{{ action_setup_uv }}
+        with:
+          enable-cache: false
+
+      # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
+      - name: Verify the project with norms
+        run: uvx pre-commit@{{ pre_commit_version }} run norms-verify --all-files
 {{ job('pre-commit', 'Run the remaining pre-commit hooks', '') }}
 
       - name: Install uv

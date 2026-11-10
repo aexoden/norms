@@ -505,10 +505,11 @@ without it follows the same workflow by convention, without enforcement.
 Continuous integration is provided by GitHub Actions. Every project has the
 following workflows:
 
-| Workflow                       | Triggers                                        | Purpose                                 |
-|--------------------------------|-------------------------------------------------|-----------------------------------------|
-| `.github/workflows/ci.yaml`    | Pushes to `main` (and `dev`), all pull requests | Every check the pre-commit hooks run    |
-| `.github/workflows/audit.yaml` | Daily schedule, manual dispatch                 | Security advisory audit of dependencies |
+| Workflow                          | Triggers                                        | Purpose                                         |
+|-----------------------------------|-------------------------------------------------|-------------------------------------------------|
+| `.github/workflows/ci.yaml`       | Pushes to `main` (and `dev`), all pull requests | Every check the pre-commit hooks run            |
+| `.github/workflows/audit.yaml`    | Daily schedule, manual dispatch                 | Security advisory audit of dependencies         |
+| `.github/workflows/pr-title.yaml` | Pull requests opened, reopened or retitled      | Commit message checks on pull request titles    |
 
 ### Checks
 
@@ -532,6 +533,12 @@ A hook's job has the hook's ID, or for the `markdownlint-cli2` and
 `tombi-format` hooks, is the `markdownlint` or `tombi` job.
 The `commit-msg` hooks don't run in it, but in the `pr-title.yaml` workflow on
 pull request titles (see [Branches](#branches)).
+
+The `norms-verify` hook's job runs it as `pre-commit run norms-verify
+--all-files`, so that pre-commit builds the norms that the hook's `rev` pins.
+Its checkout fetches the whole history (`fetch-depth: 0`), since without
+`CHANGELOG.md`, `norms verify` looks for release tags (see
+[Changelog](#changelog)).
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -768,8 +775,6 @@ Every project uses these hooks:
       - id: norms-verify
         args: [--deny-warnings]
   ```
-
-  The template doesn't add them or the `pr-title.yaml` workflow yet.
 
 `norms verify` checks that every hook it checks, the language hooks included,
 runs in the `pre-commit` stage (the `conventional-pre-commit` hook in

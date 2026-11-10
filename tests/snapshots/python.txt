@@ -53,12 +53,15 @@ pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
 pass  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
 pass  audit-yaml-dispatch  CI: audit.yaml: runs on manual dispatch (workflow_dispatch)
+pass  workflow-valid  CI: pr-title.yaml: valid
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
 pass  workflow-setup-uv-version  CI: audit.yaml: setup-uv pins an exact uv version in jobs running uv
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 pass  workflow-setup-uv-version  CI: ci.yaml: setup-uv pins an exact uv version in jobs running uv
+pass  workflow-job-timeouts  CI: pr-title.yaml: every job sets timeout-minutes
+pass  workflow-concurrency  CI: pr-title.yaml: concurrency cancels superseded runs
 pass  ci-reuse  CI: REUSE compliance
 pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting

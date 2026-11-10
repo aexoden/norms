@@ -72,6 +72,13 @@ hook_conventional_pre_commit:
   default: "v4.5.0"
   when: false
 
+# norms' own hooks. A release sets this to the version it tags, so that a project
+# rendered from it runs the norms that checked the template.
+# renovate: datasource=github-tags depName=aexoden/norms
+hook_norms:
+  default: "v0.2.0"
+  when: false
+
 # GitHub Actions
 
 # renovate: datasource=github-tags depName=actions/checkout

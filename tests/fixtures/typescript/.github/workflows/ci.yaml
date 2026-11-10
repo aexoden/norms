@@ -18,7 +18,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [eslint, markdownlint, pnpm-peer-dependencies, pre-commit, prettier, reuse, tombi, tsc, vite-build, vitest, zizmor]
+    needs: [eslint, markdownlint, norms-verify, pnpm-peer-dependencies, pre-commit, prettier, reuse, tombi, tsc, vite-build, vitest, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -44,6 +44,29 @@ jobs:
         with:
           globs: '**/*.md'
 
+  norms-verify:
+    name: Verify the project with norms
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Without CHANGELOG.md, norms reads the release tags.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
+      - name: Verify the project with norms
+        run: uvx pre-commit@4.7.0 run norms-verify --all-files
+
   pre-commit:
     name: Run the remaining pre-commit hooks
     runs-on: ubuntu-latest
@@ -63,7 +86,7 @@ jobs:
 
       - name: Run the hooks that have no job of their own
         env:
-          SKIP: eslint,markdownlint-cli2,pnpm-lock,pnpm-peer-dependencies,prettier,reuse,tombi-format,tsc,vite-build,vitest,zizmor
+          SKIP: eslint,markdownlint-cli2,norms-verify,pnpm-lock,pnpm-peer-dependencies,prettier,reuse,tombi-format,tsc,vite-build,vitest,zizmor
         run: uvx pre-commit@4.7.0 run --all-files --show-diff-on-failure
 
   reuse:
@@ -94,7 +117,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Tombi
-        uses: tombi-toml/setup-tombi@88295e71426671820b98934ea75ea352d73eba8b # v1.9.8
+        uses: tombi-toml/setup-tombi@336fd5f0db887ebf637389a659b4193608756ecd # v1.10.0
         with:
           enable-cache: false
 
@@ -114,7 +137,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
         with:
           advanced-security: false
           annotations: true

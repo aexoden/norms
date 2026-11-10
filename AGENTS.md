@@ -38,14 +38,20 @@ outside tests, so return errors or handle `None` instead, and crate-internal
 items are `pub(crate)`.
 
 Rendering the template locally, as the CI `template` job does (it needs
-`--vcs-ref HEAD`, so commit first; answers are passed with `--data`):
+`--vcs-ref HEAD`, so commit first; answers are passed with `--data`). The
+render's `norms-verify` hook would build the released norms the template pins,
+so the job skips it and runs this checkout's norms instead. pre-commit still
+clones the pinned release, which in a release commit isn't tagged yet, so the
+job points the render's norms hooks at this checkout first:
 
 ```sh
 git init /tmp/demo
 uvx copier copy --trust --defaults --vcs-ref HEAD \
   --data project_name=demo-project --data "description=A demo." \
   --data primary_language=rust . /tmp/demo
-git -C /tmp/demo add --all && (cd /tmp/demo && uvx pre-commit run --all-files)
+git -C /tmp/demo add --all
+(cd /tmp/demo && SKIP=norms-verify uvx pre-commit run --all-files)
+cargo run -- verify --deny-warnings /tmp/demo
 ```
 
 ## Architecture of the CLI
@@ -312,4 +318,6 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   anything it missed, rename it to the new version with the date, add an empty
   `Unreleased` above it, and update the link definitions: the new version
   compares the previous tag with the new one, and `Unreleased` the new tag with
-  `HEAD`.
+  `HEAD`. In the same commit, set `hook_norms` in `versions.yml` to the new tag,
+  so that projects rendered from the release run its hooks (`tests/versions.rs`
+  fails until it matches the latest release in `CHANGELOG.md`).

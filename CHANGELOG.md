@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add the `norms-commit-msg` and `norms-verify` hooks to the template, with a
+  `norms-verify` CI job that runs the pinned hook and a `pr-title.yaml` workflow
+  that checks pull request titles with the commit message hooks.
+
 ## [0.2.0] - 2026-11-10
 
 norms 0.2.0 replaces the Python prototype of 0.1.0 with a rewrite in Rust, and

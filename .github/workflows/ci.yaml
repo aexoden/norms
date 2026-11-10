@@ -316,12 +316,25 @@ jobs:
             --data project_name=demo-project --data "description=A demonstration project." \
             . "$RUNNER_TEMP/project"
           git -C "$RUNNER_TEMP/project" add --all
+          # pre-commit clones every hook's repository, skipped or not, and a release commit pins
+          # its own tag, which isn't pushed until CI passes, so the hooks run from a copy of the
+          # config whose norms hooks come from this checkout. The project keeps the config as
+          # rendered, for zizmor and norms verify.
+          sed \
+            -e "s|^  - repo: https://github.com/aexoden/norms\$|  - repo: $GITHUB_WORKSPACE|" \
+            -e "\|^  - repo: $GITHUB_WORKSPACE\$|{n;s|^    rev: .*|    rev: $(git rev-parse HEAD)|}" \
+            "$RUNNER_TEMP/project/.pre-commit-config.yaml" > "$RUNNER_TEMP/pre-commit-config.yaml"
 
+      # The norms-verify hook would build norms, so the step below verifies the project with the
+      # build-norms job's build instead.
       - name: Run the rendered project's hooks
         working-directory: ${{ runner.temp }}/project
         env:
           PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
+          SKIP: norms-verify
+        run: |
+          uvx "pre-commit@$PRE_COMMIT_VERSION" run --config "$RUNNER_TEMP/pre-commit-config.yaml" \
+            --all-files --show-diff-on-failure
 
       - name: Download norms
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

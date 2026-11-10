@@ -28,7 +28,7 @@ dev = [
   "mypy==2.4.1",
   "pytest==9.2.0",
   "pytest-cov==7.1.0",
-  "ruff==0.17.3",
+  "ruff==0.17.4",
 ]
 
 [build-system]
@@ -86,4 +86,4 @@ convention = "google"
 # Reinstall the project when HEAD or tags move, so the reported version stays current.
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 exclude-newer = "3 days"
-required-version = ">=0.13.6"
+required-version = ">=0.13.7"

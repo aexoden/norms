@@ -16,7 +16,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "26.6.6",
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-v8": "5.1.0",
     "eslint": "10.14.0",
     "eslint-config-prettier": "10.1.8",
     "jiti": "2.7.0",
@@ -24,8 +24,8 @@
     "prettier-plugin-packagejson": "3.1.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
-    "vite": "8.3.5",
-    "vitest": "5.0.5"
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
   },
   "devEngines": {
     "runtime": {
@@ -35,7 +35,7 @@
     },
     "packageManager": {
       "name": "pnpm",
-      "version": "12.16.1",
+      "version": "12.18.0",
       "onFail": "download"
     }
   }

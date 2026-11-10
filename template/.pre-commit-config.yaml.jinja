@@ -64,6 +64,14 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
+
+  # norms: commit message line lengths, and the project against the standards
+  - repo: https://github.com/aexoden/norms
+    rev: {{ hook_norms }}
+    hooks:
+      - id: norms-commit-msg
+      - id: norms-verify
+        args: [--deny-warnings]
 {%- if 'rust' in languages %}
 {%- set manifest = '' if rust_prefix == '' else ' --manifest-path ' ~ rust_prefix ~ 'Cargo.toml' %}
 

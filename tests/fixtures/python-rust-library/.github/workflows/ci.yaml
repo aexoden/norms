@@ -18,7 +18,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, msrv, mypy, pre-commit, pytest, pytest-min-python, reuse, ruff-check, ruff-format, rustfmt, tombi, uv-lock, zizmor]
+    needs: [cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, msrv, mypy, norms-verify, pre-commit, pytest, pytest-min-python, reuse, ruff-check, ruff-format, rustfmt, tombi, uv-lock, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -44,6 +44,29 @@ jobs:
         with:
           globs: '**/*.md'
 
+  norms-verify:
+    name: Verify the project with norms
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Without CHANGELOG.md, norms reads the release tags.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
+      - name: Verify the project with norms
+        run: uvx pre-commit@4.7.0 run norms-verify --all-files
+
   pre-commit:
     name: Run the remaining pre-commit hooks
     runs-on: ubuntu-latest
@@ -63,7 +86,7 @@ jobs:
 
       - name: Run the hooks that have no job of their own
         env:
-          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,mypy,pytest,reuse,ruff-check,ruff-format,rustfmt,tombi-format,uv-lock,zizmor
+          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,mypy,norms-verify,pytest,reuse,ruff-check,ruff-format,rustfmt,tombi-format,uv-lock,zizmor
         run: uvx pre-commit@4.7.0 run --all-files --show-diff-on-failure
 
   reuse:
@@ -94,7 +117,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Tombi
-        uses: tombi-toml/setup-tombi@88295e71426671820b98934ea75ea352d73eba8b # v1.9.8
+        uses: tombi-toml/setup-tombi@336fd5f0db887ebf637389a659b4193608756ecd # v1.10.0
         with:
           enable-cache: false
 
@@ -155,7 +178,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
 
@@ -178,7 +201,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-workspaces: rust -> target
 
@@ -201,7 +224,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-workspaces: rust -> target
 
@@ -224,7 +247,7 @@ jobs:
           persist-credentials: false
 
       - name: Install the minimum supported Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-workspaces: rust -> target
           toolchain: "1.99"
@@ -246,7 +269,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
 
@@ -270,7 +293,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.13.6"
+          version: "0.13.7"
 
       - name: Install dependencies
         run: uv sync --locked
@@ -293,7 +316,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.13.6"
+          version: "0.13.7"
 
       - name: Install dependencies
         run: uv sync --locked
@@ -317,7 +340,7 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.15"
-          version: "0.13.6"
+          version: "0.13.7"
 
       - name: Install dependencies
         run: uv sync --locked
@@ -340,7 +363,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.13.6"
+          version: "0.13.7"
 
       - name: Install dependencies
         run: uv sync --locked
@@ -363,7 +386,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.13.6"
+          version: "0.13.7"
 
       - name: Install dependencies
         run: uv sync --locked
@@ -386,7 +409,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: "0.13.6"
+          version: "0.13.7"
 
       - name: Check that uv.lock is up to date
         run: uv lock --check

@@ -3,7 +3,7 @@
 
 //! Consistency checks between the template's `versions.yml` and this
 //! repository's own workflows, which Renovate updates through different
-//! managers.
+//! managers, and its latest release, which the template's norms hooks pin.
 
 #[cfg(test)]
 mod tests {
@@ -158,6 +158,30 @@ mod tests {
         assert!(
             vars.is_empty(),
             "versions.yml lists these actions more than once: {vars:?}"
+        );
+    }
+
+    /// A release sets the template's norms hooks to the version it tags, so
+    /// that a project rendered from it runs the norms that checked it.
+    #[test]
+    fn template_norms_hooks_pin_the_latest_release() {
+        let changelog = read(&root().join("CHANGELOG.md"));
+        let release = Regex::new(r"(?m)^## \[(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\]")
+            .unwrap()
+            .captures(&changelog)
+            .expect("CHANGELOG.md has a release")["version"]
+            .to_owned();
+        let versions = read(&root().join("versions.yml"));
+        let pin = Regex::new(r#"\nhook_norms:\n\s+default: "(?<rev>[^"]+)""#)
+            .unwrap()
+            .captures(&versions)
+            .expect("versions.yml has hook_norms")["rev"]
+            .to_owned();
+
+        assert_eq!(
+            pin,
+            format!("v{release}"),
+            "versions.yml's hook_norms must be the latest release in CHANGELOG.md"
         );
     }
 
