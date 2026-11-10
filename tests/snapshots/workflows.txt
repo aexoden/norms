@@ -45,7 +45,9 @@ pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
-fail  audit-yaml-schedule  CI: audit.yaml: runs on a schedule
+fail  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
+      No schedule
+pass  audit-yaml-dispatch  CI: audit.yaml: runs on manual dispatch (workflow_dispatch)
 pass  workflow-valid  CI: release.yaml: valid
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs

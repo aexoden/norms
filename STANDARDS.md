@@ -516,6 +516,10 @@ promptly without blocking unrelated pull requests. The audit tools are:
 - Python: `uv audit` (currently experimental in uv).
 - TypeScript: `pnpm audit`.
 
+`audit.yaml` also runs on `workflow_dispatch`, so that the audit can be rerun by
+hand once a fix lands. `norms verify` fails an `audit.yaml` without a schedule,
+and warns when no `cron` entry runs every day, or when it can't be dispatched.
+
 ### zizmor
 
 `ci.yaml` runs [zizmor](https://docs.zizmor.sh/) as a job, using

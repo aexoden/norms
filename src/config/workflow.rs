@@ -434,13 +434,52 @@ impl Workflow {
         }
     }
 
-    /// Whether the workflow runs on a schedule: `on` maps `schedule` to at least one entry. A `schedule` given only by
-    /// name, as a string or in a list, sets no times and never runs.
-    pub(crate) fn runs_on_schedule(&self) -> bool {
-        let Some(Value::Object(on)) = &self.on else {
-            return false;
-        };
-        matches!(on.get("schedule"), Some(Value::Array(entries)) if !entries.is_empty())
+    /// The entries of the workflow's `schedule`, if `on` maps it to a list. A `schedule` given only by name, as a string
+    /// or in a list, sets no times and never runs.
+    fn schedule(&self) -> &[Value] {
+        match &self.on {
+            Some(Value::Object(on)) => match on.get("schedule") {
+                Some(Value::Array(entries)) => entries,
+                _ => &[],
+            },
+            _ => &[],
+        }
+    }
+
+    /// Whether the workflow runs on a schedule at least daily, a failure if it has none: some entry's `cron` runs on every day, with `*` for its day of the month, month and day
+    /// of the week. A schedule that skips days warns.
+    pub(crate) fn check_daily_schedule(&self) -> Result<(), Issue> {
+        let schedule = self.schedule();
+        if schedule.is_empty() {
+            return Err(Issue::fail("No schedule"));
+        }
+        let daily = schedule.iter().any(|entry| {
+            entry
+                .get("cron")
+                .and_then(Value::as_str)
+                .is_some_and(|cron| {
+                    let fields: Vec<&str> = cron.split_whitespace().collect();
+                    fields.len() == 5
+                        && fields
+                            .get(2..)
+                            .is_some_and(|days| days.iter().all(|field| *field == "*"))
+                })
+        });
+        if daily {
+            Ok(())
+        } else {
+            Err(Issue::warn("The schedule doesn't run every day"))
+        }
+    }
+
+    /// Whether `on` names the event `event`: as itself, in a list, or as a key of a mapping.
+    pub(crate) fn runs_on(&self, event: &str) -> bool {
+        match &self.on {
+            Some(Value::String(on)) => on == event,
+            Some(Value::Array(on)) => on.iter().any(|name| name.as_str() == Some(event)),
+            Some(Value::Object(on)) => on.contains_key(event),
+            _ => false,
+        }
     }
 
     /// The IDs of the jobs that set `continue-on-error` to anything but `false`: `true`, or an expression, which may
@@ -1059,12 +1098,13 @@ jobs:
 
     #[test]
     fn finds_schedule_triggers() {
-        let scheduled = |yaml: &str| {
+        let unscheduled = |yaml: &str| {
             serde_saphyr::from_str::<Workflow>(yaml)
                 .expect("workflow parses")
-                .runs_on_schedule()
+                .schedule()
+                .is_empty()
         };
-        assert!(scheduled(
+        assert!(!unscheduled(
             "on:\n  schedule:\n    - cron: '0 0 * * *'\n  workflow_dispatch:\n"
         ));
         for yaml in [
@@ -1075,7 +1115,50 @@ jobs:
             "on:\n  schedule: []\n",
             "on:\n  workflow_dispatch:\n",
         ] {
-            assert!(!scheduled(yaml), "{yaml}");
+            assert!(unscheduled(yaml), "{yaml}");
+        }
+    }
+
+    #[test]
+    fn audits_run_daily_and_on_dispatch() {
+        let workflow =
+            |yaml: &str| serde_saphyr::from_str::<Workflow>(yaml).expect("workflow parses");
+        for cron in ["0 0 * * *", "30 6 * * *", "0 */6 * * *"] {
+            assert_eq!(
+                workflow(&format!("on:\n  schedule:\n    - cron: '{cron}'\n"))
+                    .check_daily_schedule(),
+                Ok(()),
+                "{cron}"
+            );
+        }
+        // One daily entry among others is enough.
+        assert_eq!(
+            workflow("on:\n  schedule:\n    - cron: '0 0 * * 1'\n    - cron: '0 12 * * *'\n")
+                .check_daily_schedule(),
+            Ok(())
+        );
+        for cron in ["0 0 * * 1", "0 0 1 * *", "0 0 * 1 *", "0 0 * *"] {
+            assert_eq!(
+                workflow(&format!("on:\n  schedule:\n    - cron: '{cron}'\n"))
+                    .check_daily_schedule(),
+                Err(Issue::warn("The schedule doesn't run every day")),
+                "{cron}"
+            );
+        }
+        assert_eq!(
+            workflow("on:\n  workflow_dispatch:\n").check_daily_schedule(),
+            Err(Issue::fail("No schedule"))
+        );
+
+        for yaml in [
+            "on: workflow_dispatch\n",
+            "on: [schedule, workflow_dispatch]\n",
+            "on:\n  workflow_dispatch:\n",
+        ] {
+            assert!(workflow(yaml).runs_on("workflow_dispatch"), "{yaml}");
+        }
+        for yaml in ["name: Audit\n", "on: push\n", "on:\n  schedule: []\n"] {
+            assert!(!workflow(yaml).runs_on("workflow_dispatch"), "{yaml}");
         }
     }
 

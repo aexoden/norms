@@ -1384,10 +1384,15 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
     if let Some(audit) = report.require_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
     {
-        report.must(
+        report.check(
             "audit-yaml-schedule",
-            "CI: audit.yaml: runs on a schedule",
-            audit.runs_on_schedule(),
+            "CI: audit.yaml: runs on a daily schedule",
+            audit.check_daily_schedule(),
+        );
+        report.should(
+            "audit-yaml-dispatch",
+            "CI: audit.yaml: runs on manual dispatch (workflow_dispatch)",
+            audit.runs_on("workflow_dispatch"),
         );
     }
 
