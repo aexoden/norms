@@ -7,3 +7,4 @@ onlyBuiltDependencies:
 permissions:
   - esbuild
 strictDepBuilds: false
+trustPolicy: "off"

@@ -138,6 +138,11 @@ pub(crate) fn check_pnpm_workspace(ctx: &ComponentContext, report: &mut Report) 
         "pnpm: builds limited to permissions",
         config.check_builds_restricted(),
     );
+    report.should(
+        "pnpm-workspace-trust-policy",
+        "pnpm: no trust downgrades (trustPolicy)",
+        config.check_trust_policy(),
+    );
 }
 
 //

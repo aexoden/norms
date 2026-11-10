@@ -3,3 +3,4 @@
 
 minimumReleaseAge: 4320
 permissions: {}
+trustPolicy: no-downgrade

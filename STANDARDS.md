@@ -1309,14 +1309,16 @@ pnpm is the only package manager, so there is no `package-lock.json` or
 
 Like the hook and CI job, the `lint` script fails on warnings as well as errors.
 
-`pnpm-workspace.yaml` sets the release age, and records in `permissions` (read
-since pnpm 12.11) what each dependency may do, such as running build scripts:
+`pnpm-workspace.yaml` sets the release age, refuses trust downgrades, and
+records in `permissions` (read since pnpm 12.11) what each dependency may do,
+such as running build scripts:
 
 ```yaml
 minimumReleaseAge: 4320
 permissions:
   esbuild:
     build: true
+trustPolicy: no-downgrade
 ```
 
 A new project starts with `permissions: {}`, so that `pnpm approve` and
@@ -1326,6 +1328,12 @@ a dependency's build scripts haven't been approved or denied, so neither
 `allowBuilds`, which pnpm still reads for the dependencies `permissions` doesn't
 list, isn't used, so that every decision is in one place. Nor are the settings
 it replaced in pnpm 11, such as `onlyBuiltDependencies`, which pnpm ignores.
+
+`trustPolicy: no-downgrade`, which is off by default, fails the install when a
+version was published with weaker trust evidence than an earlier one, such as
+without the provenance or trusted publisher its predecessors had, as a release
+published with stolen credentials often is. A package that legitimately lost
+that evidence is listed in `trustPolicyExclude`, with a comment saying why.
 
 #### Compiler Options
 

@@ -138,6 +138,8 @@ warn  pnpm-workspace-permissions  [web] pnpm: records what dependencies may do (
       Missing permissions
 pass  pnpm-workspace-no-legacy-build-settings  [web] pnpm: no older build settings
 pass  pnpm-workspace-builds-restricted  [web] pnpm: builds limited to permissions
+warn  pnpm-workspace-trust-policy  [web] pnpm: no trust downgrades (trustPolicy)
+      Missing trustPolicy, so pnpm installs a version with weaker trust evidence
 fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [web] eslint.config.ts: exists

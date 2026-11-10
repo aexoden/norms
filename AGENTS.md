@@ -235,12 +235,12 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   settings rather than `nodenext`, and the application's `lib` and the
   tooling's `target` name versions older than ES2022. Its `pnpm-workspace.yaml`
   lists `permissions` as a sequence, keeps the older `allowBuilds` and
-  `onlyBuiltDependencies`, and lets unreviewed dependencies' build scripts
-  through. Its `eslint.config.ts` includes typescript-eslint's
-  `recommendedTypeChecked` and an `Only` variant of `stylisticTypeChecked`
-  rather than the standard's configs, comments out `strictTypeChecked`, sets
-  `project` rather than `projectService`, and takes Prettier's config from
-  `eslint-plugin-prettier`.
+  `onlyBuiltDependencies`, lets unreviewed dependencies' build scripts
+  through, and turns `trustPolicy` off. Its `eslint.config.ts` includes
+  typescript-eslint's `recommendedTypeChecked` and an `Only` variant of
+  `stylisticTypeChecked` rather than the standard's configs, comments out
+  `strictTypeChecked`, sets `project` rather than `projectService`, and takes
+  Prettier's config from `eslint-plugin-prettier`.
   `layout` breaks the layout standards: a TypeScript component has npm's and
   yarn's lock files beside `pnpm-lock.yaml`, and a Python component's `src/`
   holds a module and a namespace package, but no package with an

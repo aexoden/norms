@@ -47,6 +47,8 @@ warn  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no older build settings
       Sets allowBuilds, which permissions replaces; onlyBuiltDependencies, which pnpm 11 removed
 warn  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to permissions
       dangerouslyAllowAllBuilds is true; strictDepBuilds is false
+warn  pnpm-workspace-trust-policy  [.] pnpm: no trust downgrades (trustPolicy)
+      trustPolicy is "off", not "no-downgrade"
 pass  tsconfig-exists  [.] tsconfig.json: exists
 pass  tsconfig-valid  [.] tsconfig.json: valid
 pass  tsconfig-project-references  [.] tsconfig.json: uses project references

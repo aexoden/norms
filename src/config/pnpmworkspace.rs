@@ -33,6 +33,9 @@ pub(crate) struct PnpmWorkspace {
     /// The older map of dependencies allowed to run build scripts, still read for those `permissions` doesn't list.
     pub allow_builds: Option<Value>,
 
+    /// Whether pnpm refuses a version published with weaker trust evidence, such as provenance, than an earlier one.
+    pub trust_policy: Option<Value>,
+
     /// The settings pnpm 11 replaced with `allowBuilds`, which it no longer reads.
     pub only_built_dependencies: Option<Value>,
     pub only_built_dependencies_file: Option<Value>,
@@ -99,6 +102,19 @@ impl PnpmWorkspace {
             Ok(())
         } else {
             Err(format!("Sets {}", problems.join("; ")))
+        }
+    }
+
+    /// Check that `trustPolicy` is `no-downgrade`. pnpm's default, `off`, installs a version published with weaker
+    /// trust evidence than an earlier one, as a compromised release often is.
+    pub(crate) fn check_trust_policy(&self) -> Result<(), String> {
+        match &self.trust_policy {
+            Some(Value::String(policy)) if policy == "no-downgrade" => Ok(()),
+            Some(value) => Err(format!("trustPolicy is {value}, not \"no-downgrade\"")),
+            None => Err(
+                "Missing trustPolicy, so pnpm installs a version with weaker trust evidence"
+                    .to_owned(),
+            ),
         }
     }
 
@@ -227,6 +243,25 @@ mod tests {
             parse("dangerouslyAllowAllBuilds: true\nstrictDepBuilds: false\n")
                 .check_builds_restricted(),
             Err("dangerouslyAllowAllBuilds is true; strictDepBuilds is false".to_owned())
+        );
+    }
+
+    #[test]
+    fn trust_may_not_be_downgraded() {
+        assert_eq!(
+            parse("trustPolicy: no-downgrade\n").check_trust_policy(),
+            Ok(())
+        );
+        assert_eq!(
+            parse("trustPolicy: \"off\"\n").check_trust_policy(),
+            Err("trustPolicy is \"off\", not \"no-downgrade\"".to_owned())
+        );
+        assert_eq!(
+            parse("permissions: {}\n").check_trust_policy(),
+            Err(
+                "Missing trustPolicy, so pnpm installs a version with weaker trust evidence"
+                    .to_owned()
+            )
         );
     }
 

@@ -85,6 +85,7 @@ pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minim
 pass  pnpm-workspace-permissions  [.] pnpm: records what dependencies may do (permissions)
 pass  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no older build settings
 pass  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to permissions
+pass  pnpm-workspace-trust-policy  [.] pnpm: no trust downgrades (trustPolicy)
 pass  tsconfig-exists  [.] tsconfig.json: exists
 pass  tsconfig-valid  [.] tsconfig.json: valid
 pass  tsconfig-project-references  [.] tsconfig.json: uses project references
