@@ -1097,6 +1097,7 @@ create_dir = "warn"
 dbg_macro = "warn"
 decimal_literal_representation = "warn"
 default_union_representation = "warn"
+definition_in_module_root = "warn"
 doc_paragraphs_missing_punctuation = "warn"
 empty_enum_variants_with_brackets = "warn"
 empty_structs_with_brackets = "warn"
@@ -1109,6 +1110,7 @@ fn_to_numeric_cast_any = "warn"
 if_then_some_else_none = "warn"
 indexing_slicing = "warn"
 infinite_loop = "warn"
+inline_modules = "warn"
 lossy_float_literal = "warn"
 map_err_ignore = "warn"
 map_with_unused_argument_over_ranges = "warn"
@@ -1180,6 +1182,9 @@ so it is allowed. Fields of `pub(crate)` types stay `pub`, since
 `field_scoped_visibility_modifiers` forbids scoped visibility on fields.
 
 `self_named_module_files` requires `foo/mod.rs` over `foo.rs` next to `foo/`.
+`definition_in_module_root` keeps `mod.rs` to declaring and re-exporting its
+submodules, so that each definition lives in a file named after its module, and
+`inline_modules` gives every module apart from tests a file of its own.
 
 Some restriction lints are left out deliberately because they work against
 idiomatic Rust or do not suit applications:
