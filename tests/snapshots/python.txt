@@ -109,6 +109,7 @@ pass  ruff-lint-isort  [.] Ruff lint: isort configured
 pass  ruff-lint-copyright  [.] Ruff lint: copyright notice regex
 pass  mypy-configured  [.] mypy: configured
 pass  mypy-strict  [.] mypy: strict mode
+pass  mypy-optional-checks  [.] mypy: the checks strict mode leaves out enabled
 pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
 pass  python-precommit-ruff-check  Python pre-commit: ruff-check
 pass  python-precommit-ruff-format  Python pre-commit: ruff-format (--check)

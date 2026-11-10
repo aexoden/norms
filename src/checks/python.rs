@@ -565,6 +565,11 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
         "mypy: strict mode",
         mypy.strict == Some(true),
     );
+    report.should(
+        "mypy-optional-checks",
+        "mypy: the checks strict mode leaves out enabled",
+        mypy.check_optional_checks(),
+    );
 }
 
 //

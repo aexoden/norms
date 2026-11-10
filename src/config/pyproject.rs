@@ -769,11 +769,62 @@ pub(crate) struct UvConfig {
 // Mypy
 //
 
+/// The optional error codes, beyond those `strict` enables, that the standard turns on.
+const MYPY_ERROR_CODES: [&str; 11] = [
+    "deprecated",
+    "exhaustive-match",
+    "explicit-override",
+    "mutable-override",
+    "possibly-undefined",
+    "redundant-expr",
+    "redundant-self",
+    "truthy-bool",
+    "truthy-iterable",
+    "unimported-reveal",
+    "unused-awaitable",
+];
+
 /// `[tool.mypy]` configuration.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct MypyConfig {
     pub strict: Option<bool>,
+    /// Kept unparsed, like the other settings below, so that a malformed value fails only the check reading it.
+    pub strict_equality_for_none: Option<toml::Value>,
+    pub warn_unreachable: Option<toml::Value>,
+    pub enable_error_code: Option<toml::Value>,
+}
+
+impl MypyConfig {
+    /// Check that the checks `strict` leaves out are on: `strict_equality_for_none`, `warn_unreachable` and each of the
+    /// standard's optional error codes, listed in `enable_error_code`. The error names each one that isn't.
+    pub(crate) fn check_optional_checks(&self) -> Result<(), String> {
+        let enabled: Vec<&str> = match &self.enable_error_code {
+            Some(toml::Value::Array(codes)) => {
+                codes.iter().filter_map(toml::Value::as_str).collect()
+            }
+            _ => Vec::new(),
+        };
+        let missing: Vec<&str> = [
+            ("strict_equality_for_none", &self.strict_equality_for_none),
+            ("warn_unreachable", &self.warn_unreachable),
+        ]
+        .into_iter()
+        .filter(|(_, value)| value.as_ref().and_then(toml::Value::as_bool) != Some(true))
+        .map(|(flag, _)| flag)
+        .chain(
+            MYPY_ERROR_CODES
+                .into_iter()
+                .filter(|code| !enabled.contains(code)),
+        )
+        .collect();
+
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("Not enabled: {}", missing.join(", ")))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -793,6 +844,51 @@ mod tests {
         assert!(!parse("[tool.ruff]\nline-length = 120\n").is_library());
         assert!(!parse("[project]\nname = 'service'\n\n[tool.uv]\npackage = false\n").is_library());
         assert!(parse("[project]\nname = 'lib'\n\n[tool.uv]\npackage = true\n").is_library());
+    }
+
+    #[test]
+    fn mypy_enables_the_checks_strict_leaves_out() {
+        fn mypy(pyproject: &str) -> Result<(), String> {
+            parse(pyproject)
+                .tool
+                .unwrap()
+                .mypy
+                .unwrap()
+                .check_optional_checks()
+        }
+
+        let codes = MYPY_ERROR_CODES
+            .map(|code| format!("\"{code}\""))
+            .join(", ");
+        assert_eq!(
+            mypy(&format!(
+                "[tool.mypy]\nstrict = true\nstrict_equality_for_none = true\nwarn_unreachable = true\n\
+                 enable_error_code = [{codes}, \"unused-ignore\"]\n"
+            )),
+            Ok(())
+        );
+        assert_eq!(
+            mypy("[tool.mypy]\nstrict = true\n"),
+            Err(format!(
+                "Not enabled: strict_equality_for_none, warn_unreachable, {}",
+                MYPY_ERROR_CODES.join(", ")
+            ))
+        );
+        assert_eq!(
+            mypy(&format!(
+                "[tool.mypy]\nstrict_equality_for_none = true\nwarn_unreachable = \"yes\"\nenable_error_code = [{}]\n",
+                codes.replace("\"deprecated\", ", "")
+            )),
+            Err("Not enabled: warn_unreachable, deprecated".to_owned())
+        );
+        // A string, which mypy splits at commas, isn't the standard's form.
+        assert_eq!(
+            mypy(&format!(
+                "[tool.mypy]\nstrict_equality_for_none = true\nwarn_unreachable = true\nenable_error_code = \"{}\"\n",
+                MYPY_ERROR_CODES.join(",")
+            )),
+            Err(format!("Not enabled: {}", MYPY_ERROR_CODES.join(", ")))
+        );
     }
 
     #[test]

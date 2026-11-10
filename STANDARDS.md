@@ -981,12 +981,36 @@ needs a comment in `pyproject.toml` explaining why.
 
 #### Type Checking
 
-Use [mypy](https://mypy.readthedocs.io/en/stable/) in strict mode:
+Use [mypy](https://mypy.readthedocs.io/en/stable/) in strict mode, along with
+the checks that strict mode leaves out:
 
 ```toml
 [tool.mypy]
 strict = true
+strict_equality_for_none = true
+warn_unreachable = true
+enable_error_code = [
+  "deprecated",
+  "exhaustive-match",
+  "explicit-override",
+  "mutable-override",
+  "possibly-undefined",
+  "redundant-expr",
+  "redundant-self",
+  "truthy-bool",
+  "truthy-iterable",
+  "unimported-reveal",
+  "unused-awaitable",
+]
 ```
+
+`explicit-override` requires `@override` on every method that overrides one in
+a base class, imported from `typing`, or from `typing_extensions` in a library
+that supports Python before 3.12. The other optional checks are left off.
+Ruff's `blanket-type-ignore` already reports what `ignore-without-code` does,
+`disallow_any_explicit` would reject every annotation with `Any`, even where it
+is the honest type, and `disallow_any_unimported` matters only to a project that
+ignores missing imports, which fail by default.
 
 #### Testing
 
