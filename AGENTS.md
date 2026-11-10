@@ -298,5 +298,5 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   dependencies in alphabetical order.
 - Dependencies in `Cargo.toml` are pinned exactly (`=x.y.z`). New dependencies
   must have licenses allowed by `deny.toml`.
-- `CHANGELOG.md` is maintained by hand in Keep a Changelog format, with no
-  `Unreleased` section.
+- `CHANGELOG.md` is maintained by hand in Keep a Changelog format, as the
+  Changelog section of `STANDARDS.md` describes.

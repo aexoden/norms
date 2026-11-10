@@ -198,10 +198,28 @@ project.
 ### Changelog
 
 Projects that publish versioned releases keep a hand-written `CHANGELOG.md` in
-the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format and follow
+the [Keep a Changelog](https://keepachangelog.com/en/2.0.0/) format and follow
 [Semantic Versioning](https://semver.org/). Releases are tagged `vX.Y.Z`.
 Projects that are deployed directly from `main` without versioned releases do
 not need a changelog.
+
+An `[Unreleased]` section at the top collects notable changes as they land, so
+that anyone who comes across the repository long after a release can see what
+has changed since. A release renames it to the new version, and a new, empty
+`[Unreleased]` section takes its place. The link definitions at the bottom of
+the file change with it: each version links to a comparison with the one before
+it, or the first to its tag, and `[Unreleased]` to a comparison of the latest
+tag with `HEAD` (before the first release, to the commits on `main`, as the
+template writes it). Before a release, go through the commits since the previous
+one for notable changes the section missed. The changelog is written for its
+readers, not as a list of commits: a change that was made and then reverted
+before a release isn't mentioned, and several changes that together make one
+difference are one entry.
+
+An entry for a breaking change starts with `**Breaking:**`, under the type of
+change it is, and says briefly how to upgrade. The README should say what the
+version numbers cover, such as a command line, a library's API or a file
+format, so that readers know what a breaking change breaks.
 
 `norms verify` expects a changelog in a project that has a Rust or Python
 library component, since libraries are published, or a release tag (`vX.Y.Z`,
