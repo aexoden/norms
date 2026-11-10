@@ -222,6 +222,9 @@ pub(crate) fn is_valid_check_id(id: &str) -> bool {
 //
 
 /// A single recorded check result.
+///
+/// It serializes as an entry of `norms verify --json`'s `results`, so its fields and their serde attributes are that
+/// output's format: a field added here appears there.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct CheckResult {
     pub id: String,

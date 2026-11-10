@@ -3,6 +3,7 @@
 
 //! Command-line interface.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::{env, fs};
@@ -50,17 +51,17 @@ enum Commands {
 
 /// JSON output structure.
 #[derive(Serialize)]
-struct JsonOutput {
+struct JsonOutput<'a> {
     path: String,
-    languages: Vec<String>,
+    languages: BTreeSet<Language>,
     components: Vec<JsonComponent>,
     summary: JsonSummary,
-    results: Vec<JsonResult>,
+    results: &'a [CheckResult],
 }
 
 #[derive(Serialize)]
 struct JsonComponent {
-    language: String,
+    language: Language,
     path: String,
 }
 
@@ -72,27 +73,6 @@ struct JsonSummary {
     skipped: usize,
 }
 
-#[derive(Serialize)]
-struct JsonResult {
-    id: String,
-    name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    component: Option<String>,
-    status: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    message: String,
-}
-
-/// The lowercase name of a language in JSON output.
-fn language_id(language: Language) -> String {
-    match language {
-        Language::Cpp => "cpp".into(),
-        Language::Python => "python".into(),
-        Language::Rust => "rust".into(),
-        Language::TypeScript => "typescript".into(),
-    }
-}
-
 fn json_output(report: &Report) -> anyhow::Result<String> {
     let output = JsonOutput {
         path: report
@@ -101,12 +81,12 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             .unwrap_or_else(|_| report.project_path.clone())
             .display()
             .to_string(),
-        languages: report.languages().into_iter().map(language_id).collect(),
+        languages: report.languages(),
         components: report
             .components
             .iter()
             .map(|component| JsonComponent {
-                language: language_id(component.language),
+                language: component.language,
                 path: component.display_path(),
             })
             .collect(),
@@ -116,17 +96,7 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
             warnings: report.warnings(),
             skipped: report.skipped(),
         },
-        results: report
-            .results
-            .iter()
-            .map(|r: &CheckResult| JsonResult {
-                id: r.id.clone(),
-                name: r.name.clone(),
-                component: r.component.clone(),
-                status: r.status.to_string().to_lowercase(),
-                message: r.message.clone(),
-            })
-            .collect(),
+        results: &report.results,
     };
     serde_json::to_string_pretty(&output).context("Failed to serialize JSON output")
 }
@@ -247,6 +217,52 @@ mod tests {
         assert_eq!(result.get("name").unwrap(), "README.md");
         assert_eq!(result.get("status").unwrap(), "warn");
         assert_eq!(json.pointer("/summary/skipped").unwrap(), 0);
+    }
+
+    #[test]
+    fn json_results_have_exactly_their_fields() {
+        let frontend = Component {
+            language: Language::TypeScript,
+            path: PathBuf::from("frontend"),
+        };
+        let mut report = Report::new(PathBuf::new(), vec![frontend.clone()]);
+        report.must("readme-exists", "README.md", true);
+        report.with_component(&frontend, |report| {
+            report.should(
+                "package-json-private",
+                "package.json: private",
+                Err("Not private".to_owned()),
+            );
+        });
+
+        let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();
+        assert_eq!(
+            json.get("results").unwrap(),
+            &serde_json::json!([
+                { "id": "readme-exists", "name": "README.md", "status": "pass" },
+                {
+                    "id": "package-json-private",
+                    "name": "package.json: private",
+                    "component": "frontend",
+                    "status": "warn",
+                    "message": "Not private",
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn json_names_languages_in_lowercase() {
+        let languages = [
+            Language::Cpp,
+            Language::Python,
+            Language::Rust,
+            Language::TypeScript,
+        ];
+        assert_eq!(
+            serde_json::to_value(languages).unwrap(),
+            serde_json::json!(["cpp", "python", "rust", "typescript"])
+        );
     }
 
     #[test]

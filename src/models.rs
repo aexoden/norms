@@ -66,17 +66,6 @@ pub(crate) enum Status {
     Skip,
 }
 
-impl fmt::Display for Status {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Pass => write!(f, "PASS"),
-            Self::Fail => write!(f, "FAIL"),
-            Self::Warn => write!(f, "WARN"),
-            Self::Skip => write!(f, "SKIP"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
