@@ -69,11 +69,12 @@ any check failed or warned.
   (also given the `ProjectContext` when a repository-wide file applies to that
   component alone, such as the CI job testing a library's MSRV).
   Registration is explicit: a new check must be added to the list in
-  `checks/runner.rs`. `common.rs` runs for every project. For each detected
-  language, the component checks run once per component of that language
-  (inside `Report::with_component`, which labels their results with the
-  component's path), then the checks of the language's place in repository-wide
-  files (pre-commit hooks, CI) run once.
+  `checks/runner.rs`. `common/` runs for every project: `files.rs` checks the
+  repository's own files, `precommit.rs` and `ci.rs` the hooks and workflows
+  every project has. For each detected language, the component checks run once
+  per component of that language (inside `Report::with_component`, which labels
+  their results with the component's path), then the checks of the language's
+  place in repository-wide files (pre-commit hooks, CI) run once.
 - `report.rs`: `report.must(id, name, outcome)` records a check whose issue is
   a failure, `report.should(...)` one whose issue is a warning, and
   `report.check(...)` one whose issues differ in severity, each an `Issue` that
