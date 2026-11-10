@@ -26,7 +26,7 @@ pass  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
 warn  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
       Hooks with no ID or alias of their own: eslint, vitest
 fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
-      Missing: check-symlinks, check-vcs-permalinks, trailing-whitespace
+      Missing: check-illegal-windows-names, check-merge-conflict, check-symlinks, check-vcs-permalinks, trailing-whitespace
 warn  precommit-reuse  Pre-commit: reuse hook
       The reuse hook doesn't run in the pre-commit stage
 fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook

@@ -32,7 +32,7 @@ warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
 pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
 fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
-      Missing: check-added-large-files, check-case-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
+      Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
 fail  precommit-reuse  Pre-commit: reuse hook
       No reuse hook
 fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook

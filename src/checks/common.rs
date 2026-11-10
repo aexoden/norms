@@ -652,9 +652,11 @@ fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
 //
 
 /// The hooks from pre-commit-hooks that every project runs.
-const PRE_COMMIT_HOOKS: [&str; 9] = [
+const PRE_COMMIT_HOOKS: [&str; 11] = [
     "check-added-large-files",
     "check-case-conflict",
+    "check-illegal-windows-names",
+    "check-merge-conflict",
     "check-symlinks",
     "check-toml",
     "check-vcs-permalinks",

@@ -669,9 +669,12 @@ Hook revisions are pinned to release tags and updated by Renovate.
 Every project uses these hooks:
 
 - [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks):
-  `check-added-large-files`, `check-case-conflict`, `check-symlinks`,
+  `check-added-large-files`, `check-case-conflict`,
+  `check-illegal-windows-names`, `check-merge-conflict`, `check-symlinks`,
   `check-toml`, `check-vcs-permalinks`, `check-yaml`, `detect-private-key`,
-  `end-of-file-fixer` and `trailing-whitespace`.
+  `end-of-file-fixer` and `trailing-whitespace`. `check-merge-conflict` looks
+  for conflict markers only while a merge or rebase is in progress, which is
+  when they can be committed by mistake, so in CI it always passes.
 - [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see
   [Licensing](#licensing)).
 - [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2):
