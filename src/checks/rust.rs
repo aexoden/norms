@@ -10,8 +10,8 @@ use semver::Comparator;
 
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, FormatterRun,
-    HIDDEN_CLIPPY_TOML, Workflow, WorkflowJob, WorkflowStep, commands, is_other_deny_toml,
-    is_program,
+    HIDDEN_CLIPPY_TOML, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands,
+    is_other_deny_toml, is_program,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -564,8 +564,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "rust-precommit-clippy",
-        "Rust pre-commit: clippy hook",
-        config.check_commit_hook("clippy"),
+        "Rust pre-commit: clippy hook (-D warnings)",
+        clippy_hooks(config),
     );
 
     report.check(
@@ -577,7 +577,7 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     report.check(
         "rust-precommit-cargo-deny",
         "Rust pre-commit: cargo-deny hook",
-        config.check_commit_hook("cargo-deny"),
+        cargo_deny_hooks(config),
     );
     report.should(
         "rust-precommit-local-hooks",
@@ -605,10 +605,10 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "Rust CI: format check",
         rustfmt_in_ci(workflow),
     );
-    report.must(
+    report.check(
         "rust-ci-clippy",
-        "Rust CI: clippy check",
-        workflow.runs_command("cargo clippy"),
+        "Rust CI: clippy check (-D warnings)",
+        clippy_in_ci(workflow),
     );
     report.must(
         "rust-ci-test",
@@ -731,6 +731,152 @@ fn rustfmt_run(words: &[&str]) -> Option<FormatterRun> {
 /// Whether a command's words run cargo-deny, through `cargo deny` or as the command itself.
 fn runs_cargo_deny(words: &[&str]) -> bool {
     runs_cargo_subcommand(words, "deny")
+}
+
+/// The options `cargo clippy` takes, before `--`, in the standard's command, so that it lints every package, target
+/// and feature.
+const CLIPPY_OPTIONS: [&str; 3] = ["--workspace", "--all-targets", "--all-features"];
+
+/// Whether `args`, the arguments `cargo clippy` passes on to Clippy after `--`, deny warnings: `-D warnings`, as the
+/// standard gives it, or another spelling of it.
+fn denies_warnings(args: &[&str]) -> bool {
+    args.iter()
+        .any(|arg| matches!(*arg, "-Dwarnings" | "--deny=warnings"))
+        || args
+            .windows(2)
+            .any(|pair| matches!(pair, ["-D" | "--deny", "warnings"]))
+}
+
+/// Whether a command's words run Clippy through `cargo clippy`, and if so, its issue: a failure if it doesn't deny
+/// warnings, since the lints table sets every lint to `warn`, so Clippy then passes whatever it finds, and a warning
+/// if it lacks one of [`CLIPPY_OPTIONS`], so that it lints less than the whole workspace.
+fn clippy_run(words: &[&str]) -> Option<Result<(), Issue>> {
+    let (subcommand, args) = cargo_subcommand(words)?;
+    if subcommand != "clippy" {
+        return None;
+    }
+    let (options, clippy_args) =
+        args.iter()
+            .position(|arg| *arg == "--")
+            .map_or((args.as_slice(), &[][..]), |split| {
+                (
+                    args.get(..split).unwrap_or_default(),
+                    args.get(split + 1..).unwrap_or_default(),
+                )
+            });
+    if !denies_warnings(clippy_args) {
+        return Some(Err(Issue::fail(
+            "cargo clippy runs without -D warnings, so it passes on every lint, which the lints table sets to warn",
+        )));
+    }
+    let missing: Vec<&str> = CLIPPY_OPTIONS
+        .into_iter()
+        .filter(|option| !options.contains(option))
+        .collect();
+    Some(if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(Issue::warn(format!(
+            "cargo clippy runs without {}",
+            missing.join(", ")
+        )))
+    })
+}
+
+/// Check that each `clippy` hook runs `cargo clippy` as [`clippy_run`] requires. A hook that runs it nowhere norms can
+/// see warns, as does one without an entry of its own, as a remote hook may leave it to the hook's repository, since
+/// norms can't see the arguments it passes.
+fn clippy_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+    let issues = config.commit_hooks("clippy")?.into_iter().map(|hook| {
+        if hook.entry.is_none() {
+            return Err(Issue::warn(
+                "The clippy hook sets no entry, so norms can't see whether it denies warnings",
+            ));
+        }
+        let runs = hook.filter_map_commands("cargo clippy", clippy_run);
+        if runs.is_empty() {
+            Err(Issue::warn("The clippy hook doesn't run cargo clippy"))
+        } else if runs.iter().any(Result::is_ok) {
+            Ok(())
+        } else {
+            Issue::alternatives(runs.into_iter().filter_map(Result::err))
+        }
+    });
+    Issue::combine(issues.filter_map(Result::err))
+}
+
+/// Check that some step runs `cargo clippy` as [`clippy_run`] requires. Warnings denied through `RUSTFLAGS` rather than
+/// `-D warnings`, in any step's environment, still fail Clippy, but differ from the standard, so they warn instead.
+fn clippy_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    let runs = workflow.filter_map_commands(clippy_run);
+    if runs.is_empty() {
+        Err(Issue::fail("No step runs cargo clippy"))
+    } else if runs.iter().any(Result::is_ok) {
+        Ok(())
+    } else if rustflags_deny_warnings(workflow) {
+        Err(Issue::warn(
+            "cargo clippy denies warnings through RUSTFLAGS rather than -D warnings",
+        ))
+    } else {
+        Issue::alternatives(runs.into_iter().filter_map(Result::err))
+    }
+}
+
+/// Whether the environment of some step of `workflow` sets `RUSTFLAGS` to deny warnings.
+fn rustflags_deny_warnings(workflow: &Workflow) -> bool {
+    workflow.jobs.values().any(|job| {
+        job.steps.iter().any(|step| {
+            workflow
+                .env(job, step, "RUSTFLAGS")
+                .is_some_and(|flags| denies_warnings(&flags.split_whitespace().collect::<Vec<_>>()))
+        })
+    })
+}
+
+/// The arguments a command's words pass to cargo-deny, if they run it, as [`runs_cargo_deny`] tells, joined with single
+/// spaces and without `--manifest-path`, which names the component in a subdirectory rather than changing the checks.
+fn cargo_deny_args(words: &[&str]) -> Option<String> {
+    if !runs_cargo_deny(words) {
+        return None;
+    }
+    let start = words
+        .iter()
+        .position(|word| *word == "deny" || is_program(word, "cargo-deny"))?;
+    let mut args = Vec::new();
+    let mut rest = words.get(start + 1..).unwrap_or_default().iter();
+    while let Some(&arg) = rest.next() {
+        if arg == "--manifest-path" {
+            rest.next();
+        } else if !arg.starts_with("--manifest-path=") {
+            args.push(arg);
+        }
+    }
+    Some(args.join(" "))
+}
+
+/// Check that each `cargo-deny` hook runs cargo-deny with the arguments the standard gives, [`CARGO_DENY_CI_ARGS`],
+/// apart from `--manifest-path`. A hook passing others, or running it nowhere norms can see, warns.
+fn cargo_deny_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+    let issues = config.commit_hooks("cargo-deny")?.into_iter().map(|hook| {
+        let runs = hook.filter_map_commands("cargo deny", cargo_deny_args);
+        if runs.is_empty() {
+            Err(Issue::warn("The cargo-deny hook doesn't run cargo deny"))
+        } else if runs.iter().any(|args| args == CARGO_DENY_CI_ARGS) {
+            Ok(())
+        } else {
+            Issue::alternatives(runs.into_iter().map(|args| {
+                let args = if args.is_empty() {
+                    "without arguments".to_owned()
+                } else {
+                    args
+                };
+                Issue::warn(format!(
+                    "The cargo-deny hook runs cargo deny {args} rather than {CARGO_DENY_CI_ARGS}"
+                ))
+            }))
+        }
+    });
+    Issue::combine(issues.filter_map(Result::err))
 }
 
 /// The actions that build no Rust code.
@@ -909,6 +1055,7 @@ mod tests {
 
     use super::*;
     use crate::models::{Component, Status};
+    use crate::report::Severity;
 
     /// Whether a package with the given manifest and files is an application.
     fn is_application_with(manifest: &str, files: &[&str]) -> bool {
@@ -1660,5 +1807,158 @@ jobs:
         for line in ["cargo install cargo-deny", "cargo denylist"] {
             assert!(!runs(line), "{line}");
         }
+    }
+
+    #[test]
+    fn clippy_must_deny_warnings_across_the_workspace() {
+        let run = |line: &str| {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            clippy_run(&words)
+        };
+        for line in [
+            "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+            "cargo +1.99.1 clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features -- -Dwarnings",
+            "cargo clippy --all-features --all-targets --workspace -- --deny warnings",
+            "cargo clippy --workspace --all-targets --all-features -- --deny=warnings -W clippy::pedantic",
+        ] {
+            assert_eq!(run(line), Some(Ok(())), "{line}");
+        }
+        // Without -D warnings Clippy passes on every lint the lints table sets to warn, whatever else it passes.
+        for line in [
+            "cargo clippy --workspace --all-targets --all-features",
+            "cargo clippy --workspace --all-targets --all-features -D warnings",
+            "cargo clippy --workspace --all-targets --all-features -- -W warnings",
+            "cargo clippy --workspace --all-targets --all-features -- -D clippy::all",
+        ] {
+            assert_eq!(
+                run(line).map(|result| result.map_err(|issue| issue.severity)),
+                Some(Err(Severity::Fail)),
+                "{line}"
+            );
+        }
+        assert_eq!(
+            run("cargo clippy --workspace -- -D warnings"),
+            Some(Err(Issue::warn(
+                "cargo clippy runs without --all-targets, --all-features"
+            )))
+        );
+        for line in [
+            "cargo test --workspace",
+            "cargo install clippy",
+            "echo clippy",
+        ] {
+            assert_eq!(run(line), None, "{line}");
+        }
+    }
+
+    #[test]
+    fn clippy_hooks_and_ci_deny_warnings() {
+        let hooks = |entries: &[&str]| {
+            let hooks = entries
+                .iter()
+                .map(|entry| format!("      - id: clippy\n        entry: {entry}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!(
+                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
+            );
+            clippy_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+        };
+        let standard = "cargo clippy --workspace --all-targets --all-features -- -D warnings";
+        assert_eq!(hooks(&[standard]), Ok(()));
+        // Every copy of the hook must deny warnings.
+        assert_eq!(
+            hooks(&[
+                standard,
+                "cargo clippy --workspace --all-targets --all-features"
+            ])
+            .map_err(|issue| issue.severity),
+            Err(Severity::Fail)
+        );
+        assert_eq!(
+            hooks(&["cargo check"]),
+            Err(Issue::warn("The clippy hook doesn't run cargo clippy"))
+        );
+        // A hook without an entry runs its repository's, whose arguments norms can't see.
+        assert_eq!(
+            clippy_hooks(
+                &serde_saphyr::from_str(
+                    "default_stages: [pre-commit]\nrepos:\n  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: clippy\n"
+                )
+                .expect("config parses")
+            ),
+            Err(Issue::warn(
+                "The clippy hook sets no entry, so norms can't see whether it denies warnings"
+            ))
+        );
+
+        let ci = |runs: &[&str]| {
+            let steps = runs
+                .iter()
+                .map(|run| format!("      - run: {run}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!("jobs:\n  clippy:\n    steps:\n{steps}");
+            clippy_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        // A step that denies warnings decides.
+        assert_eq!(ci(&["cargo clippy", standard]), Ok(()));
+        assert_eq!(
+            ci(&["cargo clippy --workspace --all-targets --all-features"])
+                .map_err(|issue| issue.severity),
+            Err(Severity::Fail)
+        );
+        assert_eq!(
+            ci(&["cargo test"]),
+            Err(Issue::fail("No step runs cargo clippy"))
+        );
+        // A run that only lacks some options warns.
+        assert_eq!(
+            ci(&["cargo clippy --workspace -- -D warnings"]).map_err(|issue| issue.severity),
+            Err(Severity::Warn)
+        );
+        // Warnings denied through RUSTFLAGS still fail Clippy, but aren't the standard's form.
+        let yaml = "jobs:\n  clippy:\n    env:\n      RUSTFLAGS: -Dwarnings\n    steps:\n      - run: cargo clippy --workspace --all-targets --all-features\n";
+        assert_eq!(
+            clippy_in_ci(&serde_saphyr::from_str(yaml).expect("workflow parses")),
+            Err(Issue::warn(
+                "cargo clippy denies warnings through RUSTFLAGS rather than -D warnings"
+            ))
+        );
+    }
+
+    #[test]
+    fn cargo_deny_hooks_pass_the_standard_arguments() {
+        let hook = |entry: &str| {
+            let yaml = format!(
+                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n      - id: cargo-deny\n        entry: {entry}\n"
+            );
+            cargo_deny_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+        };
+        for entry in [
+            "cargo deny --workspace --all-features check -D warnings bans licenses sources",
+            "cargo deny --manifest-path rust/Cargo.toml --workspace --all-features check -D warnings bans licenses sources",
+            "cargo-deny --manifest-path=rust/Cargo.toml --workspace --all-features check -D warnings bans licenses sources",
+        ] {
+            assert_eq!(hook(entry), Ok(()), "{entry}");
+        }
+        assert_eq!(
+            hook("cargo deny --workspace --all-features check bans licenses sources"),
+            Err(Issue::warn(
+                "The cargo-deny hook runs cargo deny --workspace --all-features check bans licenses sources rather than \
+                 --workspace --all-features check -D warnings bans licenses sources"
+            ))
+        );
+        assert_eq!(
+            hook("cargo deny"),
+            Err(Issue::warn(
+                "The cargo-deny hook runs cargo deny without arguments rather than \
+                 --workspace --all-features check -D warnings bans licenses sources"
+            ))
+        );
+        assert_eq!(
+            hook("cargo install cargo-deny"),
+            Err(Issue::warn("The cargo-deny hook doesn't run cargo deny"))
+        );
     }
 }

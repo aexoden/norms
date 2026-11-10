@@ -1266,6 +1266,13 @@ out of date with `Cargo.toml`. Updating only the workspace's own packages,
 left untouched. The other Cargo commands would quietly update a stale lock file
 instead.
 
+`norms verify` fails a `clippy` hook or CI job that runs Clippy without
+`-D warnings`, since every lint is set to `warn`, so Clippy would pass whatever
+it finds, and warns on one without `--workspace`, `--all-targets` or
+`--all-features`, or that denies warnings through `RUSTFLAGS` instead. It also
+warns on a `cargo-deny` hook that passes other arguments than the table's,
+apart from `--manifest-path`.
+
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
 reads `rust-toolchain.toml` and caches builds with its built-in
 `Swatinem/rust-cache`, so jobs don't add a separate cache step. Jobs that build

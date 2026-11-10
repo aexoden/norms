@@ -153,7 +153,7 @@ fail  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
       No cargo-lock hook
 fail  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
       No rustfmt hook
-fail  rust-precommit-clippy  Rust pre-commit: clippy hook
+fail  rust-precommit-clippy  Rust pre-commit: clippy hook (-D warnings)
       No clippy hook
 fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
       No cargo-test hook
@@ -163,7 +163,8 @@ pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, uns
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt
-fail  rust-ci-clippy  Rust CI: clippy check
+fail  rust-ci-clippy  Rust CI: clippy check (-D warnings)
+      No step runs cargo clippy
 fail  rust-ci-test  Rust CI: test
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
       No step uses EmbarkStudios/cargo-deny-action
