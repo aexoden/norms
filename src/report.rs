@@ -346,7 +346,7 @@ impl Report {
     /// Require a parsed config file, recording existence and validity checks.
     ///
     /// This is the primary mechanism for dependency injection between checks.
-    /// A "provider" check calls [`ProjectContext`] to get the parse status, then
+    /// A "provider" check calls [`ProjectContext`](crate::context::ProjectContext) to get the parse status, then
     /// passes it here. Downstream checks simply use the returned reference.
     ///
     /// Records up to two checks, with IDs derived from `id`:
