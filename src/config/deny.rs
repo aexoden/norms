@@ -43,6 +43,7 @@ pub(crate) struct DenyAdvisories {
 #[serde(default, rename_all = "kebab-case")]
 pub(crate) struct DenyBans {
     pub multiple_versions: Option<toml::Value>,
+    pub std_replacements: Option<toml::Value>,
 }
 
 impl DenyToml {
@@ -57,6 +58,34 @@ impl DenyToml {
             Some(value) if value.as_str() == Some("allow") => Ok(()),
             Some(value) => Err(format!("multiple-versions is {value}, not \"allow\"")),
             None => Err("multiple-versions isn't set, so cargo-deny warns".to_owned()),
+        }
+    }
+
+    /// Check that `[bans] std-replacements` is a table that leaves `level` and `scope` at their defaults, so that
+    /// cargo-deny fails on a dependency of the workspace's own crates that `std` or `core` replaces. Without the table,
+    /// cargo-deny skips the check. Other keys, such as `ignore`, may be set.
+    pub(crate) fn check_std_replacements(&self) -> Result<(), String> {
+        match self
+            .bans
+            .as_ref()
+            .and_then(|bans| bans.std_replacements.as_ref())
+        {
+            Some(toml::Value::Table(table)) => {
+                let changed: Vec<String> = ["level", "scope"]
+                    .into_iter()
+                    .filter_map(|key| table.get(key).map(|value| format!("{key} = {value}")))
+                    .collect();
+                if changed.is_empty() {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "std-replacements sets {}, which the standard leaves at cargo-deny's defaults",
+                        changed.join(", ")
+                    ))
+                }
+            }
+            Some(value) => Err(format!("std-replacements is {value}, not a table")),
+            None => Err("std-replacements isn't set, so cargo-deny skips the check".to_owned()),
         }
     }
 
@@ -123,6 +152,42 @@ mod tests {
         assert_eq!(
             deny("[licenses]\nallow = [\"MIT\"]\n").check_multiple_versions(),
             Err("multiple-versions isn't set, so cargo-deny warns".to_owned())
+        );
+    }
+
+    #[test]
+    fn std_replacements_are_checked() {
+        assert_eq!(
+            deny("[bans]\nstd-replacements = {}\n").check_std_replacements(),
+            Ok(())
+        );
+        assert_eq!(
+            deny("[bans.std-replacements]\nignore = [\"once_cell\"]\n").check_std_replacements(),
+            Ok(())
+        );
+        assert_eq!(
+            deny("[bans]\nstd-replacements = { level = \"allow\", scope = \"none\" }\n")
+                .check_std_replacements(),
+            Err(
+                "std-replacements sets level = \"allow\", scope = \"none\", which the standard leaves at \
+                 cargo-deny's defaults"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            deny("[bans.std-replacements]\nlevel = \"warn\"\n").check_std_replacements(),
+            Err(
+                "std-replacements sets level = \"warn\", which the standard leaves at cargo-deny's defaults"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            deny("[bans]\nstd-replacements = true\n").check_std_replacements(),
+            Err("std-replacements is true, not a table".to_owned())
+        );
+        assert_eq!(
+            deny("[bans]\nmultiple-versions = \"allow\"\n").check_std_replacements(),
+            Err("std-replacements isn't set, so cargo-deny skips the check".to_owned())
         );
     }
 

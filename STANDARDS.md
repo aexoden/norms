@@ -1220,6 +1220,11 @@ The hooks and CI pass `-D warnings`, so any warning fails the check.
   those cargo-deny encounters. By default that excludes dev-only dependencies.
 - `[bans] multiple-versions = "allow"`, for the same reason as the Clippy lint
   above.
+- `[bans] std-replacements = {}`, which fails on a crate the workspace depends
+  on directly that `std` or `core` now replaces, such as `once_cell`. Without
+  the table, cargo-deny skips this check. A package's `rust-version`, which
+  libraries set, limits it to the replacements its MSRV has. A crate the
+  project keeps anyway goes in the table's `ignore`.
 - Every entry in `[advisories] ignore` has a `reason`.
 
 cargo-deny uses the nearest `deny.toml` in the directory of the manifest it

@@ -6,3 +6,4 @@ allow = ["Apache-2.0", "MIT"]
 
 [bans]
 multiple-versions = "allow"
+std-replacements = {}

@@ -330,7 +330,7 @@ fn check_clippy_toml_settings(label: &str, config: &ClippyToml, report: &mut Rep
 //
 
 /// Check the cargo-deny configuration that applies to the component: that it is named `deny.toml`, allows multiple
-/// versions of a crate, and gives a reason for every ignored advisory.
+/// versions of a crate, checks for crates that `std` replaces, and gives a reason for every ignored advisory.
 pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
     let (label, status) = ctx.deny_toml();
     if is_other_deny_toml(Path::new(label)) {
@@ -351,6 +351,11 @@ pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
         "deny-toml-multiple-versions",
         format!("{label}: multiple versions allowed (bans)"),
         config.check_multiple_versions(),
+    );
+    report.should(
+        "deny-toml-std-replacements",
+        format!("{label}: crates that std replaces are banned"),
+        config.check_std_replacements(),
     );
     report.should(
         "deny-toml-ignore-reasons",
@@ -1178,7 +1183,7 @@ jobs:
     }
 
     #[test]
-    fn deny_toml_allows_multiple_versions_and_explains_ignores() {
+    fn deny_toml_allows_multiple_versions_bans_std_replacements_and_explains_ignores() {
         let results = |deny: &str| {
             let dir = tempfile::tempdir().unwrap();
             fs::write(dir.path().join("deny.toml"), deny).unwrap();
@@ -1199,9 +1204,10 @@ jobs:
             "deny-toml-exists",
             "deny-toml-valid",
             "deny-toml-multiple-versions",
+            "deny-toml-std-replacements",
             "deny-toml-ignore-reasons",
         ];
-        let with = |statuses: [Status; 4]| {
+        let with = |statuses: [Status; 5]| {
             ids.iter()
                 .map(|id| (*id).to_owned())
                 .zip(statuses)
@@ -1209,18 +1215,31 @@ jobs:
         };
 
         assert_eq!(
-            results("[bans]\nmultiple-versions = \"allow\"\n"),
-            with([Status::Pass; 4])
+            results("[bans]\nmultiple-versions = \"allow\"\nstd-replacements = {}\n"),
+            with([Status::Pass; 5])
         );
         assert_eq!(
             results(
-                "[advisories]\nignore = [\"RUSTSEC-2024-0001\"]\n\n[bans]\nmultiple-versions = \"allow\"\n"
+                "[advisories]\nignore = [\"RUSTSEC-2024-0001\"]\n\n\
+                 [bans]\nmultiple-versions = \"allow\"\nstd-replacements = {}\n"
             ),
-            with([Status::Pass, Status::Pass, Status::Pass, Status::Warn])
+            with([
+                Status::Pass,
+                Status::Pass,
+                Status::Pass,
+                Status::Pass,
+                Status::Warn
+            ])
         );
         assert_eq!(
             results("[bans]\nmultiple-versions = \"deny\"\n"),
-            with([Status::Pass, Status::Pass, Status::Warn, Status::Pass])
+            with([
+                Status::Pass,
+                Status::Pass,
+                Status::Warn,
+                Status::Warn,
+                Status::Pass
+            ])
         );
     }
 

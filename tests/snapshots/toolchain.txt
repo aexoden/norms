@@ -67,6 +67,7 @@ warn  clippy-toml-absolute-paths  [tools/cli] ../../clippy.toml: absolute paths 
 pass  deny-toml-exists  [tools/cli] ../../deny.toml: exists
 pass  deny-toml-valid  [tools/cli] ../../deny.toml: valid
 pass  deny-toml-multiple-versions  [tools/cli] ../../deny.toml: multiple versions allowed (bans)
+pass  deny-toml-std-replacements  [tools/cli] ../../deny.toml: crates that std replaces are banned
 pass  deny-toml-ignore-reasons  [tools/cli] ../../deny.toml: every ignored advisory has a reason
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
