@@ -142,13 +142,9 @@ fail  tsconfig-exists  [web] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [web] eslint.config.ts: exists
       File not found
-fail  eslint-dependency  [web] ESLint: in dependencies
-fail  eslint-typescript-eslint  [web] ESLint: typescript-eslint configured
-      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [web] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [web] Prettier: .prettierignore exists
       Not found: .prettierignore
-fail  prettier-dependency  [web] Prettier: in dependencies
 warn  package-json-scripts  [web] package.json: has scripts
       No scripts defined in package.json

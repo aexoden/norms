@@ -224,24 +224,6 @@ impl PackageJson {
         }
     }
 
-    /// Whether a given package name appears in any dependency list.
-    pub(crate) fn has_dep(&self, name: &str) -> bool {
-        self.dependencies
-            .as_ref()
-            .is_some_and(|d| d.contains_key(name))
-            || self
-                .dev_dependencies
-                .as_ref()
-                .is_some_and(|d| d.contains_key(name))
-    }
-
-    /// Whether any dependency name starts with the given prefix.
-    pub(crate) fn has_dep_starting_with(&self, prefix: &str) -> bool {
-        let check = |deps: &HashMap<String, String>| deps.keys().any(|k| k.starts_with(prefix));
-        self.dependencies.as_ref().is_some_and(check)
-            || self.dev_dependencies.as_ref().is_some_and(check)
-    }
-
     /// Whether a script with the given name exists.
     pub(crate) fn has_script(&self, name: &str) -> bool {
         self.scripts.as_ref().is_some_and(|s| s.contains_key(name))

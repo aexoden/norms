@@ -34,20 +34,23 @@
 //! # Severity
 //!
 //! A check records a failure with `must` and a warning with `should`, or, when
-//! its issues differ in severity, each [`Issue`] at its own with `check`. Choose
-//! by what the issue means, as STANDARDS.md's "norms Configuration" section
-//! states: a failure when a safeguard the standards require is absent or
-//! unusable (a required file is missing, a config can't be parsed, a tool isn't
-//! configured or run at all, or it is set up so that it can't run or passes
-//! what it should fail), and a warning when it's present but differs from the
-//! standard (weaker settings, other flags, versions, pins, names or metadata),
-//! when norms can't be sure of the issue, or when config is merely stale, such
-//! as an unneeded waiver. A malformed `norms.toml` fails. Three safeguards are
-//! an exception to warning when norms can't be sure: the gate job's failing
-//! step, and the setup-rust-toolchain `toolchain` and setup-uv `python-version`
-//! inputs of the jobs testing a library's oldest supported Rust and Python.
-//! norms can't tell one written another way from one that doesn't work, so it
-//! fails as absent in any other form.
+//! its issues differ in severity, each [`Issue`] at its own with `check`.
+//! Choose by what the issue means, as STANDARDS.md's "norms Configuration"
+//! section states: a failure when a safeguard the standards require is absent
+//! or unusable (a required file is missing, a config can't be parsed, a tool
+//! isn't configured or run at all, or it is set up so that it can't run or
+//! passes what it should fail), and a warning when it's present but differs
+//! from the standard (weaker settings, other flags, versions, pins, names or
+//! metadata), when norms can't be sure of the issue, or when config is merely
+//! stale, such as an unneeded waiver. What a tool already catches by failing a
+//! hook or CI job with an error that names the problem, such as a configuration
+//! that loads a package missing from the dependencies, isn't checked. A
+//! malformed `norms.toml` fails. Three safeguards are an exception to warning
+//! when norms can't be sure: the gate job's failing step, and the
+//! setup-rust-toolchain `toolchain` and setup-uv `python-version` inputs of the
+//! jobs testing a library's oldest supported Rust and Python. norms can't tell
+//! one written another way from one that doesn't work, so it fails as absent in
+//! any other form.
 //!
 //! `norms verify` exits with failure if any check fails, or with
 //! `--deny-warnings` if any check fails or warns.

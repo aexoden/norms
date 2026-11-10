@@ -103,16 +103,18 @@ A check fails when a safeguard these standards require is absent or unusable: a
 required file is missing, a configuration can't be parsed, a tool isn't
 configured or run at all (no hook, CI step or linter configuration), or it is
 set up so that it can't run or passes what it should fail, such as a gate job
-that a failed job doesn't fail or a configuration that loads a package missing
-from the dependencies. A check warns when the safeguard is present but differs
-from the standard (weaker settings, other flags, versions, pins, names or
-metadata), when norms can't be sure of the issue, or when configuration is
-stale, such as an unneeded waiver. A malformed `norms.toml` fails. Three
-safeguards are an exception to warning when norms can't be sure: the gate job's
-failing step, and the `actions-rust-lang/setup-rust-toolchain` `toolchain` and
-`astral-sh/setup-uv` `python-version` inputs of the jobs testing a library's
-oldest supported Rust and Python. norms can't tell one written another way from
-one that doesn't work, so written another way, it fails as if absent.
+that a failed job doesn't fail. What a tool already catches by failing a hook or
+CI job with an error that names the problem, such as a configuration that loads
+a package missing from the dependencies, is left to it rather than checked. A
+check warns when the safeguard is present but differs from the standard (weaker
+settings, other flags, versions, pins, names or metadata), when norms can't be
+sure of the issue, or when configuration is stale, such as an unneeded waiver. A
+malformed `norms.toml` fails. Three safeguards are an exception to warning when
+norms can't be sure: the gate job's failing step, and the
+`actions-rust-lang/setup-rust-toolchain` `toolchain` and `astral-sh/setup-uv`
+`python-version` inputs of the jobs testing a library's oldest supported Rust
+and Python. norms can't tell one written another way from one that doesn't work,
+so written another way, it fails as if absent.
 
 ## Development Environment
 

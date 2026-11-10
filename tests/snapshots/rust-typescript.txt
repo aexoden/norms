@@ -165,12 +165,9 @@ pass  eslint-strict-type-checked  [frontend] ESLint: includes typescript-eslint'
 pass  eslint-stylistic-type-checked  [frontend] ESLint: includes typescript-eslint's stylisticTypeChecked
 pass  eslint-project-service  [frontend] ESLint: projectService enabled for type-aware rules
 pass  eslint-config-prettier  [frontend] ESLint: eslint-config-prettier turns off rules Prettier covers
-pass  eslint-dependency  [frontend] ESLint: in dependencies
-pass  eslint-typescript-eslint  [frontend] ESLint: typescript-eslint configured
 pass  prettier-config-exists  [frontend] .prettierrc: exists
 pass  prettier-config-valid  [frontend] .prettierrc: valid
 pass  prettier-ignore-exists  [frontend] Prettier: .prettierignore exists
-pass  prettier-dependency  [frontend] Prettier: in dependencies
 pass  prettier-config-print-width  [frontend] .prettierrc: printWidth is 120
 pass  prettier-plugin-packagejson  [frontend] Prettier: formats package.json with prettier-plugin-packagejson
 pass  package-json-scripts  [frontend] package.json: has scripts

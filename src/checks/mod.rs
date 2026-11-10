@@ -562,7 +562,7 @@ mod tests {
     }
 
     #[test]
-    fn prettier_must_load_and_depend_on_the_packagejson_plugin() {
+    fn prettier_loads_the_packagejson_plugin() {
         let project = TempProject::new("prettier", None);
         for (component, prettierrc) in [
             ("listed", "plugins: [prettier-plugin-packagejson]\n"),
@@ -570,11 +570,7 @@ mod tests {
             ("malformed", "plugins: [\n"),
         ] {
             fs::create_dir_all(project.0.join(component)).unwrap();
-            fs::write(
-                project.0.join(component).join("package.json"),
-                "{ \"devDependencies\": { \"prettier\": \"3.9.10\" } }\n",
-            )
-            .unwrap();
+            fs::write(project.0.join(component).join("package.json"), "{}\n").unwrap();
             fs::write(project.0.join(component).join(".prettierrc"), prettierrc).unwrap();
         }
         let results = project.verify();
@@ -600,8 +596,8 @@ mod tests {
                 (
                     Some("listed"),
                     "prettier-plugin-packagejson",
-                    Status::Fail,
-                    "prettier-plugin-packagejson isn't in dependencies"
+                    Status::Pass,
+                    ""
                 ),
                 (
                     Some("malformed"),
@@ -664,10 +660,7 @@ mod tests {
 
         let eslint: Vec<_> = results
             .iter()
-            .filter(|r| {
-                r.id.starts_with("eslint-")
-                    && !["eslint-dependency", "eslint-typescript-eslint"].contains(&r.id.as_str())
-            })
+            .filter(|r| r.id.starts_with("eslint-"))
             .map(|r| (r.id.as_str(), r.status))
             .collect();
         assert_eq!(

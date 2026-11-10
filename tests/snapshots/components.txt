@@ -140,14 +140,10 @@ warn  tsconfig-erasable-syntax-only  [apps/admin] tsconfig.json: erasableSyntaxO
       Missing erasableSyntaxOnly
 fail  eslint-config-exists  [apps/admin] eslint.config.ts: exists
       File not found
-fail  eslint-dependency  [apps/admin] ESLint: in dependencies
-fail  eslint-typescript-eslint  [apps/admin] ESLint: typescript-eslint configured
-      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [apps/admin] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [apps/admin] Prettier: .prettierignore exists
       Not found: .prettierignore
-fail  prettier-dependency  [apps/admin] Prettier: in dependencies
 warn  package-json-scripts  [apps/admin] package.json: has scripts
       No scripts defined in package.json
 pass  package-json-exists  [apps/web] package.json: exists
@@ -195,13 +191,9 @@ warn  tsconfig-erasable-syntax-only  [apps/web] tsconfig.app.json: erasableSynta
       Missing erasableSyntaxOnly
 fail  eslint-config-exists  [apps/web] eslint.config.ts: exists
       File not found
-fail  eslint-dependency  [apps/web] ESLint: in dependencies
-fail  eslint-typescript-eslint  [apps/web] ESLint: typescript-eslint configured
-      typescript-eslint isn't in dependencies
 fail  prettier-config-exists  [apps/web] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [apps/web] Prettier: .prettierignore exists
       Not found: .prettierignore
-fail  prettier-dependency  [apps/web] Prettier: in dependencies
 warn  package-json-scripts  [apps/web] package.json: has scripts
       No scripts defined in package.json

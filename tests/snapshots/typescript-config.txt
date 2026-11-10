@@ -101,14 +101,11 @@ warn  eslint-stylistic-type-checked  [.] ESLint: includes typescript-eslint's st
 warn  eslint-project-service  [.] ESLint: projectService enabled for type-aware rules
       Doesn't enable projectService in the parser options
 warn  eslint-config-prettier  [.] ESLint: eslint-config-prettier turns off rules Prettier covers
-      eslint.config.ts doesn't import eslint-config-prettier
-pass  eslint-dependency  [.] ESLint: in dependencies
-pass  eslint-typescript-eslint  [.] ESLint: typescript-eslint configured
+      Doesn't import eslint-config-prettier
 fail  prettier-config-exists  [.] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
       Not found: .prettierignore
-pass  prettier-dependency  [.] Prettier: in dependencies
 pass  package-json-scripts  [.] package.json: has scripts
 pass  package-json-script-build  [.] Scripts: has 'build'
 pass  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warnings 0)
