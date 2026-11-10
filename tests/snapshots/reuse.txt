@@ -108,6 +108,8 @@ fail  ruff-lint-configured  [py] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [py] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [py] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [py] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook

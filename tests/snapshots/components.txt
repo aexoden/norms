@@ -68,6 +68,8 @@ fail  ruff-lint-configured  [tools] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [tools] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [tools] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
 warn  cargo-toml-license  [.] Cargo.toml: has license

@@ -62,6 +62,8 @@ fail  ruff-lint-configured  [python-app] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [python-app] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [python-app] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [python-lib] pyproject.toml: exists
 pass  pyproject-valid  [python-lib] pyproject.toml: valid
 pass  pyproject-project  [python-lib] pyproject.toml: has [project] section
@@ -96,6 +98,8 @@ fail  ruff-lint-configured  [python-lib] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [python-lib] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [python-lib] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid
 warn  cargo-toml-license  [.] Cargo.toml: has license

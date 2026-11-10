@@ -56,6 +56,8 @@ warn  ruff-configured  [py] Ruff: configured
       Ruff uses ruff.toml, which takes the place of [tool.ruff] in pyproject.toml
 warn  mypy-configured  [py] mypy: configured
       mypy uses mypy.ini, which takes the place of [tool.mypy] in pyproject.toml
+warn  pytest-strict  [py] pytest: strict mode ([tool.pytest] strict = true)
+      pytest uses pytest.ini, which takes the place of [tool.pytest] in pyproject.toml
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid
 pass  package-json-esm  [web] package.json: uses ESM (type: module)

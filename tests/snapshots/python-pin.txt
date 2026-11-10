@@ -62,6 +62,8 @@ fail  ruff-lint-configured  [app-other] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [app-other] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [app-other] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [app-range] pyproject.toml: exists
 pass  pyproject-valid  [app-range] pyproject.toml: valid
 pass  pyproject-project  [app-range] pyproject.toml: has [project] section
@@ -98,6 +100,8 @@ fail  ruff-lint-configured  [app-range] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [app-range] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [app-range] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [lib-below] pyproject.toml: exists
 pass  pyproject-valid  [lib-below] pyproject.toml: valid
 pass  pyproject-project  [lib-below] pyproject.toml: has [project] section
@@ -133,6 +137,8 @@ fail  ruff-lint-configured  [lib-below] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [lib-below] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [lib-below] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [minor] pyproject.toml: exists
 pass  pyproject-valid  [minor] pyproject.toml: valid
 pass  pyproject-project  [minor] pyproject.toml: has [project] section
@@ -167,3 +173,5 @@ fail  ruff-lint-configured  [minor] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [minor] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  pytest-strict  [minor] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml

@@ -54,6 +54,9 @@ enable_error_code = [
   "unused-awaitable",
 ]
 
+[tool.pytest]
+strict = true
+
 [tool.ruff]
 line-length = 120
 

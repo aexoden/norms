@@ -1046,6 +1046,20 @@ Use [pytest](https://docs.pytest.org/) with
 [pytest-cov](https://pytest-cov.readthedocs.io/), reporting missing lines: `uv
 run pytest --cov=src/package_name --cov-report=term-missing`.
 
+pytest runs in strict mode, set in its native TOML table, which pytest reads
+since version 9:
+
+```toml
+[tool.pytest]
+strict = true
+```
+
+Strict mode turns its configuration warnings, unregistered markers, duplicate
+parameter IDs and unexpectedly passing `xfail` tests into errors, and takes in
+any strictness option a later pytest adds. A `pytest.toml`, `.pytest.toml`,
+`pytest.ini` or `.pytest.ini` beside `pyproject.toml` would take the place of
+`[tool.pytest]`, so there is none.
+
 #### Hooks and CI
 
 The pre-commit hooks and CI both run:

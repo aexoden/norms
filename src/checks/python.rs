@@ -7,8 +7,9 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
-    FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, Workflow,
-    check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
+    FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, PytestConfig,
+    Workflow, check_python_version_exact, check_release_age_value, commands, program_args,
+    sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -636,6 +637,42 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
 }
 
 //
+// Testing (pytest)
+//
+
+/// The configuration files pytest prefers to `[tool.pytest]` in a `pyproject.toml` beside them, in its order.
+const PYTEST_CONFIGS: [&str; 4] = ["pytest.toml", ".pytest.toml", "pytest.ini", ".pytest.ini"];
+
+/// Check that pytest runs in strict mode, set in `[tool.pytest]`.
+pub(crate) fn check_pytest(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+
+    report.should(
+        "pytest-strict",
+        "pytest: strict mode ([tool.pytest] strict = true)",
+        ctx.first_existing(&PYTEST_CONFIGS).map_or_else(
+            || {
+                config
+                    .tool
+                    .as_ref()
+                    .and_then(|tool| tool.pytest.as_ref())
+                    .map_or_else(
+                        || Err("Missing [tool.pytest] in pyproject.toml".to_owned()),
+                        PytestConfig::check_strict,
+                    )
+            },
+            |name| {
+                Err(format!(
+                    "pytest uses {name}, which takes the place of [tool.pytest] in pyproject.toml"
+                ))
+            },
+        ),
+    );
+}
+
+//
 // Pre-commit integration
 //
 
@@ -1156,6 +1193,34 @@ jobs:
                     .to_owned(),
                 String::new(),
             ]
+        );
+    }
+
+    #[test]
+    fn pytest_config_files_take_the_place_of_the_table() {
+        let message = |files: &[&str]| {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(
+                dir.path().join("pyproject.toml"),
+                "[project]\nname = \"x\"\n\n[tool.pytest]\nstrict = true\n",
+            )
+            .unwrap();
+            for file in files {
+                std::fs::write(dir.path().join(file), "").unwrap();
+            }
+            let component = Component {
+                language: Language::Python,
+                path: std::path::PathBuf::new(),
+            };
+            let project = ProjectContext::new(dir.path().to_path_buf());
+            let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+            check_pytest(&ComponentContext::new(&project, &component), &mut report);
+            report.results.first().map(|result| result.message.clone())
+        };
+        assert_eq!(message(&[]), Some(String::new()));
+        assert_eq!(
+            message(&[".pytest.ini", "pytest.ini", ".pytest.toml"]),
+            Some("pytest uses .pytest.toml, which takes the place of [tool.pytest] in pyproject.toml".to_owned())
         );
     }
 

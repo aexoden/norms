@@ -66,6 +66,7 @@ pub(crate) struct ProjectSection {
 pub(crate) struct ToolSection {
     pub ruff: Option<RuffConfig>,
     pub mypy: Option<MypyConfig>,
+    pub pytest: Option<PytestConfig>,
     pub uv: Option<UvConfig>,
     pub hatch: Option<HatchConfig>,
 }
@@ -784,6 +785,31 @@ const MYPY_ERROR_CODES: [&str; 11] = [
     "unused-awaitable",
 ];
 
+/// `[tool.pytest]` configuration, which pytest reads natively as TOML since pytest 9.
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+pub(crate) struct PytestConfig {
+    /// Kept unparsed, so that a malformed value fails only the check reading it.
+    pub strict: Option<toml::Value>,
+    /// The older INI-style settings, which pytest reads in place of the native table.
+    pub ini_options: Option<toml::Value>,
+}
+
+impl PytestConfig {
+    /// Check that `strict` is `true`, turning on all of pytest's strictness options.
+    pub(crate) fn check_strict(&self) -> Result<(), String> {
+        match &self.strict {
+            Some(toml::Value::Boolean(true)) => Ok(()),
+            Some(value) => Err(format!("strict is {value}, not true")),
+            None if self.ini_options.is_some() => Err(
+                "pytest's settings are in [tool.pytest.ini_options] rather than the native [tool.pytest] table"
+                    .to_owned(),
+            ),
+            None => Err("[tool.pytest] doesn't set strict = true".to_owned()),
+        }
+    }
+}
+
 /// `[tool.mypy]` configuration.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -1497,6 +1523,39 @@ cache-keys = [{ git = { commit = true } }]
         assert_eq!(
             parse("[project]\ndynamic = [\"version\"]\n").check_dependencies_exact(),
             Ok(())
+        );
+    }
+
+    #[test]
+    fn pytest_runs_strict() {
+        let strict = |table: &str| {
+            toml::from_str::<PyprojectToml>(&format!("[tool.pytest]\n{table}"))
+                .unwrap()
+                .tool
+                .unwrap()
+                .pytest
+                .unwrap()
+                .check_strict()
+        };
+        assert_eq!(strict("strict = true\n"), Ok(()));
+        assert_eq!(
+            strict("strict = false\n"),
+            Err("strict is false, not true".to_owned())
+        );
+        assert_eq!(
+            strict("strict = \"true\"\n"),
+            Err("strict is \"true\", not true".to_owned())
+        );
+        assert_eq!(
+            strict("xfail_strict = true\n"),
+            Err("[tool.pytest] doesn't set strict = true".to_owned())
+        );
+        assert_eq!(
+            strict("[tool.pytest.ini_options]\nstrict = true\n"),
+            Err(
+                "pytest's settings are in [tool.pytest.ini_options] rather than the native [tool.pytest] table"
+                    .to_owned()
+            )
         );
     }
 }
