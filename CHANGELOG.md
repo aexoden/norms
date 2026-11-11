@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `STANDARDS.md` marks a breaking change in a commit message with `!` before
   the colon, matching the changelog's `**Breaking:**` entries, writes commit
   types in lowercase, and gives footers git's trailer format.
+- `norms commit-msg` rejects a commit type that isn't in lowercase, such as
+  `Feat:`, which `conventional-pre-commit` lets through.
 
 ## [0.2.0] - 2026-11-10
 

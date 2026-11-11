@@ -46,7 +46,7 @@ enum Commands {
         deny_warnings: bool,
     },
 
-    /// Check a commit message's line lengths, for a commit-msg hook.
+    /// Check a commit message's line lengths and type case, for a commit-msg hook.
     CommitMsg {
         /// Path to the file holding the commit message.
         file: PathBuf,
@@ -144,11 +144,20 @@ fn verify(path: PathBuf, output_json: bool, deny_warnings: bool) -> anyhow::Resu
     Ok(ExitCode::FAILURE)
 }
 
-/// Describes each line of a commit message that is too long, as
-/// `<file>:<line>: <problem>`. See [`commit_msg::long_lines`] for `comment`
-/// and `edited`.
+/// Describes a commit message's type if it isn't in lowercase, and each of its
+/// lines that is too long, as `<file>:<line>: <problem>`. See
+/// [`commit_msg::long_lines`] for `comment` and `edited`.
 fn commit_msg_problems(file: &Path, message: &str, comment: &str, edited: bool) -> Vec<String> {
-    commit_msg::long_lines(message, comment, edited)
+    let miscased = commit_msg::miscased_type(message, comment, edited).map(|found| {
+        format!(
+            "{}:{}: type {} is not in lowercase; write {}",
+            file.display(),
+            found.number,
+            found.found,
+            found.found.to_lowercase()
+        )
+    });
+    let long = commit_msg::long_lines(message, comment, edited)
         .into_iter()
         .map(|line| {
             let what = if line.subject { "subject" } else { "body line" };
@@ -158,8 +167,8 @@ fn commit_msg_problems(file: &Path, message: &str, comment: &str, edited: bool) 
                 line.number,
                 line.length
             )
-        })
-        .collect()
+        });
+    miscased.into_iter().chain(long).collect()
 }
 
 fn commit_msg(file: &Path) -> anyhow::Result<ExitCode> {
@@ -180,8 +189,8 @@ fn commit_msg(file: &Path) -> anyhow::Result<ExitCode> {
         eprintln!("{problem}");
     }
     eprintln!(
-        "Keep the subject within {MAX_LINE_LENGTH} characters (aiming for 50) and wrap the body at \
-         {MAX_LINE_LENGTH}; body lines with URLs are exempt."
+        "Write the type in lowercase, keep the subject within {MAX_LINE_LENGTH} characters (aiming for 50) and wrap \
+         the body at {MAX_LINE_LENGTH}; body lines with URLs are exempt."
     );
     Ok(ExitCode::FAILURE)
 }
@@ -319,6 +328,18 @@ mod tests {
             [
                 ".git/COMMIT_EDITMSG:1: subject is 76 characters long, over 72",
                 ".git/COMMIT_EDITMSG:3: body line is 73 characters long, over 72",
+            ]
+        );
+    }
+
+    #[test]
+    fn commit_msg_problems_put_a_miscased_type_first() {
+        let message = format!("Feat: {}\n", "a".repeat(70));
+        assert_eq!(
+            commit_msg_problems(Path::new("MSG"), &message, "#", true),
+            [
+                "MSG:1: type Feat is not in lowercase; write feat",
+                "MSG:1: subject is 76 characters long, over 72",
             ]
         );
     }

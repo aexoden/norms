@@ -6,7 +6,7 @@
 
 - id: norms-commit-msg
   name: norms commit-msg
-  description: Check that a commit message's subject and body lines are within 72 characters
+  description: Check that a commit message's type is lowercase and its subject and body lines are within 72 characters
   entry: norms commit-msg
   language: rust
   stages: [commit-msg]

@@ -65,7 +65,7 @@ repos:
         stages: [commit-msg]
         args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
 
-  # norms: commit message line lengths, and the project against the standards
+  # norms: commit messages, and the project against the standards
   - repo: https://github.com/aexoden/norms
     rev: {{ hook_norms }}
     hooks:

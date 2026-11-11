@@ -5,11 +5,11 @@ norms is three things in one repository:
 - `STANDARDS.md`, the standards for the author's projects. norms follows them
   itself, so it is the reference for conventions here too.
 - The `norms` Rust CLI. `norms verify <path> [--json] [--deny-warnings]` checks
-  a project against the standards, and `norms commit-msg <file>` checks a commit
-  message's line lengths. Other projects run them as the `norms-verify` and
-  `norms-commit-msg` hooks from `.pre-commit-hooks.yaml`; norms runs both on
-  itself as local hooks, which `tests/hooks.rs` keeps in step with the shipped
-  ones.
+  a project against the standards, and `norms commit-msg <file>` checks the case
+  of a commit message's type and its line lengths. Other projects run them as
+  the `norms-verify` and `norms-commit-msg` hooks from `.pre-commit-hooks.yaml`;
+  norms runs both on itself as local hooks, which `tests/hooks.rs` keeps in step
+  with the shipped ones.
 - A Copier template (`copier.yml`, `template/`) that renders new projects
   following the standards.
 

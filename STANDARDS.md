@@ -372,7 +372,8 @@ Include only the language blocks that apply. Python projects also mark
 
 Commit messages follow [Conventional
 Commits](https://www.conventionalcommits.org/), checked by the
-`conventional-pre-commit` hook (see [Pre-Commit Hooks](#pre-commit-hooks)). The
+`conventional-pre-commit` and `norms-commit-msg` hooks (see
+[Pre-Commit Hooks](#pre-commit-hooks)). The
 [Conventional Commit Types
 Cheatsheet](https://www.bavaga.com/blog/2025/01/27/my-ultimate-conventional-commit-types-cheatsheet/)
 is a useful reference for choosing types.
@@ -772,16 +773,19 @@ Every project uses these hooks:
   ```
 
 - [norms](https://github.com/aexoden/norms): `norms-commit-msg`, also in the
-  `commit-msg` stage, which rejects a subject over 72 characters or a body line
-  over 72 characters, unless the body line holds a URL. Like git's default
-  cleanup, it leaves out comment lines, which start with `#`, or instead with
-  the `core.commentChar` (or `core.commentString`) git is configured with, and
-  the diff `git commit --verbose` adds. When git opens no editor, as for
+  `commit-msg` stage, which rejects a type that isn't in lowercase
+  (`conventional-pre-commit` accepts any case), a subject over 72 characters, or
+  a body line over 72 characters, unless the body line holds a URL. Like git's
+  default cleanup, it leaves out comment lines, which start with `#`, or instead
+  with the `core.commentChar` (or `core.commentString`) git is configured with,
+  and the diff `git commit --verbose` adds. When git opens no editor, as for
   `git commit -m`, it keeps comment lines, as git does. The subject is the first
   paragraph, its lines joined as `git log` shows them, less the `fixup!`,
-  `squash!` and `amend!` prefixes that `git rebase --autosquash` removes; a
-  merge subject git writes, starting with `Merge`, may be of any length. CI
-  applies the same rules to pull request titles (see [Branches](#branches)).
+  `squash!` and `amend!` prefixes that `git rebase --autosquash` removes. Its
+  type isn't checked when it has one of those prefixes, since the rebase drops
+  it, or when it is a merge subject git writes, starting with `Merge`, which may
+  also be of any length. CI applies the same rules to pull request titles (see
+  [Branches](#branches)).
 
   `norms-verify`, in the `pre-commit` stage, runs `norms verify` on the whole
   project, whichever files a commit changes. Like the other hooks that check

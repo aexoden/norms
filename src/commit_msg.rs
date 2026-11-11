@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Checks a commit message's line lengths, for the `norms-commit-msg` hook.
+//! Checks a commit message's line lengths and the case of its type, for the
+//! `norms-commit-msg` hook.
 
 use std::sync::LazyLock;
 
@@ -26,6 +27,13 @@ const AUTOSQUASH_PREFIXES: [&str; 3] = ["fixup! ", "squash! ", "amend! "];
 static URL: LazyLock<Regex> = LazyLock::new(|| {
     #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
     Regex::new(r"(?i)\b[a-z][a-z0-9+.-]*://\S").unwrap()
+});
+
+/// The type that starts a Conventional Commits subject, with any scope and `!`
+/// after it, as `conventional-pre-commit` reads it.
+static TYPE: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"^([A-Za-z]+)(?:\([^)]*\))?!?:").unwrap()
 });
 
 /// A line of a commit message that is too long.
@@ -59,12 +67,7 @@ pub(crate) fn long_lines(message: &str, comment: &str, edited: bool) -> Vec<Long
     // The number of the subject's first line and its lines, until it ends.
     let mut subject: Option<(usize, Vec<&str>)> = None;
     let mut in_body = false;
-    let lines = message
-        .lines()
-        .enumerate()
-        .take_while(|(_, line)| line.strip_prefix(comment) != Some(SCISSORS))
-        .filter(|(_, line)| !(edited && line.starts_with(comment)));
-    for (index, line) in lines {
+    for (index, line) in message_lines(message, comment, edited) {
         let number = index + 1;
         let line = line.trim_end();
         if in_body {
@@ -102,6 +105,54 @@ pub(crate) fn long_lines(message: &str, comment: &str, edited: bool) -> Vec<Long
         }
     }
     long
+}
+
+/// A commit type that isn't in lowercase, which `conventional-pre-commit`
+/// accepts.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct MiscasedType {
+    /// The number of the subject's first line in the message file, from 1.
+    pub number: usize,
+    /// The type, as written.
+    pub found: String,
+}
+
+/// Returns the subject's type if it isn't written in lowercase, reading the
+/// message as [`long_lines`] does. As with `conventional-pre-commit`, a
+/// subject with an autosquash prefix isn't checked, since `git rebase
+/// --autosquash` drops it, and nor is a merge subject. A subject without a
+/// type is left to `conventional-pre-commit`.
+pub(crate) fn miscased_type(message: &str, comment: &str, edited: bool) -> Option<MiscasedType> {
+    let (index, line) =
+        message_lines(message, comment, edited).find(|(_, line)| !line.trim_start().is_empty())?;
+    if AUTOSQUASH_PREFIXES
+        .iter()
+        .any(|prefix| line.starts_with(prefix))
+        || line.starts_with("Merge ")
+    {
+        return None;
+    }
+    let found = TYPE.captures(line)?.get(1)?.as_str();
+    (found.chars().any(char::is_uppercase) && !found.eq_ignore_ascii_case("merge")).then(|| {
+        MiscasedType {
+            number: index + 1,
+            found: found.to_owned(),
+        }
+    })
+}
+
+/// The lines of a message, numbered from 0, that git would keep: up to the
+/// scissors line, and without comment lines if the message was `edited`.
+fn message_lines<'a>(
+    message: &'a str,
+    comment: &'a str,
+    edited: bool,
+) -> impl Iterator<Item = (usize, &'a str)> {
+    message
+        .lines()
+        .enumerate()
+        .take_while(move |(_, line)| line.strip_prefix(comment) != Some(SCISSORS))
+        .filter(move |(_, line)| !(edited && line.starts_with(comment)))
 }
 
 /// Returns a subject without the prefixes `git rebase --autosquash` removes,
@@ -280,5 +331,64 @@ mod tests {
         assert_eq!(edited(&format!("fixup! {original}a\n")), [subject(1, 73)]);
         // Only a prefix git adds is removed.
         assert_eq!(edited(&format!("Fixup! {original}\n")), [subject(1, 79)]);
+    }
+
+    fn miscased(message: &str) -> Option<MiscasedType> {
+        miscased_type(message, DEFAULT_COMMENT, true)
+    }
+
+    #[test]
+    fn accepts_lowercase_types() {
+        for message in [
+            "feat: add it\n",
+            "feat(api): add it\n",
+            "feat!: drop it\n",
+            "fix(API)!: Fix it\n",
+            "fixup! feat: add it\n",
+            "Merge branch 'dev'\n",
+            "MERGE: branch 'dev'\n",
+            // git drops an autosquash subject, so the type it names doesn't
+            // reach history.
+            "fixup! Feat: add it\n",
+            "squash! fixup! Chore: tidy\n",
+            "amend! Feat: add it\n\nfeat: add it\n",
+            "Add it\n",
+            "",
+        ] {
+            assert_eq!(miscased(message), None, "{message}");
+        }
+    }
+
+    #[test]
+    fn rejects_types_not_in_lowercase() {
+        for (message, found) in [
+            ("Feat: add it\n", "Feat"),
+            ("FIX(api): fix it\n", "FIX"),
+            ("dOcS!: drop it\n", "dOcS"),
+            ("Revert: undo it\n", "Revert"),
+        ] {
+            assert_eq!(
+                miscased(message),
+                Some(MiscasedType {
+                    number: 1,
+                    found: found.to_owned()
+                }),
+                "{message}"
+            );
+        }
+    }
+
+    #[test]
+    fn finds_the_type_after_blank_lines_and_comments() {
+        let message = "\n# Feat: a comment\nFeat: add it\n";
+        assert_eq!(
+            miscased(message),
+            Some(MiscasedType {
+                number: 3,
+                found: "Feat".to_owned()
+            })
+        );
+        // Unedited, the comment line is the subject, which has no type.
+        assert_eq!(miscased_type(message, DEFAULT_COMMENT, false), None);
     }
 }

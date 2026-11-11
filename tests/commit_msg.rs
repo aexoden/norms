@@ -74,6 +74,20 @@ mod tests {
     }
 
     #[test]
+    fn exits_with_failure_for_a_type_not_in_lowercase() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("COMMIT_EDITMSG");
+        fs::write(&file, "Feat(api)!: drop it\n").unwrap();
+        let failed = commit_msg(&file);
+        assert_eq!(failed.status.code(), Some(1));
+        let stderr = String::from_utf8(failed.stderr).unwrap();
+        assert!(
+            stderr.contains(":1: type Feat is not in lowercase; write feat"),
+            "{stderr}"
+        );
+    }
+
+    #[test]
     fn keeps_comment_lines_when_git_opens_no_editor() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("COMMIT_EDITMSG");
