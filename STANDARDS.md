@@ -380,14 +380,14 @@ is a useful reference for choosing types.
 The standard template for a commit message:
 
 ```txt
-<type>(<optional scope>): <subject>
+<type>(<optional scope>)<optional !>: <subject>
 
 [optional body]
 
-[optional footer]
+[optional footers]
 ```
 
-The recognized types are:
+The recognized types, always written in lowercase, are:
 
 - `feat` - adds, changes or removes a feature
 - `fix` - fixes one or more bugs
@@ -413,6 +413,14 @@ acronyms, or otherwise conventionally capitalized words), with no concluding
 punctuation. Aim to keep the entire first line within 50 characters, and look
 for a shorter wording when it runs past that, but never exceed 72 characters.
 
+A breaking change adds `!` before the colon, as in `feat!: drop the v1 API` or
+`feat(api)!: drop the v1 API`. A change is breaking when it breaks what the
+project's version numbers cover since the last release (see
+[Changelog](#changelog)), so in a project with a changelog, the commit that adds
+a `**Breaking:**` entry, or makes an entry breaking, carries the `!`. When the
+subject doesn't say what breaks, a `BREAKING-CHANGE:` footer may add it, but it
+isn't required.
+
 A revert uses the `revert` type with the subject of the reverted commit, for
 example `revert: add the history panel`. The body names the reverted commit and
 explains why.
@@ -421,6 +429,12 @@ The optional body, if present, should document the motivation for the change and
 identify differences from existing behavior. Avoid documenting things that are
 either self-explanatory from the code or from comments within the code. Wrap the
 body at 72 characters.
+
+Footers end the message, after a blank line, and use git's trailer format,
+`Token: value`, with hyphens in place of spaces in the token (`Co-Authored-By`,
+`Refs`). The breaking change footer is always `BREAKING-CHANGE`, uppercase:
+Conventional Commits also allows `BREAKING CHANGE`, but git doesn't read a token
+with a space as a trailer, and then reads none of the footers as trailers.
 
 Commits written with an AI agent carry a `Co-Authored-By` trailer that
 identifies the agent. A `Signed-off-by` trailer is not required.
@@ -447,7 +461,8 @@ default commit message set to "Pull request title and commit details"
 takes the subject of a pull request with a single commit from that commit
 rather than the title, so the title check below wouldn't check the subject
 that is merged. Every pull request title, whoever opens it, must follow the
-subject rules above.
+subject rules above, including the `!` when the pull request makes a breaking
+change.
 
 A `pr-title.yaml` workflow checks each title by running the `commit-msg` hooks
 on the subject the squash merge would create, which is the title followed by

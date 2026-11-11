@@ -159,7 +159,8 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   columns.
 - Commits use Conventional Commits with the types listed in `STANDARDS.md`;
   the subject is imperative and lowercase, aiming for 50 characters and never
-  over 72.
+  over 72. A commit that adds a `**Breaking:**` changelog entry, or makes an
+  entry breaking, adds `!` before the colon (`feat!: ...`).
 - TOML files are formatted by Tombi (the `tombi-format` hook), which also keeps
   dependencies in alphabetical order.
 - Dependencies in `Cargo.toml` are pinned exactly (`=x.y.z`). New dependencies

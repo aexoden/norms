@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the commit message hooks on pull request titles. Add them as the template
   does.
 
+### Changed
+
+- `STANDARDS.md` marks a breaking change in a commit message with `!` before
+  the colon, matching the changelog's `**Breaking:**` entries, writes commit
+  types in lowercase, and gives footers git's trailer format.
+
 ## [0.2.0] - 2026-11-10
 
 norms 0.2.0 replaces the Python prototype of 0.1.0 with a rewrite in Rust, and
