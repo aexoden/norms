@@ -15,6 +15,10 @@ use super::release_age::check_release_age_minutes;
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub(crate) struct PnpmWorkspace {
+    /// The glob patterns naming the workspace's packages, besides the root, which is always one. Kept unparsed, so
+    /// that a value of the wrong shape is reported rather than failing to parse.
+    pub packages: Option<Value>,
+
     /// How old, in minutes, a release must be before pnpm installs it. Kept unparsed, so that a malformed value fails
     /// only the check reading it.
     pub minimum_release_age: Option<Value>,

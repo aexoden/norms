@@ -1,0 +1,10 @@
+{
+  "name": "pnpm-workspace",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "devEngines": {
+    "runtime": { "name": "node", "version": "25.9.0", "onFail": "download" },
+    "packageManager": { "name": "pnpm", "version": "11.1.0", "onFail": "download" }
+  }
+}

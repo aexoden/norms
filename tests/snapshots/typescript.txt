@@ -86,9 +86,9 @@ pass  package-json-license-texts  [.] package.json: license has its texts in LIC
 pass  package-json-esm  [.] package.json: uses ESM (type: module)
 pass  package-json-private  [.] package.json: private (application)
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
 pass  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
-pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
 pass  package-json-version  [.] package.json: version of the latest release
 pass  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists

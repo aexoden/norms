@@ -1,0 +1,7 @@
+{
+  "name": "@demo/old",
+  "version": "1.1.0",
+  "license": "Proprietary",
+  "packageManager": "pnpm@11.1.0",
+  "dependencies": { "@demo/ui": "workspace:*", "lodash": "^4.17.21" }
+}

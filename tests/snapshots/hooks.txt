@@ -138,11 +138,11 @@ warn  package-json-esm  [.] package.json: uses ESM (type: module)
 warn  package-json-private  [.] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
 warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
-pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
 fail  package-json-version  [.] package.json: version of the latest release
       Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists

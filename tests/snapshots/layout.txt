@@ -63,11 +63,11 @@ pass  package-json-valid  [web] package.json: valid
 pass  package-json-esm  [web] package.json: uses ESM (type: module)
 pass  package-json-private  [web] package.json: private (application)
 pass  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
 warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
-pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
 fail  package-json-version  [web] package.json: version of the latest release
       Missing version, which should be 0.0.0, as the project has no release yet
 pass  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists

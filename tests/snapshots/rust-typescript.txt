@@ -131,9 +131,9 @@ pass  package-json-license-texts  [frontend] package.json: license has its texts
 pass  package-json-esm  [frontend] package.json: uses ESM (type: module)
 pass  package-json-private  [frontend] package.json: private (application)
 pass  package-json-dependencies-exact  [frontend] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [frontend] package.json: no Corepack packageManager field
 pass  package-json-dev-engines-runtime  [frontend] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [frontend] package.json: pins pnpm in devEngines
-pass  package-json-no-corepack-package-manager  [frontend] package.json: no Corepack packageManager field
 pass  package-json-version  [frontend] package.json: version of the latest release
 pass  pnpm-lock-exists  [frontend] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [frontend] pnpm-workspace.yaml: exists

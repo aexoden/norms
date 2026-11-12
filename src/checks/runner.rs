@@ -119,6 +119,7 @@ fn check_component(
             typescript::check_package_json_version(project, ctx, report);
             typescript::check_pnpm(ctx, report);
             typescript::check_pnpm_workspace(ctx, report);
+            typescript::check_pnpm_workspace_packages(ctx, report);
             typescript::check_tsconfig(ctx, report);
             typescript::check_eslint(ctx, report);
             typescript::check_prettier(ctx, report);

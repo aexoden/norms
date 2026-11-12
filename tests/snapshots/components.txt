@@ -114,11 +114,11 @@ warn  package-json-esm  [apps/admin] package.json: uses ESM (type: module)
 warn  package-json-private  [apps/admin] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [apps/admin] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [apps/admin] package.json: no Corepack packageManager field
 warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
-pass  package-json-no-corepack-package-manager  [apps/admin] package.json: no Corepack packageManager field
 fail  package-json-version  [apps/admin] package.json: version of the latest release
       Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
@@ -166,11 +166,11 @@ warn  package-json-esm  [apps/web] package.json: uses ESM (type: module)
 warn  package-json-private  [apps/web] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [apps/web] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [apps/web] package.json: no Corepack packageManager field
 warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
-pass  package-json-no-corepack-package-manager  [apps/web] package.json: no Corepack packageManager field
 fail  package-json-version  [apps/web] package.json: version of the latest release
       Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists

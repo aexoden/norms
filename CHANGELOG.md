@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository's one version: that of the latest release in `CHANGELOG.md` (or,
   without one, the latest release tag), or `0.0.0` before the first release.
   Set `version` to it, and change it in the commit that makes each release.
+- **Breaking:** Check the packages of a TypeScript component's pnpm workspace,
+  those its `pnpm-workspace.yaml`'s `packages` patterns match, as the
+  component's own `package.json` is checked: each must parse, use ESM, be
+  private, pin its dependencies exactly, and leave out Corepack's
+  `packageManager`. Fix or waive what each package reports.
 
 ### Changed
 

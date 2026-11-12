@@ -76,6 +76,18 @@ reason = "The repository holds no binary files."
   any package's, with what it inherits from the workspace resolved. A virtual
   manifest, which has no `[package]`, isn't checked for them itself, so one
   with no members is reported as a warning.
+- norms finds a pnpm workspace's packages as pnpm does: the `package.json`
+  files in the directories that `pnpm-workspace.yaml`'s `packages` patterns
+  match, less those a `!` pattern matches and those in `node_modules` or
+  `bower_components`. Without `packages`, the workspace is the root package
+  alone. Unlike pnpm, it doesn't look in hidden directories or through
+  symlinked ones, or read `package.yaml` and `package.json5` manifests, and,
+  like pnpm, it searches the directories `[components] exclude` lists. A
+  manifest it can't parse fails, and a pattern leading outside the workspace's
+  directory is reported as a warning. Each package's `package.json` is checked
+  like the component's own (see [TypeScript Package
+  Configuration](#package-configuration)), but for the `devEngines` pins and
+  the scripts, which belong in the root's alone.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search
   them. An entry must be a plain relative path, without `.` or `..`; one that
@@ -1438,6 +1450,11 @@ downloads the declared versions automatically:
 
 Corepack's `packageManager` field is not set. Corepack and some CI actions read
 it, so it would be a second pnpm pin that can drift from `devEngines`.
+
+In a pnpm workspace, each package's `package.json` is held to the same: it sets
+`"type": "module"` and `"private": true`, pins its dependencies exactly and
+leaves out `packageManager`. The `devEngines` pins and the scripts below belong
+in the root's `package.json` alone.
 
 pnpm is the only package manager, so there is no `package-lock.json` or
 `yarn.lock` beside `pnpm-lock.yaml`.

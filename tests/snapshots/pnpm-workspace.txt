@@ -1,0 +1,90 @@
+exit: 1
+languages: typescript
+components: typescript (.)
+
+fail  readme-exists  README.md
+      Not found: README.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+fail  reuse-toml-exists  REUSE.toml: exists
+      File not found
+pass  changelog-exists  CHANGELOG.md
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
+fail  precommit-config-exists  .pre-commit-config.yaml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  package-json-exists  [.] package.json: exists
+pass  package-json-valid  [.] package.json: valid
+pass  package-json-esm  [.] package.json: uses ESM (type: module)
+pass  package-json-private  [.] package.json: private (application)
+pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
+pass  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
+pass  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
+pass  package-json-version  [.] package.json: version of the latest release
+fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
+      Not found: pnpm-lock.yaml
+pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
+pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
+pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minimumReleaseAge)
+pass  pnpm-workspace-permissions  [.] pnpm: records what dependencies may do (permissions)
+pass  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no older build settings
+pass  pnpm-workspace-builds-restricted  [.] pnpm: builds limited to permissions
+pass  pnpm-workspace-trust-policy  [.] pnpm: no trust downgrades (trustPolicy)
+warn  pnpm-workspace-packages  [.] pnpm-workspace.yaml: workspace packages found
+      Pattern "../shared/*" leads outside the workspace's directory, which isn't searched
+pass  package-json-exists  [.] apps/web/package.json: exists
+pass  package-json-valid  [.] apps/web/package.json: valid
+pass  package-json-esm  [.] apps/web/package.json: uses ESM (type: module)
+pass  package-json-private  [.] apps/web/package.json: private (application)
+pass  package-json-dependencies-exact  [.] apps/web/package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [.] apps/web/package.json: no Corepack packageManager field
+pass  package-json-exists  [.] apps/web/tests/e2e/package.json: exists
+pass  package-json-valid  [.] apps/web/tests/e2e/package.json: valid
+pass  package-json-esm  [.] apps/web/tests/e2e/package.json: uses ESM (type: module)
+pass  package-json-private  [.] apps/web/tests/e2e/package.json: private (application)
+pass  package-json-dependencies-exact  [.] apps/web/tests/e2e/package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [.] apps/web/tests/e2e/package.json: no Corepack packageManager field
+pass  package-json-exists  [.] packages/broken/package.json: exists
+fail  package-json-valid  [.] packages/broken/package.json: valid
+      Invalid JSON: EOF parsing object at line 1 column 1
+pass  package-json-exists  [.] packages/old/package.json: exists
+pass  package-json-valid  [.] packages/old/package.json: valid
+warn  package-json-license-texts  [.] packages/old/package.json: license has its texts in LICENSES/
+      Not a valid SPDX expression (unknown term): Proprietary
+warn  package-json-esm  [.] packages/old/package.json: uses ESM (type: module)
+      Missing "type": "module"
+warn  package-json-private  [.] packages/old/package.json: private (application)
+      Missing "private": true
+warn  package-json-dependencies-exact  [.] packages/old/package.json: dependencies pinned exactly (application)
+      Not pinned with x.y.z: dependencies.lodash ("^4.17.21")
+warn  package-json-no-corepack-package-manager  [.] packages/old/package.json: no Corepack packageManager field
+      Sets Corepack's packageManager ("pnpm@11.1.0"); pin pnpm only in devEngines.packageManager
+pass  package-json-exists  [.] packages/ui/package.json: exists
+pass  package-json-valid  [.] packages/ui/package.json: valid
+pass  package-json-esm  [.] packages/ui/package.json: uses ESM (type: module)
+pass  package-json-private  [.] packages/ui/package.json: private (application)
+pass  package-json-dependencies-exact  [.] packages/ui/package.json: dependencies pinned exactly (application)
+pass  package-json-no-corepack-package-manager  [.] packages/ui/package.json: no Corepack packageManager field
+fail  tsconfig-exists  [.] tsconfig.json: exists
+      File not found
+fail  eslint-config-exists  [.] eslint.config.ts: exists
+      File not found
+fail  prettier-config-exists  [.] .prettierrc: exists
+      File not found
+fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
+      Not found: .prettierignore
+warn  package-json-scripts  [.] package.json: has scripts
+      No scripts defined in package.json

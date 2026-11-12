@@ -11,5 +11,6 @@ mod detection;
 mod git;
 mod licenses;
 mod models;
+mod pnpm_workspace;
 mod release;
 mod report;

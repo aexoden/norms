@@ -102,6 +102,10 @@ any check failed or warned.
 - `cargo_workspace.rs`: the members of a Cargo workspace aren't components.
   Their results belong to the workspace's component and name the member's
   manifest (`crates/cli/Cargo.toml: ...`).
+- `pnpm_workspace.rs`: the packages of a pnpm workspace, which
+  `pnpm-workspace.yaml`'s `packages` patterns match, are checked as the
+  component's own `package.json` is, and labeled by their path
+  (`packages/ui/package.json: ...`).
 - `git.rs`: runs `git` for the release tags the changelog and version checks
   need. Only a project at the top of its repository has any, so the fixtures
   don't see norms' own tags.

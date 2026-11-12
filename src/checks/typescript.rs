@@ -3,6 +3,7 @@
 
 //! TypeScript-specific checks.
 
+use std::path::Path;
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -42,39 +43,9 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         return;
     };
 
-    if let Some(license) = &config.license {
-        report.check(
-            "package-json-license-texts",
-            "package.json: license has its texts in LICENSES/",
-            license.as_str().map_or_else(
-                || Err(Issue::warn("Not an SPDX expression string")),
-                |expression| ctx.license_files().check_expression(expression),
-            ),
-        );
-    }
+    check_package(ctx, "package.json", config, report);
 
-    // ESM module type
-    report.should(
-        "package-json-esm",
-        "package.json: uses ESM (type: module)",
-        config.check_module_type(),
-    );
-
-    // Every TypeScript component is an application, which npm mustn't publish.
-    report.should(
-        "package-json-private",
-        "package.json: private (application)",
-        config.check_private(),
-    );
-
-    // Version pinning. Every TypeScript component is an application.
-    report.should(
-        "package-json-dependencies-exact",
-        "package.json: dependencies pinned exactly (application)",
-        config.check_dependencies_exact(),
-    );
-
-    // Toolchain pins
+    // Toolchain pins, which pnpm reads from the workspace root's package.json alone.
     report.should(
         "package-json-dev-engines-runtime",
         "package.json: pins Node.js in devEngines",
@@ -85,11 +56,83 @@ pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
         "package.json: pins pnpm in devEngines",
         check_dev_engine(config, "packageManager", "pnpm"),
     );
+}
+
+/// Check a package, of the component itself or of its pnpm workspace, whose manifest, labeled `label`, is `config`.
+fn check_package(ctx: &ComponentContext, label: &str, config: &PackageJson, report: &mut Report) {
+    if let Some(license) = &config.license {
+        report.check(
+            "package-json-license-texts",
+            format!("{label}: license has its texts in LICENSES/"),
+            license.as_str().map_or_else(
+                || Err(Issue::warn("Not an SPDX expression string")),
+                |expression| ctx.license_files().check_expression(expression),
+            ),
+        );
+    }
+
+    // ESM module type
+    report.should(
+        "package-json-esm",
+        format!("{label}: uses ESM (type: module)"),
+        config.check_module_type(),
+    );
+
+    // Every TypeScript component is an application, which npm mustn't publish.
+    report.should(
+        "package-json-private",
+        format!("{label}: private (application)"),
+        config.check_private(),
+    );
+
+    // Version pinning. Every TypeScript component is an application.
+    report.should(
+        "package-json-dependencies-exact",
+        format!("{label}: dependencies pinned exactly (application)"),
+        config.check_dependencies_exact(),
+    );
+
     report.should(
         "package-json-no-corepack-package-manager",
-        "package.json: no Corepack packageManager field",
+        format!("{label}: no Corepack packageManager field"),
         config.check_no_package_manager(),
     );
+}
+
+/// The label of a pnpm workspace package's manifest, by its path from the component.
+fn package_manifest(path: &Path) -> String {
+    let parts: Vec<_> = path.iter().map(|part| part.to_string_lossy()).collect();
+    format!("{}/package.json", parts.join("/"))
+}
+
+/// Check that the packages of the component's pnpm workspace can be found, and that each has a valid manifest that
+/// meets the standards for a package.
+pub(crate) fn check_pnpm_workspace_packages(ctx: &ComponentContext, report: &mut Report) {
+    if ctx
+        .pnpm_workspace()
+        .as_ref_ok()
+        .is_none_or(|workspace| workspace.packages.is_none())
+    {
+        return;
+    }
+
+    let packages = ctx.pnpm_packages();
+    report.should(
+        "pnpm-workspace-packages",
+        "pnpm-workspace.yaml: workspace packages found",
+        if packages.errors.is_empty() {
+            Outcome::Pass
+        } else {
+            Outcome::issue(packages.errors.join("; "))
+        },
+    );
+
+    for (path, status) in &packages.packages {
+        let label = package_manifest(path);
+        if let Some(config) = report.require_parsed("package-json", &label, status) {
+            check_package(ctx, &label, config, report);
+        }
+    }
 }
 
 //

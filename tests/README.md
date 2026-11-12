@@ -63,6 +63,15 @@ lock files apart from `Cargo.lock`.
   matched by the glob is on the 2021 edition, while the binary and the path
   dependency inherit 2024. Its `CHANGELOG.md` has a release, whose version the
   binary and the path dependency inherit, while the library sets an older one.
+- `pnpm-workspace` is a TypeScript component whose `pnpm-workspace.yaml` lists
+  packages by a single-level glob, a recursive one, a negated one and one
+  leading outside its directory. The packages it finds are one that conforms,
+  one that breaks the package standards (an unknown license, no `type` or
+  `private`, a range among its dependencies and a Corepack `packageManager`),
+  a malformed one, one the recursive glob matches, and one inside it, in a
+  `tests` directory, which pnpm doesn't skip. Of the `package.json` files it
+  doesn't find, one is excluded by the negated pattern and one is in a
+  directory no pattern names. Its `CHANGELOG.md` has a release.
 - `msrv` is a virtual Cargo workspace of libraries whose members set
   `rust-version` themselves, inherit it from `[workspace.package]`, or lack it.
 - `workflows` breaks the Actions standards, beside stub `Cargo.toml` and

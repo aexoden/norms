@@ -1,0 +1,8 @@
+packages:
+  - "packages/*"
+  - "apps/**"
+  - "!apps/legacy"
+  - "../shared/*"
+minimumReleaseAge: 4320
+permissions: {}
+trustPolicy: no-downgrade

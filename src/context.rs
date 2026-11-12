@@ -50,6 +50,7 @@ use crate::config::{
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
 use crate::models::{Component, Language};
+use crate::pnpm_workspace::{PnpmWorkspacePackages, find_packages};
 use crate::release::Release;
 
 /// The file name of markdownlint-cli2's configuration, at the root of the project.
@@ -381,6 +382,7 @@ pub(crate) struct ComponentContext {
     eslint_config: OnceLock<ConfigStatus<String>>,
     package_json: OnceLock<ConfigStatus<PackageJson>>,
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
+    pnpm_packages: OnceLock<PnpmWorkspacePackages>,
     prettier: OnceLock<ConfigStatus<PrettierConfig>>,
     tsconfig: OnceLock<ConfigStatus<TsConfig>>,
     typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
@@ -407,6 +409,7 @@ impl ComponentContext {
             eslint_config: OnceLock::new(),
             package_json: OnceLock::new(),
             pnpm_workspace: OnceLock::new(),
+            pnpm_packages: OnceLock::new(),
             prettier: OnceLock::new(),
             tsconfig: OnceLock::new(),
             typescript_referenced_configs: OnceLock::new(),
@@ -600,6 +603,16 @@ impl ComponentContext {
         })
     }
 
+    /// The packages of the component's pnpm workspace, other than the component's own (cached).
+    pub(crate) fn pnpm_packages(&self) -> &PnpmWorkspacePackages {
+        self.pnpm_packages.get_or_init(|| {
+            self.pnpm_workspace()
+                .as_ref_ok()
+                .map(|workspace| find_packages(&self.path, workspace))
+                .unwrap_or_default()
+        })
+    }
+
     /// Parsed `.prettierrc` (cached).
     pub(crate) fn prettier(&self) -> &ConfigStatus<PrettierConfig> {
         self.prettier
@@ -713,7 +726,7 @@ pub(crate) fn parse_toml_file<T: serde::de::DeserializeOwned>(path: &Path) -> Co
 }
 
 /// Parse a JSON/JSON5 file into the given type.
-fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
+pub(crate) fn parse_json5_file<T: serde::de::DeserializeOwned>(path: &Path) -> ConfigStatus<T> {
     read_text_file(path)
         .parse_with(|raw| json5::from_str(&raw).map_err(|e| format!("Invalid JSON: {e}")))
 }
