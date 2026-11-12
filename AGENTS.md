@@ -108,6 +108,9 @@ any check failed or warned.
 - `release.rs`: the project's latest release, from `CHANGELOG.md` or else its
   tags, whose version the `Cargo.toml` and `package.json` checks expect.
 - `commit_msg.rs`: `norms commit-msg`, tested in `tests/commit_msg.rs`.
+- `build.rs` sets the `BUILD_VERSION` that `--version` reports, from
+  `git describe`. The template's Rust applications get the same script, which
+  `tests/build_version.rs` keeps identical and tests.
 
 ## Tests
 

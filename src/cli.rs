@@ -22,7 +22,7 @@ use crate::report::{CheckResult, Report};
 #[derive(Parser)]
 #[command(
     name = "norms",
-    version,
+    version = env!("BUILD_VERSION"),
     about = "Verify and enforce project coding standards."
 )]
 struct Cli {
@@ -345,12 +345,12 @@ mod tests {
     }
 
     #[test]
-    fn version_option_prints_the_package_version() {
+    fn version_option_prints_the_build_version() {
         let error = Cli::try_parse_from(["norms", "--version"]).err().unwrap();
         assert_eq!(error.kind(), clap::error::ErrorKind::DisplayVersion);
         assert_eq!(
             error.to_string(),
-            format!("norms {}\n", env!("CARGO_PKG_VERSION"))
+            format!("norms {}\n", env!("BUILD_VERSION"))
         );
     }
 }

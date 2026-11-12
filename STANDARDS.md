@@ -245,6 +245,17 @@ release. Each language's manifest records it in its own way:
 `norms verify` checks the Rust and TypeScript versions, members of a Cargo
 workspace included.
 
+A program reports the version of the build it is, so that one between releases
+names its commit: on a release tag, the release's version (`0.2.0`); past one,
+`git describe`'s without the `v` (`0.2.0-5-gf8a4d2b`, ending in `-dirty` if the
+working tree has changes); in a clone without tags, such as a shallow one, the
+manifest's version and the commit (`0.2.0+gf8a4d2b`); and without git, the
+manifest's version alone. Python's hatch-vcs writes its own form of these
+(`0.2.1.dev5+gf8a4d2b`). A Rust application gets it from a `build.rs`, which
+the template gives it, that sets `BUILD_VERSION` for `env!("BUILD_VERSION")`.
+Cargo reruns it only when the commit, the tags, the index, `Cargo.toml` or
+`src/` change, so its `-dirty` misses changes to other files.
+
 ### Agent Guidance
 
 Projects may include an `AGENTS.md` describing the project's commands and

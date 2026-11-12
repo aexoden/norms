@@ -3,11 +3,18 @@
 
 //! {{ description }}
 
+use std::env;
+
 fn greeting(name: &str) -> String {
     format!("Hello, {name}!")
 }
 
 fn main() {
+    // build.rs sets BUILD_VERSION from the release tags.
+    if env::args().nth(1).as_deref() == Some("--version") {
+        println!("{} {}", env!("CARGO_PKG_NAME"), env!("BUILD_VERSION"));
+        return;
+    }
     println!("{}", greeting("world"));
 }
 
