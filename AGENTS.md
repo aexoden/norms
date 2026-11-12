@@ -60,7 +60,8 @@ there the hooks fail to install; the CI job runs them from a copy of the config
 whose norms hooks come from this checkout (see its `sed` step in `ci.yaml`),
 leaving the render's own config as it is. The CI job runs
 `norms verify --deny-warnings` on each render, so a render must have no
-failures or warnings.
+failures or warnings. It then commits and tags the render, and checks the
+version its Rust application and Vite build report against `git describe`.
 
 ## Architecture of the CLI
 

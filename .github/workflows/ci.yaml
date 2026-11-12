@@ -347,6 +347,50 @@ jobs:
           chmod +x "$RUNNER_TEMP/norms/norms"
           "$RUNNER_TEMP/norms/norms" verify --deny-warnings "$RUNNER_TEMP/project"
 
+      # A Rust application's build.rs and a TypeScript application's vite.config.ts set the version
+      # it reports from git describe. This commits and tags the render, so it comes after norms
+      # verify, which would expect the tag in CHANGELOG.md.
+      - name: Check the versions the rendered applications report
+        working-directory: ${{ runner.temp }}/project
+        shell: bash
+        run: |
+          # Found by files that don't depend on the version code, so that a component missing it fails.
+          mapfile -t rust < <(git ls-files ':(glob)**/src/main.rs' | sed -E 's#(^|/)src/main.rs$##; s#^$#.#')
+          mapfile -t typescript < <(git ls-files ':(glob)**/package.json' | xargs -r -n 1 dirname)
+          check() {
+            local dir version
+            for dir in "${rust[@]}"; do
+              version=$(cd "$dir" && cargo run --quiet --locked -- --version | cut -d ' ' -f 2)
+              if [ "$version" != "$1" ]; then
+                echo "::error::$dir: the Rust application reports $version, not $1"
+                exit 1
+              fi
+            done
+            for dir in "${typescript[@]}"; do
+              (cd "$dir" && pnpm exec vite build --logLevel warn)
+              if ! grep -rqF -e "version=\"$1\"" -e "version='$1'" -e "version=\`$1\`" "$dir/dist"; then
+                echo "::error::$dir: the Vite build doesn't contain the version $1"
+                exit 1
+              fi
+            done
+          }
+          commit() {
+            git -c user.name=CI -c user.email=ci@example.com commit --quiet --no-verify "$@"
+          }
+          # Without git. The cargo-test hook already ran the build script with git, which Cargo
+          # wouldn't rerun for a change in GIT_DIR, so this builds in a target directory of its own.
+          (export GIT_DIR=/nonexistent CARGO_TARGET_DIR="$RUNNER_TEMP/no-git"; check 0.0.0)
+          commit --message "chore: render the template"
+          check "0.0.0+g$(git rev-parse --short HEAD)"
+          git tag v0.1.0
+          check 0.1.0
+          commit --allow-empty --message "chore: commit past the release"
+          check "0.1.0-1-g$(git rev-parse --short HEAD)"
+          # The build script reruns when src/ changes, but not for every file.
+          for dir in "${rust[@]}"; do echo "// A change." >> "$dir/src/main.rs"; done
+          for dir in "${typescript[@]}"; do echo "// A change." >> "$dir/src/main.ts"; done
+          check "0.1.0-1-g$(git rev-parse --short HEAD)-dirty"
+
   tombi:
     name: Check TOML formatting with Tombi
     runs-on: ubuntu-slim
