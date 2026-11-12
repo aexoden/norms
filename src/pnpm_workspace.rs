@@ -26,6 +26,15 @@ pub(crate) struct PnpmWorkspacePackages {
     pub errors: Vec<String>,
 }
 
+impl PnpmWorkspacePackages {
+    /// The packages whose manifests parsed, with their directories relative to the workspace root.
+    pub(crate) fn parsed(&self) -> impl Iterator<Item = (&Path, &PackageJson)> {
+        self.packages
+            .iter()
+            .filter_map(|(path, status)| Some((path.as_path(), status.as_ref_ok()?)))
+    }
+}
+
 /// Find the packages of the workspace whose `pnpm-workspace.yaml`, `workspace`, is in `root`, as pnpm does: each
 /// `package.json` in a directory that a pattern in `packages` matches, unless a pattern starting with `!` matches it
 /// too, or it lies in a `node_modules` or `bower_components` directory. Without `packages`, the workspace is the root

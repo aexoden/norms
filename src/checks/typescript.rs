@@ -20,8 +20,8 @@ use crate::report::{Issue, Outcome, Report, file_exists};
 // Package configuration
 //
 
-/// Check that `package.json` carries the version of the project's latest release, as the one version of the whole
-/// repository.
+/// Check that the component's `package.json`, and that of each package of its pnpm workspace, carries the version of
+/// the project's latest release, as the one version of the whole repository.
 pub(crate) fn check_package_json_version(
     project: &ProjectContext,
     ctx: &ComponentContext,
@@ -30,11 +30,19 @@ pub(crate) fn check_package_json_version(
     let Some(config) = ctx.package_json().as_ref_ok() else {
         return;
     };
-    report.must(
-        "package-json-version",
-        "package.json: version of the latest release",
-        config.check_version(project.release()),
-    );
+    let release = project.release();
+
+    let packages = ctx
+        .pnpm_packages()
+        .parsed()
+        .map(|(path, package)| (package_manifest(path), package));
+    for (label, manifest) in std::iter::once(("package.json".to_owned(), config)).chain(packages) {
+        report.must(
+            "package-json-version",
+            format!("{label}: version of the latest release"),
+            manifest.check_version(release),
+        );
+    }
 }
 
 pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {

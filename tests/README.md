@@ -71,7 +71,9 @@ lock files apart from `Cargo.lock`.
   a malformed one, one the recursive glob matches, and one inside it, in a
   `tests` directory, which pnpm doesn't skip. Of the `package.json` files it
   doesn't find, one is excluded by the negated pattern and one is in a
-  directory no pattern names. Its `CHANGELOG.md` has a release.
+  directory no pattern names. Its `CHANGELOG.md` has a release, whose version
+  the conforming packages carry, while the nonconforming one carries an older
+  one and the one the recursive glob matches none.
 - `msrv` is a virtual Cargo workspace of libraries whose members set
   `rust-version` themselves, inherit it from `[workspace.package]`, or lack it.
 - `workflows` breaks the Actions standards, beside stub `Cargo.toml` and

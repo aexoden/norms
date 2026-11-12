@@ -85,7 +85,7 @@ reason = "The repository holds no binary files."
   like pnpm, it searches the directories `[components] exclude` lists. A
   manifest it can't parse fails, and a pattern leading outside the workspace's
   directory is reported as a warning. Each package's `package.json` is checked
-  like the component's own (see [TypeScript Package
+  like the component's own, its version included (see [TypeScript Package
   Configuration](#package-configuration)), but for the `devEngines` pins and
   the scripts, which belong in the root's alone.
 - `[components] exclude` lists directories, relative to the root, that hold
@@ -249,13 +249,13 @@ release. Each language's manifest records it in its own way:
 - Python's comes from the release tags, through hatch-vcs (see [Python
   Versioning](#versioning-1)).
 - Rust's `version` in each `Cargo.toml`, and TypeScript's `version` in each
-  component's `package.json`, name the latest release in `CHANGELOG.md`, or, in
+  `package.json`, name the latest release in `CHANGELOG.md`, or, in
   a project without one, the latest release tag. The commit that makes a
   release changes them along with the changelog. Before the first release they
   are `0.0.0`, set explicitly although Cargo takes a missing `version` as that.
 
 `norms verify` checks the Rust and TypeScript versions, members of a Cargo
-workspace included.
+workspace and packages of a pnpm workspace included.
 
 A program reports the version of the build it is, so that one between releases
 names its commit: on a release tag, the release's version (`0.2.0`); past one,
@@ -1452,9 +1452,9 @@ Corepack's `packageManager` field is not set. Corepack and some CI actions read
 it, so it would be a second pnpm pin that can drift from `devEngines`.
 
 In a pnpm workspace, each package's `package.json` is held to the same: it sets
-`"type": "module"` and `"private": true`, pins its dependencies exactly and
-leaves out `packageManager`. The `devEngines` pins and the scripts below belong
-in the root's `package.json` alone.
+`version`, `"type": "module"` and `"private": true`, pins its dependencies
+exactly and leaves out `packageManager`. The `devEngines` pins and the scripts
+below belong in the root's `package.json` alone.
 
 pnpm is the only package manager, so there is no `package-lock.json` or
 `yarn.lock` beside `pnpm-lock.yaml`.

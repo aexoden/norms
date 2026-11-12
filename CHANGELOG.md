@@ -22,15 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `0.2.0-5-gf8a4d2b` between releases, which `--version` reports.
 - Set `__APP_VERSION__` in the template's TypeScript components to the version
   `git describe` gives, the same way, through Vite's `define`.
-- **Breaking:** Check that every `Cargo.toml` and `package.json` carries the
+- **Breaking:** Check that every `Cargo.toml` and `package.json`, those of
+  Cargo workspace members and pnpm workspace packages included, carries the
   repository's one version: that of the latest release in `CHANGELOG.md` (or,
   without one, the latest release tag), or `0.0.0` before the first release.
   Set `version` to it, and change it in the commit that makes each release.
 - **Breaking:** Check the packages of a TypeScript component's pnpm workspace,
   those its `pnpm-workspace.yaml`'s `packages` patterns match, as the
-  component's own `package.json` is checked: each must parse, use ESM, be
-  private, pin its dependencies exactly, and leave out Corepack's
-  `packageManager`. Fix or waive what each package reports.
+  component's own `package.json` is checked: each must parse, carry the
+  release's version, use ESM, be private, pin its dependencies exactly, and
+  leave out Corepack's `packageManager`. Fix or waive what each package reports.
 
 ### Changed
 
