@@ -117,7 +117,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Tombi
-        uses: tombi-toml/setup-tombi@336fd5f0db887ebf637389a659b4193608756ecd # v1.10.0
+        uses: tombi-toml/setup-tombi@309f61c909c0972a1f5ebc0cb5465913778010b5 # v1.11.1
         with:
           enable-cache: false
 
@@ -196,8 +196,13 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
 
-      - name: Run Rust tests
-        run: cargo test --workspace --all-features
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-llvm-cov@0.9.1
+
+      - name: Run Rust tests with coverage
+        run: cargo llvm-cov --workspace --all-features --show-missing-lines
 
   clippy:
     name: Lint Rust code with Clippy

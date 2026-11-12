@@ -13,7 +13,9 @@ pre-commit install
 Rust uses [rustup](https://rustup.rs/), which installs the toolchain pinned in
 `rust-toolchain.toml`. Install
 [cargo-deny](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny) for
-the dependency policy hook.
+the dependency policy hook, and
+[cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov#installation) for the
+test coverage hook.
 
 Python uses [uv](https://docs.astral.sh/uv/), which installs the Python version
 pinned in `.python-version`.

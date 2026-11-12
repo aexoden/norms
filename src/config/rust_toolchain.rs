@@ -5,8 +5,13 @@
 
 use serde::Deserialize;
 
-/// The components every toolchain installs, which the hooks need.
-const REQUIRED_COMPONENTS: [&str; 2] = ["clippy", "rustfmt"];
+/// The components every toolchain installs, which the hooks need, each with the other names rustup knows it by:
+/// cargo-llvm-cov, which measures test coverage, needs `llvm-tools`, once named `llvm-tools-preview`.
+const REQUIRED_COMPONENTS: [(&str, &[&str]); 3] = [
+    ("clippy", &[]),
+    ("rustfmt", &[]),
+    ("llvm-tools", &["llvm-tools-preview"]),
+];
 
 /// Top-level `rust-toolchain.toml` structure.
 #[derive(Debug, Deserialize, Default)]
@@ -57,7 +62,12 @@ impl RustToolchain {
 
         let missing: Vec<&str> = REQUIRED_COMPONENTS
             .into_iter()
-            .filter(|component| !listed.contains(component))
+            .filter(|(component, aliases)| {
+                !listed
+                    .iter()
+                    .any(|name| name == component || aliases.contains(name))
+            })
+            .map(|(component, _)| component)
             .collect();
 
         if missing.is_empty() {
@@ -115,19 +125,29 @@ mod tests {
     }
 
     #[test]
-    fn components_must_include_clippy_and_rustfmt() {
+    fn components_must_include_clippy_rustfmt_and_llvm_tools() {
+        for components in [
+            r#"["rustfmt", "clippy", "llvm-tools", "rust-src"]"#,
+            r#"["llvm-tools-preview", "clippy", "rustfmt"]"#,
+        ] {
+            assert_eq!(
+                toolchain(&format!("[toolchain]\ncomponents = {components}\n")).check_components(),
+                Ok(()),
+                "{components}"
+            );
+        }
         assert_eq!(
-            toolchain("[toolchain]\ncomponents = [\"rustfmt\", \"clippy\", \"rust-src\"]\n")
+            toolchain("[toolchain]\ncomponents = [\"rustfmt\", \"llvm-tools\"]\n")
                 .check_components(),
-            Ok(())
-        );
-        assert_eq!(
-            toolchain("[toolchain]\ncomponents = [\"rustfmt\"]\n").check_components(),
             Err("Missing components: clippy".to_owned())
         );
         assert_eq!(
+            toolchain("[toolchain]\ncomponents = [\"clippy\", \"rustfmt\"]\n").check_components(),
+            Err("Missing components: llvm-tools".to_owned())
+        );
+        assert_eq!(
             toolchain("[toolchain]\nchannel = \"1.99.1\"\n").check_components(),
-            Err("Missing components: clippy, rustfmt".to_owned())
+            Err("Missing components: clippy, rustfmt, llvm-tools".to_owned())
         );
         assert_eq!(
             toolchain("[toolchain]\ncomponents = \"clippy\"\n").check_components(),

@@ -148,7 +148,7 @@ pass  cargo-toml-version  [rust] Cargo.toml: version of the latest release
 pass  rust-toolchain-toml-exists  [rust] ../rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [rust] ../rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [rust] ../rust-toolchain.toml: exact channel
-pass  rust-toolchain-toml-components  [rust] ../rust-toolchain.toml: clippy and rustfmt components
+pass  rust-toolchain-toml-components  [rust] ../rust-toolchain.toml: clippy, rustfmt and llvm-tools components
 pass  cargo-toml-rust-version  [rust] Cargo.toml: MSRV set (rust-version, library)
 pass  clippy-lints  [rust] Cargo.toml: Clippy lints configured
 pass  clippy-pedantic  [rust] Cargo.toml: Clippy pedantic enabled
@@ -173,13 +173,13 @@ pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-pub
 pass  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
 pass  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
 pass  rust-precommit-clippy  Rust pre-commit: clippy hook (-D warnings)
-pass  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
+pass  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook (with coverage)
 pass  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
 pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, unsupported and take no file names
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check (-D warnings)
-pass  rust-ci-test  Rust CI: tests
+pass  rust-ci-test  Rust CI: tests (with coverage)
 pass  rust-ci-cargo-deny  Rust CI: cargo deny
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  rust-audit-cargo-deny  Rust audit: cargo deny advisories

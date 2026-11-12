@@ -24,10 +24,10 @@ pre-commit hooks and CI:
 ```sh
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+# cargo-llvm-cov and cargo-deny are installed separately
+cargo llvm-cov --workspace --all-features --show-missing-lines
 cargo test <name>                         # a single test, by name substring
 NORMS_BLESS=1 cargo test --test fixtures  # rewrite the fixture snapshots
-# cargo-deny is installed separately
 cargo deny --workspace --all-features check -D warnings bans licenses sources
 cargo run -- verify <path>                # run norms against a project
 cargo run -- verify --deny-warnings .     # run norms against itself

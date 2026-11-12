@@ -90,16 +90,45 @@ jobs:
         with:
           persist-credentials: false
 
+      # The version the template pins for rendered projects, which the template job installs too.
+      - name: Read the template's cargo-llvm-cov version
+        id: versions
+        run: echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
 
-      - name: Run Rust tests
-        run: cargo test --workspace --all-features
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-llvm-cov@${{ steps.versions.outputs.cargo-llvm-cov }}
+
+      - name: Run Rust tests with coverage
+        run: cargo llvm-cov --workspace --all-features --show-missing-lines
+
+  cargo-doctest:
+    name: Run Rust doctests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      # cargo-llvm-cov runs doctests only on a nightly toolchain.
+      - name: Run Rust doctests
+        run: cargo test --workspace --all-features --doc
 
   ci-success:
     name: CI success
     if: always()
-    needs: [build-norms, cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, norms-verify, pre-commit, reuse, rustfmt, template, tombi, zizmor]
+    needs: [build-norms, cargo-deny, cargo-doctest, cargo-lock, cargo-test, clippy, markdownlint, norms-verify, pre-commit, reuse, rustfmt, template, tombi, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -196,7 +225,7 @@ jobs:
       - name: Run the hooks that have no job of their own
         env:
           PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
-          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
+          SKIP: cargo-deny,cargo-doctest,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
         run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
 
   reuse:
@@ -279,13 +308,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Use the same pre-commit, uv and pnpm versions the template pins for rendered projects.
+      # Use the same pre-commit, uv, pnpm and cargo-llvm-cov versions the template pins for rendered
+      # projects.
       - name: Read the template's tool versions
         id: versions
         run: |
           echo "pnpm=$(yq '.pnpm_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
           echo "pre-commit=$(yq '.pre_commit_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
           echo "uv=$(yq '.uv_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+          echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
@@ -294,6 +325,11 @@ jobs:
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-deny@${{ env.CARGO_DENY_VERSION }}
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-llvm-cov@${{ steps.versions.outputs.cargo-llvm-cov }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -377,8 +413,8 @@ jobs:
           commit() {
             git -c user.name=CI -c user.email=ci@example.com commit --quiet --no-verify "$@"
           }
-          # Without git. The cargo-test hook already ran the build script with git, which Cargo
-          # wouldn't rerun for a change in GIT_DIR, so this builds in a target directory of its own.
+          # Without git. The hooks already ran the build script with git, which Cargo wouldn't rerun
+          # for a change in GIT_DIR, so this builds in a target directory of its own.
           (export GIT_DIR=/nonexistent CARGO_TARGET_DIR="$RUNNER_TEMP/no-git"; check 0.0.0)
           commit --message "chore: render the template"
           check "0.0.0+g$(git rev-parse --short HEAD)"

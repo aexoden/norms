@@ -265,7 +265,7 @@ pub(crate) fn check_rust_toolchain(ctx: &ComponentContext, report: &mut Report) 
         );
         report.should(
             "rust-toolchain-toml-components",
-            format!("{label}: clippy and rustfmt components"),
+            format!("{label}: clippy, rustfmt and llvm-tools components"),
             toolchain.check_components(),
         );
     }
@@ -689,6 +689,62 @@ fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
     }
 }
 
+/// Check that the `cargo-test` hook runs the tests with coverage, through cargo-llvm-cov. A hook that runs them without,
+/// or doesn't run them where norms can see, warns.
+fn cargo_test_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+    let runs: Vec<TestRun> = config
+        .commit_hooks("cargo-test")?
+        .into_iter()
+        .flat_map(|hook| hook.filter_map_commands("", cargo_test_run))
+        .collect();
+    if runs.iter().any(|run| run.coverage) {
+        Ok(())
+    } else {
+        Err(Issue::warn(
+            "The cargo-test hook doesn't run the tests with coverage, as cargo llvm-cov does",
+        ))
+    }
+}
+
+/// Whether a command's words run the tests through cargo-llvm-cov with `--no-report`, which measures coverage but
+/// leaves reporting it to a later `cargo llvm-cov report`.
+fn defers_coverage_report(words: &[&str]) -> bool {
+    cargo_test_run(words).is_some()
+        && cargo_subcommand(words).is_some_and(|(subcommand, args)| {
+            subcommand == "llvm-cov" && cargo_options(&args).contains(&"--no-report")
+        })
+}
+
+/// Whether a command's words report coverage measured earlier, with `cargo llvm-cov report`.
+fn reports_coverage(words: &[&str]) -> bool {
+    cargo_subcommand(words).is_some_and(|(subcommand, args)| {
+        subcommand == "llvm-cov" && args.first() == Some(&"report")
+    })
+}
+
+/// Check that some step runs the tests with coverage, through cargo-llvm-cov, reporting it at once or, after
+/// `--no-report`, in a later `cargo llvm-cov report`. One that runs them only without coverage warns.
+fn tests_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+    let runs = workflow.filter_map_commands(cargo_test_run);
+    let reported_later = || {
+        !workflow
+            .filter_map_commands(|words| defers_coverage_report(words).then_some(()))
+            .is_empty()
+            && !workflow
+                .filter_map_commands(|words| reports_coverage(words).then_some(()))
+                .is_empty()
+    };
+    if runs.iter().any(|run| run.coverage) || reported_later() {
+        Ok(())
+    } else if runs.is_empty() {
+        Err(Issue::fail("No step runs cargo test or cargo llvm-cov"))
+    } else {
+        Err(Issue::warn(
+            "No step runs the tests with coverage, as cargo llvm-cov does",
+        ))
+    }
+}
+
 /// Check that a library's doctests run, before each commit and in CI. `cargo test` runs them, but cargo-llvm-cov, which
 /// measures coverage, runs them only on a nightly toolchain, so a library whose tests run through it needs a step of
 /// its own that runs them, `cargo test --doc`. Components without a library target, or whose libraries turn doctests
@@ -785,11 +841,12 @@ fn check_cargo_config_file(status: &ConfigStatus<CargoConfig>, report: &mut Repo
 //
 
 /// The IDs of Rust's language hooks, which the standard's hook table lists.
-const LANGUAGE_HOOKS: [&str; 5] = [
+const LANGUAGE_HOOKS: [&str; 6] = [
     "cargo-lock",
     "rustfmt",
     "clippy",
     "cargo-test",
+    "cargo-doctest",
     "cargo-deny",
 ];
 
@@ -818,8 +875,8 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "rust-precommit-cargo-test",
-        "Rust pre-commit: cargo-test hook",
-        config.check_commit_hook("cargo-test"),
+        "Rust pre-commit: cargo-test hook (with coverage)",
+        cargo_test_hooks(config),
     );
 
     report.check(
@@ -858,10 +915,10 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "Rust CI: clippy check (-D warnings)",
         clippy_in_ci(workflow),
     );
-    report.must(
+    report.check(
         "rust-ci-test",
-        "Rust CI: tests",
-        workflow.runs_command("cargo test"),
+        "Rust CI: tests (with coverage)",
+        tests_in_ci(workflow),
     );
     report.check(
         "rust-ci-cargo-deny",
@@ -2147,6 +2204,91 @@ jobs:
         ] {
             assert_eq!(run(line), None, "{line}");
         }
+    }
+
+    #[test]
+    fn tests_run_with_coverage_in_hooks_and_ci() {
+        let hooks = |entries: &[&str]| {
+            let hooks = entries
+                .iter()
+                .map(|entry| format!("      - id: cargo-test\n        entry: {entry}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!(
+                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
+            );
+            cargo_test_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+        };
+        assert_eq!(
+            hooks(&["cargo llvm-cov --workspace --all-features --show-missing-lines"]),
+            Ok(())
+        );
+        let uncovered = Err(Issue::warn(
+            "The cargo-test hook doesn't run the tests with coverage, as cargo llvm-cov does",
+        ));
+        assert_eq!(hooks(&["cargo test --workspace --all-features"]), uncovered);
+        assert_eq!(hooks(&["cargo llvm-cov --no-report"]), uncovered);
+        assert_eq!(hooks(&["cargo check"]), uncovered);
+        // Any copy of the hook that measures coverage is enough.
+        assert_eq!(
+            hooks(&["cargo test --workspace", "cargo llvm-cov --workspace"]),
+            Ok(())
+        );
+        // A hook without an entry runs its repository's, which norms can't see.
+        assert_eq!(
+            cargo_test_hooks(
+                &serde_saphyr::from_str(
+                    "default_stages: [pre-commit]\nrepos:\n  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: cargo-test\n"
+                )
+                .expect("config parses")
+            ),
+            uncovered
+        );
+        assert_eq!(
+            cargo_test_hooks(
+                &serde_saphyr::from_str("default_stages: [pre-commit]\nrepos: []\n")
+                    .expect("config parses")
+            ),
+            Err(Issue::fail("No cargo-test hook"))
+        );
+
+        let ci = |runs: &[&str]| {
+            let steps = runs
+                .iter()
+                .map(|run| format!("      - run: {run}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!("jobs:\n  test:\n    steps:\n{steps}");
+            tests_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        assert_eq!(
+            ci(&["cargo test --doc", "cargo llvm-cov --workspace"]),
+            Ok(())
+        );
+        // Coverage measured with --no-report counts once a later step reports it.
+        assert_eq!(
+            ci(&[
+                "cargo llvm-cov --workspace --no-report",
+                "cargo llvm-cov report --show-missing-lines"
+            ]),
+            Ok(())
+        );
+        let uncovered_in_ci = Err(Issue::warn(
+            "No step runs the tests with coverage, as cargo llvm-cov does",
+        ));
+        assert_eq!(ci(&["cargo test --workspace"]), uncovered_in_ci);
+        assert_eq!(
+            ci(&["cargo llvm-cov --workspace --no-report"]),
+            uncovered_in_ci
+        );
+        assert_eq!(
+            ci(&["cargo test --workspace", "cargo llvm-cov report"]),
+            uncovered_in_ci
+        );
+        assert_eq!(
+            ci(&["cargo build", "cargo llvm-cov report"]),
+            Err(Issue::fail("No step runs cargo test or cargo llvm-cov"))
+        );
     }
 
     #[test]

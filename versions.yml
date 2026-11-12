@@ -33,6 +33,14 @@ pnpm_version:
   default: "12.18.0"
   when: false
 
+# cargo-llvm-cov, which the cargo-test hook and job run, installed in CI by
+# taiki-e/install-action
+
+# renovate: datasource=crate depName=cargo-llvm-cov
+cargo_llvm_cov_version:
+  default: "0.9.1"
+  when: false
+
 # pre-commit, which CI runs for the hooks that have no job of their own
 
 # renovate: datasource=pypi depName=pre-commit
@@ -119,6 +127,11 @@ action_rustfmt:
 # renovate: datasource=github-tags depName=EmbarkStudios/cargo-deny-action
 action_cargo_deny:
   default: "3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1"
+  when: false
+
+# renovate: datasource=github-tags depName=taiki-e/install-action
+action_install_action:
+  default: "cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3"
   when: false
 
 # renovate: datasource=github-tags depName=astral-sh/setup-uv

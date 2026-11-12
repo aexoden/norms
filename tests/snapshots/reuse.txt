@@ -170,7 +170,7 @@ fail  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
       No rustfmt hook
 fail  rust-precommit-clippy  Rust pre-commit: clippy hook (-D warnings)
       No clippy hook
-fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook
+fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook (with coverage)
       No cargo-test hook
 fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
       No cargo-deny hook
@@ -180,7 +180,8 @@ fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt
 fail  rust-ci-clippy  Rust CI: clippy check (-D warnings)
       No step runs cargo clippy
-fail  rust-ci-test  Rust CI: tests
+fail  rust-ci-test  Rust CI: tests (with coverage)
+      No step runs cargo test or cargo llvm-cov
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
       No step uses EmbarkStudios/cargo-deny-action
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false

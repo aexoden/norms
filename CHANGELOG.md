@@ -38,8 +38,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   files below it. Directories Prettier skips, those its `.gitignore` and
   `.prettierignore` match included, aren't searched, while those `[components]
   exclude` lists are, as Prettier formats them.
-- Warn when no hook, or no CI step, runs a Rust library's doctests, as
-  `cargo test` does unless it selects other targets.
+- Warn when no hook, or no CI step, runs the doctests of a Rust library
+  target, beside a binary or not, as `cargo test` does unless it selects other
+  targets.
+- Measure Rust test coverage with cargo-llvm-cov, as Python and TypeScript
+  already do: the `cargo-test` hook and CI job run `cargo llvm-cov --workspace
+  --all-features --show-missing-lines`, `rust-toolchain.toml` adds the
+  `llvm-tools` component, and libraries get a `cargo-doctest` hook and job
+  running `cargo test --workspace --all-features --doc`, since cargo-llvm-cov
+  runs doctests only on nightly. Warn when the `cargo-test` hook or CI tests
+  run without coverage, or `rust-toolchain.toml` lacks `llvm-tools`. Install
+  [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov#installation) to
+  run the hook.
 
 ### Changed
 

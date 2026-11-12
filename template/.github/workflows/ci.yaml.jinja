@@ -67,6 +67,7 @@
 {%- endmacro %}
 {%- set jobs = ['markdownlint', 'norms-verify', 'pre-commit', 'reuse', 'tombi', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
+{%- if 'rust' in languages and project_type == 'library' %}{% set jobs = jobs + ['cargo-doctest'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vite-build', 'vitest'] %}{% endif %}
 {#- The pre-commit job skips the hooks that have a job of their own, the hooks for
@@ -174,8 +175,21 @@ jobs:
 {{ job('cargo-test', 'Run Rust tests', rust_dir, timeout=30) }}
 {{- setup_rust() }}
 
-      - name: Run Rust tests
-        run: cargo test --workspace --all-features
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@{{ action_install_action }}
+        with:
+          tool: cargo-llvm-cov@{{ cargo_llvm_cov_version }}
+
+      - name: Run Rust tests with coverage
+        run: cargo llvm-cov --workspace --all-features --show-missing-lines
+{%- if project_type == 'library' %}
+{{ job('cargo-doctest', 'Run Rust doctests', rust_dir, timeout=30) }}
+{{- setup_rust() }}
+
+      # cargo-llvm-cov runs doctests only on a nightly toolchain.
+      - name: Run Rust doctests
+        run: cargo test --workspace --all-features --doc
+{%- endif %}
 {{ job('clippy', 'Lint Rust code with Clippy', rust_dir, timeout=30) }}
 {{- setup_rust() }}
 

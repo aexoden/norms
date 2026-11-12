@@ -45,9 +45,9 @@ lock files apart from `Cargo.lock`.
 - `toolchain` has two Rust components in subdirectories, one with a conforming
   `rust-toolchain.toml` of its own and a `.clippy.toml` and `.deny.toml`, which
   should be named `clippy.toml` and `deny.toml`, and one using the root's
-  files, whose toolchain pins no exact channel and lacks clippy, whose
-  `clippy.toml` doesn't allow `panic` in tests and allows four path segments,
-  and whose `deny.toml` conforms.
+  files, whose toolchain pins no exact channel and lacks clippy and
+  llvm-tools, whose `clippy.toml` doesn't allow `panic` in tests and allows four
+  path segments, and whose `deny.toml` conforms.
 - `classifiers` has Python components whose classifiers are checked against
   `requires-python`: an application and a library with gaps in its range, each
   with its own `.python-version`, one capped by `requires-python` without a

@@ -37,7 +37,7 @@ fail  cargo-toml-version  [backend] Cargo.toml: version of the latest release
 pass  rust-toolchain-toml-exists  [backend] rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [backend] rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [backend] rust-toolchain.toml: exact channel
-pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy and rustfmt components
+pass  rust-toolchain-toml-components  [backend] rust-toolchain.toml: clippy, rustfmt and llvm-tools components
 warn  cargo-toml-rust-version  [backend] Cargo.toml: MSRV set (rust-version, library)
 fail  clippy-lints  [backend] Cargo.toml: Clippy lints configured
       No [lints.clippy] section
@@ -59,8 +59,8 @@ pass  rust-toolchain-toml-exists  [tools/cli] ../../rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [tools/cli] ../../rust-toolchain.toml: valid
 warn  rust-toolchain-toml-channel  [tools/cli] ../../rust-toolchain.toml: exact channel
       channel is "stable", not an exact x.y.z release
-warn  rust-toolchain-toml-components  [tools/cli] ../../rust-toolchain.toml: clippy and rustfmt components
-      Missing components: clippy
+warn  rust-toolchain-toml-components  [tools/cli] ../../rust-toolchain.toml: clippy, rustfmt and llvm-tools components
+      Missing components: clippy, llvm-tools
 warn  cargo-toml-rust-version  [tools/cli] Cargo.toml: MSRV set (rust-version, library)
 fail  clippy-lints  [tools/cli] Cargo.toml: Clippy lints configured
       No [lints.clippy] section

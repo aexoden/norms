@@ -576,10 +576,10 @@ following workflows:
 
 ### Checks
 
-`ci.yaml` runs formatting checks, linting, type checking, tests (with coverage
-for Python and TypeScript) and dependency policy checks, such as `cargo
-deny --workspace --all-features check -D warnings bans licenses sources` and
-lock file freshness. CI should fail in every case where the pre-commit hooks
+`ci.yaml` runs formatting checks, linting, type checking, tests (with
+coverage) and dependency policy checks, such as `cargo deny --workspace
+--all-features check -D warnings bans licenses sources` and lock file
+freshness. CI should fail in every case where the pre-commit hooks
 would.
 
 Where this standard names an action for a check, such as
@@ -1180,7 +1180,7 @@ need, so `rustup` installs everything on first use:
 ```toml
 [toolchain]
 channel = "1.99.1"
-components = ["clippy", "rustfmt"]
+components = ["clippy", "llvm-tools", "rustfmt"]
 ```
 
 rustup uses the nearest `rust-toolchain.toml` in the directory it runs in or a
@@ -1388,17 +1388,31 @@ cargo-deny is installed separately by the developer. See the [cargo-deny
 installation
 documentation](https://embarkstudios.github.io/cargo-deny/#install-cargo-deny).
 
+#### Testing
+
+Use Cargo's test harness with
+[cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov), reporting missing
+lines: `cargo llvm-cov --workspace --all-features --show-missing-lines`. It
+needs the `llvm-tools` component, which `rust-toolchain.toml` lists (see
+[Toolchain](#toolchain)), and is installed like cargo-deny: by each developer,
+and in CI with `taiki-e/install-action` at the version the project pins.
+
+cargo-llvm-cov runs doctests only on a nightly toolchain, so a project with a
+library target, binaries or not, also runs them on their own, with `cargo test
+--workspace --all-features --doc`.
+
 #### Hooks and CI
 
 The pre-commit hooks and CI both run:
 
-| Hook ID      | Command                                                                         |
-|--------------|---------------------------------------------------------------------------------|
-| `cargo-lock` | `cargo update --workspace --locked`                                             |
-| `rustfmt`    | `cargo fmt --all --check`                                                       |
-| `clippy`     | `cargo clippy --workspace --all-targets --all-features -- -D warnings`          |
-| `cargo-test` | `cargo test --workspace --all-features`                                         |
-| `cargo-deny` | `cargo deny --workspace --all-features check -D warnings bans licenses sources` |
+| Hook ID         | Command                                                                         |
+|-----------------|---------------------------------------------------------------------------------|
+| `cargo-lock`    | `cargo update --workspace --locked`                                             |
+| `rustfmt`       | `cargo fmt --all --check`                                                       |
+| `clippy`        | `cargo clippy --workspace --all-targets --all-features -- -D warnings`          |
+| `cargo-test`    | `cargo llvm-cov --workspace --all-features --show-missing-lines`                |
+| `cargo-doctest` | `cargo test --workspace --all-features --doc` (library targets only)            |
+| `cargo-deny`    | `cargo deny --workspace --all-features check -D warnings bans licenses sources` |
 
 `cargo-lock` fails, naming the entries that would change, if `Cargo.lock` is
 out of date with `Cargo.toml`. Updating only the workspace's own packages,
@@ -1407,8 +1421,10 @@ out of date with `Cargo.toml`. Updating only the workspace's own packages,
 left untouched. The other Cargo commands would quietly update a stale lock file
 instead.
 
-A library's hooks and CI run its doctests, as `cargo test` does unless it
-selects other targets, and `norms verify` warns when none does.
+`norms verify` warns on a `cargo-test` hook or CI tests that don't measure
+coverage, as `cargo test` doesn't, and, for a component with a library target,
+when no hook, or no CI step, runs its doctests, as `cargo test` does unless it
+selects other targets.
 
 `norms verify` fails a `clippy` hook or CI job that runs Clippy without
 `-D warnings`, since every lint is set to `warn`, so Clippy would pass whatever

@@ -39,7 +39,7 @@ repos:
 
   # TOML
   - repo: https://github.com/tombi-toml/tombi-pre-commit
-    rev: v1.10.0
+    rev: v1.11.1
     hooks:
       - id: tombi-format
         args: [--check]
@@ -91,9 +91,15 @@ repos:
         language: unsupported
         pass_filenames: false
       - id: cargo-test
-        name: cargo test
-        description: Run Rust tests using cargo test
-        entry: cargo test --manifest-path rust/Cargo.toml --workspace --all-features
+        name: cargo llvm-cov
+        description: Run Rust tests with coverage using cargo-llvm-cov
+        entry: cargo llvm-cov --manifest-path rust/Cargo.toml --workspace --all-features --show-missing-lines
+        language: unsupported
+        pass_filenames: false
+      - id: cargo-doctest
+        name: cargo test --doc
+        description: Run Rust doctests using cargo test
+        entry: cargo test --manifest-path rust/Cargo.toml --workspace --all-features --doc
         language: unsupported
         pass_filenames: false
       - id: cargo-deny
