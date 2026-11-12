@@ -52,13 +52,13 @@ git -C /tmp/demo add --all
 cargo run -- verify --deny-warnings /tmp/demo
 ```
 
-`--vcs-ref HEAD` renders the last commit, so commit template changes first. The
-render's `norms-verify` hook would build the released norms the template pins,
-so it is skipped and this checkout's norms runs instead. pre-commit still
-clones that pinned release, which in a release commit isn't tagged yet, so
-there the hooks fail to install; the CI job runs them from a copy of the config
-whose norms hooks come from this checkout (see its `sed` step in `ci.yaml`),
-leaving the render's own config as it is. The CI job runs
+`--vcs-ref HEAD` renders the last commit with any uncommitted changes, untracked
+files included. The render's `norms-verify` hook would build the released norms
+the template pins, so it is skipped and this checkout's norms runs instead.
+pre-commit still clones that pinned release, which in a release commit isn't
+tagged yet, so there the hooks fail to install; the CI job runs them from a copy
+of the config whose norms hooks come from this checkout (see its `sed` step in
+`ci.yaml`), leaving the render's own config as it is. The CI job runs
 `norms verify --deny-warnings` on each render, so a render must have no
 failures or warnings. It then commits and tags the render, and checks the
 version its Rust application and Vite build report against `git describe`.
