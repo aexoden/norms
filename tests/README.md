@@ -158,9 +158,11 @@ lock files apart from `Cargo.lock`.
     `eslint-plugin-prettier`.
 - `layout` breaks the layout standards: a TypeScript component has npm's and
   yarn's lock files beside `pnpm-lock.yaml`, an `eslint.config.js` beside
-  `eslint.config.ts`, and a `prettier` key in `package.json` beside
-  `.prettierrc`, and a Python component's `src/` holds a module and a namespace
-  package, but no package with an `__init__.py`, while a `ruff.toml`,
+  `eslint.config.ts`, a `prettier` key in `package.json` beside `.prettierrc`,
+  Prettier configuration in two subdirectories (a `prettier` key in a nested
+  `package.json` and a `.prettierrc.json`) and in a third that its
+  `.prettierignore` skips, and a Python component's `src/` holds a module and a
+  namespace package, but no package with an `__init__.py`, while a `ruff.toml`,
   `mypy.ini`, `pytest.ini` and `uv.toml` beside its `pyproject.toml` take the
   place of its tables.
 

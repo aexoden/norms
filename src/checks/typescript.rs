@@ -14,6 +14,9 @@ use crate::config::{
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::models::Language;
+use crate::prettier_configs::{
+    NestedPrettierConfig, NestedPrettierConfigs, PRETTIER_CONFIG, PRETTIER_CONFIGS,
+};
 use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
@@ -740,32 +743,6 @@ const PACKAGEJSON_PLUGIN: &str = "prettier-plugin-packagejson";
 /// The line length the standards set for Prettier, as for Ruff's `line-length`.
 const PRETTIER_PRINT_WIDTH: u64 = 120;
 
-/// The configuration files Prettier looks for after the `prettier` key in `package.json` and `package.yaml`, in the
-/// order Prettier 3.9 does. norms doesn't read `package.yaml`, which pnpm projects rarely have.
-const PRETTIER_CONFIGS: [&str; 18] = [
-    PRETTIER_CONFIG,
-    ".prettierrc.json",
-    ".prettierrc.yml",
-    ".prettierrc.yaml",
-    ".prettierrc.json5",
-    ".prettierrc.js",
-    "prettier.config.js",
-    ".prettierrc.ts",
-    "prettier.config.ts",
-    ".prettierrc.mjs",
-    "prettier.config.mjs",
-    ".prettierrc.mts",
-    "prettier.config.mts",
-    ".prettierrc.cjs",
-    "prettier.config.cjs",
-    ".prettierrc.cts",
-    "prettier.config.cts",
-    ".prettierrc.toml",
-];
-
-/// The Prettier configuration file the standard names.
-const PRETTIER_CONFIG: &str = ".prettierrc";
-
 /// Where Prettier takes its configuration from, if not the standard's `.prettierrc`: the `prettier` key in
 /// `package.json`, which it reads first, or another configuration file it finds before `.prettierrc`, as the first
 /// that exists when `.prettierrc` doesn't.
@@ -780,6 +757,33 @@ fn other_prettier_config(ctx: &ComponentContext) -> Option<String> {
     ctx.first_existing(&PRETTIER_CONFIGS)
         .filter(|name| *name != PRETTIER_CONFIG)
         .map(str::to_owned)
+}
+
+/// Check that no subdirectory has a Prettier configuration of its own, naming each that does and what Prettier uses
+/// there, along with anything that kept a directory from being searched.
+fn check_nested_prettier_configs(nested: &NestedPrettierConfigs) -> Outcome {
+    let issues: Vec<String> = nested
+        .configs
+        .iter()
+        .map(|config| {
+            let directory = config.directory_label();
+            let label = config.label();
+            match config {
+                NestedPrettierConfig::PackageJson(_) => format!(
+                    "Prettier uses the prettier key in {label} rather than {PRETTIER_CONFIG} below {directory}"
+                ),
+                NestedPrettierConfig::File(_) => {
+                    format!("Prettier uses {label} rather than {PRETTIER_CONFIG} below {directory}")
+                }
+            }
+        })
+        .chain(nested.errors.iter().cloned())
+        .collect();
+    if issues.is_empty() {
+        Outcome::Pass
+    } else {
+        Outcome::issue(issues.join("; "))
+    }
 }
 
 pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
@@ -803,6 +807,13 @@ pub(crate) fn check_prettier(ctx: &ComponentContext, report: &mut Report) {
         "prettier-ignore-exists",
         "Prettier: .prettierignore exists",
         ignore,
+    );
+
+    // Configuration below the component's root, which takes the place of .prettierrc for the files below it
+    report.should(
+        "prettier-config-nested",
+        "Prettier: no configuration in subdirectories",
+        check_nested_prettier_configs(ctx.nested_prettier_configs()),
     );
 
     let Some(config) = config else {

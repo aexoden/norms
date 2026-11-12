@@ -51,6 +51,7 @@ use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
 use crate::models::{Component, Language};
 use crate::pnpm_workspace::{PnpmWorkspacePackages, find_packages};
+use crate::prettier_configs::{NestedPrettierConfigs, find_nested_configs};
 use crate::release::Release;
 
 /// The file name of markdownlint-cli2's configuration, at the root of the project.
@@ -384,6 +385,7 @@ pub(crate) struct ComponentContext {
     pnpm_workspace: OnceLock<ConfigStatus<PnpmWorkspace>>,
     pnpm_packages: OnceLock<PnpmWorkspacePackages>,
     prettier: OnceLock<ConfigStatus<PrettierConfig>>,
+    nested_prettier_configs: OnceLock<NestedPrettierConfigs>,
     tsconfig: OnceLock<ConfigStatus<TsConfig>>,
     typescript_referenced_configs: OnceLock<Vec<(String, ConfigStatus<TsConfig>)>>,
 }
@@ -411,6 +413,7 @@ impl ComponentContext {
             pnpm_workspace: OnceLock::new(),
             pnpm_packages: OnceLock::new(),
             prettier: OnceLock::new(),
+            nested_prettier_configs: OnceLock::new(),
             tsconfig: OnceLock::new(),
             typescript_referenced_configs: OnceLock::new(),
         }
@@ -617,6 +620,13 @@ impl ComponentContext {
     pub(crate) fn prettier(&self) -> &ConfigStatus<PrettierConfig> {
         self.prettier
             .get_or_init(|| parse_yaml_file::<PrettierConfig>(&self.path.join(".prettierrc")))
+    }
+
+    /// The Prettier configurations in the component's subdirectories, which take the place of its own for the files
+    /// below them (cached).
+    pub(crate) fn nested_prettier_configs(&self) -> &NestedPrettierConfigs {
+        self.nested_prettier_configs
+            .get_or_init(|| find_nested_configs(&self.path))
     }
 
     /// Parsed `tsconfig.json` (cached).

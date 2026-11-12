@@ -83,7 +83,8 @@ warn  eslint-config-exists  [web] eslint.config.ts: exists
       ESLint uses eslint.config.js rather than eslint.config.ts
 warn  prettier-config-exists  [web] .prettierrc: exists
       Prettier uses the prettier key in package.json rather than .prettierrc
-fail  prettier-ignore-exists  [web] Prettier: .prettierignore exists
-      Not found: .prettierignore
+pass  prettier-ignore-exists  [web] Prettier: .prettierignore exists
+warn  prettier-config-nested  [web] Prettier: no configuration in subdirectories
+      Prettier uses the prettier key in packages/ui/package.json rather than .prettierrc below packages/ui; Prettier uses src/legacy/.prettierrc.json rather than .prettierrc below src/legacy
 warn  package-json-scripts  [web] package.json: has scripts
       No scripts defined in package.json

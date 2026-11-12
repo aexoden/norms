@@ -12,5 +12,6 @@ mod git;
 mod licenses;
 mod models;
 mod pnpm_workspace;
+mod prettier_configs;
 mod release;
 mod report;

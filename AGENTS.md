@@ -106,6 +106,10 @@ any check failed or warned.
   `pnpm-workspace.yaml`'s `packages` patterns match, are checked as the
   component's own `package.json` is, and labeled by their path
   (`packages/ui/package.json: ...`).
+- `prettier_configs.rs`: the Prettier configuration in a TypeScript
+  component's subdirectories, searched as Prettier formats them, skipping
+  `node_modules`, version control directories and what the component's
+  `.gitignore` and `.prettierignore` match.
 - `git.rs`: runs `git` for the release tags the changelog and version checks
   need. Only a project at the top of its repository has any, so the fixtures
   don't see norms' own tags.

@@ -1555,7 +1555,9 @@ along with a `.prettierignore`. The `.prettierrc` is:
 
 Prettier reads a `prettier` key in `package.json` before `.prettierrc`, so
 `package.json` has none, and no other Prettier configuration file takes the
-place of `.prettierrc`.
+place of `.prettierrc`. Prettier also uses the configuration nearest each file,
+so no subdirectory has one of its own: neither a configuration file nor a
+`prettier` key in a nested `package.json`, such as a workspace package's.
 
 [prettier-plugin-packagejson](https://github.com/matzkoh/prettier-plugin-packagejson),
 a development dependency, formats `package.json` with

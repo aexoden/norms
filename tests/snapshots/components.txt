@@ -157,6 +157,7 @@ fail  prettier-config-exists  [apps/admin] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [apps/admin] Prettier: .prettierignore exists
       Not found: .prettierignore
+pass  prettier-config-nested  [apps/admin] Prettier: no configuration in subdirectories
 warn  package-json-scripts  [apps/admin] package.json: has scripts
       No scripts defined in package.json
 pass  package-json-exists  [apps/web] package.json: exists
@@ -210,5 +211,6 @@ fail  prettier-config-exists  [apps/web] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [apps/web] Prettier: .prettierignore exists
       Not found: .prettierignore
+pass  prettier-config-nested  [apps/web] Prettier: no configuration in subdirectories
 warn  package-json-scripts  [apps/web] package.json: has scripts
       No scripts defined in package.json

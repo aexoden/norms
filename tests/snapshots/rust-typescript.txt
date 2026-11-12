@@ -186,6 +186,7 @@ pass  eslint-config-prettier  [frontend] ESLint: eslint-config-prettier turns of
 pass  prettier-config-exists  [frontend] .prettierrc: exists
 pass  prettier-config-valid  [frontend] .prettierrc: valid
 pass  prettier-ignore-exists  [frontend] Prettier: .prettierignore exists
+pass  prettier-config-nested  [frontend] Prettier: no configuration in subdirectories
 pass  prettier-config-print-width  [frontend] .prettierrc: printWidth is 120
 pass  prettier-plugin-packagejson  [frontend] Prettier: formats package.json with prettier-plugin-packagejson
 pass  package-json-scripts  [frontend] package.json: has scripts

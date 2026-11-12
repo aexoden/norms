@@ -157,6 +157,7 @@ fail  prettier-config-exists  [.] .prettierrc: exists
       File not found
 fail  prettier-ignore-exists  [.] Prettier: .prettierignore exists
       Not found: .prettierignore
+pass  prettier-config-nested  [.] Prettier: no configuration in subdirectories
 pass  package-json-scripts  [.] package.json: has scripts
 warn  package-json-script-build  [.] Scripts: has 'build' (tsc -b)
       Missing 'build' script
