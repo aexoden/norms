@@ -23,8 +23,8 @@
     "prettier": "3.9.10",
     "prettier-plugin-packagejson": "3.1.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.72.1",
-    "vite": "8.3.6",
+    "typescript-eslint": "8.72.2",
+    "vite": "8.3.7",
     "vitest": "5.1.0"
   },
   "devEngines": {
