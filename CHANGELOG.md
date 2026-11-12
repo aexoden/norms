@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a `build.rs` to the template's Rust applications that sets
   `BUILD_VERSION` to the version `git describe` gives, such as
   `0.2.0-5-gf8a4d2b` between releases, which `--version` reports.
+- Set `__APP_VERSION__` in the template's TypeScript components to the version
+  `git describe` gives, the same way, through Vite's `define`.
 - **Breaking:** Check that every `Cargo.toml` and `package.json` carries the
   repository's one version: that of the latest release in `CHANGELOG.md` (or,
   without one, the latest release tag), or `0.0.0` before the first release.

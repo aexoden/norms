@@ -254,7 +254,9 @@ manifest's version alone. Python's hatch-vcs writes its own form of these
 (`0.2.1.dev5+gf8a4d2b`). A Rust application gets it from a `build.rs`, which
 the template gives it, that sets `BUILD_VERSION` for `env!("BUILD_VERSION")`.
 Cargo reruns it only when the commit, the tags, the index, `Cargo.toml` or
-`src/` change, so its `-dirty` misses changes to other files.
+`src/` change, so its `-dirty` misses changes to other files. A TypeScript
+component gets it from `vite.config.ts`, which sets `__APP_VERSION__` through
+`define`, declared in `src/vite-env.d.ts`.
 
 ### Agent Guidance
 
