@@ -42,6 +42,28 @@ fn is_application(ctx: &ComponentContext, config: &CargoToml) -> bool {
             .any(|(path, member)| builds_binary(&ctx.path().join(path), member))
 }
 
+/// Whether the package whose manifest, `config`, is in `dir` has a library target whose doctests run: an explicit
+/// `[lib]` target or `src/lib.rs`, unless `[lib]` sets `doctest = false`. A virtual manifest has none.
+fn tests_library_docs(dir: &Path, config: &CargoToml) -> bool {
+    if config.package.is_none() {
+        return false;
+    }
+    config.lib.as_ref().map_or_else(
+        || dir.join("src/lib.rs").is_file(),
+        |lib| lib.get("doctest").and_then(toml::Value::as_bool) != Some(false),
+    )
+}
+
+/// Whether the component has a library whose doctests run, as [`tests_library_docs`] tells: its package's or any member
+/// of its workspace's, whether or not they build binaries too.
+fn has_doctests(ctx: &ComponentContext, config: &CargoToml) -> bool {
+    tests_library_docs(ctx.path(), config)
+        || ctx
+            .cargo_members()
+            .parsed()
+            .any(|(path, member)| tests_library_docs(&ctx.path().join(path), member))
+}
+
 /// Whether the component is a published library: its `Cargo.toml` parses, neither its package nor any member of its
 /// workspace builds a binary, and one of them may be published, as it may unless its `publish` is `false` or `[]`.
 pub(crate) fn publishes_library(ctx: &ComponentContext) -> bool {
@@ -582,6 +604,148 @@ pub(crate) fn check_msrv_job(
         "Rust CI: MSRV checked (library)",
         msrvs_tested(&declared_msrvs(ctx, config), workflow),
     );
+}
+
+//
+// Tests
+//
+
+/// How a command runs a component's tests: whether it measures their coverage, and whether it runs the doctests too.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TestRun {
+    coverage: bool,
+    doctests: bool,
+}
+
+/// The options of `cargo test` that select targets. With any of them, it runs only those targets, which leave out the
+/// doctests unless `--doc` is among them. `--no-run` builds the tests but runs none.
+const CARGO_TEST_TARGET_OPTIONS: [&str; 12] = [
+    "--lib",
+    "--bin",
+    "--bins",
+    "--example",
+    "--examples",
+    "--test",
+    "--tests",
+    "--bench",
+    "--benches",
+    "--all-targets",
+    "--doc",
+    "--no-run",
+];
+
+/// The options before any `--` that ends Cargo's own, after which they belong to the test binaries.
+fn cargo_options<'a, 'b>(args: &'b [&'a str]) -> &'b [&'a str] {
+    let end = args
+        .iter()
+        .position(|arg| *arg == "--")
+        .unwrap_or(args.len());
+    args.get(..end).unwrap_or_default()
+}
+
+/// Whether `option` is the option `name`, alone or with its value attached (`--bin=name`).
+fn is_option(option: &str, name: &str) -> bool {
+    option
+        .strip_prefix(name)
+        .is_some_and(|value| value.is_empty() || value.starts_with('='))
+}
+
+/// Whether a command's words run Rust tests, through `cargo test` or cargo-llvm-cov, and if so how. `cargo test` runs
+/// the doctests unless it selects other targets. `cargo llvm-cov`, or its `test` subcommand, measures coverage, but runs
+/// the doctests only with `--doctests` or `--doc`, which need a nightly toolchain, and measures nothing with
+/// `--no-report`; its `nextest` subcommand runs no doctests, and neither its other subcommands nor `--no-run` run
+/// tests.
+fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
+    let (subcommand, args) = cargo_subcommand(words)?;
+    let options = cargo_options(&args);
+    match subcommand {
+        "test" => {
+            let selects = |name| options.iter().any(|option| is_option(option, name));
+            Some(TestRun {
+                coverage: false,
+                doctests: selects("--doc") || !CARGO_TEST_TARGET_OPTIONS.into_iter().any(selects),
+            })
+        }
+        "llvm-cov" => {
+            let (nextest, options) = match options.split_first() {
+                Some((&"test", rest)) => (false, rest),
+                Some((&"nextest", rest)) => (true, rest),
+                Some((first, _)) if !first.starts_with('-') => return None,
+                _ => (false, options),
+            };
+            // With --no-run, it only reports the coverage an earlier run measured.
+            if options.contains(&"--no-run") {
+                return None;
+            }
+            Some(TestRun {
+                coverage: !options.contains(&"--no-report"),
+                doctests: !nextest
+                    && options
+                        .iter()
+                        .any(|option| matches!(*option, "--doctests" | "--doc")),
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Check that a library's doctests run, before each commit and in CI. `cargo test` runs them, but cargo-llvm-cov, which
+/// measures coverage, runs them only on a nightly toolchain, so a library whose tests run through it needs a step of
+/// its own that runs them, `cargo test --doc`. Components without a library target, or whose libraries turn doctests
+/// off, are skipped; one with a binary beside its library is not. Any hook or step that runs doctests counts, whichever
+/// package it runs them for.
+pub(crate) fn check_doctests(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    report: &mut Report,
+) {
+    let Some(config) = ctx.cargo().as_ref_ok() else {
+        return;
+    };
+    if !has_doctests(ctx, config) {
+        return;
+    }
+
+    if let Some(precommit) = project.precommit().as_ref_ok() {
+        report.should(
+            "rust-precommit-cargo-doctest",
+            "Rust pre-commit: doctests run (library target)",
+            doctest_hooks(precommit),
+        );
+    }
+    if let ConfigStatus::Ok(workflow) = project.ci_workflow() {
+        report.should(
+            "rust-ci-doctest",
+            "Rust CI: doctests run (library target)",
+            doctests_in_ci(workflow),
+        );
+    }
+}
+
+/// Whether some hook that runs before each commit runs the doctests, as [`cargo_test_run`] tells.
+fn doctest_hooks(config: &PrecommitConfig) -> Result<(), String> {
+    if config
+        .hooks_in("pre-commit")
+        .flat_map(|hook| hook.filter_map_commands("", cargo_test_run))
+        .any(|run| run.doctests)
+    {
+        Ok(())
+    } else {
+        Err("No hook runs the doctests, as cargo test --doc does".to_owned())
+    }
+}
+
+/// Whether some step runs the doctests, as [`cargo_test_run`] tells.
+fn doctests_in_ci(workflow: &Workflow) -> Result<(), String> {
+    if workflow
+        .filter_map_commands(cargo_test_run)
+        .iter()
+        .any(|run| run.doctests)
+    {
+        Ok(())
+    } else {
+        Err("No step runs the doctests, as cargo test --doc does".to_owned())
+    }
 }
 
 //
@@ -1143,6 +1307,20 @@ mod tests {
 
     /// Whether a package with the given manifest and files is an application.
     fn is_application_with(manifest: &str, files: &[&str]) -> bool {
+        with_component(manifest, files, is_application)
+    }
+
+    fn has_doctests_with(manifest: &str, files: &[&str]) -> bool {
+        with_component(manifest, files, has_doctests)
+    }
+
+    /// `f`'s result for a Rust component at the root of a temporary project with the manifest `manifest`, the files
+    /// `files`, and a stub package for each `Cargo.toml` among them.
+    fn with_component(
+        manifest: &str,
+        files: &[&str],
+        f: fn(&ComponentContext, &CargoToml) -> bool,
+    ) -> bool {
         let dir = tempfile::tempdir().unwrap();
         fs::write(dir.path().join("Cargo.toml"), manifest).unwrap();
         for file in files {
@@ -1165,7 +1343,7 @@ mod tests {
         let ConfigStatus::Ok(config) = ctx.cargo() else {
             panic!("invalid manifest");
         };
-        is_application(&ctx, config)
+        f(&ctx, config)
     }
 
     #[test]
@@ -1187,6 +1365,37 @@ mod tests {
         assert!(!is_application_with(
             "[package]\nname = \"x\"\nautobins = false\n",
             &["src/lib.rs", "src/main.rs", "src/bin/tool.rs"]
+        ));
+    }
+
+    #[test]
+    fn library_targets_have_doctests() {
+        let package = "[package]\nname = \"x\"\n";
+        assert!(has_doctests_with(package, &["src/lib.rs"]));
+        assert!(has_doctests_with(package, &["src/lib.rs", "src/main.rs"]));
+        assert!(has_doctests_with(
+            "[package]\nname = \"x\"\n\n[lib]\npath = \"lib.rs\"\n",
+            &["lib.rs"]
+        ));
+        // A binary member doesn't hide a library member's doctests.
+        assert!(has_doctests_with(
+            "[workspace]\nmembers = [\"crates/*\"]\n",
+            &[
+                "crates/cli/Cargo.toml",
+                "crates/cli/src/main.rs",
+                "crates/core/Cargo.toml",
+                "crates/core/src/lib.rs"
+            ]
+        ));
+
+        assert!(!has_doctests_with(package, &["src/main.rs"]));
+        assert!(!has_doctests_with(
+            "[package]\nname = \"x\"\n\n[lib]\ndoctest = false\n",
+            &["src/lib.rs"]
+        ));
+        assert!(!has_doctests_with(
+            "[workspace]\nmembers = []\n",
+            &["src/lib.rs"]
         ));
     }
 
@@ -1891,6 +2100,110 @@ jobs:
         for line in ["cargo install cargo-deny", "cargo denylist"] {
             assert!(!runs(line), "{line}");
         }
+    }
+
+    #[test]
+    fn cargo_test_runs_tell_coverage_and_doctests() {
+        let run = |line: &str| {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            cargo_test_run(&words).map(|run| (run.coverage, run.doctests))
+        };
+        for (line, expected) in [
+            ("cargo test --workspace --all-features", (false, true)),
+            (
+                "cargo +1.99.1 test --manifest-path rust/Cargo.toml",
+                (false, true),
+            ),
+            (
+                "cargo test --workspace -- --test-threads 1 --lib",
+                (false, true),
+            ),
+            ("cargo test --workspace --all-features --doc", (false, true)),
+            ("cargo test --doc --features extra", (false, true)),
+            ("cargo test --lib", (false, false)),
+            ("cargo test --test=cli", (false, false)),
+            ("cargo test --all-targets", (false, false)),
+            ("cargo test --no-run", (false, false)),
+            (
+                "cargo llvm-cov --workspace --all-features --show-missing-lines",
+                (true, false),
+            ),
+            ("cargo llvm-cov test --workspace", (true, false)),
+            ("cargo +nightly llvm-cov --doctests", (true, true)),
+            ("cargo +nightly llvm-cov --doc", (true, true)),
+            ("cargo llvm-cov nextest --workspace", (true, false)),
+            ("cargo llvm-cov --no-report", (false, false)),
+        ] {
+            assert_eq!(run(line), Some(expected), "{line}");
+        }
+        for line in [
+            "cargo llvm-cov report",
+            "cargo llvm-cov run",
+            "cargo llvm-cov --no-run --show-missing-lines",
+            "cargo llvm-cov clean --workspace",
+            "cargo check --tests",
+            "cargo install cargo-llvm-cov",
+            "echo cargo",
+        ] {
+            assert_eq!(run(line), None, "{line}");
+        }
+    }
+
+    #[test]
+    fn doctests_run_in_hooks_and_ci() {
+        let hooks = |entries: &[(&str, &str)]| {
+            let hooks = entries
+                .iter()
+                .map(|(id, entry)| format!("      - id: {id}\n        entry: {entry}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!(
+                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
+            );
+            doctest_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+        };
+        assert_eq!(hooks(&[("cargo-test", "cargo test --workspace")]), Ok(()));
+        assert_eq!(
+            hooks(&[
+                ("cargo-test", "cargo llvm-cov --workspace"),
+                ("cargo-doctest", "cargo test --workspace --doc"),
+            ]),
+            Ok(())
+        );
+        let missing = Err("No hook runs the doctests, as cargo test --doc does".to_owned());
+        assert_eq!(
+            hooks(&[("cargo-test", "cargo llvm-cov --workspace")]),
+            missing
+        );
+        // A hook that runs only in the manual stage doesn't run them before each commit.
+        assert_eq!(
+            doctest_hooks(
+                &serde_saphyr::from_str(
+                    "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n      - id: cargo-doctest\n        entry: cargo test --doc\n        stages: [manual]\n"
+                )
+                .expect("config parses")
+            ),
+            missing
+        );
+
+        let ci = |runs: &[&str]| {
+            let steps = runs
+                .iter()
+                .map(|run| format!("      - run: {run}\n"))
+                .collect::<Vec<_>>()
+                .concat();
+            let yaml = format!("jobs:\n  test:\n    steps:\n{steps}");
+            doctests_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
+        assert_eq!(ci(&["cargo test --workspace --all-features"]), Ok(()));
+        assert_eq!(
+            ci(&["cargo llvm-cov --workspace", "cargo test --workspace --doc"]),
+            Ok(())
+        );
+        assert_eq!(
+            ci(&["cargo llvm-cov --workspace", "cargo test --tests"]),
+            Err("No step runs the doctests, as cargo test --doc does".to_owned())
+        );
     }
 
     #[test]

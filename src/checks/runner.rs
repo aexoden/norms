@@ -113,6 +113,7 @@ fn check_component(
             rust::check_cargo_deny(ctx, report);
             rust::check_cargo_lock(ctx, report);
             rust::check_msrv_job(project, ctx, report);
+            rust::check_doctests(project, ctx, report);
         }
         Language::TypeScript => {
             typescript::check_package_json(ctx, report);

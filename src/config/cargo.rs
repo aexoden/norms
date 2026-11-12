@@ -18,6 +18,8 @@ pub(crate) struct CargoToml {
     pub package: Option<CargoPackage>,
     pub lints: Option<CargoLints>,
     pub workspace: Option<CargoWorkspace>,
+    /// The `[lib]` target, read leniently, so that one of the wrong type fails only its check.
+    pub lib: Option<toml::Value>,
     /// Explicit `[[bin]]` targets.
     pub bin: Vec<CargoBinTarget>,
     #[serde(flatten)]

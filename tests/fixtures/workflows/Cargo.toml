@@ -1,2 +1,5 @@
 [package]
 name = "workflows"
+
+[lib]
+path = "lib.rs"

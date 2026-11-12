@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   files below it. Directories Prettier skips, those its `.gitignore` and
   `.prettierignore` match included, aren't searched, while those `[components]
   exclude` lists are, as Prettier formats them.
+- Warn when no hook, or no CI step, runs a Rust library's doctests, as
+  `cargo test` does unless it selects other targets.
 
 ### Changed
 

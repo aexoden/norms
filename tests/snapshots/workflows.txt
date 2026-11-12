@@ -176,6 +176,10 @@ fail  deny-toml-exists  [.] deny.toml: exists
       File not found
 fail  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
       No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
+warn  rust-precommit-cargo-doctest  [.] Rust pre-commit: doctests run (library target)
+      No hook runs the doctests, as cargo test --doc does
+warn  rust-ci-doctest  [.] Rust CI: doctests run (library target)
+      No step runs the doctests, as cargo test --doc does
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
 fail  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook

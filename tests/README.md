@@ -78,6 +78,7 @@ lock files apart from `Cargo.lock`.
   `rust-version` themselves, inherit it from `[workspace.package]`, or lack it.
 - `workflows` breaks the Actions standards, beside stub `Cargo.toml` and
   `pyproject.toml` files:
+  - a Rust library target whose doctests no hook or CI step runs;
   - a zizmor hook that doesn't run its pedantic persona, and a CI step running
     zizmor itself beside a zizmor-action step that doesn't fail on findings,
     which decides;

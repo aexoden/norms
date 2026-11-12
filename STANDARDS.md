@@ -1407,6 +1407,9 @@ out of date with `Cargo.toml`. Updating only the workspace's own packages,
 left untouched. The other Cargo commands would quietly update a stale lock file
 instead.
 
+A library's hooks and CI run its doctests, as `cargo test` does unless it
+selects other targets, and `norms verify` warns when none does.
+
 `norms verify` fails a `clippy` hook or CI job that runs Clippy without
 `-D warnings`, since every lint is set to `warn`, so Clippy would pass whatever
 it finds, and warns on one without `--workspace`, `--all-targets` or
