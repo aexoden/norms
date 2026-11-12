@@ -1283,15 +1283,28 @@ pub(crate) fn check_toolchain_cache(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
-/// The Cargo subcommand a command's words run, after any `+toolchain`, and the arguments that follow it.
+/// Cargo's global options that take a value as the next word, such as `-C <dir>`.
+const CARGO_GLOBAL_OPTIONS_WITH_VALUES: [&str; 4] = ["-C", "--color", "--config", "-Z"];
+
+/// The Cargo subcommand a command's words run, after any `+toolchain` and global options such as `--locked`, and the
+/// arguments that follow it. A command of only options, such as `cargo --version`, gives its first option instead.
 fn cargo_subcommand<'a>(words: &[&'a str]) -> Option<(&'a str, Vec<&'a str>)> {
     let mut words = words
         .iter()
         .copied()
         .skip_while(|word| *word != "cargo")
         .skip(1)
-        .skip_while(|word| word.starts_with('+'));
-    Some((words.next()?, words.collect()))
+        .skip_while(|word| word.starts_with('+'))
+        .peekable();
+    let first = *words.peek()?;
+    while let Some(word) = words.next_if(|word| word.starts_with('-')) {
+        if CARGO_GLOBAL_OPTIONS_WITH_VALUES.contains(&word) {
+            words.next();
+        }
+    }
+    Some(words.next().map_or((first, Vec::new()), |subcommand| {
+        (subcommand, words.collect())
+    }))
 }
 
 /// Whether a script line checks that `Cargo.lock` is up to date: `cargo update` with `--locked` (or `--frozen`, which
@@ -2157,6 +2170,34 @@ jobs:
         for line in ["cargo install cargo-deny", "cargo denylist"] {
             assert!(!runs(line), "{line}");
         }
+    }
+
+    #[test]
+    fn cargo_subcommands_follow_global_options() {
+        let subcommand = |line: &str| {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            cargo_subcommand(&words).map(|(name, args)| (name.to_owned(), args.join(" ")))
+        };
+        for (line, expected) in [
+            ("cargo test --doc", ("test", "--doc")),
+            ("cargo +1.99.1 --locked test --doc", ("test", "--doc")),
+            (
+                "cargo -q -C rust --config x=1 -Z flag llvm-cov",
+                ("llvm-cov", ""),
+            ),
+            (
+                "cargo --color=never clippy -- -D warnings",
+                ("clippy", "-- -D warnings"),
+            ),
+            ("cargo --version", ("--version", "")),
+        ] {
+            assert_eq!(
+                subcommand(line),
+                Some((expected.0.to_owned(), expected.1.to_owned())),
+                "{line}"
+            );
+        }
+        assert_eq!(subcommand("echo cargo"), None);
     }
 
     #[test]

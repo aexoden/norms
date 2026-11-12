@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `norms commit-msg` rejects a commit type that isn't in lowercase, such as
   `Feat:`, which `conventional-pre-commit` lets through.
 
+### Fixed
+
+- Recognize Cargo commands that pass global options before the subcommand,
+  such as `cargo --locked test` or `cargo -C rust clippy`, in the Rust hook and
+  CI checks.
+
 ## [0.2.0] - 2026-11-10
 
 norms 0.2.0 replaces the Python prototype of 0.1.0 with a rewrite in Rust, and
