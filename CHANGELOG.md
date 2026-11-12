@@ -17,9 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `norms verify` with the whole history, and a `pr-title.yaml` workflow running
   the commit message hooks on pull request titles. Add them as the template
   does.
+- **Breaking:** Check that every `Cargo.toml` and `package.json` carries the
+  repository's one version: that of the latest release in `CHANGELOG.md` (or,
+  without one, the latest release tag), or `0.0.0` before the first release.
+  Set `version` to it, and change it in the commit that makes each release.
 
 ### Changed
 
+- The template starts Rust packages at version `0.0.0`, as TypeScript ones
+  already were, until the first release.
 - `STANDARDS.md` marks a breaking change in a commit message with `!` before
   the colon, matching the changelog's `**Breaking:**` entries, writes commit
   types in lowercase, and gives footers git's trailer format.

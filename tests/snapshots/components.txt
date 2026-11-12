@@ -85,6 +85,10 @@ warn  cargo-toml-description  [.] crates/core/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/core/Cargo.toml: has repository
 warn  cargo-toml-edition  [.] crates/core/Cargo.toml: edition 2024
       Missing edition
+fail  cargo-toml-version  [.] Cargo.toml: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
+fail  cargo-toml-version  [.] crates/core/Cargo.toml: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
@@ -115,6 +119,8 @@ warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js 
 warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [apps/admin] package.json: no Corepack packageManager field
+fail  package-json-version  [apps/admin] package.json: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [apps/admin] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 fail  pnpm-workspace-exists  [apps/admin] pnpm-workspace.yaml: exists
@@ -165,6 +171,8 @@ warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in
 warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [apps/web] package.json: no Corepack packageManager field
+fail  package-json-version  [apps/web] package.json: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [apps/web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 fail  pnpm-workspace-exists  [apps/web] pnpm-workspace.yaml: exists

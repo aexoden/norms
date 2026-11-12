@@ -164,6 +164,36 @@ pub(crate) fn check_cargo_workspace(ctx: &ComponentContext, report: &mut Report)
     }
 }
 
+/// Check that the component's package, and each member of its workspace, carries the version of the project's latest
+/// release, as the one version of the whole repository.
+pub(crate) fn check_cargo_version(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    report: &mut Report,
+) {
+    let Some(config) = ctx.cargo().as_ref_ok() else {
+        return;
+    };
+    let workspace = config.workspace.as_ref();
+    let release = project.release();
+
+    let members = ctx
+        .cargo_members()
+        .parsed()
+        .map(|(path, member)| (member_manifest(path), member));
+    let root = config
+        .package
+        .is_some()
+        .then(|| ("Cargo.toml".to_owned(), config));
+    for (label, manifest) in root.into_iter().chain(members) {
+        report.must(
+            "cargo-toml-version",
+            format!("{label}: version of the latest release"),
+            release.check(manifest.metadata(workspace).version),
+        );
+    }
+}
+
 //
 // Version pinning
 //

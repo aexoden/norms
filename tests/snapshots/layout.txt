@@ -68,6 +68,8 @@ warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devE
 warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
+fail  package-json-version  [web] package.json: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 pass  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
 warn  pnpm-no-npm-lock  [web] pnpm: no npm lock file
       Found package-lock.json, though pnpm is the package manager

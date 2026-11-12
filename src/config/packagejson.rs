@@ -11,10 +11,16 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::release::Release;
+
 /// Top-level `package.json` structure.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub(crate) struct PackageJson {
+    /// The package's version. Kept unparsed, so that a value of the wrong type is reported rather than failing to
+    /// parse.
+    pub version: Option<Value>,
+
     pub description: Option<String>,
 
     /// The license, as an SPDX expression. Kept unparsed, so that one of the wrong type fails only its check.
@@ -208,6 +214,15 @@ impl PackageJson {
         })
     }
 
+    /// Check that `version` is that of the project's latest release, `release`.
+    pub(crate) fn check_version(&self, release: &Release) -> Result<(), String> {
+        match &self.version {
+            Some(Value::String(version)) => release.check(Some(version)),
+            Some(value) => Err(format!("version is {value}, not a string")),
+            None => release.check(None),
+        }
+    }
+
     /// Check that `private` is `true`, so that npm refuses to publish the application by mistake. npm checks for
     /// exactly `true`, so a string such as `"true"` doesn't count.
     pub(crate) fn check_private(&self) -> Result<(), String> {
@@ -252,6 +267,7 @@ impl PackageJson {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::release::Source;
 
     #[test]
     fn exact_specifiers_name_one_version() {
@@ -424,6 +440,33 @@ mod tests {
                 "{json}"
             );
         }
+    }
+
+    #[test]
+    fn requires_the_release_version() {
+        let release = Release::Version {
+            version: semver::Version::new(0, 2, 0),
+            source: Source::Changelog,
+        };
+        assert_eq!(
+            parse(r#"{ "version": "0.2.0" }"#).check_version(&release),
+            Ok(())
+        );
+        assert_eq!(
+            parse(r#"{ "version": "0.1.0" }"#).check_version(&release),
+            Err("version is 0.1.0, not 0.2.0, the latest release in CHANGELOG.md".to_owned())
+        );
+        assert_eq!(
+            parse(r#"{ "version": 1 }"#).check_version(&release),
+            Err("version is 1, not a string".to_owned())
+        );
+        assert_eq!(
+            parse("{}").check_version(&release),
+            Err(
+                "Missing version, which should be 0.2.0, the latest release in CHANGELOG.md"
+                    .to_owned()
+            )
+        );
     }
 
     #[test]

@@ -104,6 +104,7 @@ fn check_component(
         Language::Rust => {
             rust::check_cargo(ctx, report);
             rust::check_cargo_workspace(ctx, report);
+            rust::check_cargo_version(project, ctx, report);
             rust::check_cargo_dependencies(ctx, report);
             rust::check_rust_toolchain(ctx, report);
             rust::check_rust_version(ctx, report);
@@ -115,6 +116,7 @@ fn check_component(
         }
         Language::TypeScript => {
             typescript::check_package_json(ctx, report);
+            typescript::check_package_json_version(project, ctx, report);
             typescript::check_pnpm(ctx, report);
             typescript::check_pnpm_workspace(ctx, report);
             typescript::check_tsconfig(ctx, report);

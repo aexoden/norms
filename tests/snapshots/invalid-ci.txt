@@ -60,6 +60,8 @@ warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
 warn  cargo-toml-edition  [.] Cargo.toml: edition 2024
       Missing edition
+fail  cargo-toml-version  [.] Cargo.toml: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)

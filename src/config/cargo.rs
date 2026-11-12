@@ -130,6 +130,7 @@ fn is_exact_requirement(requirement: &str) -> bool {
 #[serde(default, rename_all = "kebab-case")]
 pub(crate) struct CargoPackage {
     pub name: Option<String>,
+    pub version: Option<Inheritable<String>>,
     pub description: Option<Inheritable<String>>,
     pub license: Option<Inheritable<String>>,
     pub edition: Option<Inheritable<String>>,
@@ -185,6 +186,7 @@ impl<T> Inheritable<T> {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default, rename_all = "kebab-case")]
 pub(crate) struct CargoWorkspacePackage {
+    pub version: Option<String>,
     pub description: Option<String>,
     pub license: Option<String>,
     pub edition: Option<String>,
@@ -197,6 +199,7 @@ pub(crate) struct CargoWorkspacePackage {
 /// or if it is inherited and the workspace doesn't set it.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct PackageMetadata<'a> {
+    pub version: Option<&'a str>,
     pub description: Option<&'a str>,
     pub license: Option<&'a str>,
     pub edition: Option<&'a str>,
@@ -326,6 +329,7 @@ impl CargoToml {
             };
 
         PackageMetadata {
+            version: resolve(&package.version, |p| &p.version),
             description: resolve(&package.description, |p| &p.description),
             license: resolve(&package.license, |p| &p.license),
             edition: resolve(&package.edition, |p| &p.edition),
@@ -561,6 +565,7 @@ mod tests {
             r#"
             [package]
             name = "x"
+            version.workspace = true
             description = "Own."
             license.workspace = true
             edition = { workspace = true }
@@ -568,6 +573,7 @@ mod tests {
             repository = { workspace = false }
 
             [workspace.package]
+            version = "1.2.3"
             description = "Inherited."
             license = "MIT"
             edition = "2024"
@@ -578,6 +584,7 @@ mod tests {
         assert_eq!(
             manifest.metadata(manifest.workspace.as_ref()),
             PackageMetadata {
+                version: Some("1.2.3"),
                 description: Some("Own."),
                 license: Some("MIT"),
                 edition: Some("2024"),

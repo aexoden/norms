@@ -50,6 +50,7 @@ use crate::config::{
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
 use crate::models::{Component, Language};
+use crate::release::Release;
 
 /// The file name of markdownlint-cli2's configuration, at the root of the project.
 pub(crate) const MARKDOWNLINT_CLI2_CONFIG: &str = ".markdownlint-cli2.jsonc";
@@ -135,6 +136,7 @@ pub(crate) struct ProjectContext {
     workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
     markdownlint_configs: OnceLock<Vec<PathBuf>>,
     release_tags: OnceLock<Vec<String>>,
+    release: OnceLock<Release>,
 }
 
 impl ProjectContext {
@@ -159,6 +161,7 @@ impl ProjectContext {
             workflows: OnceLock::new(),
             markdownlint_configs: OnceLock::new(),
             release_tags: OnceLock::new(),
+            release: OnceLock::new(),
         }
     }
 
@@ -171,6 +174,12 @@ impl ProjectContext {
     pub(crate) fn release_tags(&self) -> &[String] {
         self.release_tags
             .get_or_init(|| crate::git::release_tags(&self.path))
+    }
+
+    /// The project's latest release (cached), whose version its manifests carry. See [`Release::find`].
+    pub(crate) fn release(&self) -> &Release {
+        self.release
+            .get_or_init(|| Release::find(&self.path, self.release_tags()))
     }
 
     /// The search for the project's components (cached).

@@ -9,7 +9,7 @@ fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/
 fail  reuse-toml-exists  REUSE.toml: exists
       File not found
-pass  changelog-exists  CHANGELOG.md (not needed: no published library or release tag)
+pass  changelog-exists  CHANGELOG.md
 fail  gitignore-exists  .gitignore
       Not found: .gitignore
 fail  gitattributes-exists  .gitattributes: exists
@@ -60,6 +60,10 @@ fail  cargo-toml-license-texts  [.] tools/helper/Cargo.toml: license has its tex
 pass  cargo-toml-description  [.] tools/helper/Cargo.toml: has description
 pass  cargo-toml-repository  [.] tools/helper/Cargo.toml: has repository
 pass  cargo-toml-edition  [.] tools/helper/Cargo.toml: edition 2024
+pass  cargo-toml-version  [.] crates/cli/Cargo.toml: version of the latest release
+fail  cargo-toml-version  [.] crates/core/Cargo.toml: version of the latest release
+      version is 0.1.0, not 0.2.0, the latest release in CHANGELOG.md
+pass  cargo-toml-version  [.] tools/helper/Cargo.toml: version of the latest release
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: workspace.dependencies.serde ("1.0")
 warn  cargo-toml-dependencies-exact  [.] crates/cli/Cargo.toml: dependencies pinned exactly (application)

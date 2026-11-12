@@ -88,6 +88,7 @@ pass  cargo-toml-license-texts  [.] Cargo.toml: license has its texts in LICENSE
 pass  cargo-toml-description  [.] Cargo.toml: has description
 pass  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: edition 2024
+pass  cargo-toml-version  [.] Cargo.toml: version of the latest release
 pass  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
 pass  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [.] rust-toolchain.toml: valid
@@ -133,6 +134,7 @@ pass  package-json-dependencies-exact  [frontend] package.json: dependencies pin
 pass  package-json-dev-engines-runtime  [frontend] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [frontend] package.json: pins pnpm in devEngines
 pass  package-json-no-corepack-package-manager  [frontend] package.json: no Corepack packageManager field
+pass  package-json-version  [frontend] package.json: version of the latest release
 pass  pnpm-lock-exists  [frontend] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [frontend] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [frontend] pnpm-workspace.yaml: valid

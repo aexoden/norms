@@ -203,16 +203,17 @@ not need a changelog.
 
 An `[Unreleased]` section at the top collects notable changes as they land, so
 that anyone who comes across the repository long after a release can see what
-has changed since. A release renames it to the new version, and a new, empty
-`[Unreleased]` section takes its place. The link definitions at the bottom of
-the file change with it: each version links to a comparison with the one before
-it, or the first to its tag, and `[Unreleased]` to a comparison of the latest
-tag with `HEAD` (before the first release, to the commits on `main`, as the
-template writes it). Before a release, go through the commits since the previous
-one for notable changes the section missed. The changelog is written for its
-readers, not as a list of commits: a change that was made and then reverted
-before a release isn't mentioned, and several changes that together make one
-difference are one entry.
+has changed since. A release renames it to the new version, a new, empty
+`[Unreleased]` section takes its place, and the manifests' versions change to
+the new one (see [Versioning](#versioning)). The link definitions at the bottom
+of the file change with it: each version links to a comparison with the one
+before it, or the first to its tag, and `[Unreleased]` to a comparison of the
+latest tag with `HEAD` (before the first release, to the commits on `main`, as
+the template writes it). Before a release, go through the commits since the
+previous one for notable changes the section missed. The changelog is written
+for its readers, not as a list of commits: a change that was made and then
+reverted before a release isn't mentioned, and several changes that together
+make one difference are one entry.
 
 An entry for a breaking change starts with `**Breaking:**`, under the type of
 change it is, and says briefly how to upgrade. The README should say what the
@@ -227,6 +228,22 @@ count: a Rust one whose packages all set `publish = false` (or inherit it from
 `[workspace.package]`), or a Python one with the `Private :: Do Not Upload`
 classifier. A shallow clone, such as CI's default checkout, has no tags, so
 there only the libraries count.
+
+### Versioning
+
+A repository has one version, shared by all its components: that of its latest
+release. Each language's manifest records it in its own way:
+
+- Python's comes from the release tags, through hatch-vcs (see [Python
+  Versioning](#versioning-1)).
+- Rust's `version` in each `Cargo.toml`, and TypeScript's `version` in each
+  component's `package.json`, name the latest release in `CHANGELOG.md`, or, in
+  a project without one, the latest release tag. The commit that makes a
+  release changes them along with the changelog. Before the first release they
+  are `0.0.0`, set explicitly although Cargo takes a missing `version` as that.
+
+`norms verify` checks the Rust and TypeScript versions, members of a Cargo
+workspace included.
 
 ### Agent Guidance
 
@@ -366,7 +383,7 @@ git's built-in diff drivers for each language in the project:
 ```
 
 Include only the language blocks that apply. Python projects also mark
-`.git_archival.txt` as `export-subst` (see [Versioning](#versioning)).
+`.git_archival.txt` as `export-subst` (see [Versioning](#versioning-1)).
 
 ### Commit Messages
 
@@ -559,10 +576,11 @@ The `norms-verify` hook's job runs it as `pre-commit run norms-verify
 --all-files`, so that pre-commit builds the norms that the hook's `rev` pins.
 Its checkout fetches the whole history (`fetch-depth: 0`), since without
 `CHANGELOG.md`, `norms verify` looks for release tags (see
-[Changelog](#changelog)). `norms verify` fails a `ci.yaml` in which no job runs
-it, as the hook or itself, and warns when that job's checkout lacks
-`fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook runs
-only in the `pre-commit` job.
+[Changelog](#changelog)), and takes the latest as the version the manifests
+carry (see [Versioning](#versioning)). `norms verify` fails a `ci.yaml` in
+which no job runs it, as the hook or itself, and warns when that job's checkout
+lacks `fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook
+runs only in the `pre-commit` job.
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -1162,12 +1180,13 @@ global-min-publish-age = "3 days"
 
 #### Package Metadata
 
-`Cargo.toml` sets `description`, `repository`, `license` and `edition` (the
-latest edition, currently 2024). A package that may be published also sets
-`keywords` and `categories`, which Clippy's `cargo_common_metadata` lint, in the
-`cargo` group (see [Lints](#lints)), requires of it. In a workspace, a package
-may inherit these fields from `[workspace.package]` instead, with
-`license.workspace = true` and so on.
+`Cargo.toml` sets `version` (see [Versioning](#versioning)), `description`,
+`repository`, `license` and `edition` (the latest edition, currently 2024). A
+package that may be published also sets `keywords` and `categories`, which
+Clippy's `cargo_common_metadata` lint, in the `cargo` group (see
+[Lints](#lints)), requires of it. In a workspace, a package may inherit these
+fields from `[workspace.package]` instead, with `license.workspace = true` and
+so on.
 
 #### Lints
 
@@ -1392,9 +1411,10 @@ Paths below are relative to that directory.
 
 #### Package Configuration
 
-`package.json` sets `"type": "module"` and `"private": true` (for applications),
-and pins Node.js and pnpm through `devEngines`. pnpm downloads the declared
-versions automatically:
+`package.json` sets `version` (see [Versioning](#versioning)), `"type":
+"module"` and `"private": true` (for applications, which npm then refuses to
+publish to its registry), and pins Node.js and pnpm through `devEngines`. pnpm
+downloads the declared versions automatically:
 
 ```json
 "devEngines": {

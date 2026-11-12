@@ -144,6 +144,7 @@ pass  cargo-toml-license-texts  [rust] Cargo.toml: license has its texts in LICE
 pass  cargo-toml-description  [rust] Cargo.toml: has description
 pass  cargo-toml-repository  [rust] Cargo.toml: has repository
 pass  cargo-toml-edition  [rust] Cargo.toml: edition 2024
+pass  cargo-toml-version  [rust] Cargo.toml: version of the latest release
 pass  rust-toolchain-toml-exists  [rust] ../rust-toolchain.toml: exists
 pass  rust-toolchain-toml-valid  [rust] ../rust-toolchain.toml: valid
 pass  rust-toolchain-toml-channel  [rust] ../rust-toolchain.toml: exact channel

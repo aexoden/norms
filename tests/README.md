@@ -61,7 +61,8 @@ lock files apart from `Cargo.lock`.
   matched by a glob, an excluded crate, a malformed member, a member found only
   as a path dependency, and an unrelated crate that isn't a member. The library
   matched by the glob is on the 2021 edition, while the binary and the path
-  dependency inherit 2024.
+  dependency inherit 2024. Its `CHANGELOG.md` has a release, whose version the
+  binary and the path dependency inherit, while the library sets an older one.
 - `msrv` is a virtual Cargo workspace of libraries whose members set
   `rust-version` themselves, inherit it from `[workspace.package]`, or lack it.
 - `workflows` breaks the Actions standards, beside stub `Cargo.toml` and

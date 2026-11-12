@@ -50,6 +50,12 @@ warn  cargo-toml-description  [.] crates/own/Cargo.toml: has description
 warn  cargo-toml-repository  [.] crates/own/Cargo.toml: has repository
 warn  cargo-toml-edition  [.] crates/own/Cargo.toml: edition 2024
       Missing edition
+fail  cargo-toml-version  [.] crates/inherits/Cargo.toml: version of the latest release
+      version is 0.1.0, not 0.0.0, as the project has no release yet
+fail  cargo-toml-version  [.] crates/missing/Cargo.toml: version of the latest release
+      version is 0.1.0, not 0.0.0, as the project has no release yet
+fail  cargo-toml-version  [.] crates/own/Cargo.toml: version of the latest release
+      version is 0.1.0, not 0.0.0, as the project has no release yet
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 pass  cargo-toml-rust-version  [.] crates/inherits/Cargo.toml: MSRV set (rust-version, library)

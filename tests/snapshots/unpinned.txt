@@ -106,6 +106,8 @@ warn  cargo-toml-license  [.] Cargo.toml: has license
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: edition 2024
+fail  cargo-toml-version  [.] Cargo.toml: version of the latest release
+      version is 0.1.0, not 0.0.0, as the project has no release yet
 warn  cargo-toml-dependencies-exact  [.] Cargo.toml: dependencies pinned exactly (application)
       Not pinned with =x.y.z: dependencies.serde ("1.0"), dev-dependencies.tempfile ("^3.27")
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
@@ -136,6 +138,8 @@ warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in
       Missing devEngines.packageManager
 warn  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
       Sets Corepack's packageManager ("pnpm@10.0.0"); pin pnpm only in devEngines.packageManager
+fail  package-json-version  [web] package.json: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 pass  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists

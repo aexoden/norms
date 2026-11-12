@@ -36,6 +36,7 @@ warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEng
 warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
+pass  package-json-version  [.] package.json: version of the latest release
 fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists

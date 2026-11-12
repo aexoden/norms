@@ -19,6 +19,23 @@ use crate::report::{Issue, Outcome, Report, file_exists};
 // Package configuration
 //
 
+/// Check that `package.json` carries the version of the project's latest release, as the one version of the whole
+/// repository.
+pub(crate) fn check_package_json_version(
+    project: &ProjectContext,
+    ctx: &ComponentContext,
+    report: &mut Report,
+) {
+    let Some(config) = ctx.package_json().as_ref_ok() else {
+        return;
+    };
+    report.must(
+        "package-json-version",
+        "package.json: version of the latest release",
+        config.check_version(project.release()),
+    );
+}
+
 pub(crate) fn check_package_json(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = report.require_parsed("package-json", "package.json", ctx.package_json())
     else {

@@ -147,6 +147,8 @@ fail  cargo-toml-license-texts  [.] Cargo.toml: license has its texts in LICENSE
 warn  cargo-toml-description  [.] Cargo.toml: has description
 warn  cargo-toml-repository  [.] Cargo.toml: has repository
 pass  cargo-toml-edition  [.] Cargo.toml: edition 2024
+fail  cargo-toml-version  [.] Cargo.toml: version of the latest release
+      version is 0.1.0, not 0.0.0, as the project has no release yet
 fail  rust-toolchain-toml-exists  [.] rust-toolchain.toml: exists
       File not found
 warn  cargo-toml-rust-version  [.] Cargo.toml: MSRV set (rust-version, library)
@@ -196,6 +198,8 @@ warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devE
 warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines
       Missing devEngines.packageManager
 pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
+fail  package-json-version  [web] package.json: version of the latest release
+      Missing version, which should be 0.0.0, as the project has no release yet
 fail  pnpm-lock-exists  [web] pnpm: pnpm-lock.yaml exists
       Not found: pnpm-lock.yaml
 fail  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists

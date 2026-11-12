@@ -102,9 +102,11 @@ any check failed or warned.
 - `cargo_workspace.rs`: the members of a Cargo workspace aren't components.
   Their results belong to the workspace's component and name the member's
   manifest (`crates/cli/Cargo.toml: ...`).
-- `git.rs`: runs `git` for the release tags the changelog check needs. Only a
-  project at the top of its repository has any, so the fixtures don't see
-  norms' own tags.
+- `git.rs`: runs `git` for the release tags the changelog and version checks
+  need. Only a project at the top of its repository has any, so the fixtures
+  don't see norms' own tags.
+- `release.rs`: the project's latest release, from `CHANGELOG.md` or else its
+  tags, whose version the `Cargo.toml` and `package.json` checks expect.
 - `commit_msg.rs`: `norms commit-msg`, tested in `tests/commit_msg.rs`.
 
 ## Tests
@@ -187,6 +189,8 @@ At a release, in one commit:
 - Rename it to the new version with the date, add an empty `Unreleased` above
   it, and update the link definitions: the new version compares the previous
   tag with the new one, and `Unreleased` the new tag with `HEAD`.
+- Set `version` in `Cargo.toml` to the new version, and run `cargo check` to
+  update `Cargo.lock` (`norms verify` fails until it matches the release).
 - Set `hook_norms` in `versions.yml` to the new tag, so that projects rendered
   from the release run its hooks (`tests/versions.rs` fails until it matches
   the latest release in `CHANGELOG.md`).

@@ -11,4 +11,5 @@ mod detection;
 mod git;
 mod licenses;
 mod models;
+mod release;
 mod report;
