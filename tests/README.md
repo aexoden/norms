@@ -8,18 +8,26 @@ adding or changing a fixture.
 
 ## Template Renders
 
-The language fixtures are renders of the template, made with the `copier copy`
-command under Commands in `AGENTS.md`, with `--skip-tasks` added and the
-answers below as its `--data`. Each drops `.copier-answers.yml` and has stub
-lock files apart from `Cargo.lock`.
+The language fixtures are renders of the template, which
+`NORMS_RENDER=1 cargo test --test fixtures` remakes from the template in the
+working tree, with the Copier version `ci.yaml` pins, before comparing the
+snapshots. It renders each with Copier's tasks skipped and the answers in
+`RENDERS` in `tests/fixtures.rs`, drops `.copier-answers.yml`, generates
+`Cargo.lock`, and writes stubs of `uv.lock` and `pnpm-lock.yaml`, which the
+checks only look for.
 
-- `rust`, `python` and `typescript`: `primary_language=<language>` and
-  `project_name=demo-<language>`.
-- `rust-typescript`: `project_name=demo`, `primary_language=rust`,
-  `secondary_languages=["typescript"]` and `typescript_path=frontend`.
-- `python-rust-library`, the only library render: `project_name=demo-library`,
-  `primary_language=python`, `project_type=library` and
-  `secondary_languages=["rust"]`.
+- `rust`, `python` and `typescript` are applications in each language.
+- `rust-typescript` is a Rust application with a TypeScript frontend in
+  `frontend/`.
+- `python-rust-library`, the only library render, is a Python library with
+  Rust in `rust/`.
+
+Renovate updates the versions the template pins, but not the fixtures, so
+their versions fall behind between renders. That is harmless, since the checks
+don't compare them, and the template job in CI checks fresh renders. The
+fixtures job in CI re-renders the fixtures and compares the snapshots, so it
+fails when a template change the checks see wasn't re-rendered. Each release
+re-renders them, as `AGENTS.md` describes.
 
 ## Hand-Written Fixtures
 

@@ -14,6 +14,12 @@ concurrency:
 
 permissions: {}
 
+env:
+  # The template job, and the fixtures job through tests/fixtures.rs, render the template with this
+  # Copier.
+  # renovate: datasource=pypi depName=copier
+  COPIER_VERSION: "9.19.1"
+
 jobs:
   build-norms:
     name: Build norms
@@ -128,7 +134,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [build-norms, cargo-deny, cargo-doctest, cargo-lock, cargo-test, clippy, markdownlint, norms-verify, pre-commit, reuse, rustfmt, template, tombi, zizmor]
+    needs: [build-norms, cargo-deny, cargo-doctest, cargo-lock, cargo-test, clippy, fixtures, markdownlint, norms-verify, pre-commit, reuse, rustfmt, template, tombi, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -154,6 +160,33 @@ jobs:
 
       - name: Lint Rust code with Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  fixtures:
+    name: Check the fixtures against fresh renders
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Copier clones the checkout to render it, and warns when it's shallow.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      # Renovate updates the versions the template pins without re-rendering the fixtures, which
+      # the snapshots don't see. This fails only when a change the checks see wasn't re-rendered.
+      - name: Re-render the language fixtures and compare their snapshots
+        env:
+          NORMS_RENDER: "1"
+        run: cargo test --locked --test fixtures
 
   markdownlint:
     name: Lint Markdown with markdownlint
@@ -299,8 +332,6 @@ jobs:
     env:
       # renovate: datasource=crate depName=cargo-deny
       CARGO_DENY_VERSION: "0.20.2"
-      # renovate: datasource=pypi depName=copier
-      COPIER_VERSION: "9.19.1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

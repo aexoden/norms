@@ -28,6 +28,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo llvm-cov --workspace --all-features --show-missing-lines
 cargo test <name>                         # a single test, by name substring
 NORMS_BLESS=1 cargo test --test fixtures  # rewrite the fixture snapshots
+NORMS_RENDER=1 cargo test --test fixtures # re-render the language fixtures
 cargo deny --workspace --all-features check -D warnings bans licenses sources
 cargo run -- verify <path>                # run norms against a project
 cargo run -- verify --deny-warnings .     # run norms against itself
@@ -136,7 +137,7 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   one, to find the fixture that already covers the area, and update it in the
   same commit.
 - Re-render the language fixtures when the template changes in a way the checks
-  see.
+  see, with `NORMS_RENDER=1 cargo test --test fixtures`.
 - Fixtures are kept exactly as written: pre-commit, markdownlint and Tombi
   skip them, and `REUSE.toml` covers them, so one may be deliberately broken or
   lack headers.
@@ -206,3 +207,6 @@ At a release, in one commit:
 - Set `hook_norms` in `versions.yml` to the new tag, so that projects rendered
   from the release run its hooks (`tests/versions.rs` fails until it matches
   the latest release in `CHANGELOG.md`).
+- Re-render the language fixtures, bringing in the versions Renovate has
+  updated since the last render: `NORMS_RENDER=1 cargo test --test fixtures`,
+  with `NORMS_BLESS=1` too if the snapshots change.
