@@ -98,7 +98,7 @@ action_reuse:
 
 # renovate: datasource=github-tags depName=tombi-toml/setup-tombi
 action_setup_tombi:
-  default: "336fd5f0db887ebf637389a659b4193608756ecd # v1.10.0"
+  default: "309f61c909c0972a1f5ebc0cb5465913778010b5 # v1.11.1"
   when: false
 
 # renovate: datasource=github-tags depName=zizmorcore/zizmor-action
