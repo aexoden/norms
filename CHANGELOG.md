@@ -65,6 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The template's workflows pin pre-commit and cargo-llvm-cov in `_VERSION`
+  environment variables under `# renovate:` comments, which the shared Renovate
+  preset now updates, rather than inline in commands, where Renovate didn't.
 - Recognize Cargo commands that pass global options before the subcommand,
   such as `cargo --locked test` or `cargo -C rust clippy`, in the Rust hook and
   CI checks.

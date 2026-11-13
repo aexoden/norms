@@ -895,6 +895,25 @@ and release age policies, so `renovate.json` normally contains nothing else:
 
 Project-specific rules may be added when a project needs them.
 
+A workflow that installs or runs a tool at a version no Renovate manager reads,
+such as cargo-llvm-cov through `taiki-e/install-action`'s `tool` input or
+pre-commit through `uvx`, pins it in an environment variable whose name ends in
+`_VERSION`, in the workflow's `env` (or a job's, if only that job uses it),
+under a `# renovate:` comment naming its datasource and package. The shared
+preset's `customManagers:githubActionsVersions` updates it from there:
+
+```yaml
+env:
+  # renovate: datasource=crate depName=cargo-llvm-cov
+  CARGO_LLVM_COV_VERSION: "0.9.1"
+  # renovate: datasource=pypi depName=pre-commit
+  PRE_COMMIT_VERSION: "4.7.0"
+```
+
+Steps refer to one as `${{ env.CARGO_LLVM_COV_VERSION }}` in an input, such as
+`tool: cargo-llvm-cov@${{ env.CARGO_LLVM_COV_VERSION }}`, or as
+`"$PRE_COMMIT_VERSION"` in a script.
+
 ### Version Pinning
 
 Every project commits its lock files, as each tool recommends. Applications also

@@ -14,6 +14,12 @@ concurrency:
 
 permissions: {}
 
+# Tools CI installs or runs at a pinned version, which Renovate updates from the
+# comment above each one.
+env:
+  # renovate: datasource=pypi depName=pre-commit
+  PRE_COMMIT_VERSION: "4.7.0"
+
 jobs:
   ci-success:
     name: CI success
@@ -65,7 +71,7 @@ jobs:
 
       # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
       - name: Verify the project with norms
-        run: uvx pre-commit@4.7.0 run norms-verify --all-files
+        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run norms-verify --all-files
 
   pre-commit:
     name: Run the remaining pre-commit hooks
@@ -87,7 +93,7 @@ jobs:
       - name: Run the hooks that have no job of their own
         env:
           SKIP: markdownlint-cli2,mypy,norms-verify,pytest,reuse,ruff-check,ruff-format,tombi-format,uv-lock,zizmor
-        run: uvx pre-commit@4.7.0 run --all-files --show-diff-on-failure
+        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
 
   reuse:
     name: Check REUSE compliance

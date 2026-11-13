@@ -19,6 +19,11 @@ concurrency:
 
 permissions: {}
 
+# Renovate updates pre-commit from the comment above its version.
+env:
+  # renovate: datasource=pypi depName=pre-commit
+  PRE_COMMIT_VERSION: "4.7.0"
+
 jobs:
   pr-title:
     name: Check the pull request title
@@ -56,5 +61,5 @@ jobs:
               ;;
           esac
           printf '%s (#%s)\n' "$PR_TITLE" "$PR_NUMBER" > "$RUNNER_TEMP/subject.txt"
-          uvx pre-commit@4.7.0 run --hook-stage commit-msg \
+          uvx "pre-commit@$PRE_COMMIT_VERSION" run --hook-stage commit-msg \
             --commit-msg-filename "$RUNNER_TEMP/subject.txt"

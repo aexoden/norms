@@ -92,6 +92,16 @@ concurrency:
 
 permissions: {}
 
+# Tools CI installs or runs at a pinned version, which Renovate updates from the
+# comment above each one.
+env:
+  # renovate: datasource=pypi depName=pre-commit
+  PRE_COMMIT_VERSION: "{{ pre_commit_version }}"
+{%- if 'rust' in languages %}
+  # renovate: datasource=crate depName=cargo-llvm-cov
+  CARGO_LLVM_COV_VERSION: "{{ cargo_llvm_cov_version }}"
+{%- endif %}
+
 jobs:
   ci-success:
     name: CI success
@@ -119,7 +129,7 @@ jobs:
 
       # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
       - name: Verify the project with norms
-        run: uvx pre-commit@{{ pre_commit_version }} run norms-verify --all-files
+        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run norms-verify --all-files
 {{ job('pre-commit', 'Run the remaining pre-commit hooks', '') }}
 
       - name: Install uv
@@ -130,7 +140,7 @@ jobs:
       - name: Run the hooks that have no job of their own
         env:
           SKIP: {{ skip | sort | join(',') }}
-        run: uvx pre-commit@{{ pre_commit_version }} run --all-files --show-diff-on-failure
+        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
 {{ job('reuse', 'Check REUSE compliance', '') }}
 
       - name: Check REUSE compliance
@@ -178,7 +188,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@{{ action_install_action }}
         with:
-          tool: cargo-llvm-cov@{{ cargo_llvm_cov_version }}
+          tool: cargo-llvm-cov@{% raw %}${{ env.CARGO_LLVM_COV_VERSION }}{% endraw %}
 
       - name: Run Rust tests with coverage
         run: cargo llvm-cov --workspace --all-features --show-missing-lines
