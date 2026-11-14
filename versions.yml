@@ -195,7 +195,7 @@ npm_jiti:
 
 # renovate: datasource=npm depName=prettier
 npm_prettier:
-  default: "3.9.10"
+  default: "3.10.0"
   when: false
 
 # renovate: datasource=npm depName=prettier-plugin-packagejson
