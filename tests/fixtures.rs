@@ -282,8 +282,7 @@ mod tests {
             let component = result
                 .get("component")
                 .and_then(Value::as_str)
-                .map(|path| format!("[{path}] "))
-                .unwrap_or_default();
+                .map_or_default(|path| format!("[{path}] "));
             writeln!(rendered, "{status:<4}  {id}  {component}{name}").unwrap();
 
             let message = result.get("message").and_then(Value::as_str);

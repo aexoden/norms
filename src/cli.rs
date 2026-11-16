@@ -196,7 +196,6 @@ fn commit_msg(file: &Path) -> anyhow::Result<ExitCode> {
 }
 
 /// Entry point for the CLI.
-#[must_use]
 pub fn run() -> ExitCode {
     let cli = Cli::parse();
 
