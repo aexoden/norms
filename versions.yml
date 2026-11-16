@@ -10,7 +10,7 @@
 
 # renovate: datasource=rust-version depName=rust
 rust_toolchain:
-  default: "1.99.1"
+  default: "1.100.0"
   when: false
 
 # renovate: datasource=python-version depName=python
