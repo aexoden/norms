@@ -128,10 +128,7 @@ impl WorkflowStep {
     /// The step's script as lines, with each line that ends in a backslash joined to the next, or none if it runs no
     /// script.
     pub(crate) fn run_lines(&self) -> Vec<String> {
-        self.run
-            .as_deref()
-            .map(join_continued_lines)
-            .unwrap_or_default()
+        self.run.as_deref().map_or_default(join_continued_lines)
     }
 
     /// Whether the step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.

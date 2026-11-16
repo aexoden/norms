@@ -192,8 +192,7 @@ impl ProjectContext {
             let excluded = self
                 .norms()
                 .as_ref_ok()
-                .map(NormsConfig::excluded_paths)
-                .unwrap_or_default();
+                .map_or_default(NormsConfig::excluded_paths);
 
             crate::detection::detect_components(&self.path, &excluded)
         })
@@ -447,8 +446,7 @@ impl ComponentContext {
         self.cargo_members.get_or_init(|| {
             self.cargo()
                 .as_ref_ok()
-                .map(|manifest| find_members(&self.path, manifest))
-                .unwrap_or_default()
+                .map_or_default(|manifest| find_members(&self.path, manifest))
         })
     }
 
@@ -611,8 +609,7 @@ impl ComponentContext {
         self.pnpm_packages.get_or_init(|| {
             self.pnpm_workspace()
                 .as_ref_ok()
-                .map(|workspace| find_packages(&self.path, workspace))
-                .unwrap_or_default()
+                .map_or_default(|workspace| find_packages(&self.path, workspace))
         })
     }
 
