@@ -422,7 +422,7 @@ mod tests {
     }
 
     /// The markdownlint-cli2 release that depends on the markdownlint whose rules [`RULES`] lists.
-    const RULES_MARKDOWNLINT_CLI2: &str = "v0.24.0";
+    const RULES_MARKDOWNLINT_CLI2: &str = "v0.24.1";
 
     /// The version of markdownlint-cli2 that the template's `versions.yml` pins its hook to.
     fn pinned_markdownlint_cli2() -> String {
