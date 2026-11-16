@@ -8,7 +8,7 @@
 
 # Toolchains
 
-# renovate: datasource=github-tags depName=rust packageName=rust-lang/rust
+# renovate: datasource=rust-version depName=rust
 rust_toolchain:
   default: "1.99.1"
   when: false
