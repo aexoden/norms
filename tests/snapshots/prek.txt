@@ -18,28 +18,28 @@ fail  editorconfig-exists  .editorconfig: exists
       File not found
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-pass  precommit-config-exists  prek.toml: exists
-pass  precommit-config-valid  prek.toml: valid
-fail  precommit-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
+pass  prek-config-exists  prek.toml: exists
+pass  prek-config-valid  prek.toml: valid
+fail  prek-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
       default_install_hook_types lacks pre-commit
-pass  precommit-default-stages  prek: default_stages is [pre-commit]
-warn  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
+pass  prek-default-stages  prek: default_stages is [pre-commit]
+warn  prek-hook-ids-unique  prek: each hook has a unique ID or alias
       Hooks with no ID or alias of their own: eslint, vitest
-fail  precommit-pre-commit-hooks  prek: the common hooks from prek's builtin repo
+fail  prek-builtin-hooks  prek: the common hooks from prek's builtin repo
       Missing: check-illegal-windows-names, check-merge-conflict, check-symlinks, check-vcs-permalinks, trailing-whitespace; Not from prek's builtin repo: check-added-large-files, check-case-conflict, check-toml, check-yaml, detect-private-key, end-of-file-fixer
-warn  precommit-reuse  prek: reuse hook
+warn  prek-reuse  prek: reuse hook
       The reuse hook doesn't run in the pre-commit stage
-fail  precommit-markdownlint  prek: markdownlint-cli2 hook
+fail  prek-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  precommit-tombi  prek: tombi-format hook
+fail  prek-tombi  prek: tombi-format hook
       The tombi-format hook runs only in the manual stage, so it never runs on its own
-fail  precommit-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
+fail  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow perf, refactor, style, test, build, ci, revert and also allows wip
-fail  precommit-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
+fail  prek-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
       The norms-commit-msg hook doesn't run in the commit-msg stage
-warn  precommit-norms-verify  prek: norms-verify hook (--deny-warnings)
+warn  prek-norms-verify  prek: norms-verify hook (--deny-warnings)
       The norms-verify hook doesn't pass --deny-warnings, so it passes a project that warns
-fail  precommit-zizmor  prek: zizmor hook (pedantic)
+fail  prek-zizmor  prek: zizmor hook (pedantic)
       No zizmor hook
 fail  renovate-exists  renovate.json: exists
       File not found

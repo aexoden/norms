@@ -764,7 +764,7 @@ pub(crate) fn check_doctests(
 
     if let Some(prek) = project.prek().as_ref_ok() {
         report.should(
-            "rust-precommit-cargo-doctest",
+            "rust-prek-cargo-doctest",
             "Rust prek: doctests run (library target)",
             doctest_hooks(prek),
         );
@@ -856,36 +856,36 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.check(
-        "rust-precommit-cargo-lock",
+        "rust-prek-cargo-lock",
         "Rust prek: cargo-lock hook",
         config.check_commit_hook("cargo-lock"),
     );
 
     report.check(
-        "rust-precommit-rustfmt",
+        "rust-prek-rustfmt",
         "Rust prek: rustfmt hook (--check)",
         config.check_formatter_hook("rustfmt", "rustfmt", rustfmt_run),
     );
 
     report.check(
-        "rust-precommit-clippy",
+        "rust-prek-clippy",
         "Rust prek: clippy hook (-D warnings)",
         clippy_hooks(config),
     );
 
     report.check(
-        "rust-precommit-cargo-test",
+        "rust-prek-cargo-test",
         "Rust prek: cargo-test hook (with coverage)",
         cargo_test_hooks(config),
     );
 
     report.check(
-        "rust-precommit-cargo-deny",
+        "rust-prek-cargo-deny",
         "Rust prek: cargo-deny hook",
         cargo_deny_hooks(config),
     );
     report.should(
-        "rust-precommit-local-hooks",
+        "rust-prek-local-hooks",
         "Rust prek: language hooks are local, system and take no file names",
         config.check_language_hooks(&LANGUAGE_HOOKS),
     );

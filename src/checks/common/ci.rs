@@ -795,7 +795,7 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
     );
     report.check("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
     report.check(
-        "ci-pre-commit",
+        "ci-prek",
         "CI: remaining prek hooks (pinned, --all-files)",
         prek_in_ci(workflow),
     );
@@ -808,7 +808,7 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
         && let Some(skip) = prek_skip(config, workflow)
     {
         report.should(
-            "ci-pre-commit-skip",
+            "ci-prek-skip",
             "CI: the prek job's PREK_SKIP lists every hook with a job of its own",
             skip,
         );

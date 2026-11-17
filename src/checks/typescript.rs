@@ -940,17 +940,17 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.check(
-        "typescript-precommit-pnpm-lock",
+        "typescript-prek-pnpm-lock",
         "TypeScript prek: pnpm-lock hook",
         prek.check_commit_hook("pnpm-lock"),
     );
     report.check(
-        "typescript-precommit-pnpm-peer-dependencies",
+        "typescript-prek-pnpm-peer-dependencies",
         "TypeScript prek: pnpm-peer-dependencies hook",
         prek.check_commit_hook("pnpm-peer-dependencies"),
     );
     report.check(
-        "typescript-precommit-eslint",
+        "typescript-prek-eslint",
         "TypeScript prek: eslint hook (--max-warnings 0)",
         prek.commit_hooks("eslint").and_then(|hooks| {
             if hooks.into_iter().any(eslint_hook_strict) {
@@ -961,27 +961,27 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
         }),
     );
     report.check(
-        "typescript-precommit-prettier",
+        "typescript-prek-prettier",
         "TypeScript prek: prettier hook (--check)",
         prek.check_formatter_hook("prettier", "prettier", prettier_run),
     );
     report.check(
-        "typescript-precommit-tsc",
+        "typescript-prek-tsc",
         "TypeScript prek: tsc hook (tsc -b)",
         tsc_hooks(prek, every_tsconfig_solution_style(ctx)),
     );
     report.check(
-        "typescript-precommit-vite-build",
+        "typescript-prek-vite-build",
         "TypeScript prek: vite-build hook",
         prek.check_commit_hook("vite-build"),
     );
     report.check(
-        "typescript-precommit-vitest",
+        "typescript-prek-vitest",
         "TypeScript prek: vitest hook (with coverage)",
         vitest_hooks(prek),
     );
     report.should(
-        "typescript-precommit-local-hooks",
+        "typescript-prek-local-hooks",
         "TypeScript prek: language hooks are local, system and take no file names",
         prek.check_language_hooks(&LANGUAGE_HOOKS),
     );

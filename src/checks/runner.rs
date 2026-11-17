@@ -203,12 +203,12 @@ mod tests {
         .unwrap();
         let results = project.verify();
 
-        let valid = find(&results, "precommit-config-valid");
+        let valid = find(&results, "prek-config-valid");
         assert!(matches!(valid.as_slice(), [r] if r.status == Status::Fail));
         assert!(
             !results
                 .iter()
-                .any(|r| r.id.starts_with("rust-precommit-") || r.id == "precommit-reuse")
+                .any(|r| r.id.starts_with("rust-prek-") || r.id == "prek-reuse")
         );
     }
 

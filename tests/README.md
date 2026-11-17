@@ -106,7 +106,7 @@ re-renders them, as `AGENTS.md` describes.
     advisories check;
   - a `release.yaml` job that only checks formatting but leaves
     setup-rust-toolchain's cache on, beside jobs that build or turn it off.
-- `precommit` has only a `prek.toml`, which breaks the Git hook standards: its
+- `prek` has only a `prek.toml`, which breaks the Git hook standards: its
   `default_install_hook_types` lacks `pre-commit`, it runs only some of the
   common hooks, from pre-commit-hooks rather than prek's builtin repo, its
   `reuse` hook runs in the wrong stage and its `tombi-format` hook only in the

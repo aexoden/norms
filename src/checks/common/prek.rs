@@ -79,66 +79,66 @@ fn zizmor_hook_pedantic(hook: &PrekHook) -> bool {
 }
 
 pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = report.require_parsed("precommit-config", "prek.toml", ctx.prek()) else {
+    let Some(config) = report.require_parsed("prek-config", "prek.toml", ctx.prek()) else {
         return;
     };
 
     // Without both types, prek install leaves the pre-commit or the commit-msg hooks uninstalled, so they never run,
     // and prek rejects a list it can't read.
     report.must(
-        "precommit-install-hook-types",
+        "prek-install-hook-types",
         "prek: default_install_hook_types includes pre-commit and commit-msg",
         config.check_default_install_hook_types(),
     );
     // With any other list, hooks without stages of their own run in other stages than once before each commit, and
     // prek rejects a list it can't read, so it runs no hooks at all.
     report.check(
-        "precommit-default-stages",
+        "prek-default-stages",
         "prek: default_stages is [pre-commit]",
         config.check_default_stages(),
     );
     report.should(
-        "precommit-hook-ids-unique",
+        "prek-hook-ids-unique",
         "prek: each hook has a unique ID or alias",
         config.check_unique_hook_ids(),
     );
     report.check(
-        "precommit-pre-commit-hooks",
+        "prek-builtin-hooks",
         "prek: the common hooks from prek's builtin repo",
         common_hooks_in(config),
     );
     report.check(
-        "precommit-reuse",
+        "prek-reuse",
         "prek: reuse hook",
         config.check_commit_hook("reuse"),
     );
     report.check(
-        "precommit-markdownlint",
+        "prek-markdownlint",
         "prek: markdownlint-cli2 hook",
         config.check_commit_hook("markdownlint-cli2"),
     );
     report.check(
-        "precommit-tombi",
+        "prek-tombi",
         "prek: tombi-format hook",
         config.check_commit_hook("tombi-format"),
     );
     report.check(
-        "precommit-conventional-pre-commit",
+        "prek-conventional-pre-commit",
         "prek: conventional-pre-commit hook (commit-msg stage, recognized types)",
         conventional_hook_in(config),
     );
     report.check(
-        "precommit-norms-commit-msg",
+        "prek-norms-commit-msg",
         "prek: norms-commit-msg hook (commit-msg stage)",
         norms_commit_msg_hook_in(config),
     );
     report.check(
-        "precommit-norms-verify",
+        "prek-norms-verify",
         "prek: norms-verify hook (--deny-warnings)",
         norms_verify_hook_in(config),
     );
     report.check(
-        "precommit-zizmor",
+        "prek-zizmor",
         "prek: zizmor hook (pedantic)",
         config.commit_hooks("zizmor").and_then(|hooks| {
             if hooks.into_iter().any(zizmor_hook_pedantic) {

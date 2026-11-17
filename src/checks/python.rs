@@ -684,30 +684,30 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     };
 
     report.check(
-        "python-precommit-uv-lock",
+        "python-prek-uv-lock",
         "Python prek: uv-lock hook",
         config.check_commit_hook("uv-lock"),
     );
 
     report.check(
-        "python-precommit-ruff-check",
+        "python-prek-ruff-check",
         "Python prek: ruff-check hook",
         config.check_commit_hook("ruff-check"),
     );
     report.check(
-        "python-precommit-ruff-format",
+        "python-prek-ruff-format",
         "Python prek: ruff-format hook (--check)",
         config.check_formatter_hook("ruff-format", "ruff format", ruff_format_run),
     );
 
     report.check(
-        "python-precommit-mypy",
+        "python-prek-mypy",
         "Python prek: mypy hook",
         config.check_commit_hook("mypy"),
     );
 
     report.check(
-        "python-precommit-pytest",
+        "python-prek-pytest",
         "Python prek: pytest hook (with coverage)",
         config.commit_hooks("pytest").and_then(|hooks| {
             if hooks.into_iter().any(pytest_hook_covers) {
@@ -718,7 +718,7 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
         }),
     );
     report.should(
-        "python-precommit-local-hooks",
+        "python-prek-local-hooks",
         "Python prek: language hooks are local, system and take no file names",
         config.check_language_hooks(&LANGUAGE_HOOKS),
     );

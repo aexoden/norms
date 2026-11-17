@@ -71,6 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than pre-commit-hooks, so that prek needn't clone it and install Python for
   it, and warn about a common hook from another repo. Replace the
   pre-commit-hooks repo with `repo = "builtin"` and drop its `rev`.
+- **Breaking:** Rename the checks of the hook configuration for prek:
+  `precommit-*` becomes `prek-*` (`precommit-pre-commit-hooks` becomes
+  `prek-builtin-hooks`), `rust-precommit-*`, `python-precommit-*` and
+  `typescript-precommit-*` become `rust-prek-*`, `python-prek-*` and
+  `typescript-prek-*`, and `ci-pre-commit` and `ci-pre-commit-skip` become
+  `ci-prek` and `ci-prek-skip`. Rename any waivers of them in `norms.toml`.
 - `norms --version` reports the version `git describe` gives in a build from
   a git checkout, such as `0.2.0-5-gf8a4d2b` between releases.
 - The template starts Rust packages at version `0.0.0`, as TypeScript ones

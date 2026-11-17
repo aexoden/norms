@@ -618,14 +618,14 @@ mod tests {
     #[test]
     fn check_records_each_issue_at_its_own_severity() {
         let mut report = Report::new(PathBuf::new(), Vec::new());
-        report.check("precommit-reuse", "prek: reuse hook", Ok(()));
+        report.check("prek-reuse", "prek: reuse hook", Ok(()));
         report.check(
-            "precommit-reuse",
+            "prek-reuse",
             "prek: reuse hook",
             Err(Issue::fail("No reuse hook")),
         );
         report.check(
-            "precommit-reuse",
+            "prek-reuse",
             "prek: reuse hook",
             Err(Issue::warn(
                 "The reuse hook doesn't run in the pre-commit stage",
@@ -635,10 +635,10 @@ mod tests {
         assert_eq!(
             statuses(&report),
             [
-                ("precommit-reuse", Status::Pass, ""),
-                ("precommit-reuse", Status::Fail, "No reuse hook"),
+                ("prek-reuse", Status::Pass, ""),
+                ("prek-reuse", Status::Fail, "No reuse hook"),
                 (
-                    "precommit-reuse",
+                    "prek-reuse",
                     Status::Warn,
                     "The reuse hook doesn't run in the pre-commit stage"
                 ),
