@@ -23,6 +23,8 @@ pass  prek-config-valid  prek.toml: valid
 fail  prek-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
       default_install_hook_types lacks pre-commit
 pass  prek-default-stages  prek: default_stages is [pre-commit]
+warn  prek-rev-follows-repo  prek: each remote repo's rev follows it, where Renovate finds it
+      Renovate can't update the rev of https://github.com/fsfe/reuse-tool: write each as repo = "https://github.com/..." with rev = "..." on the next line
 warn  prek-hook-ids-unique  prek: each hook has a unique ID or alias
       Hooks with no ID or alias of their own: eslint, vitest
 fail  prek-builtin-hooks  prek: the common hooks from prek's builtin repo

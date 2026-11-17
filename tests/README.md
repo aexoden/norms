@@ -109,12 +109,13 @@ re-renders them, as `AGENTS.md` describes.
 - `prek` has only a `prek.toml`, which breaks the Git hook standards: its
   `default_install_hook_types` lacks `pre-commit`, it runs only some of the
   common hooks, from pre-commit-hooks rather than prek's builtin repo, its
-  `reuse` hook runs in the wrong stage and its `tombi-format` hook only in the
-  `manual` one, its conventional-pre-commit hook runs in the wrong stage with
-  other commit types than the standard's, its `norms-commit-msg` hook runs in
-  the `pre-commit` stage and its `norms-verify` hook without
-  `--deny-warnings`, and among remote and local hooks whose IDs or aliases
-  collide, some have aliases of their own and some can't be selected alone.
+  reuse repo's `rev` comes before its `repo`, its `reuse` hook runs in the
+  wrong stage and its `tombi-format` hook only in the `manual` one, its
+  conventional-pre-commit hook runs in the wrong stage with other commit types
+  than the standard's, its `norms-commit-msg` hook runs in the `pre-commit`
+  stage and its `norms-verify` hook without `--deny-warnings`, and among remote
+  and local hooks whose IDs or aliases collide, some have aliases of their own
+  and some can't be selected alone.
 - `markdown` breaks the Markdown standards: its `.markdownlint-cli2.jsonc`
   names rules by alias and tag, turns some off and lets others only warn, and
   sets other options than the standard's; its markdownlint-cli2 hook has

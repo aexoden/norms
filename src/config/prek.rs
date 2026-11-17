@@ -4,7 +4,9 @@
 //! Type-safe model for `prek.toml`.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
+use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -36,7 +38,21 @@ pub(crate) struct PrekConfig {
     /// only the check reading it.
     pub default_stages: Option<Value>,
     pub repos: Vec<PrekRepo>,
+    /// The file's text, as [`parse`](Self::parse) read it.
+    #[serde(skip)]
+    pub source: String,
 }
+
+/// The repositories prek provides itself, which have no `rev`.
+const OWN_REPOS: [&str; 3] = ["local", "builtin", "meta"];
+
+/// A remote repository and its `rev` as the shared Renovate preset's stopgap manager for `prek.toml` finds them: a
+/// GitHub URL with the `rev` on the next line. Its regular expression, which Renovate runs on the whole file, matches
+/// the depName and leaves the URL's `.git` out of it; this one takes the whole URL.
+static RENOVATE_REPO_REV: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r#"repo = "(https://github\.com/[^"]+)"\n\s*rev = "[^"]+""#).unwrap()
+});
 
 /// A single repo entry in the prek config.
 #[derive(Debug, Deserialize, Default)]
@@ -102,6 +118,48 @@ impl PrekHook {
 }
 
 impl PrekConfig {
+    /// Parse `prek.toml`'s text, `source`, keeping it.
+    pub(crate) fn parse(source: String) -> Result<Self, String> {
+        let config: Self = toml::from_str(&source).map_err(|e| format!("Invalid TOML: {e}"))?;
+        Ok(Self { source, ..config })
+    }
+
+    /// Whether Renovate can update the `rev` of every remote repository: the shared preset's stopgap manager finds a
+    /// `rev` only on the line after a GitHub `repo`, as [`RENOVATE_REPO_REV`] does. Without it, the hooks stay at their
+    /// revision until someone updates them by hand.
+    pub(crate) fn check_renovate_revs(&self) -> Result<(), String> {
+        // Each match finds one entry's rev, so a URL that two entries share needs two.
+        let mut found: HashMap<&str, usize> = HashMap::new();
+        for url in RENOVATE_REPO_REV
+            .captures_iter(&self.source)
+            .filter_map(|captures| captures.get(1))
+        {
+            *found.entry(url.as_str()).or_default() += 1;
+        }
+        let mut missed: Vec<&str> = Vec::new();
+        for repo in self
+            .repos
+            .iter()
+            .map(|repo| repo.repo.as_str())
+            .filter(|repo| !OWN_REPOS.contains(repo))
+        {
+            match found.get_mut(repo) {
+                Some(count) if *count > 0 => *count -= 1,
+                _ if missed.contains(&repo) => {}
+                _ => missed.push(repo),
+            }
+        }
+        if missed.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Renovate can't update the rev of {}: write each as repo = \"https://github.com/...\" with \
+                 rev = \"...\" on the next line",
+                missed.join(", ")
+            ))
+        }
+    }
+
     /// Whether `default_stages` is exactly `[pre-commit]`, so that hooks without stages of their own run once per
     /// commit, and not again on its message: a failure if prek would reject it, as anything but a list of the
     /// stages it knows, and a warning if it is missing or lists other stages.
@@ -771,6 +829,99 @@ mod tests {
                 "{stages} {default_stages}"
             );
         }
+    }
+
+    #[test]
+    fn renovate_finds_each_rev_on_the_line_after_its_repo() {
+        let revs = |toml: &str| {
+            PrekConfig::parse(toml.to_owned())
+                .unwrap()
+                .check_renovate_revs()
+        };
+        let missed = |repos: &str| {
+            Err(format!(
+                "Renovate can't update the rev of {repos}: write each as repo = \"https://github.com/...\" with rev = \
+                 \"...\" on the next line"
+            ))
+        };
+        // Renovate's \s* lets blank lines through, too.
+        assert_eq!(
+            revs(
+                r#"
+[[repos]]
+repo = "builtin"
+
+[[repos.hooks]]
+id = "check-yaml"
+
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+rev = "v6.3.0"
+
+[[repos]]
+repo = "https://github.com/zizmorcore/zizmor-pre-commit.git"
+
+rev = "v1.32.0"
+
+[[repos]]
+repo = "local"
+"#
+            ),
+            Ok(())
+        );
+        // The rev before the repo, a comment between them, a comment after the repo, or a literal string all hide it.
+        assert_eq!(
+            revs(
+                r#"
+[[repos]]
+rev = "v1.11.2"
+repo = "https://github.com/tombi-toml/tombi-pre-commit"
+
+[[repos]]
+repo = "https://github.com/DavidAnson/markdownlint-cli2"
+# Markdown
+rev = "v0.24.1"
+
+[[repos]]
+repo = "https://github.com/zizmorcore/zizmor-pre-commit" # zizmor
+rev = "v1.32.0"
+
+[[repos]]
+repo = 'https://github.com/compilerla/conventional-pre-commit'
+rev = "v4.5.0"
+
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+rev = "v6.3.0"
+"#
+            ),
+            missed(
+                "https://github.com/tombi-toml/tombi-pre-commit, https://github.com/DavidAnson/markdownlint-cli2, \
+                 https://github.com/zizmorcore/zizmor-pre-commit, https://github.com/compilerla/conventional-pre-commit"
+            )
+        );
+        // So do inline tables and another host.
+        assert_eq!(
+            revs(
+                r#"repos = [{repo = "https://github.com/fsfe/reuse-tool", rev = "v6.3.0", hooks = []}, {repo = "https://gitlab.com/a/b", rev = "v1"}]"#
+            ),
+            missed("https://github.com/fsfe/reuse-tool, https://gitlab.com/a/b")
+        );
+        // A repo listed twice needs each rev where Renovate finds it, and is named once however many it misses.
+        let twice = |second: &str| {
+            revs(&format!(
+                "[[repos]]\nrepo = \"https://github.com/a/b\"\nrev = \"v1\"\n\n[[repos]]\n{second}\n\n[[repos]]\n\
+                 repo = \"https://github.com/c/d\"\nrev = \"v1\"\n\n[[repos]]\nrev = \"v3\"\nrepo = \"https://github.com/a/b\"\n"
+            ))
+        };
+        assert_eq!(
+            twice("repo = \"https://github.com/a/b\"\nrev = \"v2\""),
+            missed("https://github.com/a/b")
+        );
+        assert_eq!(
+            twice("rev = \"v2\"\nrepo = \"https://github.com/a/b\""),
+            missed("https://github.com/a/b")
+        );
     }
 
     #[test]

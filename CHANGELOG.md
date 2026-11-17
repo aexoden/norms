@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run without coverage, or `rust-toolchain.toml` lacks `llvm-tools`. Install
   [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov#installation) to
   run the hook.
+- Warn about a remote repository in `prek.toml` whose `rev` the shared Renovate
+  preset can't update: one not written as `repo = "https://github.com/..."`
+  with `rev = "..."` on the next line, as with inline tables.
 
 ### Changed
 

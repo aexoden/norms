@@ -786,7 +786,9 @@ id = "reuse"
 Renovate updates the revisions. Its pre-commit manager reads only
 `.pre-commit-config.yaml`, so until it has one for `prek.toml`, the shared
 [renovate-config](https://github.com/aexoden/renovate-config) preset finds them
-with a regular expression that expects that layout.
+with a regular expression that expects that layout. `norms verify` warns about
+a remote repository whose `rev` it wouldn't find, such as one on another host
+or written before its `repo`.
 
 prek runs the configuration of every project it finds below the root, so a
 directory holding configurations that aren't the repository's own, such as

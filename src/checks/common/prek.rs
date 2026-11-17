@@ -97,6 +97,12 @@ pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
         "prek: default_stages is [pre-commit]",
         config.check_default_stages(),
     );
+    // Renovate would leave such a repo at its revision, which still runs.
+    report.should(
+        "prek-rev-follows-repo",
+        "prek: each remote repo's rev follows it, where Renovate finds it",
+        config.check_renovate_revs(),
+    );
     report.should(
         "prek-hook-ids-unique",
         "prek: each hook has a unique ID or alias",

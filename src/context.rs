@@ -284,8 +284,9 @@ impl ProjectContext {
 
     /// Parsed `prek.toml` (cached).
     pub(crate) fn prek(&self) -> &ConfigStatus<PrekConfig> {
-        self.prek
-            .get_or_init(|| parse_toml_file::<PrekConfig>(&self.path.join("prek.toml")))
+        self.prek.get_or_init(|| {
+            read_text_file(&self.path.join("prek.toml")).parse_with(PrekConfig::parse)
+        })
     }
 
     /// Parsed `.editorconfig` (cached).

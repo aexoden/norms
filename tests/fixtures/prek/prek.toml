@@ -24,8 +24,8 @@ id = "detect-private-key"
 id = "end-of-file-fixer"
 
 [[repos]]
-repo = "https://github.com/fsfe/reuse-tool"
 rev = "v6.2.0"
+repo = "https://github.com/fsfe/reuse-tool"
 
 [[repos.hooks]]
 id = "reuse"
