@@ -31,7 +31,7 @@ fail  precommit-install-hook-types  prek: default_install_hook_types includes pr
 warn  precommit-default-stages  prek: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
 pass  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
-fail  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
+fail  precommit-pre-commit-hooks  prek: the common hooks from prek's builtin repo
       Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
 fail  precommit-reuse  prek: reuse hook
       No reuse hook

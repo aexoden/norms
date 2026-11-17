@@ -50,11 +50,6 @@ prek_version:
 
 # Hooks
 
-# renovate: datasource=github-tags depName=pre-commit/pre-commit-hooks
-hook_pre_commit_hooks:
-  default: "v6.0.0"
-  when: false
-
 # renovate: datasource=github-tags depName=fsfe/reuse-tool
 hook_reuse:
   default: "v6.3.0"

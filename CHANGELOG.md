@@ -66,6 +66,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the template does, setting `PREK_SKIP` rather than `SKIP`. prek builds the
   `norms-verify` hook with `cargo install --locked`, so with the dependency
   versions norms' `Cargo.lock` pins.
+- **Breaking:** Run the common hooks, such as `check-yaml` and
+  `trailing-whitespace`, from prek's builtin repo (`repo = "builtin"`) rather
+  than pre-commit-hooks, so that prek needn't clone it and install Python for
+  it, and warn about a common hook from another repo. Replace the
+  pre-commit-hooks repo with `repo = "builtin"` and drop its `rev`.
 - `norms --version` reports the version `git describe` gives in a build from
   a git checkout, such as `0.2.0-5-gf8a4d2b` between releases.
 - The template starts Rust packages at version `0.0.0`, as TypeScript ones

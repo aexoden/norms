@@ -146,8 +146,8 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 ## Template
 
 - `copier.yml` holds the questions and post-copy `_tasks` (lock file
-  generation). It `!include`s `versions.yml`, so it is excluded from the
-  `check-yaml` hook.
+  generation). It `!include`s `versions.yml` in a document of its own, so the
+  `check-yaml` hook allows multiple documents.
 - `versions.yml` holds every version the template pins, as hidden variables.
   Each entry's `# renovate:` comment feeds the regex managers in
   `renovate.json`, so keep that comment format when adding entries.

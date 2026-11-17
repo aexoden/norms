@@ -25,8 +25,8 @@ fail  precommit-install-hook-types  prek: default_install_hook_types includes pr
 pass  precommit-default-stages  prek: default_stages is [pre-commit]
 warn  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
       Hooks with no ID or alias of their own: eslint, vitest
-fail  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
-      Missing: check-illegal-windows-names, check-merge-conflict, check-symlinks, check-vcs-permalinks, trailing-whitespace
+fail  precommit-pre-commit-hooks  prek: the common hooks from prek's builtin repo
+      Missing: check-illegal-windows-names, check-merge-conflict, check-symlinks, check-vcs-permalinks, trailing-whitespace; Not from prek's builtin repo: check-added-large-files, check-case-conflict, check-toml, check-yaml, detect-private-key, end-of-file-fixer
 warn  precommit-reuse  prek: reuse hook
       The reuse hook doesn't run in the pre-commit stage
 fail  precommit-markdownlint  prek: markdownlint-cli2 hook

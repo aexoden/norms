@@ -587,7 +587,7 @@ action rather than running the tool itself. `norms verify` warns on a step that
 runs the tool instead, without checking its arguments.
 
 Most hooks have a job of their own. A `prek` job runs the rest, such as the
-[common hooks](#common-hooks) from pre-commit-hooks, with `prek run --all-files
+[common hooks](#common-hooks) built into prek, with `prek run --all-files
 --show-diff-on-failure` at a pinned prek version, installed with
 `taiki-e/install-action` (`tool: prek@${{ env.PREK_VERSION }}`). Its
 `PREK_SKIP` lists every hook that has its own job, so a hook added later runs in
@@ -796,13 +796,21 @@ test fixtures, is listed in `.prekignore`.
 
 Every project uses these hooks:
 
-- [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks):
-  `check-added-large-files`, `check-case-conflict`,
+- [prek's builtin hooks](https://prek.j178.dev/built-in-hooks/), from
+  `repo = "builtin"`, which prek runs without cloning a repository or
+  installing anything: `check-added-large-files`, `check-case-conflict`,
   `check-illegal-windows-names`, `check-merge-conflict`, `check-symlinks`,
   `check-toml`, `check-vcs-permalinks`, `check-yaml`, `detect-private-key`,
-  `end-of-file-fixer` and `trailing-whitespace`. `check-merge-conflict` looks
-  for conflict markers only while a merge or rebase is in progress, which is
-  when they can be committed by mistake, so in CI it always passes.
+  `end-of-file-fixer` and `trailing-whitespace`. They reimplement the hooks of
+  [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks), which
+  prek runs the same way from that repository too, though only after cloning it
+  and installing Python. `check-yaml` accepts tags it doesn't know, such as
+  Copier's `!include`, but a file holding several YAML documents, such as
+  `pnpm-lock.yaml`, needs its `--allow-multiple-documents`.
+  `check-merge-conflict` looks for conflict markers only while a merge or
+  rebase is in progress, which is when they can be committed by mistake, so in
+  CI it always passes. `norms verify` fails a project without one of these
+  hooks, and warns when one comes from another repository.
 - [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see
   [Licensing](#licensing)).
 - [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2):

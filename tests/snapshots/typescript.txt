@@ -35,7 +35,7 @@ pass  precommit-config-valid  prek.toml: valid
 pass  precommit-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  prek: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
-pass  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
+pass  precommit-pre-commit-hooks  prek: the common hooks from prek's builtin repo
 pass  precommit-reuse  prek: reuse hook
 pass  precommit-markdownlint  prek: markdownlint-cli2 hook
 pass  precommit-tombi  prek: tombi-format hook

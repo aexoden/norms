@@ -29,7 +29,7 @@ pass  precommit-config-valid  prek.toml: valid
 pass  precommit-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
 pass  precommit-default-stages  prek: default_stages is [pre-commit]
 pass  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
-fail  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
+fail  precommit-pre-commit-hooks  prek: the common hooks from prek's builtin repo
       Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
 fail  precommit-reuse  prek: reuse hook
       No reuse hook

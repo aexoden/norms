@@ -11,10 +11,9 @@ default_stages = ["pre-commit"]
 # The test fixtures are projects for norms to check, kept exactly as written.
 exclude = "^tests/fixtures/"
 
-# General hooks
+# General hooks, built into prek
 [[repos]]
-repo = "https://github.com/pre-commit/pre-commit-hooks"
-rev = "v6.0.0"
+repo = "builtin"
 
 [[repos.hooks]]
 id = "check-added-large-files"
@@ -39,8 +38,8 @@ id = "check-vcs-permalinks"
 
 [[repos.hooks]]
 id = "check-yaml"
-# copier.yml uses Copier's !include tag across several documents.
-exclude = '^copier\.yml$'
+# copier.yml holds several documents.
+args = ["--allow-multiple-documents"]
 
 [[repos.hooks]]
 id = "detect-private-key"

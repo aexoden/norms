@@ -15,8 +15,11 @@ use crate::report::{Issue, Report};
 // prek
 //
 
-/// The hooks from pre-commit-hooks that every project runs.
-const PRE_COMMIT_HOOKS: [&str; 11] = [
+/// The repository of hooks built into prek, which it runs without cloning or installing anything.
+const BUILTIN_REPO: &str = "builtin";
+
+/// The hooks from prek's builtin repository that every project runs.
+const COMMON_HOOKS: [&str; 11] = [
     "check-added-large-files",
     "check-case-conflict",
     "check-illegal-windows-names",
@@ -30,21 +33,37 @@ const PRE_COMMIT_HOOKS: [&str; 11] = [
     "trailing-whitespace",
 ];
 
-/// Whether each hook of the pre-commit-hooks set runs before each commit.
-fn pre_commit_hooks_in(config: &PrekConfig) -> Result<(), Issue> {
+/// Whether each of the common hooks runs before each commit, from prek's builtin repository. One from another, such as
+/// pre-commit-hooks, which prek clones and installs Python for, still checks the files, so it only warns.
+fn common_hooks_in(config: &PrekConfig) -> Result<(), Issue> {
     let mut missing = Vec::new();
+    let mut elsewhere = Vec::new();
     let mut issues = Vec::new();
-    for id in PRE_COMMIT_HOOKS {
-        if !config
+    for id in COMMON_HOOKS {
+        let mut repos = config
             .repos
             .iter()
-            .flat_map(|repo| &repo.hooks)
-            .any(|hook| hook.id == id)
-        {
+            .filter(|repo| repo.hooks.iter().any(|hook| hook.id == id))
+            .peekable();
+        if repos.peek().is_none() {
             missing.push(id);
-        } else if let Err(issue) = config.check_commit_hook(id) {
+            continue;
+        }
+        if !repos.any(|repo| repo.repo == BUILTIN_REPO) {
+            elsewhere.push(id);
+        }
+        if let Err(issue) = config.check_commit_hook(id) {
             issues.push(issue);
         }
+    }
+    if !elsewhere.is_empty() {
+        issues.insert(
+            0,
+            Issue::warn(format!(
+                "Not from prek's builtin repo: {}",
+                elsewhere.join(", ")
+            )),
+        );
     }
     if !missing.is_empty() {
         issues.insert(0, Issue::fail(format!("Missing: {}", missing.join(", "))));
@@ -85,8 +104,8 @@ pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "precommit-pre-commit-hooks",
-        "prek: the common hooks from pre-commit-hooks",
-        pre_commit_hooks_in(config),
+        "prek: the common hooks from prek's builtin repo",
+        common_hooks_in(config),
     );
     report.check(
         "precommit-reuse",
@@ -517,18 +536,18 @@ mod tests {
     }
 
     #[test]
-    fn pre_commit_hooks_fail_when_missing_and_warn_in_another_stage() {
-        let config = |hooks: &str| -> PrekConfig {
+    fn common_hooks_fail_when_missing_and_warn_in_another_stage_or_repo() {
+        let config = |repo: &str, hooks: &str| -> PrekConfig {
             toml::from_str(&format!(
-                "repos = [{{repo = \"https://github.com/pre-commit/pre-commit-hooks\", hooks = [{hooks}]}}]\n"
+                "repos = [{{repo = \"{repo}\", hooks = [{hooks}]}}]\n"
             ))
             .unwrap()
         };
-        let all: Vec<_> = PRE_COMMIT_HOOKS
+        let all: Vec<_> = COMMON_HOOKS
             .iter()
             .map(|id| format!("{{id = \"{id}\"}}"))
             .collect();
-        assert_eq!(pre_commit_hooks_in(&config(&all.join(", "))), Ok(()));
+        assert_eq!(common_hooks_in(&config("builtin", &all.join(", "))), Ok(()));
 
         let in_stage = |stage: &str| {
             all.iter()
@@ -543,13 +562,13 @@ mod tests {
         };
         let pre_push = in_stage("pre-push");
         assert_eq!(
-            pre_commit_hooks_in(&config(&pre_push)),
+            common_hooks_in(&config("builtin", &pre_push)),
             Err(Issue::warn(
                 "The check-yaml hook doesn't run in the pre-commit stage"
             ))
         );
         assert_eq!(
-            pre_commit_hooks_in(&config(&in_stage("manual"))),
+            common_hooks_in(&config("builtin", &in_stage("manual"))),
             Err(Issue::fail(
                 "The check-yaml hook runs only in the manual stage, so it never runs on its own"
             ))
@@ -560,11 +579,41 @@ mod tests {
             .filter(|hook| *hook != r#"{id = "check-toml"}"#)
             .collect();
         assert_eq!(
-            pre_commit_hooks_in(&config(&without_toml.join(", "))),
+            common_hooks_in(&config("builtin", &without_toml.join(", "))),
             Err(Issue::fail(
                 "Missing: check-toml; The check-yaml hook doesn't run in the pre-commit stage"
             ))
         );
+
+        // pre-commit-hooks has the same hooks, which prek clones and installs Python for.
+        let remote = "https://github.com/pre-commit/pre-commit-hooks";
+        assert_eq!(
+            common_hooks_in(&config(remote, &all.join(", "))),
+            Err(Issue::warn(format!(
+                "Not from prek's builtin repo: {}",
+                COMMON_HOOKS.join(", ")
+            )))
+        );
+        let split: PrekConfig = toml::from_str(&format!(
+            "repos = [{{repo = \"builtin\", hooks = [{}]}}, {{repo = \"{remote}\", hooks = [{{id = \"check-yaml\"}}]}}]\n",
+            all.iter()
+                .filter(|hook| !hook.contains("check-yaml"))
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ")
+        ))
+        .unwrap();
+        assert_eq!(
+            common_hooks_in(&split),
+            Err(Issue::warn("Not from prek's builtin repo: check-yaml"))
+        );
+        // A hook in both, as during a move to the builtin repo, is one from it.
+        let both: PrekConfig = toml::from_str(&format!(
+            "repos = [{{repo = \"builtin\", hooks = [{}]}}, {{repo = \"{remote}\", hooks = [{{id = \"check-yaml\"}}]}}]\n",
+            all.join(", ")
+        ))
+        .unwrap();
+        assert_eq!(common_hooks_in(&both), Ok(()));
     }
 
     /// A configuration with `default_stages` and a repository, given as its URL, or `local`, and its hooks, an inline
