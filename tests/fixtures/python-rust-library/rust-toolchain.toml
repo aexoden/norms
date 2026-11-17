@@ -2,5 +2,5 @@
 # SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 [toolchain]
-channel = "1.99.1"
+channel = "1.100.0"
 components = ["clippy", "llvm-tools", "rustfmt"]

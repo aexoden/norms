@@ -25,7 +25,7 @@ fail  editorconfig-exists  .editorconfig: exists
       File not found
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml: exists
+fail  precommit-config-exists  prek.toml: exists
       File not found
 fail  renovate-exists  renovate.json: exists
       File not found
@@ -47,7 +47,7 @@ fail  ci-markdownlint  CI: Markdown linting (every file)
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
       No step uses zizmorcore/zizmor-action
-pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-pre-commit  CI: remaining prek hooks (pinned, --all-files)
 fail  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
       No job runs norms verify, as the norms-verify hook or itself
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request

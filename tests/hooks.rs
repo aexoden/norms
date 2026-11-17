@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 //! Checks that each hook norms ships in `.pre-commit-hooks.yaml` matches the
-//! local copy norms runs on itself in `.pre-commit-config.yaml`.
+//! local copy norms runs on itself in `prek.toml`.
 
 #[cfg(test)]
 mod tests {
@@ -16,11 +16,11 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR"))
     }
 
-    fn yaml(path: &str) -> Value {
-        serde_saphyr::from_str(&fs::read_to_string(root().join(path)).unwrap()).unwrap()
+    fn read(path: &str) -> String {
+        fs::read_to_string(root().join(path)).unwrap()
     }
 
-    /// The value of `key` in a YAML mapping, or null.
+    /// The value of `key` in a mapping, or null.
     fn get<'a>(value: &'a Value, key: &str) -> &'a Value {
         value.get(key).unwrap_or(&Value::Null)
     }
@@ -35,8 +35,8 @@ mod tests {
 
     #[test]
     fn local_hooks_match_the_shipped_ones() {
-        let shipped = yaml(".pre-commit-hooks.yaml");
-        let config = yaml(".pre-commit-config.yaml");
+        let shipped: Value = serde_saphyr::from_str(&read(".pre-commit-hooks.yaml")).unwrap();
+        let config: Value = toml::from_str(&read("prek.toml")).unwrap();
         let local: Vec<&Value> = get(&config, "repos")
             .as_array()
             .unwrap()
@@ -87,7 +87,7 @@ mod tests {
                 "{id}"
             );
             assert_eq!(get(hook, "language"), "rust", "{id}");
-            assert_eq!(get(copy, "language"), "unsupported", "{id}");
+            assert_eq!(get(copy, "language"), "system", "{id}");
         }
 
         // norms treats its own warnings as failures.

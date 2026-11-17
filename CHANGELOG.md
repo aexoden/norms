@@ -53,6 +53,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** Run the Git hooks with [prek](https://prek.j178.dev/) rather
+  than pre-commit, configured in `prek.toml` rather than
+  `.pre-commit-config.yaml`, which norms no longer reads. Language hooks have
+  `language = "system"`. CI installs prek with `taiki-e/install-action` at the
+  version in `PREK_VERSION`, and runs `prek run` in a `prek` job, in the
+  `norms-verify` job and in `pr-title.yaml` (`prek run --stage commit-msg`).
+  To upgrade, install prek, run `prek util yaml-to-toml`, lay the result out as
+  the template does, with a `[[repos]]` table for each repository and a
+  `[[repos.hooks]]` table for each hook, delete `.pre-commit-config.yaml`, run
+  `prek install` to replace pre-commit's Git hooks, and update the workflows as
+  the template does, setting `PREK_SKIP` rather than `SKIP`. prek builds the
+  `norms-verify` hook with `cargo install --locked`, so with the dependency
+  versions norms' `Cargo.lock` pins.
 - `norms --version` reports the version `git describe` gives in a build from
   a git checkout, such as `0.2.0-5-gf8a4d2b` between releases.
 - The template starts Rust packages at version `0.0.0`, as TypeScript ones
@@ -65,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The template's workflows pin pre-commit and cargo-llvm-cov in `_VERSION`
+- The template's workflows pin prek and cargo-llvm-cov in `_VERSION`
   environment variables under `# renovate:` comments, which the shared Renovate
   preset now updates, rather than inline in commands, where Renovate didn't.
 - Recognize Cargo commands that pass global options before the subcommand,

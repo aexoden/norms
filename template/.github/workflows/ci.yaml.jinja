@@ -56,6 +56,13 @@
         run: uv sync --locked
 {%- endif %}
 {%- endmacro %}
+{%- macro install_prek() %}
+
+      - name: Install prek
+        uses: taiki-e/install-action@{{ action_install_action }}
+        with:
+          tool: prek@{% raw %}${{ env.PREK_VERSION }}{% endraw %}
+{%- endmacro %}
 {%- macro setup_pnpm() %}
 
       - name: Install pnpm, Node.js and dependencies
@@ -65,15 +72,15 @@
           working-directory: {{ typescript_dir }}
 {%- endif %}
 {%- endmacro %}
-{%- set jobs = ['markdownlint', 'norms-verify', 'pre-commit', 'reuse', 'tombi', 'zizmor'] %}
+{%- set jobs = ['markdownlint', 'norms-verify', 'prek', 'reuse', 'tombi', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'rust' in languages and project_type == 'library' %}{% set jobs = jobs + ['cargo-doctest'] %}{% endif %}
 {%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vite-build', 'vitest'] %}{% endif %}
-{#- The pre-commit job skips the hooks that have a job of their own, the hooks for
+{#- The prek job skips the hooks that have a job of their own, the hooks for
     markdownlint and tombi being markdownlint-cli2 and tombi-format, and pnpm-lock,
     since pnpm/setup installs with a frozen lock file. #}
-{%- set skip = jobs | reject('in', ['markdownlint', 'pre-commit', 'tombi']) | list + ['markdownlint-cli2', 'tombi-format'] %}
+{%- set skip = jobs | reject('in', ['markdownlint', 'prek', 'tombi']) | list + ['markdownlint-cli2', 'tombi-format'] %}
 {%- if 'typescript' in languages %}{% set skip = skip + ['pnpm-lock'] %}{% endif %}
 {#- Libraries also test the oldest versions they support, in CI only. #}
 {%- if project_type == 'library' and 'rust' in languages %}{% set jobs = jobs + ['msrv'] %}{% endif %}
@@ -95,8 +102,8 @@ permissions: {}
 # Tools CI installs or runs at a pinned version, which Renovate updates from the
 # comment above each one.
 env:
-  # renovate: datasource=pypi depName=pre-commit
-  PRE_COMMIT_VERSION: "{{ pre_commit_version }}"
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: "{{ prek_version }}"
 {%- if 'rust' in languages %}
   # renovate: datasource=crate depName=cargo-llvm-cov
   CARGO_LLVM_COV_VERSION: "{{ cargo_llvm_cov_version }}"
@@ -121,26 +128,18 @@ jobs:
         with:
           globs: '**/*.md'
 {{ job('norms-verify', 'Verify the project with norms', '', timeout=30, history=true) }}
+{{- install_prek() }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@{{ action_setup_uv }}
-        with:
-          enable-cache: false
-
-      # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
+      # prek builds norms at the revision prek.toml pins.
       - name: Verify the project with norms
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run norms-verify --all-files
-{{ job('pre-commit', 'Run the remaining pre-commit hooks', '') }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@{{ action_setup_uv }}
-        with:
-          enable-cache: false
+        run: prek run norms-verify --all-files
+{{ job('prek', 'Run the remaining prek hooks', '') }}
+{{- install_prek() }}
 
       - name: Run the hooks that have no job of their own
         env:
-          SKIP: {{ skip | sort | join(',') }}
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
+          PREK_SKIP: {{ skip | sort | join(',') }}
+        run: prek run --all-files --show-diff-on-failure
 {{ job('reuse', 'Check REUSE compliance', '') }}
 
       - name: Check REUSE compliance

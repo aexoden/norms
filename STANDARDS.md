@@ -140,9 +140,9 @@ every CI run uses identical versions without any additional environment layer:
 
 The language-specific sections below describe each of these files in detail.
 
-[pre-commit](https://pre-commit.com/) must also be installed, by whatever method
-the developer prefers. See the [pre-commit installation
-documentation](https://pre-commit.com/#install).
+[prek](https://prek.j178.dev/) must also be installed, by whatever method the
+developer prefers. See the [prek installation
+documentation](https://prek.j178.dev/installation/).
 
 ### Devbox
 
@@ -160,7 +160,7 @@ When Devbox is used:
   `DEVBOX_COREPACK_ENABLED`.
 - Service setup steps (initializing and creating databases, for example) are
   provided as Devbox scripts and documented in the README.
-- Pre-commit hooks and CI steps invoke tools directly. Only steps that need a
+- Git hooks and CI steps invoke tools directly. Only steps that need a
   running service may depend on Devbox.
 
 ## Editor Configuration
@@ -283,7 +283,7 @@ for those instructions.
 
 Markdown files are checked by
 [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2), in both
-the pre-commit hooks and CI. The standard `.markdownlint-cli2.jsonc` enables
+the Git hooks and CI. The standard `.markdownlint-cli2.jsonc` enables
 every default rule, requires dashes for unordered lists, wraps prose at 80
 columns and allows repeated headings under different parents:
 
@@ -368,7 +368,7 @@ Files that cannot carry a comment header, such as JSON files, lock files, images
 and generated caches, are annotated in a `REUSE.toml` at the repository root
 instead.
 
-`reuse lint` checks all of this, in both the pre-commit hooks and CI, where it
+`reuse lint` checks all of this, in both the Git hooks and CI, where it
 runs through `fsfe/reuse-action`.
 
 ## Version Control
@@ -415,7 +415,7 @@ Include only the language blocks that apply. Python projects also mark
 Commit messages follow [Conventional
 Commits](https://www.conventionalcommits.org/), checked by the
 `conventional-pre-commit` and `norms-commit-msg` hooks (see
-[Pre-Commit Hooks](#pre-commit-hooks)). The
+[Git Hooks](#git-hooks)). The
 [Conventional Commit Types
 Cheatsheet](https://www.bavaga.com/blog/2025/01/27/my-ultimate-conventional-commit-types-cheatsheet/)
 is a useful reference for choosing types.
@@ -520,8 +520,8 @@ so editing a pull request doesn't rerun CI, and advisory: the
 [branch protection](#branch-protection) doesn't require it.
 
 `norms verify` fails a project without `pr-title.yaml`, or whose
-`pr-title.yaml` doesn't run on pull requests or doesn't run `pre-commit run
---hook-stage commit-msg`, and warns when its `pull_request` types leave out
+`pr-title.yaml` doesn't run on pull requests or doesn't run `prek run --stage
+commit-msg`, and warns when its `pull_request` types leave out
 `opened`, `reopened` or `edited`.
 
 ### Branch Protection
@@ -570,7 +570,7 @@ following workflows:
 
 | Workflow                          | Triggers                                        | Purpose                                         |
 |-----------------------------------|-------------------------------------------------|-------------------------------------------------|
-| `.github/workflows/ci.yaml`       | Pushes to `main` (and `dev`), all pull requests | Every check the pre-commit hooks run            |
+| `.github/workflows/ci.yaml`       | Pushes to `main` (and `dev`), all pull requests | Every check the Git hooks run                   |
 | `.github/workflows/audit.yaml`    | Daily schedule, manual dispatch                 | Security advisory audit of dependencies         |
 | `.github/workflows/pr-title.yaml` | Pull requests opened, reopened or retitled      | Commit message checks on pull request titles    |
 
@@ -579,33 +579,34 @@ following workflows:
 `ci.yaml` runs formatting checks, linting, type checking, tests (with
 coverage) and dependency policy checks, such as `cargo deny --workspace
 --all-features check -D warnings bans licenses sources` and lock file
-freshness. CI should fail in every case where the pre-commit hooks
-would.
+freshness. CI should fail in every case where the Git hooks would.
 
 Where this standard names an action for a check, such as
 `zizmorcore/zizmor-action` or `EmbarkStudios/cargo-deny-action`, CI uses that
 action rather than running the tool itself. `norms verify` warns on a step that
 runs the tool instead, without checking its arguments.
 
-Most hooks have a job of their own. A `pre-commit` job runs the rest, such as
-the [common hooks](#common-hooks) from pre-commit-hooks, with `pre-commit run
---all-files --show-diff-on-failure` at a pinned pre-commit version, installed
-through `astral-sh/setup-uv` and run with `uvx`. Its `SKIP` lists every hook
-that has its own job, so a hook added later runs in this job until it gets one.
+Most hooks have a job of their own. A `prek` job runs the rest, such as the
+[common hooks](#common-hooks) from pre-commit-hooks, with `prek run --all-files
+--show-diff-on-failure` at a pinned prek version, installed with
+`taiki-e/install-action` (`tool: prek@${{ env.PREK_VERSION }}`). Its
+`PREK_SKIP` lists every hook that has its own job, so a hook added later runs in
+this job until it gets one. (prek also reads pre-commit's `SKIP`, but only when
+`PREK_SKIP` isn't set.)
 A hook's job has the hook's ID, or for the `markdownlint-cli2` and
 `tombi-format` hooks, is the `markdownlint` or `tombi` job.
 The `commit-msg` hooks don't run in it, but in the `pr-title.yaml` workflow on
 pull request titles (see [Branches](#branches)).
 
-The `norms-verify` hook's job runs it as `pre-commit run norms-verify
---all-files`, so that pre-commit builds the norms that the hook's `rev` pins.
+The `norms-verify` hook's job runs it as `prek run norms-verify --all-files`,
+so that prek builds the norms that the hook's `rev` pins.
 Its checkout fetches the whole history (`fetch-depth: 0`), since without
 `CHANGELOG.md`, `norms verify` looks for release tags (see
 [Changelog](#changelog)), and takes the latest as the version the manifests
 carry (see [Versioning](#versioning)). `norms verify` fails a `ci.yaml` in
 which no job runs it, as the hook or itself, and warns when that job's checkout
 lacks `fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook
-runs only in the `pre-commit` job.
+runs only in the `prek` job.
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -629,7 +630,7 @@ and warns when no `cron` entry runs every day, or when it can't be dispatched.
 `zizmorcore/zizmor-action` with `advanced-security: false` and `annotations:
 true`. In that mode the action fails the job on any finding and annotates the
 offending lines, so a finding shows up on the CI run like any other failure. CI
-also runs zizmor's online audits, which the pre-commit hook skips when no GitHub
+also runs zizmor's online audits, which the hook skips when no GitHub
 token is available.
 
 Both run zizmor's pedantic persona, the action with `persona: pedantic` and the
@@ -656,9 +657,8 @@ Install toolchains with each language's standard setup action (for example,
 versions pinned in the repository. An `astral-sh/setup-uv` step in a job that
 runs `uv` itself, such as `uv sync` or `uv audit`, sets `version` to an exact uv
 version: without it, the action installs the newest uv that `required-version`
-allows. A job that only runs tools through `uvx`, such as the `pre-commit` job,
-doesn't install the project, so its uv needn't be pinned, as long as every
-hook that runs `uv` has a job of its own and so is in its `SKIP`. Use Devbox
+allows. A job that only runs tools through `uvx` doesn't install the project,
+so its uv needn't be pinned. Use Devbox
 only in jobs that need a local service.
 
 Split checks into parallel jobs where feasible. Use an operating system matrix
@@ -742,7 +742,7 @@ expression.
   the workflows the same whatever the repository's visibility, and in a public
   repository it exposes nothing that isn't already public. No job needs more.
 - Set `persist-credentials: false` on every `actions/checkout` step.
-- Run [zizmor](https://docs.zizmor.sh/) in both CI and the pre-commit hooks.
+- Run [zizmor](https://docs.zizmor.sh/) in both CI and the Git hooks.
 
 `norms verify` leaves these rules to zizmor's pedantic persona, which flags
 unpinned actions, missing or broad permissions and persisted credentials. It
@@ -750,26 +750,47 @@ checks only that the hook and the CI job run zizmor with that persona, the hook
 with `--pedantic` and the job through `zizmorcore/zizmor-action` with `persona:
 pedantic`, and that the action sets `advanced-security: false`.
 
-## Pre-Commit Hooks
+## Git Hooks
 
-Pre-commit hooks are provided by [pre-commit](https://pre-commit.com/),
-configured in `.pre-commit-config.yaml` at the repository root. The
-configuration sets `default_install_hook_types` so that a plain `pre-commit
-install` also installs the commit message hook, and `default_stages` so that
-the other hooks run only once per commit:
+Git hooks are provided by [prek](https://prek.j178.dev/), configured in
+`prek.toml` at the repository root. The configuration sets
+`default_install_hook_types` so that a plain `prek install` also installs the
+commit message hook, and `default_stages` so that the other hooks run only
+once per commit:
 
-```yaml
-default_install_hook_types: [pre-commit, commit-msg]
-default_stages: [pre-commit]
+```toml
+default_install_hook_types = ["pre-commit", "commit-msg"]
+default_stages = ["pre-commit"]
 ```
 
 Without `default_stages`, a hook that doesn't list its own stages runs in every
 installed stage, so the language hooks would run again on the commit message.
 A project with hooks of another type, such as `pre-push`, adds that type to
-`default_install_hook_types`; `default_stages` stays `[pre-commit]`, and those
-hooks list their own stages.
+`default_install_hook_types`; `default_stages` stays `["pre-commit"]`, and
+those hooks list their own stages.
 
-Hook revisions are pinned to release tags and updated by Renovate.
+Each repository is a `[[repos]]` table and each of its hooks a
+`[[repos.hooks]]` table, rather than inline tables, which Tombi would join
+into one long line. A remote repository's `rev` is pinned to a release tag and
+follows its `repo` on the next line:
+
+```toml
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+rev = "v6.3.0"
+
+[[repos.hooks]]
+id = "reuse"
+```
+
+Renovate updates the revisions. Its pre-commit manager reads only
+`.pre-commit-config.yaml`, so until it has one for `prek.toml`, the shared
+[renovate-config](https://github.com/aexoden/renovate-config) preset finds them
+with a regular expression that expects that layout.
+
+prek runs the configuration of every project it finds below the root, so a
+directory holding configurations that aren't the repository's own, such as
+test fixtures, is listed in `.prekignore`.
 
 ### Common Hooks
 
@@ -792,10 +813,11 @@ Every project uses these hooks:
   their schemas define one for, such as those of `[package]`, as well as of
   dependencies (see [Dependency Order](#dependency-order)):
 
-  ```yaml
-  - id: tombi-format
-    args: [--check]
-    exclude: (^|/)(Cargo|uv)\.lock$
+  ```toml
+  [[repos.hooks]]
+  id = "tombi-format"
+  args = ["--check"]
+  exclude = '(^|/)(Cargo|uv)\.lock$'
   ```
 
   CI runs Tombi in a `tombi` job instead, installed by `tombi-toml/setup-tombi`
@@ -809,10 +831,11 @@ Every project uses these hooks:
   `conventional-pre-commit` in the `commit-msg` stage, with the recognized
   commit types passed as arguments:
 
-  ```yaml
-  - id: conventional-pre-commit
-    stages: [commit-msg]
-    args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, chore]
+  ```toml
+  [[repos.hooks]]
+  id = "conventional-pre-commit"
+  stages = ["commit-msg"]
+  args = ["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]
   ```
 
 - [norms](https://github.com/aexoden/norms): `norms-commit-msg`, also in the
@@ -834,16 +857,21 @@ Every project uses these hooks:
   project, whichever files a commit changes. Like the other hooks that check
   the whole project, it also sees untracked files that `.gitignore` doesn't
   exclude. It fails if a check fails, and with `--deny-warnings` if one warns,
-  too, which these standards require. pre-commit builds norms at the pinned
-  revision with cargo, installing Rust first in a project without it:
+  too, which these standards require. prek builds norms at the pinned revision
+  with `cargo install --locked`, so with the dependencies norms' `Cargo.lock`
+  pins, installing Rust first in a project without it:
 
-  ```yaml
-  - repo: https://github.com/aexoden/norms
-    rev: vX.Y.Z
-    hooks:
-      - id: norms-commit-msg
-      - id: norms-verify
-        args: [--deny-warnings]
+  ```toml
+  [[repos]]
+  repo = "https://github.com/aexoden/norms"
+  rev = "vX.Y.Z"
+
+  [[repos.hooks]]
+  id = "norms-commit-msg"
+
+  [[repos.hooks]]
+  id = "norms-verify"
+  args = ["--deny-warnings"]
   ```
 
   `norms verify` fails a project without the `norms-commit-msg` hook in the
@@ -859,23 +887,23 @@ release may change.
 
 ### Language Hooks
 
-Language hooks are `local` hooks with `language: unsupported` and
-`pass_filenames: false`. (`unsupported` is pre-commit 4.4's name for `system`,
-which it still accepts but means to deprecate.) They invoke the project's own
+Language hooks are `local` hooks with `language = "system"` and
+`pass_filenames = false`. (prek also accepts `unsupported`, pre-commit's name
+for `system`, but its schema doesn't.) They invoke the project's own
 tools directly (for example, `cargo clippy` or `uv run ruff check`), never
 through Devbox. Running the project's tools, they use the versions its lock
 files and toolchain pins select, as CI does. A remote hook is pinned by its own
-`rev` instead, and one in a language pre-commit manages, such as Python or
+`rev` instead, and one in a language prek manages, such as Python or
 Node.js, installs its own copy of the tool, without the project's dependencies
 or plugins. Each language hook checks all of its component's files, not only
 the staged ones, since a change to one file can break another, and checks
 without modifying files, so the hooks and CI produce the same results. The
 language sections below list the required hooks. Hook IDs are unique, across
 languages too (for example, `pytest`, `cargo-test` and `vitest` rather than
-`test`), so that `SKIP` can target one. `SKIP` and `pre-commit run` also match a
-hook's `alias`, so a hook that runs twice under one ID, such as a language hook
-run for two components, gives each copy an alias of its own (`eslint-admin`,
-`eslint-web`).
+`test`), so that `PREK_SKIP` can target one. `PREK_SKIP` and `prek run` also
+match a hook's `alias`, so a hook that runs twice under one ID, such as a
+language hook run for two components, gives each copy an alias of its own
+(`eslint-admin`, `eslint-web`).
 
 ## Dependency Management
 
@@ -896,8 +924,8 @@ and release age policies, so `renovate.json` normally contains nothing else:
 Project-specific rules may be added when a project needs them.
 
 A workflow that installs or runs a tool at a version no Renovate manager reads,
-such as cargo-llvm-cov through `taiki-e/install-action`'s `tool` input or
-pre-commit through `uvx`, pins it in an environment variable whose name ends in
+such as cargo-llvm-cov or prek through `taiki-e/install-action`'s `tool`
+input, pins it in an environment variable whose name ends in
 `_VERSION`, in the workflow's `env` (or a job's, if only that job uses it),
 under a `# renovate:` comment naming its datasource and package. The shared
 preset's `customManagers:githubActionsVersions` updates it from there:
@@ -906,13 +934,12 @@ preset's `customManagers:githubActionsVersions` updates it from there:
 env:
   # renovate: datasource=crate depName=cargo-llvm-cov
   CARGO_LLVM_COV_VERSION: "0.9.1"
-  # renovate: datasource=pypi depName=pre-commit
-  PRE_COMMIT_VERSION: "4.7.0"
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: "0.5.10"
 ```
 
-Steps refer to one as `${{ env.CARGO_LLVM_COV_VERSION }}` in an input, such as
-`tool: cargo-llvm-cov@${{ env.CARGO_LLVM_COV_VERSION }}`, or as
-`"$PRE_COMMIT_VERSION"` in a script.
+Steps refer to one as `${{ env.PREK_VERSION }}` in an input, such as
+`tool: prek@${{ env.PREK_VERSION }}`, or as `"$PREK_VERSION"` in a script.
 
 ### Version Pinning
 
@@ -1176,7 +1203,7 @@ any strictness option a later pytest adds. A `pytest.toml`, `.pytest.toml`,
 
 #### Hooks and CI
 
-The pre-commit hooks and CI both run:
+The Git hooks and CI both run:
 
 | Hook ID       | Command                                                          |
 |---------------|------------------------------------------------------------------|
@@ -1422,7 +1449,7 @@ library target, binaries or not, also runs them on their own, with `cargo test
 
 #### Hooks and CI
 
-The pre-commit hooks and CI both run:
+The Git hooks and CI both run:
 
 | Hook ID         | Command                                                                         |
 |-----------------|---------------------------------------------------------------------------------|
@@ -1643,7 +1670,7 @@ export default defineConfig({
 
 #### Hooks and CI
 
-The pre-commit hooks and CI both run the following. When the project lives in a
+The Git hooks and CI both run the following. When the project lives in a
 subdirectory, the hooks prefix each command with `pnpm --dir <path>`, and CI
 sets the job's working directory instead:
 

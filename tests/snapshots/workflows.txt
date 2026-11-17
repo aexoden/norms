@@ -19,28 +19,28 @@ fail  editorconfig-exists  .editorconfig: exists
       File not found
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-pass  precommit-config-exists  .pre-commit-config.yaml: exists
-pass  precommit-config-valid  .pre-commit-config.yaml: valid
-fail  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
-      No default_install_hook_types, so pre-commit install installs only the pre-commit hook
-warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+pass  precommit-config-exists  prek.toml: exists
+pass  precommit-config-valid  prek.toml: valid
+fail  precommit-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
+      No default_install_hook_types, so prek install installs only the pre-commit hook
+warn  precommit-default-stages  prek: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
-pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
-fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
+pass  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
+fail  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
       Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
-fail  precommit-reuse  Pre-commit: reuse hook
+fail  precommit-reuse  prek: reuse hook
       No reuse hook
-fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
+fail  precommit-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  precommit-tombi  Pre-commit: tombi-format hook
+fail  precommit-tombi  prek: tombi-format hook
       No tombi-format hook
-fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+fail  precommit-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
-fail  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+fail  precommit-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
       No norms-commit-msg hook
-fail  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
+fail  precommit-norms-verify  prek: norms-verify hook (--deny-warnings)
       No norms-verify hook
-warn  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+warn  precommit-zizmor  prek: zizmor hook (pedantic)
       The zizmor hook doesn't pass --pedantic
 fail  renovate-exists  renovate.json: exists
       File not found
@@ -51,7 +51,7 @@ pass  pr-title-yaml-exists  CI: pr-title.yaml: exists
 pass  pr-title-yaml-valid  CI: pr-title.yaml: valid
 warn  pr-title-yaml-trigger  CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled
       pull_request types omit edited
-fail  pr-title-yaml-commit-msg  CI: pr-title.yaml: runs the commit-msg hooks (pre-commit run --hook-stage commit-msg)
+fail  pr-title-yaml-commit-msg  CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
 fail  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
@@ -76,8 +76,8 @@ fail  ci-markdownlint  CI: Markdown linting (every file)
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
       zizmor-action doesn't set advanced-security: false
-fail  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
-      pre-commit run only runs named hooks or another --hook-stage's, not every pre-commit hook
+fail  ci-pre-commit  CI: remaining prek hooks (pinned, --all-files)
+      prek run only runs named hooks or another --stage's, not every pre-commit hook
 warn  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
       norms-verify runs norms verify from a checkout without the whole history (fetch-depth: 0), so it sees no release tags
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
@@ -134,17 +134,17 @@ warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
-fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook
+fail  python-precommit-uv-lock  Python prek: uv-lock hook
       No uv-lock hook
-fail  python-precommit-ruff-check  Python pre-commit: ruff-check hook
+fail  python-precommit-ruff-check  Python prek: ruff-check hook
       No ruff-check hook
-fail  python-precommit-ruff-format  Python pre-commit: ruff-format hook (--check)
+fail  python-precommit-ruff-format  Python prek: ruff-format hook (--check)
       No ruff-format hook
-fail  python-precommit-mypy  Python pre-commit: mypy hook
+fail  python-precommit-mypy  Python prek: mypy hook
       No mypy hook
-fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
+fail  python-precommit-pytest  Python prek: pytest hook (with coverage)
       No pytest hook
-pass  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
+pass  python-precommit-local-hooks  Python prek: language hooks are local, system and take no file names
 fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
@@ -176,23 +176,23 @@ fail  deny-toml-exists  [.] deny.toml: exists
       File not found
 fail  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
       No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
-warn  rust-precommit-cargo-doctest  [.] Rust pre-commit: doctests run (library target)
+warn  rust-precommit-cargo-doctest  [.] Rust prek: doctests run (library target)
       No hook runs the doctests, as cargo test --doc does
 warn  rust-ci-doctest  [.] Rust CI: doctests run (library target)
       No step runs the doctests, as cargo test --doc does
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
-fail  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
+fail  rust-precommit-cargo-lock  Rust prek: cargo-lock hook
       No cargo-lock hook
-fail  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
+fail  rust-precommit-rustfmt  Rust prek: rustfmt hook (--check)
       No rustfmt hook
-fail  rust-precommit-clippy  Rust pre-commit: clippy hook (-D warnings)
+fail  rust-precommit-clippy  Rust prek: clippy hook (-D warnings)
       No clippy hook
-fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook (with coverage)
+fail  rust-precommit-cargo-test  Rust prek: cargo-test hook (with coverage)
       No cargo-test hook
-fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+fail  rust-precommit-cargo-deny  Rust prek: cargo-deny hook
       No cargo-deny hook
-pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, unsupported and take no file names
+pass  rust-precommit-local-hooks  Rust prek: language hooks are local, system and take no file names
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt

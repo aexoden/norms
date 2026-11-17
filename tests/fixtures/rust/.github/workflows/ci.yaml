@@ -17,8 +17,8 @@ permissions: {}
 # Tools CI installs or runs at a pinned version, which Renovate updates from the
 # comment above each one.
 env:
-  # renovate: datasource=pypi depName=pre-commit
-  PRE_COMMIT_VERSION: "4.7.0"
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: "0.5.10"
   # renovate: datasource=crate depName=cargo-llvm-cov
   CARGO_LLVM_COV_VERSION: "0.9.1"
 
@@ -26,7 +26,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, norms-verify, pre-commit, reuse, rustfmt, tombi, zizmor]
+    needs: [cargo-deny, cargo-lock, cargo-test, clippy, markdownlint, norms-verify, prek, reuse, rustfmt, tombi, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -66,17 +66,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install prek
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          enable-cache: false
+          tool: prek@${{ env.PREK_VERSION }}
 
-      # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
+      # prek builds norms at the revision prek.toml pins.
       - name: Verify the project with norms
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run norms-verify --all-files
+        run: prek run norms-verify --all-files
 
-  pre-commit:
-    name: Run the remaining pre-commit hooks
+  prek:
+    name: Run the remaining prek hooks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -87,15 +87,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install prek
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          enable-cache: false
+          tool: prek@${{ env.PREK_VERSION }}
 
       - name: Run the hooks that have no job of their own
         env:
-          SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
+          PREK_SKIP: cargo-deny,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
+        run: prek run --all-files --show-diff-on-failure
 
   reuse:
     name: Check REUSE compliance

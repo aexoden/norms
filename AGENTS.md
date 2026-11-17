@@ -18,8 +18,8 @@ relevant, the checks in `src/checks/` together.
 
 ## Commands
 
-The Rust toolchain is pinned in `rust-toolchain.toml`. These match the
-pre-commit hooks and CI:
+The Rust toolchain is pinned in `rust-toolchain.toml`. These match the prek
+hooks and CI:
 
 ```sh
 cargo fmt --all --check
@@ -32,7 +32,7 @@ NORMS_RENDER=1 cargo test --test fixtures # re-render the language fixtures
 cargo deny --workspace --all-features check -D warnings bans licenses sources
 cargo run -- verify <path>                # run norms against a project
 cargo run -- verify --deny-warnings .     # run norms against itself
-pre-commit run --all-files                # every hook, incl. reuse, markdownlint, tombi, zizmor
+prek run --all-files                      # every hook, incl. reuse, markdownlint, tombi, zizmor
 ```
 
 Clippy runs `pedantic`, `nursery` and `cargo` with `-D warnings`, plus the
@@ -49,17 +49,18 @@ uvx copier copy --trust --defaults --vcs-ref HEAD \
   --data project_name=demo-project --data "description=A demo." \
   --data primary_language=rust . /tmp/demo
 git -C /tmp/demo add --all
-(cd /tmp/demo && SKIP=norms-verify uvx pre-commit run --all-files)
+(cd /tmp/demo && PREK_SKIP=norms-verify prek run --all-files)
 cargo run -- verify --deny-warnings /tmp/demo
 ```
 
 `--vcs-ref HEAD` renders the last commit with any uncommitted changes, untracked
 files included. The render's `norms-verify` hook would build the released norms
 the template pins, so it is skipped and this checkout's norms runs instead.
-pre-commit still clones that pinned release, which in a release commit isn't
-tagged yet, so there the hooks fail to install; the CI job runs them from a copy
-of the config whose norms hooks come from this checkout (see its `sed` step in
-`ci.yaml`), leaving the render's own config as it is. The CI job runs
+prek still clones that pinned release to read its `norms-commit-msg` hook,
+which in a release commit isn't tagged yet, so there the hooks fail to install;
+the CI job runs them from a copy of the config whose norms hooks come from this
+checkout (see its `sed` step in `ci.yaml`), leaving the render's own config as
+it is. The CI job runs
 `norms verify --deny-warnings` on each render, so a render must have no
 failures or warnings. It then commits and tags the render, and checks the
 version its Rust application and Vite build report against `git describe`.
@@ -84,7 +85,7 @@ any check failed or warned.
   component alone, such as the CI job testing a library's MSRV).
   `common/` runs for every project. For each detected language, the component
   checks run once per component, then the checks of the language's place in
-  repository-wide files (pre-commit hooks, CI) run once. Registration is
+  repository-wide files (prek hooks, CI) run once. Registration is
   explicit: add a new check to the list in `checks/runner.rs`.
 - `report.rs`: `report.must(id, name, outcome)` records a check whose issue is
   a failure, `report.should(...)` one whose issue is a warning, and
@@ -138,9 +139,9 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   same commit.
 - Re-render the language fixtures when the template changes in a way the checks
   see, with `NORMS_RENDER=1 cargo test --test fixtures`.
-- Fixtures are kept exactly as written: pre-commit, markdownlint and Tombi
-  skip them, and `REUSE.toml` covers them, so one may be deliberately broken or
-  lack headers.
+- Fixtures are kept exactly as written: prek (through `.prekignore` and
+  `prek.toml`'s `exclude`), markdownlint and Tombi skip them, and `REUSE.toml`
+  covers them, so one may be deliberately broken or lack headers.
 
 ## Template
 

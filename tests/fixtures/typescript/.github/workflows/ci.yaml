@@ -17,14 +17,14 @@ permissions: {}
 # Tools CI installs or runs at a pinned version, which Renovate updates from the
 # comment above each one.
 env:
-  # renovate: datasource=pypi depName=pre-commit
-  PRE_COMMIT_VERSION: "4.7.0"
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: "0.5.10"
 
 jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [eslint, markdownlint, norms-verify, pnpm-peer-dependencies, pre-commit, prettier, reuse, tombi, tsc, vite-build, vitest, zizmor]
+    needs: [eslint, markdownlint, norms-verify, pnpm-peer-dependencies, prek, prettier, reuse, tombi, tsc, vite-build, vitest, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -64,17 +64,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install prek
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          enable-cache: false
+          tool: prek@${{ env.PREK_VERSION }}
 
-      # pre-commit builds norms at the revision .pre-commit-config.yaml pins.
+      # prek builds norms at the revision prek.toml pins.
       - name: Verify the project with norms
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run norms-verify --all-files
+        run: prek run norms-verify --all-files
 
-  pre-commit:
-    name: Run the remaining pre-commit hooks
+  prek:
+    name: Run the remaining prek hooks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -85,15 +85,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install prek
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          enable-cache: false
+          tool: prek@${{ env.PREK_VERSION }}
 
       - name: Run the hooks that have no job of their own
         env:
-          SKIP: eslint,markdownlint-cli2,norms-verify,pnpm-lock,pnpm-peer-dependencies,prettier,reuse,tombi-format,tsc,vite-build,vitest,zizmor
-        run: uvx "pre-commit@$PRE_COMMIT_VERSION" run --all-files --show-diff-on-failure
+          PREK_SKIP: eslint,markdownlint-cli2,norms-verify,pnpm-lock,pnpm-peer-dependencies,prettier,reuse,tombi-format,tsc,vite-build,vitest,zizmor
+        run: prek run --all-files --show-diff-on-failure
 
   reuse:
     name: Check REUSE compliance
@@ -162,7 +162,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm, Node.js and dependencies
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
 
       - name: Lint TypeScript code with ESLint
         run: pnpm exec eslint . --max-warnings 0
@@ -180,7 +180,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm, Node.js and dependencies
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
 
       - name: Check pnpm peer dependencies
         run: pnpm peers check
@@ -198,7 +198,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm, Node.js and dependencies
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
 
       - name: Check formatting with Prettier
         run: pnpm exec prettier --check .
@@ -216,7 +216,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm, Node.js and dependencies
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
 
       - name: Type check TypeScript code
         run: pnpm exec tsc -b --noEmit
@@ -234,7 +234,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm, Node.js and dependencies
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
 
       - name: Build the TypeScript application with Vite
         run: pnpm exec vite build
@@ -252,7 +252,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm, Node.js and dependencies
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
 
       - name: Run TypeScript tests
         run: pnpm exec vitest run --coverage

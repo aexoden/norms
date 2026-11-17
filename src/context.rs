@@ -43,7 +43,7 @@ use crate::cargo_workspace::{CargoWorkspaceMembers, find_members};
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, ClippyToml, DENY_TOML, DenyToml, DevboxConfig,
     EditorConfig, GIT_ARCHIVAL, HIDDEN_CLIPPY_TOML, MarkdownlintCli2Config, NormsConfig,
-    OTHER_DENY_TOMLS, PYTHON_VERSION, PackageJson, PnpmWorkspace, PrecommitConfig, PrettierConfig,
+    OTHER_DENY_TOMLS, PYTHON_VERSION, PackageJson, PnpmWorkspace, PrekConfig, PrettierConfig,
     PyprojectToml, RenovateConfig, ReuseToml, RustToolchain, TsConfig, Workflow,
     is_other_deny_toml, parse_python_version,
 };
@@ -131,7 +131,7 @@ pub(crate) struct ProjectContext {
     norms: OnceLock<ConfigStatus<NormsConfig>>,
     renovate: OnceLock<ConfigStatus<RenovateConfig>>,
     reuse_toml: OnceLock<ConfigStatus<ReuseToml>>,
-    precommit: OnceLock<ConfigStatus<PrecommitConfig>>,
+    prek: OnceLock<ConfigStatus<PrekConfig>>,
     editorconfig: OnceLock<ConfigStatus<EditorConfig>>,
     gitattributes: OnceLock<ConfigStatus<String>>,
     claude_md: OnceLock<ConfigStatus<String>>,
@@ -156,7 +156,7 @@ impl ProjectContext {
             norms: OnceLock::new(),
             renovate: OnceLock::new(),
             reuse_toml: OnceLock::new(),
-            precommit: OnceLock::new(),
+            prek: OnceLock::new(),
             editorconfig: OnceLock::new(),
             gitattributes: OnceLock::new(),
             claude_md: OnceLock::new(),
@@ -282,11 +282,10 @@ impl ProjectContext {
             .get_or_init(|| parse_toml_file::<ReuseToml>(&self.path.join("REUSE.toml")))
     }
 
-    /// Parsed `.pre-commit-config.yaml` (cached).
-    pub(crate) fn precommit(&self) -> &ConfigStatus<PrecommitConfig> {
-        self.precommit.get_or_init(|| {
-            parse_yaml_file::<PrecommitConfig>(&self.path.join(".pre-commit-config.yaml"))
-        })
+    /// Parsed `prek.toml` (cached).
+    pub(crate) fn prek(&self) -> &ConfigStatus<PrekConfig> {
+        self.prek
+            .get_or_init(|| parse_toml_file::<PrekConfig>(&self.path.join("prek.toml")))
     }
 
     /// Parsed `.editorconfig` (cached).

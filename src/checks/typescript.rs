@@ -9,8 +9,8 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::{
-    FormatterRun, PackageJson, PrecommitConfig, PrecommitHook, TsCompilerOptions, TsConfig,
-    Workflow, check_dev_engine, commands, program_args,
+    FormatterRun, PackageJson, PrekConfig, PrekHook, TsCompilerOptions, TsConfig, Workflow,
+    check_dev_engine, commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::models::Language;
@@ -920,7 +920,7 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
 }
 
 //
-// Pre-commit integration
+// prek integration
 //
 
 /// The IDs of TypeScript's language hooks, which the standard's hook table lists.
@@ -934,25 +934,25 @@ const LANGUAGE_HOOKS: [&str; 7] = [
     "vitest",
 ];
 
-pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
-    let Some(precommit) = ctx.precommit().as_ref_ok() else {
+pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
+    let Some(prek) = ctx.prek().as_ref_ok() else {
         return;
     };
 
     report.check(
         "typescript-precommit-pnpm-lock",
-        "TypeScript pre-commit: pnpm-lock hook",
-        precommit.check_commit_hook("pnpm-lock"),
+        "TypeScript prek: pnpm-lock hook",
+        prek.check_commit_hook("pnpm-lock"),
     );
     report.check(
         "typescript-precommit-pnpm-peer-dependencies",
-        "TypeScript pre-commit: pnpm-peer-dependencies hook",
-        precommit.check_commit_hook("pnpm-peer-dependencies"),
+        "TypeScript prek: pnpm-peer-dependencies hook",
+        prek.check_commit_hook("pnpm-peer-dependencies"),
     );
     report.check(
         "typescript-precommit-eslint",
-        "TypeScript pre-commit: eslint hook (--max-warnings 0)",
-        precommit.commit_hooks("eslint").and_then(|hooks| {
+        "TypeScript prek: eslint hook (--max-warnings 0)",
+        prek.commit_hooks("eslint").and_then(|hooks| {
             if hooks.into_iter().any(eslint_hook_strict) {
                 Ok(())
             } else {
@@ -962,28 +962,28 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "typescript-precommit-prettier",
-        "TypeScript pre-commit: prettier hook (--check)",
-        precommit.check_formatter_hook("prettier", "prettier", prettier_run),
+        "TypeScript prek: prettier hook (--check)",
+        prek.check_formatter_hook("prettier", "prettier", prettier_run),
     );
     report.check(
         "typescript-precommit-tsc",
-        "TypeScript pre-commit: tsc hook (tsc -b)",
-        tsc_hooks(precommit, every_tsconfig_solution_style(ctx)),
+        "TypeScript prek: tsc hook (tsc -b)",
+        tsc_hooks(prek, every_tsconfig_solution_style(ctx)),
     );
     report.check(
         "typescript-precommit-vite-build",
-        "TypeScript pre-commit: vite-build hook",
-        precommit.check_commit_hook("vite-build"),
+        "TypeScript prek: vite-build hook",
+        prek.check_commit_hook("vite-build"),
     );
     report.check(
         "typescript-precommit-vitest",
-        "TypeScript pre-commit: vitest hook (with coverage)",
-        vitest_hooks(precommit),
+        "TypeScript prek: vitest hook (with coverage)",
+        vitest_hooks(prek),
     );
     report.should(
         "typescript-precommit-local-hooks",
-        "TypeScript pre-commit: language hooks are local, unsupported and take no file names",
-        precommit.check_language_hooks(&LANGUAGE_HOOKS),
+        "TypeScript prek: language hooks are local, system and take no file names",
+        prek.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }
 
@@ -1109,9 +1109,9 @@ fn format_script_checks(script: &str) -> Result<(), Issue> {
     )
 }
 
-/// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args pre-commit appends to it. A hook without
+/// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args prek appends to it. A hook without
 /// an entry, as a remote hook may leave it to the hook's repository, is taken to run `eslint`.
-fn eslint_hook_strict(hook: &PrecommitHook) -> bool {
+fn eslint_hook_strict(hook: &PrekHook) -> bool {
     hook.filter_map_commands("eslint", eslint_max_warnings_zero)
         .contains(&true)
 }
@@ -1139,10 +1139,10 @@ fn vitest_coverage(words: &[&str]) -> Option<bool> {
     program_args(words, "vitest").map(|args| args.contains(&"--coverage"))
 }
 
-/// Check that some `vitest` hook runs `vitest` with `--coverage`, in its entry or the args pre-commit appends to it. A
+/// Check that some `vitest` hook runs `vitest` with `--coverage`, in its entry or the args prek appends to it. A
 /// hook without an entry of its own, as a remote hook may leave it to the hook's repository, warns, since norms can't
 /// see its arguments.
-fn vitest_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+fn vitest_hooks(config: &PrekConfig) -> Result<(), Issue> {
     let hooks = config.commit_hooks("vitest")?;
     if hooks.iter().any(|hook| {
         hook.entry.is_some()
@@ -1229,7 +1229,7 @@ fn script_type_checks(script: Option<&str>, name: &str, solution_style: bool) ->
 /// Check that each `tsc` hook runs `tsc` in build mode, as [`tsc_builds`] tells. A hook that runs it nowhere norms can
 /// see warns, as does one without an entry of its own, as a remote hook may leave it to the hook's repository.
 /// `solution_style` tells whether every component's `tsconfig.json` is.
-fn tsc_hooks(config: &PrecommitConfig, solution_style: bool) -> Result<(), Issue> {
+fn tsc_hooks(config: &PrekConfig, solution_style: bool) -> Result<(), Issue> {
     let issues = config.commit_hooks("tsc")?.into_iter().map(|hook| {
         if hook.entry.is_none() {
             return Err(Issue::warn(
@@ -1466,11 +1466,11 @@ mod tests {
         }
         assert_eq!(strict("pnpm lint --max-warnings 0"), None);
 
-        let hook = |entry: Option<&str>, args: &[&str]| PrecommitHook {
+        let hook = |entry: Option<&str>, args: &[&str]| PrekHook {
             id: "eslint".to_owned(),
             entry: entry.map(str::to_owned),
             args: args.iter().map(|&arg| arg.to_owned()).collect(),
-            ..PrecommitHook::default()
+            ..PrekHook::default()
         };
         assert!(eslint_hook_strict(&hook(
             Some("pnpm exec eslint . --max-warnings 0"),
@@ -1732,30 +1732,27 @@ mod tests {
         );
         assert_eq!(ci("pnpm build"), Err(Issue::fail("No step runs vitest")));
 
-        let hooks = |hooks: &str| {
-            let yaml = format!("default_stages: [pre-commit]\nrepos:\n{hooks}");
-            vitest_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+        let vitest = |entry: &str, args: &[&str]| {
+            vitest_hooks(&PrekConfig::with_repo(
+                "local",
+                vec![PrekHook {
+                    args: args.iter().map(|arg| (*arg).to_owned()).collect(),
+                    ..PrekHook::new("vitest", Some(entry))
+                }],
+            ))
         };
-        let local = |rest: &str| format!("  - repo: local\n    hooks:\n      - id: vitest\n{rest}");
+        assert_eq!(vitest("pnpm exec vitest run --coverage", &[]), Ok(()));
+        // prek appends the args to the entry.
+        assert_eq!(vitest("pnpm exec vitest run", &["--coverage"]), Ok(()));
         assert_eq!(
-            hooks(&local("        entry: pnpm exec vitest run --coverage\n")),
-            Ok(())
-        );
-        // pre-commit appends the args to the entry.
-        assert_eq!(
-            hooks(&local(
-                "        entry: pnpm exec vitest run\n        args: [--coverage]\n"
-            )),
-            Ok(())
-        );
-        assert_eq!(
-            hooks(&local("        entry: pnpm exec vitest run\n")),
+            vitest("pnpm exec vitest run", &[]),
             Err(Issue::warn("The vitest hook doesn't pass --coverage"))
         );
         assert_eq!(
-            hooks(
-                "  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: vitest\n"
-            ),
+            vitest_hooks(&PrekConfig::with_repo(
+                "https://example.com/hooks",
+                vec![PrekHook::new("vitest", None)]
+            )),
             Err(Issue::warn(
                 "The vitest hook sets no entry, so norms can't see whether it reports coverage"
             ))
@@ -1812,15 +1809,8 @@ mod tests {
     #[test]
     fn tsc_hooks_and_ci_run_in_build_mode() {
         let hooks = |entries: &[&str]| {
-            let hooks = entries
-                .iter()
-                .map(|entry| format!("      - id: tsc\n        entry: {entry}\n"))
-                .collect::<Vec<_>>()
-                .concat();
-            let yaml = format!(
-                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
-            );
-            tsc_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"), true)
+            let hooks: Vec<_> = entries.iter().map(|entry| ("tsc", *entry)).collect();
+            tsc_hooks(&PrekConfig::with_local_hooks(&hooks), true)
         };
         assert_eq!(hooks(&["pnpm exec tsc -b --noEmit"]), Ok(()));
         // Every copy of the hook must build.
@@ -1838,10 +1828,10 @@ mod tests {
         // A hook without an entry runs its repository's, which norms can't see.
         assert_eq!(
             tsc_hooks(
-                &serde_saphyr::from_str(
-                    "default_stages: [pre-commit]\nrepos:\n  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: tsc\n"
-                )
-                .expect("config parses"),
+                &PrekConfig::with_repo(
+                    "https://example.com/hooks",
+                    vec![PrekHook::new("tsc", None)]
+                ),
                 true
             ),
             Err(Issue::warn(

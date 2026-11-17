@@ -12,7 +12,7 @@ use crate::report::Report;
 ///
 /// Common checks always run. Language-specific checks run for each detected language, in a stable order: first the
 /// checks of each component of that language, then the checks of the language's place in the repository's own files,
-/// such as its pre-commit hooks. The project's waivers apply last, once every check has been recorded.
+/// such as its prek hooks. The project's waivers apply last, once every check has been recorded.
 pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_norms_config(ctx, report);
@@ -25,7 +25,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_editorconfig(ctx, report);
     common::check_markdownlint(ctx, report);
     common::check_devbox(ctx, report);
-    common::check_precommit(ctx, report);
+    common::check_prek(ctx, report);
     common::check_renovate(ctx, report);
     common::check_github_actions(ctx, report);
     common::check_components(ctx, report);
@@ -46,19 +46,19 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
             // C++ components are detected, but their standards, and so their checks, are still to come.
             Language::Cpp => {}
             Language::Python => {
-                python::check_precommit_hooks(ctx, report);
+                python::check_prek_hooks(ctx, report);
                 python::check_ci(ctx, report);
                 python::check_audit(ctx, report);
             }
             Language::Rust => {
                 rust::check_cargo_config(ctx, report);
-                rust::check_precommit_hooks(ctx, report);
+                rust::check_prek_hooks(ctx, report);
                 rust::check_ci(ctx, report);
                 rust::check_toolchain_cache(ctx, report);
                 rust::check_audit(ctx, report);
             }
             Language::TypeScript => {
-                typescript::check_precommit_hooks(ctx, report);
+                typescript::check_prek_hooks(ctx, report);
                 typescript::check_ci(ctx, report);
                 typescript::check_audit(ctx, report);
             }
@@ -193,9 +193,9 @@ mod tests {
     }
 
     #[test]
-    fn invalid_precommit_config_fails() {
+    fn invalid_prek_config_fails() {
         let project = TempProject::new(None);
-        fs::write(project.path().join(".pre-commit-config.yaml"), "repos: [\n").unwrap();
+        fs::write(project.path().join("prek.toml"), "repos = [\n").unwrap();
         fs::write(
             project.path().join("Cargo.toml"),
             "[package]\nname = \"demo\"\n",

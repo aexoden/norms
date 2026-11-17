@@ -106,10 +106,10 @@ re-renders them, as `AGENTS.md` describes.
     advisories check;
   - a `release.yaml` job that only checks formatting but leaves
     setup-rust-toolchain's cache on, beside jobs that build or turn it off.
-- `precommit` has only a `.pre-commit-config.yaml`, which breaks the pre-commit
-  standards: its `default_install_hook_types` lacks `pre-commit`, it runs only
-  some of the pre-commit-hooks set, its `reuse` hook runs in the wrong stage
-  and its `tombi-format` hook only in the `manual` one, its
+- `precommit` has only a `prek.toml`, which breaks the Git hook standards: its
+  `default_install_hook_types` lacks `pre-commit`, it runs only some of the
+  pre-commit-hooks set, its `reuse` hook runs in the wrong stage and its
+  `tombi-format` hook only in the `manual` one, its
   conventional-pre-commit hook runs in the wrong stage with other commit types
   than the standard's, its `norms-commit-msg` hook runs in the `pre-commit`
   stage and its `norms-verify` hook without `--deny-warnings`, and among remote
@@ -145,9 +145,9 @@ re-renders them, as `AGENTS.md` describes.
     `--check`, so they rewrite files rather than fail, as do its `prettier`
     hook and `format` script, while its `ruff-format` hook checks with
     `--diff`;
-  - its `ruff-check` hook is remote, its `mypy` hook has `language: system`
-    and its `tsc` hook doesn't set `pass_filenames: false`;
-  - its `pre-commit` job's `SKIP` lists some of the hooks with jobs of their
+  - its `ruff-check` hook is remote, its `mypy` hook has `language =
+    "unsupported"` and its `tsc` hook doesn't set `pass_filenames = false`;
+  - its `prek` job's `PREK_SKIP` lists some of the hooks with jobs of their
     own, but not `pytest`, `eslint`, `mypy` or `ruff-check`.
 - `typescript-config` breaks the TypeScript configuration standards:
   - its `package.json` sets `private` to the string `"true"`;

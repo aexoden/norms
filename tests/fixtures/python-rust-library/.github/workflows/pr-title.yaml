@@ -19,10 +19,10 @@ concurrency:
 
 permissions: {}
 
-# Renovate updates pre-commit from the comment above its version.
+# Renovate updates prek from the comment above its version.
 env:
-  # renovate: datasource=pypi depName=pre-commit
-  PRE_COMMIT_VERSION: "4.7.0"
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: "0.5.10"
 
 jobs:
   pr-title:
@@ -38,16 +38,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install prek
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          enable-cache: false
+          tool: prek@${{ env.PREK_VERSION }}
 
       # The squash merge's subject is the title followed by the pull request's number. The hooks
       # pass autosquash and merge subjects, which a squash merge keeps, so they're rejected first.
       # GIT_EDITOR=: tells norms, as git does, that the message wasn't edited, so a title starting
       # with git's comment character is checked as GitHub keeps it rather than left out.
-      # pre-commit builds norms with the runner's Rust.
+      # prek builds norms with the runner's Rust.
       - name: Run the commit-msg hooks on the squash merge's subject
         env:
           GIT_EDITOR: ":"
@@ -61,5 +61,4 @@ jobs:
               ;;
           esac
           printf '%s (#%s)\n' "$PR_TITLE" "$PR_NUMBER" > "$RUNNER_TEMP/subject.txt"
-          uvx "pre-commit@$PRE_COMMIT_VERSION" run --hook-stage commit-msg \
-            --commit-msg-filename "$RUNNER_TEMP/subject.txt"
+          prek run --stage commit-msg --commit-msg-filename "$RUNNER_TEMP/subject.txt"

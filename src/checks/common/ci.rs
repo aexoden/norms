@@ -12,8 +12,7 @@ use regex::Regex;
 use serde_json::Value;
 
 use crate::config::{
-    GATE_JOB, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands, current_stage_name,
-    is_program, program_name,
+    GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program, program_name,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, PR_TITLE_WORKFLOW, ProjectContext,
@@ -63,31 +62,55 @@ fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
 }
 
 //
-// pre-commit in CI
+// prek in CI
 //
 
-/// A word of a shell command, with any quotes around it removed, that pins pre-commit to a version: as uvx takes it
-/// (`pre-commit@x.y.z`), or as pip and `uvx --from` do (`pre-commit==x.y.z`, also after `--from=`). A version from a
-/// shell variable counts, since its value can't be seen here.
-static PRE_COMMIT_PIN: LazyLock<Regex> = LazyLock::new(|| {
+/// A word of a shell command, with any quotes around it removed, that pins prek to a version: as uvx takes it
+/// (`prek@x.y.z`), or as pip and `uvx --from` do (`prek==x.y.z`, also after `--from=`). A version from a shell
+/// variable counts, since its value can't be seen here.
+static PREK_PIN: LazyLock<Regex> = LazyLock::new(|| {
     #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
-    Regex::new(r"(?:^|[=/])pre-commit(?:@|==)(?:[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc|\.post|\.dev)[0-9]+)?$|\$)").unwrap()
+    Regex::new(
+        r"(?:^|[=/])prek(?:@|==)(?:[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc|\.post|\.dev)[0-9]+)?$|\$)",
+    )
+    .unwrap()
 });
 
-/// Whether a word of a shell command pins pre-commit to a version.
-fn is_pre_commit_pin(word: &str) -> bool {
-    PRE_COMMIT_PIN.is_match(word.trim_matches(['"', '\'']))
+/// A tool that `taiki-e/install-action`'s `tool` input installs at a pinned version of prek: `prek@x.y.z`, or a version
+/// from an expression, such as `prek@${{ env.PREK_VERSION }}`, whose value can't be seen here.
+static PREK_TOOL_PIN: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"^prek@(?:[0-9]+(?:\.[0-9]+)*$|\$\{\{)").unwrap()
+});
+
+/// The action that installs prek in CI, as it does cargo-llvm-cov.
+const INSTALL_ACTION: &str = "taiki-e/install-action";
+
+/// Whether a word of a shell command pins prek to a version.
+fn is_prek_pin(word: &str) -> bool {
+    PREK_PIN.is_match(word.trim_matches(['"', '\'']))
 }
 
-/// Whether a word of a shell command, with any quotes around it removed, invokes pre-commit: `pre-commit`, a path to
-/// it, or a versioned `pre-commit@x.y.z` as uvx takes it.
-fn is_pre_commit_command(word: &str) -> bool {
+/// Whether `job` installs a pinned prek with [`INSTALL_ACTION`], among the comma-separated tools of its `tool` input.
+fn installs_pinned_prek(job: &WorkflowJob) -> bool {
+    job.steps_using(INSTALL_ACTION).any(|step| {
+        step.input("tool").is_some_and(|tools| {
+            tools
+                .split(',')
+                .any(|tool| PREK_TOOL_PIN.is_match(tool.trim()))
+        })
+    })
+}
+
+/// Whether a word of a shell command, with any quotes around it removed, invokes prek: `prek`, a path to it, or a
+/// versioned `prek@x.y.z` as uvx takes it.
+fn is_prek_command(word: &str) -> bool {
     let word = word.trim_matches(['"', '\'']);
     let name = program_name(word);
-    name == "pre-commit" || name.starts_with("pre-commit@")
+    name == "prek" || name.starts_with("prek@")
 }
 
-/// Whether a word of a shell command assigns a variable for the command it precedes, as `SKIP=clippy` does.
+/// Whether a word of a shell command assigns a variable for the command it precedes, as `PREK_SKIP=clippy` does.
 fn is_assignment(word: &str) -> bool {
     word.split_once('=').is_some_and(|(name, _)| {
         name.chars()
@@ -97,30 +120,31 @@ fn is_assignment(word: &str) -> bool {
     })
 }
 
-/// Whether `workflow` runs every pre-commit hook it doesn't skip: a script runs `pre-commit run` for every hook of the
-/// `pre-commit` stage (naming no hook, and with no `--hook-stage` or that stage's) with `--all-files` (or `-a`), with a
-/// pinned pre-commit. The pin belongs to that command, as `uvx pre-commit@x.y.z` or `uvx --from pre-commit==x.y.z
-/// pre-commit`, or, for a plain `pre-commit run`, perhaps after variable assignments such as `SKIP=...`, to an earlier
-/// command of the same job that installs it, such as `pip install pre-commit==x.y.z`.
-fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
+/// Whether `workflow` runs every prek hook it doesn't skip: a script runs `prek run` for every hook of the `pre-commit`
+/// stage (naming no hook, and with no `--stage` or that stage's) with `--all-files` (or `-a`), with a pinned prek. The
+/// pin belongs to the job, which installs prek with [`INSTALL_ACTION`] at a pinned version, or to the command, as
+/// `uvx prek@x.y.z` or `uvx --from prek==x.y.z prek`, or, for a plain `prek run`, perhaps after variable assignments
+/// such as `PREK_SKIP=...`, to an earlier command of the same job that installs it, such as `pip install prek==x.y.z`.
+fn prek_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let mut runs = false;
     let mut runs_all = false;
     let mut all_files = false;
     let mut pinned = false;
 
     for job in workflow.jobs.values() {
+        let action = installs_pinned_prek(job);
         let mut installed = false;
         for line in job.run_lines() {
             for words in commands(&line) {
-                if pre_commit_run_start(&words).is_none() {
-                    installed |= words.iter().any(|word| is_pre_commit_pin(word));
+                if prek_run_start(&words).is_none() {
+                    installed |= words.iter().any(|word| is_prek_pin(word));
                     continue;
                 }
                 runs = true;
-                let Some(run) = pre_commit_run_all(&words) else {
+                let Some(run) = prek_run_all(&words) else {
                     continue;
                 };
-                if current_stage_name(run.stage) != "pre-commit" {
+                if run.stage != "pre-commit" {
                     continue;
                 }
                 runs_all = true;
@@ -132,86 +156,108 @@ fn pre_commit_in_ci(workflow: &Workflow) -> Result<(), Issue> {
                 pinned |= words
                     .iter()
                     .take(prefix.len() + 1)
-                    .any(|word| is_pre_commit_pin(word))
-                    || (installed && prefix.iter().all(|word| is_assignment(word)));
+                    .any(|word| is_prek_pin(word))
+                    || ((action || installed) && prefix.iter().all(|word| is_assignment(word)));
             }
         }
     }
 
     if !runs {
-        // pre-commit/action runs the hooks too, but with whatever pre-commit is newest.
-        Err(if workflow.uses_action("pre-commit/action") {
+        Err(if workflow.uses_action("j178/prek-action") {
             Issue::warn(
-                "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned",
+                "No step runs prek run, which CI runs from a pinned prek rather than with j178/prek-action",
             )
         } else {
-            Issue::fail("No step runs pre-commit run")
+            Issue::fail("No step runs prek run")
         })
     } else if !runs_all {
         Err(Issue::fail(
-            "pre-commit run only runs named hooks or another --hook-stage's, not every pre-commit hook",
+            "prek run only runs named hooks or another --stage's, not every pre-commit hook",
         ))
     } else if !all_files {
         // CI has no staged files, so without --all-files every hook is skipped and the job passes.
         Err(Issue::fail(
-            "pre-commit run doesn't pass --all-files, so it checks no files",
+            "prek run doesn't pass --all-files, so it checks no files",
         ))
     } else if !pinned {
-        Err(Issue::warn(
-            "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
-        ))
+        Err(Issue::warn(format!(
+            "prek isn't pinned to a version ({INSTALL_ACTION} with prek@x.y.z, or uvx prek@x.y.z)"
+        )))
     } else {
         Ok(())
     }
 }
 
-/// The options of `pre-commit run` that take a value, which isn't a hook ID.
-const PRE_COMMIT_RUN_VALUE_OPTIONS: [&str; 20] = [
+/// The options of `prek run` that take a value, which isn't a hook ID.
+const PREK_RUN_VALUE_OPTIONS: [&str; 33] = [
+    "--cd",
     "--checkout-type",
     "--color",
     "--commit-msg-filename",
     "--commit-object-name",
     "--config",
+    "--directory",
+    "--files0-from",
     "--from-ref",
+    "--glob",
+    "--group",
+    "--hide-status",
     "--hook-stage",
     "--is-squash-merge",
     "--local-branch",
+    "--log-file",
+    "--no-group",
     "--origin",
     "--prepare-commit-message-source",
     "--remote-branch",
     "--remote-name",
     "--remote-url",
+    "--require-group",
     "--rewrite-command",
+    "--skip",
     "--source",
+    "--stage",
     "--to-ref",
+    "-C",
     "-c",
+    "-d",
     "-o",
     "-s",
 ];
 
-/// A command that runs `pre-commit run` for every hook of a stage, as [`pre_commit_run_all`] reads it.
-struct PreCommitRun<'a, 'b> {
-    /// The words before pre-commit, such as `uvx` or `SKIP=...`.
+/// The options of `prek run` that select its stage: `--stage`, and `--hook-stage`, pre-commit's name for it.
+const PREK_STAGE_OPTIONS: [&str; 2] = ["--stage", "--hook-stage"];
+
+/// A command that runs `prek run` for every hook of a stage, as [`prek_run_all`] reads it.
+struct PrekRun<'a, 'b> {
+    /// The words before prek, such as `uvx` or `PREK_SKIP=...`.
     prefix: &'b [&'a str],
-    /// The stage, `--hook-stage`'s value or else `pre-commit`, without quotes around it.
+    /// The stage, `--stage`'s value or else `pre-commit`, without quotes around it. Unlike `prek.toml`, prek's command
+    /// line doesn't take a stage's old name, such as `commit`.
     stage: &'a str,
     /// Whether it passes `--all-files` (or `-a`).
     all_files: bool,
 }
 
-/// The position of the word that invokes pre-commit in the words of a command that runs `pre-commit run`, however
-/// pre-commit is invoked.
-fn pre_commit_run_start(words: &[&str]) -> Option<usize> {
+/// The position of the word that invokes prek in the words of a command that runs `prek run`, however prek is invoked.
+fn prek_run_start(words: &[&str]) -> Option<usize> {
     words
         .windows(2)
-        .position(|pair| matches!(pair, [program, "run"] if is_pre_commit_command(program)))
+        .position(|pair| matches!(pair, [program, "run"] if is_prek_command(program)))
 }
 
-/// The command, as its words, if it runs `pre-commit run` for every hook of a stage, however pre-commit is invoked, or
-/// `None` if it doesn't run it or names the one hook it runs. Option values aren't hook IDs or other options, the words
-/// after `--files` are files, and those after a `#` are a comment.
-fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PreCommitRun<'a, 'b>> {
-    let start = pre_commit_run_start(words)?;
+/// The stage an argument of `prek run` gives in itself, as `--stage=<stage>` does.
+fn stage_assignment(arg: &str) -> Option<&str> {
+    PREK_STAGE_OPTIONS
+        .iter()
+        .find_map(|option| arg.strip_prefix(option)?.strip_prefix('='))
+}
+
+/// The command, as its words, if it runs `prek run` for every hook of a stage, however prek is invoked, or `None` if it
+/// doesn't run it or names the one hook it runs. Option values aren't hook IDs or other options, the words after
+/// `--files` are files, and those after a `#` are a comment.
+fn prek_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PrekRun<'a, 'b>> {
+    let start = prek_run_start(words)?;
     let mut stage = "pre-commit";
     let mut all_files = false;
     let mut args = words.iter().skip(start + 2);
@@ -224,27 +270,27 @@ fn pre_commit_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PreCommitRun<'a, '
         }
         if matches!(*arg, "--all-files" | "-a") {
             all_files = true;
-        } else if let Some(value) = arg.strip_prefix("--hook-stage=") {
+        } else if let Some(value) = stage_assignment(arg) {
             stage = value;
-        } else if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
+        } else if PREK_RUN_VALUE_OPTIONS.contains(arg) {
             let value = args.next();
-            if *arg == "--hook-stage"
+            if PREK_STAGE_OPTIONS.contains(arg)
                 && let Some(value) = value
             {
                 stage = value;
             }
         }
     }
-    Some(PreCommitRun {
+    Some(PrekRun {
         prefix: words.get(..start)?,
         stage: stage.trim_matches(['"', '\'']),
         all_files,
     })
 }
 
-/// The value a word of a shell command assigns to `SKIP`, as `SKIP=<value>` does, without quotes around it.
+/// The value a word of a shell command assigns to `PREK_SKIP`, as `PREK_SKIP=<value>` does, without quotes around it.
 fn skip_assignment(word: &str) -> Option<&str> {
-    word.strip_prefix("SKIP=")
+    word.strip_prefix("PREK_SKIP=")
         .map(|value| value.trim_matches(['"', '\'']))
 }
 
@@ -255,10 +301,10 @@ const HOOK_JOBS: [(&str, &str); 2] = [
 ];
 
 /// The hooks of `config` that run in `stage` and have a job of their own in `workflow`, other than `job_id`, as each
-/// one's alias or ID, that `skip`, a comma-separated list of hook IDs and aliases as pre-commit reads `SKIP`, doesn't
+/// one's alias or ID, that `skip`, a comma-separated list of hook IDs and aliases as prek reads `PREK_SKIP`, doesn't
 /// list. A hook has a job if a job has its ID or alias as its own ID, or is the job [`HOOK_JOBS`] gives it.
 fn hooks_not_skipped<'a>(
-    config: &'a PrecommitConfig,
+    config: &'a PrekConfig,
     workflow: &Workflow,
     job_id: &str,
     stage: &'a str,
@@ -294,20 +340,21 @@ fn hooks_not_skipped<'a>(
     missing
 }
 
-/// A command of a workflow that runs `pre-commit run` for every hook of a stage at the repository's root, where its
-/// `.pre-commit-config.yaml` applies.
-struct RootPreCommitRun<'w> {
+/// A command of a workflow that runs `prek run` for every hook of a stage at the repository's root, where its
+/// `prek.toml` applies.
+struct RootPrekRun<'w> {
     /// The ID of the job that runs it.
     job_id: &'w str,
-    /// The stage whose hooks it runs, as [`PreCommitRun`] gives it.
+    /// The stage whose hooks it runs, as [`PrekRun`] gives it.
     stage: String,
-    /// The `SKIP` it runs with: from the command's own `SKIP=` prefix, or else an earlier command of the step that sets
-    /// it (`SKIP=...` or `export SKIP=...`), or else the step's, job's or workflow's `env`.
+    /// The `PREK_SKIP` it runs with: from the command's own `PREK_SKIP=` prefix, or else an earlier command of the step
+    /// that sets it (`PREK_SKIP=...` or `export PREK_SKIP=...`), or else the step's, job's or workflow's `env`. prek
+    /// reads `SKIP` only without `PREK_SKIP`, and norms accepts only `PREK_SKIP`, so `SKIP` counts for nothing here.
     skip: String,
 }
 
-/// Every command of `workflow` that runs `pre-commit run` for every hook of a stage at the repository's root.
-fn root_pre_commit_runs(workflow: &Workflow) -> Vec<RootPreCommitRun<'_>> {
+/// Every command of `workflow` that runs `prek run` for every hook of a stage at the repository's root.
+fn root_prek_runs(workflow: &Workflow) -> Vec<RootPrekRun<'_>> {
     let mut runs = Vec::new();
     for (job_id, job) in &workflow.jobs {
         for step in job
@@ -318,8 +365,7 @@ fn root_pre_commit_runs(workflow: &Workflow) -> Vec<RootPreCommitRun<'_>> {
             let mut shell_skip: Option<String> = None;
             for line in step.run_lines() {
                 for words in commands(&line) {
-                    let Some(PreCommitRun { prefix, stage, .. }) = pre_commit_run_all(&words)
-                    else {
+                    let Some(PrekRun { prefix, stage, .. }) = prek_run_all(&words) else {
                         let assignment = match words.as_slice() {
                             ["export", word] | [word] => skip_assignment(word),
                             _ => None,
@@ -334,9 +380,9 @@ fn root_pre_commit_runs(workflow: &Workflow) -> Vec<RootPreCommitRun<'_>> {
                         .find_map(|word| skip_assignment(word))
                         .map(str::to_owned)
                         .or_else(|| shell_skip.clone())
-                        .or_else(|| workflow.env(job, step, "SKIP").map(Cow::into_owned))
+                        .or_else(|| workflow.env(job, step, "PREK_SKIP").map(Cow::into_owned))
                         .unwrap_or_default();
-                    runs.push(RootPreCommitRun {
+                    runs.push(RootPrekRun {
                         job_id,
                         stage: stage.to_owned(),
                         skip,
@@ -348,16 +394,16 @@ fn root_pre_commit_runs(workflow: &Workflow) -> Vec<RootPreCommitRun<'_>> {
     runs
 }
 
-/// Check that each command of `workflow` that runs `pre-commit run` for every hook of a stage at the repository's
-/// root, where `config` applies, lists in its `SKIP` every hook of `config` that runs in that stage and has a job of
+/// Check that each command of `workflow` that runs `prek run` for every hook of a stage at the repository's root,
+/// where `config` applies, lists in its `PREK_SKIP` every hook of `config` that runs in that stage and has a job of
 /// its own, or `None` if no command runs it.
-fn pre_commit_skip(config: &PrecommitConfig, workflow: &Workflow) -> Option<Result<(), String>> {
-    let runs = root_pre_commit_runs(workflow);
+fn prek_skip(config: &PrekConfig, workflow: &Workflow) -> Option<Result<(), String>> {
+    let runs = root_prek_runs(workflow);
     let mut issues = Vec::new();
     for run in &runs {
         let missing = hooks_not_skipped(config, workflow, run.job_id, &run.stage, &run.skip);
         let issue = format!(
-            "SKIP in {} doesn't list these hooks, which have jobs of their own: {}",
+            "PREK_SKIP in {} doesn't list these hooks, which have jobs of their own: {}",
             run.job_id,
             missing.join(", ")
         );
@@ -390,9 +436,9 @@ fn norms_verify_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
     words.get(start + 2..)
 }
 
-/// Whether the words of a command run `pre-commit run` for the hook `id` alone, naming it.
-fn pre_commit_runs_hook(words: &[&str], id: &str) -> bool {
-    let Some(start) = pre_commit_run_start(words) else {
+/// Whether the words of a command run `prek run` for the hook `id` alone, naming it.
+fn prek_runs_hook(words: &[&str], id: &str) -> bool {
+    let Some(start) = prek_run_start(words) else {
         return false;
     };
     let mut args = words.iter().skip(start + 2);
@@ -400,7 +446,7 @@ fn pre_commit_runs_hook(words: &[&str], id: &str) -> bool {
         if *arg == "--files" || arg.starts_with('#') {
             return false;
         }
-        if PRE_COMMIT_RUN_VALUE_OPTIONS.contains(arg) {
+        if PREK_RUN_VALUE_OPTIONS.contains(arg) {
             args.next();
         } else if arg.trim_matches(['"', '\'']) == id {
             return true;
@@ -416,11 +462,11 @@ fn checks_out_history(job: &WorkflowJob) -> bool {
 }
 
 /// Whether `workflow` runs `norms verify` on the project as the standards require: in a job that runs it, as the
-/// norms-verify hook (`pre-commit run norms-verify`) or as `norms verify --deny-warnings`, with the whole history,
-/// which the changelog check reads release tags from. A job that runs it otherwise warns, as does the pre-commit job
+/// norms-verify hook (`prek run norms-verify`) or as `norms verify --deny-warnings`, with the whole history, which the
+/// changelog check reads release tags from. A job that runs it otherwise warns, as does the prek job
 /// running every hook of `config`, its norms-verify hook among them, at the repository's root, from a shallow
 /// checkout. With none, it fails.
-fn norms_verify_in_ci(config: Option<&PrecommitConfig>, workflow: &Workflow) -> Result<(), Issue> {
+fn norms_verify_in_ci(config: Option<&PrekConfig>, workflow: &Workflow) -> Result<(), Issue> {
     let mut issues = Vec::new();
     for (job_id, job) in &workflow.jobs {
         for line in job.run_lines() {
@@ -430,7 +476,7 @@ fn norms_verify_in_ci(config: Option<&PrecommitConfig>, workflow: &Workflow) -> 
                     if !args.contains(&"--deny-warnings") {
                         problems.push("without --deny-warnings");
                     }
-                } else if !pre_commit_runs_hook(&words, NORMS_VERIFY_HOOK) {
+                } else if !prek_runs_hook(&words, NORMS_VERIFY_HOOK) {
                     continue;
                 }
                 if !checks_out_history(job) {
@@ -452,9 +498,9 @@ fn norms_verify_in_ci(config: Option<&PrecommitConfig>, workflow: &Workflow) -> 
             .hooks_in("pre-commit")
             .any(|hook| hook.id == NORMS_VERIFY_HOOK)
     });
-    for run in root_pre_commit_runs(workflow) {
+    for run in root_prek_runs(workflow) {
         if hook
-            && current_stage_name(&run.stage) == "pre-commit"
+            && run.stage == "pre-commit"
             && !run
                 .skip
                 .split(',')
@@ -504,12 +550,10 @@ fn check_pr_title_workflow(workflow: &Workflow, report: &mut Report) {
     );
     report.must(
         "pr-title-yaml-commit-msg",
-        "CI: pr-title.yaml: runs the commit-msg hooks (pre-commit run --hook-stage commit-msg)",
+        "CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)",
         workflow.run_lines().any(|line| {
-            commands(&line).any(|words| {
-                pre_commit_run_all(&words)
-                    .is_some_and(|run| current_stage_name(run.stage) == "commit-msg")
-            })
+            commands(&line)
+                .any(|words| prek_run_all(&words).is_some_and(|run| run.stage == "commit-msg"))
         }),
     );
 }
@@ -614,8 +658,8 @@ fn job_runs_uv(job: &WorkflowJob) -> bool {
 
 /// Check that every setup-uv step in a job that runs uv itself pins an exact uv version with its `version` input, or
 /// `None` if there is no such step. Without the input, setup-uv installs the newest uv that `required-version` allows,
-/// so the version CI runs changes with every uv release. A job that only runs tools through `uvx`, such as the
-/// pre-commit job, doesn't install the project, so its uv needn't match.
+/// so the version CI runs changes with every uv release. A job that only runs tools through `uvx` doesn't install the
+/// project, so its uv needn't match.
 fn setup_uv_exact(workflow: &Workflow) -> Option<Result<(), String>> {
     let mut used = false;
     let mut inexact = Vec::new();
@@ -752,20 +796,20 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
     report.check("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
     report.check(
         "ci-pre-commit",
-        "CI: remaining pre-commit hooks (pinned, --all-files)",
-        pre_commit_in_ci(workflow),
+        "CI: remaining prek hooks (pinned, --all-files)",
+        prek_in_ci(workflow),
     );
     report.check(
         "ci-norms-verify",
         "CI: norms verify (--deny-warnings, whole history)",
-        norms_verify_in_ci(ctx.precommit().as_ref_ok(), workflow),
+        norms_verify_in_ci(ctx.prek().as_ref_ok(), workflow),
     );
-    if let ConfigStatus::Ok(config) = ctx.precommit()
-        && let Some(skip) = pre_commit_skip(config, workflow)
+    if let ConfigStatus::Ok(config) = ctx.prek()
+        && let Some(skip) = prek_skip(config, workflow)
     {
         report.should(
             "ci-pre-commit-skip",
-            "CI: the pre-commit job's SKIP lists every hook with a job of its own",
+            "CI: the prek job's PREK_SKIP lists every hook with a job of its own",
             skip,
         );
     }
@@ -943,21 +987,24 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::PrekHook;
     use crate::models::Status;
 
-    fn skip(precommit: &str, workflow: &str) -> Option<Result<(), String>> {
-        pre_commit_skip(
-            &serde_saphyr::from_str(precommit).unwrap(),
+    fn skip(prek: &str, workflow: &str) -> Option<Result<(), String>> {
+        prek_skip(
+            &toml::from_str(prek).unwrap(),
             &serde_saphyr::from_str(workflow).unwrap(),
         )
     }
 
     fn norms_verify(workflow: &str) -> Result<(), Issue> {
-        let config: PrecommitConfig = serde_saphyr::from_str(
-            "default_stages: [pre-commit]\nrepos:\n  - repo: https://github.com/aexoden/norms\n    hooks:\n      \
-             - {id: norms-verify, args: [--deny-warnings]}\n",
-        )
-        .unwrap();
+        let config = PrekConfig::with_repo(
+            "https://github.com/aexoden/norms",
+            vec![PrekHook {
+                args: vec!["--deny-warnings".to_owned()],
+                ..PrekHook::new("norms-verify", None)
+            }],
+        );
         norms_verify_in_ci(Some(&config), &serde_saphyr::from_str(workflow).unwrap())
     }
 
@@ -972,8 +1019,8 @@ mod tests {
     #[test]
     fn norms_verify_runs_as_the_hook_or_itself_with_history() {
         for run in [
-            "uvx pre-commit@4.7.0 run norms-verify --all-files",
-            "uvx pre-commit@4.7.0 run --all-files norms-verify",
+            "uvx prek@0.5.11 run norms-verify --all-files",
+            "uvx prek@0.5.11 run --all-files norms-verify",
             "'\"$RUNNER_TEMP/norms/norms\" verify --deny-warnings .'",
             "norms verify --deny-warnings .",
         ] {
@@ -990,7 +1037,7 @@ mod tests {
         assert_eq!(
             norms_verify(&norms_job(
                 "{persist-credentials: false}",
-                "uvx pre-commit@4.7.0 run norms-verify --all-files"
+                "uvx prek@0.5.11 run norms-verify --all-files"
             )),
             Err(Issue::warn(
                 "norms-verify runs norms verify from a checkout without the whole history (fetch-depth: 0), so it \
@@ -1008,7 +1055,7 @@ mod tests {
         assert_eq!(
             norms_verify(&norms_job(
                 "{fetch-depth: 0}",
-                "uvx pre-commit run --hook-stage norms-verify clippy"
+                "uvx prek run --stage norms-verify clippy"
             )),
             Err(Issue::fail(
                 "No job runs norms verify, as the norms-verify hook or itself"
@@ -1017,37 +1064,33 @@ mod tests {
     }
 
     #[test]
-    fn pre_commit_runs_a_hook_it_names_before_any_files() {
+    fn prek_runs_a_hook_it_names_before_any_files() {
         for (run, runs) in [
-            ("uvx pre-commit@4.7.0 run norms-verify --all-files", true),
-            ("uvx pre-commit@4.7.0 run 'norms-verify' --all-files", true),
-            ("uvx pre-commit@4.7.0 run --color always norms-verify", true),
-            ("uvx pre-commit@4.7.0 run --files norms-verify", false),
-            ("uvx pre-commit@4.7.0 run --color norms-verify", false),
-            ("uvx pre-commit@4.7.0 run # norms-verify", false),
+            ("uvx prek@0.5.11 run norms-verify --all-files", true),
+            ("uvx prek@0.5.11 run 'norms-verify' --all-files", true),
+            ("uvx prek@0.5.11 run --color always norms-verify", true),
+            ("uvx prek@0.5.11 run --files norms-verify", false),
+            ("uvx prek@0.5.11 run --color norms-verify", false),
+            ("uvx prek@0.5.11 run # norms-verify", false),
             ("echo norms-verify", false),
         ] {
             let words: Vec<_> = run.split_whitespace().collect();
-            assert_eq!(
-                pre_commit_runs_hook(&words, NORMS_VERIFY_HOOK),
-                runs,
-                "{run}"
-            );
+            assert_eq!(prek_runs_hook(&words, NORMS_VERIFY_HOOK), runs, "{run}");
         }
     }
 
     #[test]
-    fn norms_verify_in_the_pre_commit_job_warns() {
+    fn norms_verify_in_the_prek_job_warns() {
         let workflow = |skip: &str| {
             format!(
-                "jobs:\n  pre-commit:\n    steps:\n      - uses: actions/checkout@v7\n      - run: SKIP={skip} uvx \
-                 pre-commit@4.7.0 run --all-files\n"
+                "jobs:\n  prek:\n    steps:\n      - uses: actions/checkout@v7\n      - run: PREK_SKIP={skip} uvx \
+                 prek@0.5.11 run --all-files\n"
             )
         };
         assert_eq!(
             norms_verify(&workflow("clippy")),
             Err(Issue::warn(
-                "norms-verify runs only among the hooks of pre-commit, rather than in a job of its own with the whole \
+                "norms-verify runs only among the hooks of prek, rather than in a job of its own with the whole \
                  history"
             ))
         );
@@ -1058,7 +1101,7 @@ mod tests {
                 "actions/checkout@v7\n        with: {fetch-depth: 0}\n"
             )),
             Err(Issue::warn(
-                "norms-verify runs only among the hooks of pre-commit, rather than in a job of its own with the whole \
+                "norms-verify runs only among the hooks of prek, rather than in a job of its own with the whole \
                  history"
             ))
         );
@@ -1068,7 +1111,7 @@ mod tests {
                 "No job runs norms verify, as the norms-verify hook or itself"
             ))
         );
-        // Without the hook, the pre-commit job doesn't run norms.
+        // Without the hook, the prek job doesn't run norms.
         assert_eq!(
             norms_verify_in_ci(None, &serde_saphyr::from_str(&workflow("clippy")).unwrap()),
             Err(Issue::fail(
@@ -1078,10 +1121,10 @@ mod tests {
         // A job of its own decides.
         assert_eq!(
             norms_verify(&format!(
-                "{}  pre-commit:\n    steps:\n      - run: uvx pre-commit@4.7.0 run --all-files\n",
+                "{}  prek:\n    steps:\n      - run: uvx prek@0.5.11 run --all-files\n",
                 norms_job(
                     "{fetch-depth: 0}",
-                    "uvx pre-commit@4.7.0 run norms-verify --all-files"
+                    "uvx prek@0.5.11 run norms-verify --all-files"
                 )
             )),
             Ok(())
@@ -1107,8 +1150,8 @@ mod tests {
         ]
     }
 
-    const PR_TITLE_RUN: &str = "jobs:\n  pr-title:\n    steps:\n      - run: |\n          uvx pre-commit@4.7.0 run \
-                                --hook-stage commit-msg \\\n            --commit-msg-filename subject.txt\n";
+    const PR_TITLE_RUN: &str = "jobs:\n  pr-title:\n    steps:\n      - run: |\n          uvx prek@0.5.11 run \
+                                --stage commit-msg \\\n            --commit-msg-filename subject.txt\n";
 
     #[test]
     fn pr_title_runs_on_title_edits_and_the_commit_msg_hooks() {
@@ -1137,39 +1180,41 @@ mod tests {
         assert_eq!(
             pr_title(
                 "on:\n  pull_request:\n    types: [opened, reopened, edited]\njobs:\n  pr-title:\n    steps:\n      \
-                 - run: uvx pre-commit@4.7.0 run --all-files\n"
+                 - run: uvx prek@0.5.11 run --all-files\n"
             ),
             pr_title_results(Status::Pass, Status::Fail)
         );
     }
 
     #[test]
-    fn pre_commit_skips_the_hooks_with_jobs() {
-        let precommit = "\
-default_stages: [pre-commit]
-repos:
-  - repo: local
-    hooks:
-      - {id: clippy}
-      - {id: cargo-test}
-      - {id: ruff-check, alias: ruff-check-api}
-      - {id: markdownlint-cli2}
-      - {id: tombi-format}
-      - {id: check-yaml}
-      - {id: conventional-pre-commit, stages: [commit-msg]}
-";
+    fn prek_skips_the_hooks_with_jobs() {
+        let prek = r#"
+default_stages = ["pre-commit"]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {id = "clippy"},
+  {id = "cargo-test"},
+  {id = "ruff-check", alias = "ruff-check-api"},
+  {id = "markdownlint-cli2"},
+  {id = "tombi-format"},
+  {id = "check-yaml"},
+  {id = "conventional-pre-commit", stages = ["commit-msg"]},
+]
+"#;
         let workflow = |skip: &str| {
             format!(
                 "\
 env:
-  SKIP: other
+  PREK_SKIP: other
 jobs:
-  pre-commit:
+  prek:
     env:
-      SKIP: {skip}
+      PREK_SKIP: {skip}
     steps:
       - uses: astral-sh/setup-uv@v7
-      - run: uvx pre-commit@4.3.0 run --all-files
+      - run: uvx prek@0.5.11 run --all-files
   clippy: {{}}
   cargo-test: {{}}
   ruff-check-api: {{}}
@@ -1181,51 +1226,48 @@ jobs:
         };
         assert_eq!(
             skip(
-                precommit,
+                prek,
                 &workflow("\"cargo-test, clippy,ruff-check,markdownlint-cli2,tombi-format\"")
             ),
             Some(Ok(()))
         );
         assert_eq!(
-            skip(
-                precommit,
-                &workflow("cargo-test,markdownlint,tombi-format")
-            ),
+            skip(prek, &workflow("cargo-test,markdownlint,tombi-format")),
             Some(Err(
-                "SKIP in pre-commit doesn't list these hooks, which have jobs of their own: clippy, \
+                "PREK_SKIP in prek doesn't list these hooks, which have jobs of their own: clippy, \
                  ruff-check-api, markdownlint-cli2"
                     .to_owned()
             ))
         );
-        // The step's own SKIP replaces the job's, and the workflow's applies when neither sets one.
+        // The step's own PREK_SKIP replaces the job's, and the workflow's applies when neither sets one.
         assert_eq!(
             skip(
-                "repos: [{repo: local, hooks: [{id: clippy}]}]\n",
-                "jobs:\n  clippy: {}\n  hooks:\n    env: {SKIP: clippy}\n    steps:\n      - run: pre-commit run -a\n        env: {SKIP: other}\n"
+                "repos = [{repo = \"local\", hooks = [{id = \"clippy\"}]}]\n",
+                "jobs:\n  clippy: {}\n  hooks:\n    env: {PREK_SKIP: clippy}\n    steps:\n      - run: prek run -a\n        env: {PREK_SKIP: other}\n"
             ),
             Some(Err(
-                "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy"
+                "PREK_SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy"
                     .to_owned()
             ))
         );
         assert_eq!(
             skip(
-                "repos: [{repo: local, hooks: [{id: clippy}]}]\n",
-                "env: {SKIP: clippy}\njobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n"
+                "repos = [{repo = \"local\", hooks = [{id = \"clippy\"}]}]\n",
+                "env: {PREK_SKIP: clippy}\njobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: prek run -a\n"
             ),
             Some(Ok(()))
         );
-        // A hook named like the job running pre-commit has no job of its own.
+        // A hook named like the job running prek has no job of its own.
         assert_eq!(
             skip(
-                "repos: [{repo: local, hooks: [{id: lint}]}]\n",
-                "jobs:\n  lint:\n    steps:\n      - run: uvx pre-commit run --all-files\n"
+                "repos = [{repo = \"local\", hooks = [{id = \"lint\"}]}]\n",
+                "jobs:\n  lint:\n    steps:\n      - run: uvx prek run --all-files\n"
             ),
             Some(Ok(()))
         );
         assert_eq!(
             skip(
-                precommit,
+                prek,
                 "jobs:\n  clippy:\n    steps:\n      - run: cargo clippy\n"
             ),
             None
@@ -1233,106 +1275,137 @@ jobs:
     }
 
     #[test]
-    fn pre_commit_skip_is_read_from_the_script() {
+    fn skip_is_not_read() {
         let clippy =
-            "repos: [{repo: local, hooks: [{id: clippy}, {id: cargo-test}, {id: clippy}]}]\n";
+            r#"repos = [{repo = "local", hooks = [{id = "clippy"}, {id = "cargo-test"}]}]"#;
         let script = |env: &str, run: &str| {
             format!(
                 "jobs:\n  clippy: {{}}\n  cargo-test: {{}}\n  hooks:\n    {env}steps:\n      - run: {run:?}\n"
             )
         };
-        // pre-commit run naming one hook needn't skip any, so it isn't checked; the hook's ID follows the values of
+        // prek reads pre-commit's SKIP only without PREK_SKIP, and norms not at all.
+        for (env, run) in [
+            ("", "SKIP=clippy,cargo-test prek run -a"),
+            ("env: {SKIP: 'clippy,cargo-test'}\n    ", "prek run -a"),
+            (
+                "env: {PREK_SKIP: other}\n    ",
+                "SKIP=clippy,cargo-test prek run -a",
+            ),
+        ] {
+            assert_eq!(
+                skip(clippy, &script(env, run)),
+                Some(Err(
+                    "PREK_SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
+                        .to_owned()
+                )),
+                "{run}"
+            );
+        }
+    }
+
+    #[test]
+    fn prek_skip_is_read_from_the_script() {
+        let clippy = r#"repos = [{repo = "local", hooks = [{id = "clippy"}, {id = "cargo-test"}, {id = "clippy"}]}]"#;
+        let script = |env: &str, run: &str| {
+            format!(
+                "jobs:\n  clippy: {{}}\n  cargo-test: {{}}\n  hooks:\n    {env}steps:\n      - run: {run:?}\n"
+            )
+        };
+        // prek run naming one hook needn't skip any, so it isn't checked; the hook's ID follows the values of
         // options.
         for run in [
-            "uvx pre-commit@4.3.0 run clippy --all-files",
-            "pre-commit run --hook-stage pre-push clippy",
+            "uvx prek@0.5.11 run clippy --all-files",
+            "prek run --stage pre-push clippy",
         ] {
             assert_eq!(skip(clippy, &script("", run)), None, "{run}");
         }
-        // A run of another stage's hooks skips those of that stage that have jobs, given by its current or old name,
-        // quoted or not.
-        let stages = "default_stages: [pre-commit]\nrepos: [{repo: local, hooks: [{id: clippy, stages: [pre-commit, pre-push]}, {id: cargo-test}]}]\n";
+        // A run of another stage's hooks skips those of that stage that have jobs, quoted or not, which the hooks may
+        // list by the stage's old name.
+        let stages = r#"
+default_stages = ["pre-commit"]
+repos = [{repo = "local", hooks = [{id = "clippy", stages = ["pre-commit", "push"]}, {id = "cargo-test"}]}]
+"#;
         for run in [
-            "pre-commit run --hook-stage commit-msg --commit-msg-filename title.txt",
-            "pre-commit run --hook-stage=manual --all-files",
+            "prek run --stage commit-msg --commit-msg-filename title.txt",
+            "prek run --stage=manual --all-files",
         ] {
             assert_eq!(skip(stages, &script("", run)), Some(Ok(())), "{run}");
         }
         for run in [
-            "pre-commit run --hook-stage pre-push --all-files",
-            "pre-commit run --hook-stage=push -a",
-            "pre-commit run --hook-stage 'pre-push' -a",
+            "prek run --stage pre-push --all-files",
+            "prek run --hook-stage=pre-push -a",
+            "prek run --stage 'pre-push' -a",
         ] {
             assert_eq!(
                 skip(stages, &script("", run)),
                 Some(Err(
-                    "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy"
+                    "PREK_SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy"
                         .to_owned()
                 )),
                 "{run}"
             );
         }
         for run in [
-            "pre-commit run --hook-stage pre-commit --all-files",
-            "pre-commit run --hook-stage=commit -a",
-            "pre-commit run --hook-stage \"pre-commit\" -a",
+            "prek run --stage pre-commit --all-files",
+            "prek run --hook-stage=pre-commit -a",
+            "prek run --stage \"pre-commit\" -a",
         ] {
             assert_eq!(
                 skip(stages, &script("", run)),
                 Some(Err(
-                    "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
+                    "PREK_SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
                         .to_owned()
                 )),
                 "{run}"
             );
         }
-        // SKIP set in the script, as a prefix or by an earlier command, comes before env.
+        // PREK_SKIP set in the script, as a prefix or by an earlier command, comes before env.
         for run in [
-            "SKIP=clippy,cargo-test uvx pre-commit@4.3.0 run --all-files",
-            "export SKIP='clippy,cargo-test'\npre-commit run -a",
-            "SKIP=clippy,cargo-test; pre-commit run --files a.rs",
+            "PREK_SKIP=clippy,cargo-test uvx prek@0.5.11 run --all-files",
+            "export PREK_SKIP='clippy,cargo-test'\nprek run -a",
+            "PREK_SKIP=clippy,cargo-test; prek run --files a.rs",
         ] {
             assert_eq!(
-                skip(clippy, &script("env: {SKIP: other}\n    ", run)),
+                skip(clippy, &script("env: {PREK_SKIP: other}\n    ", run)),
                 Some(Ok(())),
                 "{run}"
             );
         }
-        // Each hook is named once, and an env given by an expression, which can't be read, sets no SKIP.
+        // Each hook is named once, and an env given by an expression, which can't be read, sets no PREK_SKIP.
         assert_eq!(
             skip(
                 clippy,
-                &script("env: ${{ fromJSON(vars.ENV) }}\n    ", "pre-commit run -a")
+                &script("env: ${{ fromJSON(vars.ENV) }}\n    ", "prek run -a")
             ),
             Some(Err(
-                "SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
+                "PREK_SKIP in hooks doesn't list these hooks, which have jobs of their own: clippy, cargo-test"
                     .to_owned()
             ))
         );
         // A job with the hook's own ID counts, as well as the job the standards give it.
         assert_eq!(
             skip(
-                "repos: [{repo: local, hooks: [{id: tombi-format}]}]\n",
-                "jobs:\n  tombi-format: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n"
+                "repos = [{repo = \"local\", hooks = [{id = \"tombi-format\"}]}]\n",
+                "jobs:\n  tombi-format: {}\n  hooks:\n    steps:\n      - run: prek run -a\n"
             ),
             Some(Err(
-                "SKIP in hooks doesn't list these hooks, which have jobs of their own: tombi-format"
+                "PREK_SKIP in hooks doesn't list these hooks, which have jobs of their own: tombi-format"
                     .to_owned()
             ))
         );
 
-        // pre-commit run in another directory runs another configuration.
+        // prek run in another directory runs another configuration.
         for elsewhere in [
-            "jobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n        working-directory: ${{ runner.temp }}/project\n",
-            "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: pre-commit run -a\n",
-            "defaults: {run: {working-directory: frontend}}\njobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: pre-commit run -a\n",
+            "jobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: prek run -a\n        working-directory: ${{ runner.temp }}/project\n",
+            "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: prek run -a\n",
+            "defaults: {run: {working-directory: frontend}}\njobs:\n  clippy: {}\n  hooks:\n    steps:\n      - run: prek run -a\n",
         ] {
             assert_eq!(skip(clippy, elsewhere), None, "{elsewhere}");
         }
         assert!(matches!(
             skip(
                 clippy,
-                "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: pre-commit run -a\n        working-directory: .\n"
+                "jobs:\n  clippy: {}\n  hooks:\n    defaults: {run: {working-directory: frontend}}\n    steps:\n      - run: prek run -a\n        working-directory: .\n"
             ),
             Some(Err(_))
         ));
@@ -1394,24 +1467,61 @@ jobs:
         ));
     }
 
-    fn pre_commit(run: &str) -> Result<(), Issue> {
+    fn prek(run: &str) -> Result<(), Issue> {
         let yaml = format!("jobs:\n  hooks:\n    steps:\n      - run: {run:?}\n");
-        pre_commit_in_ci(&serde_saphyr::from_str(&yaml).unwrap())
+        prek_in_ci(&serde_saphyr::from_str(&yaml).unwrap())
+    }
+
+    const UNPINNED: &str = "prek isn't pinned to a version (taiki-e/install-action with prek@x.y.z, or uvx prek@x.y.z)";
+
+    #[test]
+    fn prek_is_pinned_by_install_action() {
+        let installed = |tool: &str, job: &str| {
+            let install = format!(
+                "      - uses: taiki-e/install-action@v2\n        with:\n          tool: {tool:?}\n"
+            );
+            let run = "      - run: PREK_SKIP=clippy prek run --all-files\n";
+            let jobs = if job == "prek" {
+                format!("  prek:\n    steps:\n{install}{run}")
+            } else {
+                format!("  {job}:\n    steps:\n{install}  prek:\n    steps:\n{run}")
+            };
+            prek_in_ci(&serde_saphyr::from_str(&format!("jobs:\n{jobs}")).unwrap())
+        };
+        for tool in [
+            "prek@0.5.11",
+            "prek@${{ env.PREK_VERSION }}",
+            "cargo-deny@0.20.2, prek@0.5.11",
+        ] {
+            assert_eq!(installed(tool, "prek"), Ok(()), "{tool}");
+        }
+        for tool in ["prek", "prek@latest", "prek-other@1.0.0", "cargo-deny"] {
+            assert_eq!(
+                installed(tool, "prek"),
+                Err(Issue::warn(UNPINNED)),
+                "{tool}"
+            );
+        }
+        // An install in another job doesn't apply.
+        assert_eq!(
+            installed("prek@0.5.11", "other"),
+            Err(Issue::warn(UNPINNED))
+        );
     }
 
     #[test]
-    fn pre_commit_runs_every_hook_of_the_pre_commit_stage() {
+    fn prek_runs_every_hook_of_the_pre_commit_stage() {
         for run in [
-            "uvx pre-commit@4.3.0 run cargo-test; echo --all-files",
-            "uvx pre-commit@4.3.0 run cargo-test --all-files",
-            "uvx pre-commit@4.3.0 run --hook-stage manual --all-files",
-            "uvx pre-commit@4.3.0 run --hook-stage=pre-push -a",
-            "uvx pre-commit@4.3.0 run -a --hook-stage manual",
+            "uvx prek@0.5.11 run cargo-test; echo --all-files",
+            "uvx prek@0.5.11 run cargo-test --all-files",
+            "uvx prek@0.5.11 run --stage manual --all-files",
+            "uvx prek@0.5.11 run --stage=pre-push -a",
+            "uvx prek@0.5.11 run -a --stage manual",
         ] {
             assert_eq!(
-                pre_commit(run),
+                prek(run),
                 Err(Issue::fail(
-                    "pre-commit run only runs named hooks or another --hook-stage's, not every pre-commit hook"
+                    "prek run only runs named hooks or another --stage's, not every pre-commit hook"
                 )),
                 "{run}"
             );
@@ -1419,92 +1529,75 @@ jobs:
     }
 
     #[test]
-    fn pre_commit_runs_every_file_pinned() {
+    fn prek_runs_every_file_pinned() {
         for run in [
-            "uvx pre-commit@4.3.0 run --all-files --show-diff-on-failure",
-            "uvx \"pre-commit@$PRE_COMMIT_VERSION\" run --all-files",
-            "uvx --from pre-commit==4.3.0 pre-commit run -a",
-            "pip install pre-commit==4.3.0\npre-commit run --show-diff-on-failure --all-files",
-            "uv tool install 'pre-commit==4.3.0' && pre-commit run \\\n  --all-files",
-            "uvx --from=pre-commit==4.3.0rc1 pre-commit run -a",
-            // The pre-commit stage, by its current or old name, is every hook's that runs at each commit.
-            "uvx pre-commit@4.3.0 run --hook-stage pre-commit --all-files",
-            "uvx pre-commit@4.3.0 run --hook-stage='commit' -a",
+            "uvx prek@0.5.11 run --all-files --show-diff-on-failure",
+            "uvx \"prek@$PREK_VERSION\" run --all-files",
+            "uvx --from prek==0.5.11 prek run -a",
+            "pip install prek==0.5.11\nprek run --show-diff-on-failure --all-files",
+            "uv tool install 'prek==0.5.11' && prek run \\\n  --all-files",
+            "uvx --from=prek==0.5.11rc1 prek run -a",
+            // The pre-commit stage is every hook's that runs at each commit.
+            "uvx prek@0.5.11 run --stage pre-commit --all-files",
+            "uvx prek@0.5.11 run --hook-stage='pre-commit' -a",
             // A run of another stage's hooks beside it doesn't matter.
-            "uvx pre-commit@4.3.0 run --hook-stage manual --all-files\nuvx pre-commit@4.3.0 run -a",
-            // Variables assigned for pre-commit don't hide the pin of an earlier install.
-            "pip install pre-commit==4.3.0\nSKIP=clippy pre-commit run -a",
+            "uvx prek@0.5.11 run --stage manual --all-files\nuvx prek@0.5.11 run -a",
+            // Variables assigned for prek don't hide the pin of an earlier install.
+            "pip install prek==0.5.11\nSKIP=clippy prek run -a",
         ] {
-            assert_eq!(pre_commit(run), Ok(()), "{run}");
+            assert_eq!(prek(run), Ok(()), "{run}");
         }
         for (run, issue) in [
+            ("prek install", Issue::fail("No step runs prek run")),
             (
-                "pre-commit install",
-                Issue::fail("No step runs pre-commit run"),
+                "uvx prek@0.5.11 run",
+                Issue::fail("prek run doesn't pass --all-files, so it checks no files"),
             ),
             (
-                "uvx pre-commit@4.3.0 run",
-                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
+                "uvx prek@0.5.11 run --all-files-later",
+                Issue::fail("prek run doesn't pass --all-files, so it checks no files"),
             ),
             (
-                "uvx pre-commit@4.3.0 run --all-files-later",
-                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
-            ),
-            (
-                "uvx pre-commit@4.3.0 run --hook-stage manual --all-files\nuvx pre-commit@4.3.0 run",
-                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
+                "uvx prek@0.5.11 run --stage manual --all-files\nuvx prek@0.5.11 run",
+                Issue::fail("prek run doesn't pass --all-files, so it checks no files"),
             ),
             // An option's value or a comment isn't an option.
             (
-                "uvx pre-commit@4.3.0 run -c -a",
-                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
+                "uvx prek@0.5.11 run -c -a",
+                Issue::fail("prek run doesn't pass --all-files, so it checks no files"),
             ),
             (
-                "uvx pre-commit@4.3.0 run # --all-files",
-                Issue::fail("pre-commit run doesn't pass --all-files, so it checks no files"),
+                "uvx prek@0.5.11 run # --all-files",
+                Issue::fail("prek run doesn't pass --all-files, so it checks no files"),
+            ),
+            ("uvx prek run --all-files", Issue::warn(UNPINNED)),
+            ("uvx prek@latest run --all-files", Issue::warn(UNPINNED)),
+            (
+                "pip install prek==0.5.11\nuvx prek run -a",
+                Issue::warn(UNPINNED),
             ),
             (
-                "uvx pre-commit run --all-files",
-                Issue::warn(
-                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
-                ),
-            ),
-            (
-                "uvx pre-commit@latest run --all-files",
-                Issue::warn(
-                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
-                ),
-            ),
-            (
-                "pip install pre-commit==4.3.0\nuvx pre-commit run -a",
-                Issue::warn(
-                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
-                ),
-            ),
-            (
-                "pip install pre-commit>=4 && pre-commit run -a",
-                Issue::warn(
-                    "pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)",
-                ),
+                "pip install prek>=0.5 && prek run -a",
+                Issue::warn(UNPINNED),
             ),
         ] {
-            assert_eq!(pre_commit(run), Err(issue), "{run}");
+            assert_eq!(prek(run), Err(issue), "{run}");
         }
 
         // A pin in another job doesn't apply.
         let split: Workflow = serde_saphyr::from_str(
-            "jobs:\n  a:\n    steps:\n      - run: pip install pre-commit==4.3.0\n  b:\n    steps:\n      - run: pre-commit run -a\n",
+            "jobs:\n  a:\n    steps:\n      - run: pip install prek==0.5.11\n  b:\n    steps:\n      - run: prek run -a\n",
         )
         .unwrap();
-        assert!(pre_commit_in_ci(&split).is_err());
+        assert!(prek_in_ci(&split).is_err());
         let action: Workflow = serde_saphyr::from_str(
-            "jobs:\n  a:\n    steps:\n      - uses: pre-commit/action@v3.0.1\n",
+            "jobs:\n  a:\n    steps:\n      - uses: j178/prek-action@v3.1.0\n",
         )
         .unwrap();
         assert_eq!(
-            pre_commit_in_ci(&action),
+            prek_in_ci(&action),
             Err(Issue::warn(
-                "No step runs pre-commit run; pre-commit/action installs pre-commit unpinned"
+                "No step runs prek run, which CI runs from a pinned prek rather than with j178/prek-action"
             ))
         );
     }
@@ -1564,13 +1657,13 @@ jobs:
             setup_uv_exact(&workflow(
                 "
 jobs:
-  pre-commit:
+  prek:
     steps:
       - uses: astral-sh/setup-uv@abc # v7.1.0
         with:
           enable-cache: false
       - run: rm -rf ~/.cache/uv && pip install uv
-      - run: uvx pre-commit@4.3.0 run --all-files
+      - run: uvx prek@0.5.11 run --all-files
 "
             )),
             None
@@ -1579,10 +1672,10 @@ jobs:
             setup_uv_exact(&workflow(
                 "
 jobs:
-  pre-commit:
+  prek:
     steps:
       - uses: astral-sh/setup-uv@abc # v7.1.0
-      - run: uvx pre-commit@4.3.0 run --all-files
+      - run: uvx prek@0.5.11 run --all-files
   pytest:
     steps:
       - uses: astral-sh/setup-uv@abc

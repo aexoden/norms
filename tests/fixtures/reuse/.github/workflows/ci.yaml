@@ -1,13 +1,13 @@
 name: CI
 on: [push]
 jobs:
-  pre-commit:
+  prek:
     runs-on: ubuntu-latest
     steps:
-      - name: Run pre-commit, skipping reuse
+      - name: Run prek, skipping reuse
         env:
-          SKIP: reuse
-        run: uvx pre-commit run --all-files
+          PREK_SKIP: reuse
+        run: uvx prek run --all-files
   reuse:
     runs-on: ubuntu-latest
     steps:

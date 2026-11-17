@@ -33,19 +33,18 @@ jobs:
         with:
           persist-credentials: false
 
-      # As in CI's pre-commit job, norms uses the pre-commit version the template pins.
-      - name: Read the template's tool versions
+      # As in CI's prek job, norms uses the prek version the template pins.
+      - name: Read the template's prek version
         id: versions
-        run: |
-          echo "pre-commit=$(yq '.pre_commit_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+        run: echo "prek=$(yq '.prek_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install prek
+        uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21 # v2.90.4
         with:
-          enable-cache: false
+          tool: prek@${{ steps.versions.outputs.prek }}
 
       # The squash merge's subject is the title followed by the pull request's number. The hooks
       # pass autosquash and merge subjects, which a squash merge keeps, so they're rejected first.
@@ -56,7 +55,6 @@ jobs:
           GIT_EDITOR: ":"
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          PRE_COMMIT_VERSION: ${{ steps.versions.outputs.pre-commit }}
         run: |
           case "$PR_TITLE" in
             'fixup! '* | 'squash! '* | 'amend! '* | Merge*)
@@ -65,5 +63,4 @@ jobs:
               ;;
           esac
           printf '%s (#%s)\n' "$PR_TITLE" "$PR_NUMBER" > "$RUNNER_TEMP/subject.txt"
-          uvx "pre-commit@$PRE_COMMIT_VERSION" run --hook-stage commit-msg \
-            --commit-msg-filename "$RUNNER_TEMP/subject.txt"
+          prek run --stage commit-msg --commit-msg-filename "$RUNNER_TEMP/subject.txt"

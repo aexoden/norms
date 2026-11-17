@@ -24,28 +24,28 @@ fail  editorconfig-exists  .editorconfig: exists
       File not found
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-pass  precommit-config-exists  .pre-commit-config.yaml: exists
-pass  precommit-config-valid  .pre-commit-config.yaml: valid
-fail  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
-      No default_install_hook_types, so pre-commit install installs only the pre-commit hook
-warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+pass  precommit-config-exists  prek.toml: exists
+pass  precommit-config-valid  prek.toml: valid
+fail  precommit-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
+      No default_install_hook_types, so prek install installs only the pre-commit hook
+warn  precommit-default-stages  prek: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
-pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
-fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
+pass  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
+fail  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
       Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
-fail  precommit-reuse  Pre-commit: reuse hook
+fail  precommit-reuse  prek: reuse hook
       No reuse hook
-fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
+fail  precommit-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  precommit-tombi  Pre-commit: tombi-format hook
+fail  precommit-tombi  prek: tombi-format hook
       No tombi-format hook
-fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+fail  precommit-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
-fail  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+fail  precommit-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
       No norms-commit-msg hook
-fail  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
+fail  precommit-norms-verify  prek: norms-verify hook (--deny-warnings)
       No norms-verify hook
-fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+fail  precommit-zizmor  prek: zizmor hook (pedantic)
       No zizmor hook
 fail  renovate-exists  renovate.json: exists
       File not found
@@ -57,7 +57,7 @@ fail  pr-title-yaml-exists  CI: pr-title.yaml: exists
 fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
-      No timeout-minutes: pre-commit, reuse
+      No timeout-minutes: prek, reuse
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
 fail  ci-reuse  CI: REUSE compliance
@@ -67,11 +67,11 @@ fail  ci-markdownlint  CI: Markdown linting (every file)
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
       No step uses zizmorcore/zizmor-action
-warn  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
-      pre-commit isn't pinned to a version (pre-commit@x.y.z or pre-commit==x.y.z)
+warn  ci-pre-commit  CI: remaining prek hooks (pinned, --all-files)
+      prek isn't pinned to a version (taiki-e/install-action with prek@x.y.z, or uvx prek@x.y.z)
 fail  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
       No job runs norms verify, as the norms-verify hook or itself
-pass  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
+pass  ci-pre-commit-skip  CI: the prek job's PREK_SKIP lists every hook with a job of its own
 fail  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       Doesn't run on pull_request
 pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
@@ -120,17 +120,17 @@ warn  pytest-strict  [py] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [py] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
-fail  python-precommit-uv-lock  Python pre-commit: uv-lock hook
+fail  python-precommit-uv-lock  Python prek: uv-lock hook
       No uv-lock hook
-fail  python-precommit-ruff-check  Python pre-commit: ruff-check hook
+fail  python-precommit-ruff-check  Python prek: ruff-check hook
       No ruff-check hook
-fail  python-precommit-ruff-format  Python pre-commit: ruff-format hook (--check)
+fail  python-precommit-ruff-format  Python prek: ruff-format hook (--check)
       No ruff-format hook
-fail  python-precommit-mypy  Python pre-commit: mypy hook
+fail  python-precommit-mypy  Python prek: mypy hook
       No mypy hook
-fail  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
+fail  python-precommit-pytest  Python prek: pytest hook (with coverage)
       No pytest hook
-pass  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
+pass  python-precommit-local-hooks  Python prek: language hooks are local, system and take no file names
 fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
@@ -164,17 +164,17 @@ fail  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
       No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
-fail  rust-precommit-cargo-lock  Rust pre-commit: cargo-lock hook
+fail  rust-precommit-cargo-lock  Rust prek: cargo-lock hook
       No cargo-lock hook
-fail  rust-precommit-rustfmt  Rust pre-commit: rustfmt hook (--check)
+fail  rust-precommit-rustfmt  Rust prek: rustfmt hook (--check)
       No rustfmt hook
-fail  rust-precommit-clippy  Rust pre-commit: clippy hook (-D warnings)
+fail  rust-precommit-clippy  Rust prek: clippy hook (-D warnings)
       No clippy hook
-fail  rust-precommit-cargo-test  Rust pre-commit: cargo-test hook (with coverage)
+fail  rust-precommit-cargo-test  Rust prek: cargo-test hook (with coverage)
       No cargo-test hook
-fail  rust-precommit-cargo-deny  Rust pre-commit: cargo-deny hook
+fail  rust-precommit-cargo-deny  Rust prek: cargo-deny hook
       No cargo-deny hook
-pass  rust-precommit-local-hooks  Rust pre-commit: language hooks are local, unsupported and take no file names
+pass  rust-precommit-local-hooks  Rust prek: language hooks are local, system and take no file names
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt
@@ -216,21 +216,21 @@ fail  prettier-ignore-exists  [web] Prettier: .prettierignore exists
 pass  prettier-config-nested  [web] Prettier: no configuration in subdirectories
 warn  package-json-scripts  [web] package.json: has scripts
       No scripts defined in package.json
-fail  typescript-precommit-pnpm-lock  TypeScript pre-commit: pnpm-lock hook
+fail  typescript-precommit-pnpm-lock  TypeScript prek: pnpm-lock hook
       No pnpm-lock hook
-fail  typescript-precommit-pnpm-peer-dependencies  TypeScript pre-commit: pnpm-peer-dependencies hook
+fail  typescript-precommit-pnpm-peer-dependencies  TypeScript prek: pnpm-peer-dependencies hook
       No pnpm-peer-dependencies hook
-fail  typescript-precommit-eslint  TypeScript pre-commit: eslint hook (--max-warnings 0)
+fail  typescript-precommit-eslint  TypeScript prek: eslint hook (--max-warnings 0)
       No eslint hook
-fail  typescript-precommit-prettier  TypeScript pre-commit: prettier hook (--check)
+fail  typescript-precommit-prettier  TypeScript prek: prettier hook (--check)
       No prettier hook
-fail  typescript-precommit-tsc  TypeScript pre-commit: tsc hook (tsc -b)
+fail  typescript-precommit-tsc  TypeScript prek: tsc hook (tsc -b)
       No tsc hook
-fail  typescript-precommit-vite-build  TypeScript pre-commit: vite-build hook
+fail  typescript-precommit-vite-build  TypeScript prek: vite-build hook
       No vite-build hook
-fail  typescript-precommit-vitest  TypeScript pre-commit: vitest hook (with coverage)
+fail  typescript-precommit-vitest  TypeScript prek: vitest hook (with coverage)
       No vitest hook
-pass  typescript-precommit-local-hooks  TypeScript pre-commit: language hooks are local, unsupported and take no file names
+pass  typescript-precommit-local-hooks  TypeScript prek: language hooks are local, system and take no file names
 fail  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 fail  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       No step runs eslint

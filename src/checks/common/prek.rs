@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Checks of `.pre-commit-config.yaml` that apply to every project: its settings and the common hooks, including
+//! Checks of `prek.toml` that apply to every project: its settings and the common hooks, including
 //! the commit message hook.
 
 use std::collections::BTreeSet;
 
 use super::ci::zizmor_command_pedantic;
-use crate::config::{PrecommitConfig, PrecommitHook, PrecommitRepo, program_name};
+use crate::config::{PrekConfig, PrekHook, PrekRepo, program_name};
 use crate::context::ProjectContext;
 use crate::report::{Issue, Report};
 
 //
-// Pre-commit
+// prek
 //
 
 /// The hooks from pre-commit-hooks that every project runs.
@@ -31,7 +31,7 @@ const PRE_COMMIT_HOOKS: [&str; 11] = [
 ];
 
 /// Whether each hook of the pre-commit-hooks set runs before each commit.
-fn pre_commit_hooks_in(config: &PrecommitConfig) -> Result<(), Issue> {
+fn pre_commit_hooks_in(config: &PrekConfig) -> Result<(), Issue> {
     let mut missing = Vec::new();
     let mut issues = Vec::new();
     for id in PRE_COMMIT_HOOKS {
@@ -52,79 +52,75 @@ fn pre_commit_hooks_in(config: &PrecommitConfig) -> Result<(), Issue> {
     Issue::combine(issues)
 }
 
-/// Whether a zizmor hook runs the pedantic persona, passing `--pedantic` in its entry or the args pre-commit appends to
-/// it. A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
-fn zizmor_hook_pedantic(hook: &PrecommitHook) -> bool {
+/// Whether a zizmor hook runs the pedantic persona, passing `--pedantic` in its entry or the args prek appends to it.
+/// A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
+fn zizmor_hook_pedantic(hook: &PrekHook) -> bool {
     hook.filter_map_commands("zizmor", zizmor_command_pedantic)
         .contains(&true)
 }
 
-pub(crate) fn check_precommit(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = report.require_parsed(
-        "precommit-config",
-        ".pre-commit-config.yaml",
-        ctx.precommit(),
-    ) else {
+pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
+    let Some(config) = report.require_parsed("precommit-config", "prek.toml", ctx.prek()) else {
         return;
     };
 
-    // Without both types, pre-commit install leaves the pre-commit or the commit-msg hooks uninstalled, so they never
-    // run, and pre-commit rejects a list it can't read.
+    // Without both types, prek install leaves the pre-commit or the commit-msg hooks uninstalled, so they never run,
+    // and prek rejects a list it can't read.
     report.must(
         "precommit-install-hook-types",
-        "Pre-commit: default_install_hook_types includes pre-commit and commit-msg",
+        "prek: default_install_hook_types includes pre-commit and commit-msg",
         config.check_default_install_hook_types(),
     );
     // With any other list, hooks without stages of their own run in other stages than once before each commit, and
-    // pre-commit rejects a list it can't read, so it runs no hooks at all.
+    // prek rejects a list it can't read, so it runs no hooks at all.
     report.check(
         "precommit-default-stages",
-        "Pre-commit: default_stages is [pre-commit]",
+        "prek: default_stages is [pre-commit]",
         config.check_default_stages(),
     );
     report.should(
         "precommit-hook-ids-unique",
-        "Pre-commit: each hook has a unique ID or alias",
+        "prek: each hook has a unique ID or alias",
         config.check_unique_hook_ids(),
     );
     report.check(
         "precommit-pre-commit-hooks",
-        "Pre-commit: the common hooks from pre-commit-hooks",
+        "prek: the common hooks from pre-commit-hooks",
         pre_commit_hooks_in(config),
     );
     report.check(
         "precommit-reuse",
-        "Pre-commit: reuse hook",
+        "prek: reuse hook",
         config.check_commit_hook("reuse"),
     );
     report.check(
         "precommit-markdownlint",
-        "Pre-commit: markdownlint-cli2 hook",
+        "prek: markdownlint-cli2 hook",
         config.check_commit_hook("markdownlint-cli2"),
     );
     report.check(
         "precommit-tombi",
-        "Pre-commit: tombi-format hook",
+        "prek: tombi-format hook",
         config.check_commit_hook("tombi-format"),
     );
     report.check(
         "precommit-conventional-pre-commit",
-        "Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)",
+        "prek: conventional-pre-commit hook (commit-msg stage, recognized types)",
         conventional_hook_in(config),
     );
     report.check(
         "precommit-norms-commit-msg",
-        "Pre-commit: norms-commit-msg hook (commit-msg stage)",
+        "prek: norms-commit-msg hook (commit-msg stage)",
         norms_commit_msg_hook_in(config),
     );
     report.check(
         "precommit-norms-verify",
-        "Pre-commit: norms-verify hook (--deny-warnings)",
+        "prek: norms-verify hook (--deny-warnings)",
         norms_verify_hook_in(config),
     );
     report.check(
         "precommit-zizmor",
-        "Pre-commit: zizmor hook (pedantic)",
+        "prek: zizmor hook (pedantic)",
         config.commit_hooks("zizmor").and_then(|hooks| {
             if hooks.into_iter().any(zizmor_hook_pedantic) {
                 Ok(())
@@ -145,7 +141,7 @@ const NORMS_REPO: &str = "github.com/aexoden/norms";
 /// Whether `hook`, from `repo`, runs on commit messages, in the `commit-msg` stage: by the stages it lists, or, if it
 /// lists none, by `repo` being `hook_repo`, whose manifest sets that stage for the hook, which `default_stages` doesn't
 /// override. A local hook, or one from another repository, lists the stage itself.
-fn runs_on_commit_messages(repo: &PrecommitRepo, hook: &PrecommitHook, hook_repo: &str) -> bool {
+fn runs_on_commit_messages(repo: &PrekRepo, hook: &PrekHook, hook_repo: &str) -> bool {
     hook.stages.as_ref().map_or_else(
         || repo.repo.contains(hook_repo),
         |stages| stages.iter().any(|stage| stage == "commit-msg"),
@@ -155,7 +151,7 @@ fn runs_on_commit_messages(repo: &PrecommitRepo, hook: &PrecommitHook, hook_repo
 /// Whether a norms-commit-msg hook checks each commit message: it runs in the `commit-msg` stage, which the norms
 /// repository's hook sets for it unless the configuration lists other stages, and a local hook lists itself. In any
 /// other stage, it never sees a commit message.
-fn norms_commit_msg_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
+fn norms_commit_msg_hook_in(config: &PrekConfig) -> Result<(), Issue> {
     let mut found = false;
     for (repo, hook) in config
         .repos
@@ -175,10 +171,10 @@ fn norms_commit_msg_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
     }))
 }
 
-/// Whether a norms-verify hook runs before each commit with `--deny-warnings`, in its entry or the args pre-commit
-/// appends to it, as the standards require. A hook without an entry, as the norms repository's leaves it, runs
+/// Whether a norms-verify hook runs before each commit with `--deny-warnings`, in its entry or the args prek appends
+/// to it, as the standards require. A hook without an entry, as the norms repository's leaves it, runs
 /// `norms verify .`.
-fn norms_verify_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
+fn norms_verify_hook_in(config: &PrekConfig) -> Result<(), Issue> {
     if config
         .commit_hooks("norms-verify")?
         .into_iter()
@@ -217,7 +213,7 @@ const CONVENTIONAL_TYPES: [&str; 2] = ["feat", "fix"];
 /// release may change them. Of its options, only `--scopes` takes a value, and argparse accepts it abbreviated to any
 /// prefix down to `--sc`.
 ///
-/// pre-commit appends the commit message file, which argparse takes from the first run of positional arguments, so
+/// prek appends the commit message file, which argparse takes from the first run of positional arguments, so
 /// types followed by an option leave the arguments after it unrecognized, and the hook fails on every commit.
 fn conventional_commit_types<'a>(args: &[&'a str]) -> Result<BTreeSet<&'a str>, Issue> {
     let mut types = BTreeSet::new();
@@ -302,7 +298,7 @@ fn conventional_types_issues(args: &[&str]) -> Vec<Issue> {
 /// Whether a conventional-pre-commit hook checks each commit message for the recognized types and no others. It must
 /// run in the `commit-msg` stage, which the hook's own repository sets for it unless the configuration lists other
 /// stages; a local hook, or one from another repository, lists it itself.
-fn conventional_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
+fn conventional_hook_in(config: &PrekConfig) -> Result<(), Issue> {
     let mut issues = Vec::new();
 
     for (repo, hook) in config
@@ -314,7 +310,7 @@ fn conventional_hook_in(config: &PrecommitConfig) -> Result<(), Issue> {
         let mut hook_issues = Vec::new();
 
         let commit_msg = runs_on_commit_messages(repo, hook, CONVENTIONAL_PRE_COMMIT_REPO);
-        // In any other stage, it never sees a commit message: pre-commit passes it the staged files instead, or, in
+        // In any other stage, it never sees a commit message: prek passes it the staged files instead, or, in
         // the manual stage, doesn't run it at all.
         if !commit_msg {
             hook_issues.push(Issue::fail("doesn't run in the commit-msg stage"));
@@ -355,14 +351,17 @@ mod tests {
 
     fn conventional(repo: &str, hook: &str) -> Result<(), Issue> {
         conventional_hook_in(
-            &serde_saphyr::from_str(&format!(
-                "repos:\n  - repo: {repo}\n    hooks:\n      - {hook}\n"
+            &toml::from_str(&format!(
+                "repos = [{{repo = \"{repo}\", hooks = [{hook}]}}]\n"
             ))
             .unwrap(),
         )
     }
 
     const CONVENTIONAL_REPO: &str = "https://github.com/compilerla/conventional-pre-commit";
+
+    /// The recognized commit types, as a TOML list.
+    const TYPES: &str = r#"["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]"#;
 
     #[test]
     fn conventional_pre_commit_runs_as_the_last_program_word_or_module() {
@@ -371,8 +370,7 @@ mod tests {
             "uvx --from conventional-pre-commit conventional-pre-commit",
         ] {
             let hook = format!(
-                "{{id: conventional-pre-commit, entry: {entry} feat fix perf refactor style test docs build ci revert \
-                 chore, language: unsupported, stages: [commit-msg]}}"
+                r#"{{id = "conventional-pre-commit", entry = "{entry} feat fix perf refactor style test docs build ci revert chore", language = "system", stages = ["commit-msg"]}}"#
             );
             assert_eq!(conventional("local", &hook), Ok(()), "{entry}");
         }
@@ -383,34 +381,34 @@ mod tests {
         for (repo, hook) in [
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, stages: [commit-msg], args: [feat, fix, perf, refactor, style, test, docs, \
-                 build, ci, revert, chore]}",
+                format!(
+                    r#"{{id = "conventional-pre-commit", stages = ["commit-msg"], args = {TYPES}}}"#
+                ),
             ),
             // The hook's repository sets the stage.
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, \
-                 chore]}",
+                format!(r#"{{id = "conventional-pre-commit", args = {TYPES}}}"#),
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: python -m conventional_pre_commit.hook feat fix perf refactor \
-                 style test docs build ci revert chore, language: python, stages: [commit-msg]}",
+                r#"{id = "conventional-pre-commit", entry = "python -m conventional_pre_commit.hook feat fix perf refactor style test docs build ci revert chore", language = "python", stages = ["commit-msg"]}"#
+                    .to_owned(),
             ),
             // feat and fix are added to types that name neither.
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, args: [--st, --strict, --scopes, api, perf, refactor, style, test, docs, \
-                 build, ci, revert, chore]}",
+                r#"{id = "conventional-pre-commit", args = ["--st", "--strict", "--scopes", "api", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]}"#
+                    .to_owned(),
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: .venv/bin/conventional-pre-commit --strict, language: unsupported, \
-                 stages: [commit-msg, prepare-commit-msg], args: [feat, fix, perf, refactor, style, test, docs, build, \
-                 ci, revert, chore]}",
+                format!(
+                    r#"{{id = "conventional-pre-commit", entry = ".venv/bin/conventional-pre-commit --strict", language = "system", stages = ["commit-msg", "prepare-commit-msg"], args = {TYPES}}}"#
+                ),
             ),
         ] {
-            assert_eq!(conventional(repo, hook), Ok(()), "{hook}");
+            assert_eq!(conventional(repo, &hook), Ok(()), "{hook}");
         }
     }
 
@@ -419,12 +417,12 @@ mod tests {
         for (repo, hook, issue) in [
             (
                 CONVENTIONAL_REPO,
-                "{id: commitizen}",
+                r#"{id = "commitizen"}"#.to_owned(),
                 Issue::fail("No conventional-pre-commit hook"),
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, stages: [pre-commit]}",
+                r#"{id = "conventional-pre-commit", stages = ["pre-commit"]}"#.to_owned(),
                 Issue::fail(
                     "conventional-pre-commit doesn't run in the commit-msg stage and passes no commit types, so it allows \
                  the hook's defaults, which a release may change",
@@ -432,7 +430,7 @@ mod tests {
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, args: [--strict]}",
+                r#"{id = "conventional-pre-commit", args = ["--strict"]}"#.to_owned(),
                 Issue::warn(
                     "conventional-pre-commit passes no commit types, so it allows the hook's defaults, which a release may \
                  change",
@@ -440,12 +438,14 @@ mod tests {
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: python -m conventional_pre_commit feat, stages: [commit-msg]}",
+                r#"{id = "conventional-pre-commit", entry = "python -m conventional_pre_commit feat", stages = ["commit-msg"]}"#
+                    .to_owned(),
                 Issue::fail("conventional-pre-commit doesn't run conventional-pre-commit"),
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: conventional-pre-commit feat, language: unsupported}",
+                r#"{id = "conventional-pre-commit", entry = "conventional-pre-commit feat", language = "system"}"#
+                    .to_owned(),
                 Issue::fail(
                     "conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow fix, perf, refactor, \
                  style, test, docs, build, ci, revert, chore",
@@ -453,12 +453,13 @@ mod tests {
             ),
             (
                 "local",
-                "{id: conventional-pre-commit, entry: commitlint --edit, stages: [commit-msg]}",
+                r#"{id = "conventional-pre-commit", entry = "commitlint --edit", stages = ["commit-msg"]}"#.to_owned(),
                 Issue::fail("conventional-pre-commit doesn't run conventional-pre-commit"),
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, args: [--sc, chore, --, feat, fix, wip, --docs]}",
+                r#"{id = "conventional-pre-commit", args = ["--sc", "chore", "--", "feat", "fix", "wip", "--docs"]}"#
+                    .to_owned(),
                 Issue::warn(
                     "conventional-pre-commit doesn't allow perf, refactor, style, test, docs, build, ci, revert, chore and \
                  also allows --docs, wip",
@@ -466,8 +467,8 @@ mod tests {
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, args: [feat, fix, --strict, perf, refactor, style, test, docs, build, \
-                 ci, revert, chore]}",
+                r#"{id = "conventional-pre-commit", args = ["feat", "fix", "--strict", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]}"#
+                    .to_owned(),
                 Issue::fail(
                     "conventional-pre-commit passes commit types before --strict, so it fails on every commit",
                 ),
@@ -475,34 +476,35 @@ mod tests {
             // Only the hook's own repository sets the stage, and an empty list falls back to default_stages.
             (
                 "https://github.com/example/mirror",
-                "{id: conventional-pre-commit, args: [feat, fix, perf, refactor, style, test, docs, build, ci, revert, \
-                 chore]}",
+                format!(r#"{{id = "conventional-pre-commit", args = {TYPES}}}"#),
                 Issue::fail("conventional-pre-commit doesn't run in the commit-msg stage"),
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, stages: [], args: [feat, fix, perf, refactor, style, test, docs, build, \
-                 ci, revert, chore]}",
+                format!(r#"{{id = "conventional-pre-commit", stages = [], args = {TYPES}}}"#),
                 Issue::fail("conventional-pre-commit doesn't run in the commit-msg stage"),
             ),
             (
                 CONVENTIONAL_REPO,
-                "{id: conventional-pre-commit, stages: [commit-msg], args: [--scopes=api, docs]}",
+                r#"{id = "conventional-pre-commit", stages = ["commit-msg"], args = ["--scopes=api", "docs"]}"#
+                    .to_owned(),
                 Issue::warn(
                     "conventional-pre-commit doesn't allow perf, refactor, style, test, build, ci, revert, chore",
                 ),
             ),
         ] {
-            assert_eq!(conventional(repo, hook), Err(issue), "{hook}");
+            assert_eq!(conventional(repo, &hook), Err(issue), "{hook}");
         }
     }
 
     #[test]
     fn conventional_hook_is_judged_by_its_best_hook() {
-        let config = serde_saphyr::from_str(&format!(
-            "repos:\n  - repo: {CONVENTIONAL_REPO}\n    hooks:\n      - {{id: conventional-pre-commit, args: [feat, fix]}}\n\
-             \x20 - repo: local\n    hooks:\n      - {{id: conventional-pre-commit, alias: lint, entry: commitlint \
-             --edit, stages: [commit-msg]}}\n"
+        let config = toml::from_str(&format!(
+            r#"repos = [
+  {{repo = "{CONVENTIONAL_REPO}", hooks = [{{id = "conventional-pre-commit", args = ["feat", "fix"]}}]}},
+  {{repo = "local", hooks = [{{id = "conventional-pre-commit", alias = "lint", entry = "commitlint --edit", stages = ["commit-msg"]}}]}},
+]
+"#
         ))
         .unwrap();
         assert_eq!(
@@ -516,15 +518,15 @@ mod tests {
 
     #[test]
     fn pre_commit_hooks_fail_when_missing_and_warn_in_another_stage() {
-        let config = |hooks: &str| -> PrecommitConfig {
-            serde_saphyr::from_str(&format!(
-                "repos:\n  - repo: https://github.com/pre-commit/pre-commit-hooks\n    hooks: [{hooks}]\n"
+        let config = |hooks: &str| -> PrekConfig {
+            toml::from_str(&format!(
+                "repos = [{{repo = \"https://github.com/pre-commit/pre-commit-hooks\", hooks = [{hooks}]}}]\n"
             ))
             .unwrap()
         };
         let all: Vec<_> = PRE_COMMIT_HOOKS
             .iter()
-            .map(|id| format!("{{id: {id}}}"))
+            .map(|id| format!("{{id = \"{id}\"}}"))
             .collect();
         assert_eq!(pre_commit_hooks_in(&config(&all.join(", "))), Ok(()));
 
@@ -532,8 +534,8 @@ mod tests {
             all.iter()
                 .map(|hook| {
                     hook.replace(
-                        "{id: check-yaml}",
-                        &format!("{{id: check-yaml, stages: [{stage}]}}"),
+                        r#"{id = "check-yaml"}"#,
+                        &format!(r#"{{id = "check-yaml", stages = ["{stage}"]}}"#),
                     )
                 })
                 .collect::<Vec<_>>()
@@ -555,7 +557,7 @@ mod tests {
 
         let without_toml: Vec<_> = pre_push
             .split(", ")
-            .filter(|hook| *hook != "{id: check-toml}")
+            .filter(|hook| *hook != r#"{id = "check-toml"}"#)
             .collect();
         assert_eq!(
             pre_commit_hooks_in(&config(&without_toml.join(", "))),
@@ -565,46 +567,52 @@ mod tests {
         );
     }
 
-    fn config(repos: &str) -> PrecommitConfig {
-        serde_saphyr::from_str(&format!("default_stages: [pre-commit]\nrepos:\n{repos}")).unwrap()
+    /// A configuration with `default_stages` and a repository, given as its URL, or `local`, and its hooks, an inline
+    /// array of tables.
+    fn config(repo: &str, hooks: &str) -> PrekConfig {
+        toml::from_str(&format!(
+            "default_stages = [\"pre-commit\"]\nrepos = [{{repo = \"{repo}\", rev = \"v0.2.0\", hooks = {hooks}}}]\n"
+        ))
+        .unwrap()
     }
 
-    const NORMS: &str = "  - repo: https://github.com/aexoden/norms\n    rev: v0.2.0\n    hooks:\n";
+    const NORMS: &str = "https://github.com/aexoden/norms";
 
     #[test]
     fn norms_commit_msg_hook_runs_in_the_commit_msg_stage() {
         // The norms repository's hook sets the stage, which default_stages doesn't override.
         assert_eq!(
-            norms_commit_msg_hook_in(&config(&format!("{NORMS}      - id: norms-commit-msg\n"))),
+            norms_commit_msg_hook_in(&config(NORMS, r#"[{id = "norms-commit-msg"}]"#)),
             Ok(())
         );
         assert_eq!(
             norms_commit_msg_hook_in(&config(
-                "  - repo: local\n    hooks:\n      - {id: norms-commit-msg, entry: cargo run -- commit-msg, \
-                 language: unsupported, stages: [commit-msg]}\n"
+                "local",
+                r#"[{id = "norms-commit-msg", entry = "cargo run -- commit-msg", language = "system", stages = ["commit-msg"]}]"#
             )),
             Ok(())
         );
         // A local hook without stages gets default_stages.
         assert_eq!(
             norms_commit_msg_hook_in(&config(
-                "  - repo: local\n    hooks:\n      - {id: norms-commit-msg, entry: norms commit-msg, \
-                 language: unsupported}\n"
+                "local",
+                r#"[{id = "norms-commit-msg", entry = "norms commit-msg", language = "system"}]"#
             )),
             Err(Issue::fail(
                 "The norms-commit-msg hook doesn't run in the commit-msg stage"
             ))
         );
         assert_eq!(
-            norms_commit_msg_hook_in(&config(&format!(
-                "{NORMS}      - {{id: norms-commit-msg, stages: [pre-commit]}}\n"
-            ))),
+            norms_commit_msg_hook_in(&config(
+                NORMS,
+                r#"[{id = "norms-commit-msg", stages = ["pre-commit"]}]"#
+            )),
             Err(Issue::fail(
                 "The norms-commit-msg hook doesn't run in the commit-msg stage"
             ))
         );
         assert_eq!(
-            norms_commit_msg_hook_in(&config(&format!("{NORMS}      - id: norms-verify\n"))),
+            norms_commit_msg_hook_in(&config(NORMS, r#"[{id = "norms-verify"}]"#)),
             Err(Issue::fail("No norms-commit-msg hook"))
         );
     }
@@ -612,45 +620,47 @@ mod tests {
     #[test]
     fn norms_verify_hook_denies_warnings() {
         assert_eq!(
-            norms_verify_hook_in(&config(&format!(
-                "{NORMS}      - {{id: norms-verify, args: [--deny-warnings]}}\n"
-            ))),
-            Ok(())
-        );
-        assert_eq!(
             norms_verify_hook_in(&config(
-                "  - repo: local\n    hooks:\n      - {id: norms-verify, entry: cargo run -- verify --deny-warnings ., \
-                 language: unsupported, pass_filenames: false}\n"
+                NORMS,
+                r#"[{id = "norms-verify", args = ["--deny-warnings"]}]"#
             )),
             Ok(())
         );
         assert_eq!(
-            norms_verify_hook_in(&config(&format!("{NORMS}      - id: norms-verify\n"))),
+            norms_verify_hook_in(&config(
+                "local",
+                r#"[{id = "norms-verify", entry = "cargo run -- verify --deny-warnings .", language = "system", pass_filenames = false}]"#
+            )),
+            Ok(())
+        );
+        assert_eq!(
+            norms_verify_hook_in(&config(NORMS, r#"[{id = "norms-verify"}]"#)),
             Err(Issue::warn(
                 "The norms-verify hook doesn't pass --deny-warnings, so it passes a project that warns"
             ))
         );
         assert_eq!(
-            norms_verify_hook_in(&config(&format!(
-                "{NORMS}      - {{id: norms-verify, args: [--deny-warnings], stages: [manual]}}\n"
-            ))),
+            norms_verify_hook_in(&config(
+                NORMS,
+                r#"[{id = "norms-verify", args = ["--deny-warnings"], stages = ["manual"]}]"#
+            )),
             Err(Issue::fail(
                 "The norms-verify hook runs only in the manual stage, so it never runs on its own"
             ))
         );
         assert_eq!(
-            norms_verify_hook_in(&config(&format!("{NORMS}      - id: norms-commit-msg\n"))),
+            norms_verify_hook_in(&config(NORMS, r#"[{id = "norms-commit-msg"}]"#)),
             Err(Issue::fail("No norms-verify hook"))
         );
     }
 
     #[test]
     fn zizmor_hooks_need_the_pedantic_flag() {
-        let hook = |entry: Option<&str>, args: &[&str]| PrecommitHook {
+        let hook = |entry: Option<&str>, args: &[&str]| PrekHook {
             id: "zizmor".to_owned(),
             entry: entry.map(str::to_owned),
             args: args.iter().map(|arg| (*arg).to_owned()).collect(),
-            ..PrecommitHook::default()
+            ..PrekHook::default()
         };
         assert!(zizmor_hook_pedantic(&hook(None, &["--pedantic"])));
         assert!(zizmor_hook_pedantic(&hook(

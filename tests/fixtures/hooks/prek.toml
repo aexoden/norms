@@ -1,0 +1,71 @@
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "uv-lock"
+name = "uv lock"
+entry = "uv --directory . lock --check"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "pytest"
+name = "pytest"
+entry = "uv run pytest --cov-report=term-missing"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "pnpm-peer-dependencies"
+name = "pnpm peer dependencies"
+entry = "pnpm --dir . exec pnpm peers check"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "vitest"
+name = "vitest"
+entry = "pnpm exec vitest run"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "eslint"
+name = "eslint"
+entry = "pnpm exec eslint . --max-warnings 10"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff format"
+entry = "uv run ruff format --diff"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "prettier"
+name = "prettier"
+entry = "pnpm exec prettier --write ."
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "tsc"
+name = "tsc"
+entry = "pnpm exec tsc -b --noEmit"
+language = "system"
+
+[[repos.hooks]]
+id = "mypy"
+name = "mypy"
+entry = "uv run mypy ."
+language = "unsupported"
+pass_filenames = false
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.14.0"
+
+[[repos.hooks]]
+id = "ruff-check"

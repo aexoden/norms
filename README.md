@@ -58,10 +58,10 @@ major release, and a patch release takes the place of the others.
 
 ## Development
 
-Install [pre-commit](https://pre-commit.com/#install), then the hooks:
+Install [prek](https://prek.j178.dev/installation/), then the hooks:
 
 ```sh
-pre-commit install
+prek install
 ```
 
 Rust uses [rustup](https://rustup.rs/), which installs the toolchain pinned in

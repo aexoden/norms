@@ -1,0 +1,6 @@
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+rev = "v6.3.0"
+
+[[repos.hooks]]
+id = "reuse-lint-file"

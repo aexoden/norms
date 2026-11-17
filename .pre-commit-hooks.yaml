@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 # SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-# The hooks norms provides to other projects. pre-commit builds norms from the
-# pinned revision with cargo, installing Rust first if it isn't available.
+# The hooks norms provides to other projects. prek builds norms from the pinned
+# revision with cargo install --locked, installing Rust first if it isn't
+# available.
 
 - id: norms-commit-msg
   name: norms commit-msg

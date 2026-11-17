@@ -19,7 +19,7 @@ fail  editorconfig-exists  .editorconfig: exists
       File not found
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-fail  precommit-config-exists  .pre-commit-config.yaml: exists
+fail  precommit-config-exists  prek.toml: exists
       File not found
 fail  renovate-exists  renovate.json: exists
       File not found

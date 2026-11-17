@@ -10,7 +10,7 @@ use semver::Comparator;
 
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, FormatterRun,
-    HIDDEN_CLIPPY_TOML, LintLevel, PrecommitConfig, Workflow, WorkflowJob, WorkflowStep, commands,
+    HIDDEN_CLIPPY_TOML, LintLevel, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands,
     is_other_deny_toml, is_program,
 };
 use crate::context::{
@@ -691,7 +691,7 @@ fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
 
 /// Check that the `cargo-test` hook runs the tests with coverage, through cargo-llvm-cov. A hook that runs them without,
 /// or doesn't run them where norms can see, warns.
-fn cargo_test_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+fn cargo_test_hooks(config: &PrekConfig) -> Result<(), Issue> {
     let runs: Vec<TestRun> = config
         .commit_hooks("cargo-test")?
         .into_iter()
@@ -762,11 +762,11 @@ pub(crate) fn check_doctests(
         return;
     }
 
-    if let Some(precommit) = project.precommit().as_ref_ok() {
+    if let Some(prek) = project.prek().as_ref_ok() {
         report.should(
             "rust-precommit-cargo-doctest",
-            "Rust pre-commit: doctests run (library target)",
-            doctest_hooks(precommit),
+            "Rust prek: doctests run (library target)",
+            doctest_hooks(prek),
         );
     }
     if let ConfigStatus::Ok(workflow) = project.ci_workflow() {
@@ -779,7 +779,7 @@ pub(crate) fn check_doctests(
 }
 
 /// Whether some hook that runs before each commit runs the doctests, as [`cargo_test_run`] tells.
-fn doctest_hooks(config: &PrecommitConfig) -> Result<(), String> {
+fn doctest_hooks(config: &PrekConfig) -> Result<(), String> {
     if config
         .hooks_in("pre-commit")
         .flat_map(|hook| hook.filter_map_commands("", cargo_test_run))
@@ -837,7 +837,7 @@ fn check_cargo_config_file(status: &ConfigStatus<CargoConfig>, report: &mut Repo
 }
 
 //
-// Pre-commit integration
+// prek integration
 //
 
 /// The IDs of Rust's language hooks, which the standard's hook table lists.
@@ -850,43 +850,43 @@ const LANGUAGE_HOOKS: [&str; 6] = [
     "cargo-deny",
 ];
 
-pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = ctx.precommit().as_ref_ok() else {
+pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
+    let Some(config) = ctx.prek().as_ref_ok() else {
         return;
     };
 
     report.check(
         "rust-precommit-cargo-lock",
-        "Rust pre-commit: cargo-lock hook",
+        "Rust prek: cargo-lock hook",
         config.check_commit_hook("cargo-lock"),
     );
 
     report.check(
         "rust-precommit-rustfmt",
-        "Rust pre-commit: rustfmt hook (--check)",
+        "Rust prek: rustfmt hook (--check)",
         config.check_formatter_hook("rustfmt", "rustfmt", rustfmt_run),
     );
 
     report.check(
         "rust-precommit-clippy",
-        "Rust pre-commit: clippy hook (-D warnings)",
+        "Rust prek: clippy hook (-D warnings)",
         clippy_hooks(config),
     );
 
     report.check(
         "rust-precommit-cargo-test",
-        "Rust pre-commit: cargo-test hook (with coverage)",
+        "Rust prek: cargo-test hook (with coverage)",
         cargo_test_hooks(config),
     );
 
     report.check(
         "rust-precommit-cargo-deny",
-        "Rust pre-commit: cargo-deny hook",
+        "Rust prek: cargo-deny hook",
         cargo_deny_hooks(config),
     );
     report.should(
         "rust-precommit-local-hooks",
-        "Rust pre-commit: language hooks are local, unsupported and take no file names",
+        "Rust prek: language hooks are local, system and take no file names",
         config.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }
@@ -1091,7 +1091,7 @@ fn clippy_run(words: &[&str]) -> Option<Result<(), Issue>> {
 /// Check that each `clippy` hook runs `cargo clippy` as [`clippy_run`] requires. A hook that runs it nowhere norms can
 /// see warns, as does one without an entry of its own, as a remote hook may leave it to the hook's repository, since
 /// norms can't see the arguments it passes.
-fn clippy_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+fn clippy_hooks(config: &PrekConfig) -> Result<(), Issue> {
     let issues = config.commit_hooks("clippy")?.into_iter().map(|hook| {
         if hook.entry.is_none() {
             return Err(Issue::warn(
@@ -1161,7 +1161,7 @@ fn cargo_deny_args(words: &[&str]) -> Option<String> {
 
 /// Check that each `cargo-deny` hook runs cargo-deny with the arguments the standard gives, [`CARGO_DENY_CI_ARGS`],
 /// apart from `--manifest-path`. A hook passing others, or running it nowhere norms can see, warns.
-fn cargo_deny_hooks(config: &PrecommitConfig) -> Result<(), Issue> {
+fn cargo_deny_hooks(config: &PrekConfig) -> Result<(), Issue> {
     let issues = config.commit_hooks("cargo-deny")?.into_iter().map(|hook| {
         let runs = hook.filter_map_commands("cargo deny", cargo_deny_args);
         if runs.is_empty() {
@@ -1372,6 +1372,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::config::PrekHook;
     use crate::models::{Component, Status};
     use crate::report::Severity;
 
@@ -1880,7 +1881,7 @@ jobs:
   hooks:
     steps:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
-      - run: uvx pre-commit run --all-files
+      - run: uvx prek run --all-files
   build-action:
     steps:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
@@ -2250,15 +2251,8 @@ jobs:
     #[test]
     fn tests_run_with_coverage_in_hooks_and_ci() {
         let hooks = |entries: &[&str]| {
-            let hooks = entries
-                .iter()
-                .map(|entry| format!("      - id: cargo-test\n        entry: {entry}\n"))
-                .collect::<Vec<_>>()
-                .concat();
-            let yaml = format!(
-                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
-            );
-            cargo_test_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+            let hooks: Vec<_> = entries.iter().map(|entry| ("cargo-test", *entry)).collect();
+            cargo_test_hooks(&PrekConfig::with_local_hooks(&hooks))
         };
         assert_eq!(
             hooks(&["cargo llvm-cov --workspace --all-features --show-missing-lines"]),
@@ -2277,19 +2271,14 @@ jobs:
         );
         // A hook without an entry runs its repository's, which norms can't see.
         assert_eq!(
-            cargo_test_hooks(
-                &serde_saphyr::from_str(
-                    "default_stages: [pre-commit]\nrepos:\n  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: cargo-test\n"
-                )
-                .expect("config parses")
-            ),
+            cargo_test_hooks(&PrekConfig::with_repo(
+                "https://example.com/hooks",
+                vec![PrekHook::new("cargo-test", None)]
+            )),
             uncovered
         );
         assert_eq!(
-            cargo_test_hooks(
-                &serde_saphyr::from_str("default_stages: [pre-commit]\nrepos: []\n")
-                    .expect("config parses")
-            ),
+            cargo_test_hooks(&PrekConfig::with_local_hooks(&[])),
             Err(Issue::fail("No cargo-test hook"))
         );
 
@@ -2334,17 +2323,8 @@ jobs:
 
     #[test]
     fn doctests_run_in_hooks_and_ci() {
-        let hooks = |entries: &[(&str, &str)]| {
-            let hooks = entries
-                .iter()
-                .map(|(id, entry)| format!("      - id: {id}\n        entry: {entry}\n"))
-                .collect::<Vec<_>>()
-                .concat();
-            let yaml = format!(
-                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
-            );
-            doctest_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
-        };
+        let hooks =
+            |entries: &[(&str, &str)]| doctest_hooks(&PrekConfig::with_local_hooks(entries));
         assert_eq!(hooks(&[("cargo-test", "cargo test --workspace")]), Ok(()));
         assert_eq!(
             hooks(&[
@@ -2360,12 +2340,13 @@ jobs:
         );
         // A hook that runs only in the manual stage doesn't run them before each commit.
         assert_eq!(
-            doctest_hooks(
-                &serde_saphyr::from_str(
-                    "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n      - id: cargo-doctest\n        entry: cargo test --doc\n        stages: [manual]\n"
-                )
-                .expect("config parses")
-            ),
+            doctest_hooks(&PrekConfig::with_repo(
+                "local",
+                vec![PrekHook {
+                    stages: Some(vec!["manual".to_owned()]),
+                    ..PrekHook::new("cargo-doctest", Some("cargo test --doc"))
+                }]
+            )),
             missing
         );
 
@@ -2434,15 +2415,8 @@ jobs:
     #[test]
     fn clippy_hooks_and_ci_deny_warnings() {
         let hooks = |entries: &[&str]| {
-            let hooks = entries
-                .iter()
-                .map(|entry| format!("      - id: clippy\n        entry: {entry}\n"))
-                .collect::<Vec<_>>()
-                .concat();
-            let yaml = format!(
-                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
-            );
-            clippy_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
+            let hooks: Vec<_> = entries.iter().map(|entry| ("clippy", *entry)).collect();
+            clippy_hooks(&PrekConfig::with_local_hooks(&hooks))
         };
         let standard = "cargo clippy --workspace --all-targets --all-features -- -D warnings";
         assert_eq!(hooks(&[standard]), Ok(()));
@@ -2461,12 +2435,10 @@ jobs:
         );
         // A hook without an entry runs its repository's, whose arguments norms can't see.
         assert_eq!(
-            clippy_hooks(
-                &serde_saphyr::from_str(
-                    "default_stages: [pre-commit]\nrepos:\n  - repo: https://example.com/hooks\n    rev: v1.0.0\n    hooks:\n      - id: clippy\n"
-                )
-                .expect("config parses")
-            ),
+            clippy_hooks(&PrekConfig::with_repo(
+                "https://example.com/hooks",
+                vec![PrekHook::new("clippy", None)]
+            )),
             Err(Issue::warn(
                 "The clippy hook sets no entry, so norms can't see whether it denies warnings"
             ))
@@ -2509,12 +2481,8 @@ jobs:
 
     #[test]
     fn cargo_deny_hooks_pass_the_standard_arguments() {
-        let hook = |entry: &str| {
-            let yaml = format!(
-                "default_stages: [pre-commit]\nrepos:\n  - repo: local\n    hooks:\n      - id: cargo-deny\n        entry: {entry}\n"
-            );
-            cargo_deny_hooks(&serde_saphyr::from_str(&yaml).expect("config parses"))
-        };
+        let hook =
+            |entry: &str| cargo_deny_hooks(&PrekConfig::with_local_hooks(&[("cargo-deny", entry)]));
         for entry in [
             "cargo deny --workspace --all-features check -D warnings bans licenses sources",
             "cargo deny --manifest-path rust/Cargo.toml --workspace --all-features check -D warnings bans licenses sources",

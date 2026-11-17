@@ -5,7 +5,7 @@
 
 mod ci;
 mod files;
-mod precommit;
+mod prek;
 
 pub(crate) use ci::{SETUP_UV, check_github_actions, is_exact_uv_version};
 pub(crate) use files::{
@@ -13,4 +13,4 @@ pub(crate) use files::{
     check_gitattributes, check_gitignore, check_licenses, check_markdownlint, check_norms_config,
     check_readme, check_renovate,
 };
-pub(crate) use precommit::check_precommit;
+pub(crate) use prek::check_prek;

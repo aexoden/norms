@@ -39,7 +39,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify the project with norms
-        run: uvx pre-commit@4.7.0 run norms-verify --all-files
+        run: uvx prek@0.5.10 run norms-verify --all-files
 
   ci-success:
     name: CI success

@@ -7,9 +7,8 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
-    FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrecommitHook, PyprojectToml, PytestConfig,
-    Workflow, check_python_version_exact, check_release_age_value, commands, program_args,
-    sets_attribute,
+    FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook, PyprojectToml, PytestConfig, Workflow,
+    check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -673,43 +672,43 @@ pub(crate) fn check_pytest(ctx: &ComponentContext, report: &mut Report) {
 }
 
 //
-// Pre-commit integration
+// prek integration
 //
 
 /// The IDs of Python's language hooks, which the standard's hook table lists.
 const LANGUAGE_HOOKS: [&str; 5] = ["uv-lock", "ruff-format", "ruff-check", "mypy", "pytest"];
 
-pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
-    let Some(config) = ctx.precommit().as_ref_ok() else {
+pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
+    let Some(config) = ctx.prek().as_ref_ok() else {
         return;
     };
 
     report.check(
         "python-precommit-uv-lock",
-        "Python pre-commit: uv-lock hook",
+        "Python prek: uv-lock hook",
         config.check_commit_hook("uv-lock"),
     );
 
     report.check(
         "python-precommit-ruff-check",
-        "Python pre-commit: ruff-check hook",
+        "Python prek: ruff-check hook",
         config.check_commit_hook("ruff-check"),
     );
     report.check(
         "python-precommit-ruff-format",
-        "Python pre-commit: ruff-format hook (--check)",
+        "Python prek: ruff-format hook (--check)",
         config.check_formatter_hook("ruff-format", "ruff format", ruff_format_run),
     );
 
     report.check(
         "python-precommit-mypy",
-        "Python pre-commit: mypy hook",
+        "Python prek: mypy hook",
         config.check_commit_hook("mypy"),
     );
 
     report.check(
         "python-precommit-pytest",
-        "Python pre-commit: pytest hook (with coverage)",
+        "Python prek: pytest hook (with coverage)",
         config.commit_hooks("pytest").and_then(|hooks| {
             if hooks.into_iter().any(pytest_hook_covers) {
                 Ok(())
@@ -720,7 +719,7 @@ pub(crate) fn check_precommit_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.should(
         "python-precommit-local-hooks",
-        "Python pre-commit: language hooks are local, unsupported and take no file names",
+        "Python prek: language hooks are local, system and take no file names",
         config.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }
@@ -863,8 +862,8 @@ fn runs_pytest(line: &str) -> bool {
     commands(line).any(|words| pytest_coverage(&words).is_some())
 }
 
-/// Whether a pytest hook measures coverage, from its entry and the args pre-commit appends to it.
-fn pytest_hook_covers(hook: &PrecommitHook) -> bool {
+/// Whether a pytest hook measures coverage, from its entry and the args prek appends to it.
+fn pytest_hook_covers(hook: &PrekHook) -> bool {
     hook.filter_map_commands("pytest", pytest_coverage)
         .contains(&true)
 }
@@ -1030,7 +1029,7 @@ mod tests {
             subcommand("uv --python-preference managed run pytest").as_deref(),
             Some("run: pytest")
         );
-        assert_eq!(subcommand("uvx pre-commit run"), None);
+        assert_eq!(subcommand("uvx prek run"), None);
         assert_eq!(subcommand("uv --directory"), None);
 
         for line in [
@@ -1245,11 +1244,11 @@ jobs:
         }
         assert_eq!(coverage("uv run --cov pytest-benchmark"), None);
 
-        let hook = |entry: &str, args: &[&str]| PrecommitHook {
+        let hook = |entry: &str, args: &[&str]| PrekHook {
             id: "pytest".to_owned(),
             entry: Some(entry.to_owned()),
             args: args.iter().map(|&arg| arg.to_owned()).collect(),
-            ..PrecommitHook::default()
+            ..PrekHook::default()
         };
         assert!(pytest_hook_covers(&hook(
             "uv run pytest --cov=src/demo",
@@ -1260,9 +1259,9 @@ jobs:
             &["--cov=src/demo"]
         )));
         assert!(!pytest_hook_covers(&hook("uv run pytest", &[])));
-        let remote = PrecommitHook {
+        let remote = PrekHook {
             args: vec!["--cov".to_owned()],
-            ..PrecommitHook::default()
+            ..PrekHook::default()
         };
         assert!(pytest_hook_covers(&remote));
 

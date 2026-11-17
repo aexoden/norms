@@ -19,28 +19,28 @@ fail  editorconfig-exists  .editorconfig: exists
       File not found
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
-pass  precommit-config-exists  .pre-commit-config.yaml: exists
-pass  precommit-config-valid  .pre-commit-config.yaml: valid
-fail  precommit-install-hook-types  Pre-commit: default_install_hook_types includes pre-commit and commit-msg
-      No default_install_hook_types, so pre-commit install installs only the pre-commit hook
-warn  precommit-default-stages  Pre-commit: default_stages is [pre-commit]
+pass  precommit-config-exists  prek.toml: exists
+pass  precommit-config-valid  prek.toml: valid
+fail  precommit-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
+      No default_install_hook_types, so prek install installs only the pre-commit hook
+warn  precommit-default-stages  prek: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
-pass  precommit-hook-ids-unique  Pre-commit: each hook has a unique ID or alias
-fail  precommit-pre-commit-hooks  Pre-commit: the common hooks from pre-commit-hooks
+pass  precommit-hook-ids-unique  prek: each hook has a unique ID or alias
+fail  precommit-pre-commit-hooks  prek: the common hooks from pre-commit-hooks
       Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace
-fail  precommit-reuse  Pre-commit: reuse hook
+fail  precommit-reuse  prek: reuse hook
       No reuse hook
-fail  precommit-markdownlint  Pre-commit: markdownlint-cli2 hook
+fail  precommit-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  precommit-tombi  Pre-commit: tombi-format hook
+fail  precommit-tombi  prek: tombi-format hook
       No tombi-format hook
-fail  precommit-conventional-pre-commit  Pre-commit: conventional-pre-commit hook (commit-msg stage, recognized types)
+fail  precommit-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
-fail  precommit-norms-commit-msg  Pre-commit: norms-commit-msg hook (commit-msg stage)
+fail  precommit-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
       No norms-commit-msg hook
-fail  precommit-norms-verify  Pre-commit: norms-verify hook (--deny-warnings)
+fail  precommit-norms-verify  prek: norms-verify hook (--deny-warnings)
       No norms-verify hook
-fail  precommit-zizmor  Pre-commit: zizmor hook (pedantic)
+fail  precommit-zizmor  prek: zizmor hook (pedantic)
       No zizmor hook
 fail  renovate-exists  renovate.json: exists
       File not found
@@ -62,11 +62,11 @@ fail  ci-markdownlint  CI: Markdown linting (every file)
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
       No step uses zizmorcore/zizmor-action
-pass  ci-pre-commit  CI: remaining pre-commit hooks (pinned, --all-files)
+pass  ci-pre-commit  CI: remaining prek hooks (pinned, --all-files)
 fail  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
       No job runs norms verify, as the norms-verify hook or itself
-warn  ci-pre-commit-skip  CI: the pre-commit job's SKIP lists every hook with a job of its own
-      SKIP in pre-commit doesn't list these hooks, which have jobs of their own: pytest, eslint, mypy, ruff-check
+warn  ci-pre-commit-skip  CI: the prek job's PREK_SKIP lists every hook with a job of its own
+      PREK_SKIP in prek doesn't list these hooks, which have jobs of their own: pytest, eslint, mypy, ruff-check
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
       Doesn't run on push
@@ -113,15 +113,15 @@ warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
-pass  python-precommit-uv-lock  Python pre-commit: uv-lock hook
-pass  python-precommit-ruff-check  Python pre-commit: ruff-check hook
-warn  python-precommit-ruff-format  Python pre-commit: ruff-format hook (--check)
+pass  python-precommit-uv-lock  Python prek: uv-lock hook
+pass  python-precommit-ruff-check  Python prek: ruff-check hook
+warn  python-precommit-ruff-format  Python prek: ruff-format hook (--check)
       ruff format runs with --diff rather than --check
-pass  python-precommit-mypy  Python pre-commit: mypy hook
-warn  python-precommit-pytest  Python pre-commit: pytest hook (with coverage)
+pass  python-precommit-mypy  Python prek: mypy hook
+warn  python-precommit-pytest  Python prek: pytest hook (with coverage)
       The pytest hook doesn't pass --cov
-warn  python-precommit-local-hooks  Python pre-commit: language hooks are local, unsupported and take no file names
-      mypy has language: system, not unsupported; ruff-check isn't a local hook
+warn  python-precommit-local-hooks  Python prek: language hooks are local, system and take no file names
+      mypy has language unsupported, not system; ruff-check isn't a local hook
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 warn  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
       Jobs that uv run without uv sync --locked first: pytest, ruff-check
@@ -169,20 +169,20 @@ warn  package-json-script-typecheck  [.] Scripts: has 'typecheck' (tsc -b)
       Missing 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
       Missing 'test' script
-fail  typescript-precommit-pnpm-lock  TypeScript pre-commit: pnpm-lock hook
+fail  typescript-precommit-pnpm-lock  TypeScript prek: pnpm-lock hook
       No pnpm-lock hook
-pass  typescript-precommit-pnpm-peer-dependencies  TypeScript pre-commit: pnpm-peer-dependencies hook
-warn  typescript-precommit-eslint  TypeScript pre-commit: eslint hook (--max-warnings 0)
+pass  typescript-precommit-pnpm-peer-dependencies  TypeScript prek: pnpm-peer-dependencies hook
+warn  typescript-precommit-eslint  TypeScript prek: eslint hook (--max-warnings 0)
       The eslint hook doesn't pass --max-warnings 0
-warn  typescript-precommit-prettier  TypeScript pre-commit: prettier hook (--check)
+warn  typescript-precommit-prettier  TypeScript prek: prettier hook (--check)
       prettier runs without --check, so it rewrites files rather than only failing on them
-pass  typescript-precommit-tsc  TypeScript pre-commit: tsc hook (tsc -b)
-fail  typescript-precommit-vite-build  TypeScript pre-commit: vite-build hook
+pass  typescript-precommit-tsc  TypeScript prek: tsc hook (tsc -b)
+fail  typescript-precommit-vite-build  TypeScript prek: vite-build hook
       No vite-build hook
-warn  typescript-precommit-vitest  TypeScript pre-commit: vitest hook (with coverage)
+warn  typescript-precommit-vitest  TypeScript prek: vitest hook (with coverage)
       The vitest hook doesn't pass --coverage
-warn  typescript-precommit-local-hooks  TypeScript pre-commit: language hooks are local, unsupported and take no file names
-      tsc doesn't set pass_filenames: false
+warn  typescript-precommit-local-hooks  TypeScript prek: language hooks are local, system and take no file names
+      tsc doesn't set pass_filenames = false
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       CI runs the lint script rather than eslint with --max-warnings 0

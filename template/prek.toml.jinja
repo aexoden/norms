@@ -1,0 +1,279 @@
+# SPDX-License-Identifier: {{ license }}
+# SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
+
+# prek configuration
+# Install: prek install
+
+default_install_hook_types = ["pre-commit", "commit-msg"]
+# Hooks without their own stages run only before a commit, not on its message.
+default_stages = ["pre-commit"]
+
+# General hooks
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "{{ hook_pre_commit_hooks }}"
+
+[[repos.hooks]]
+id = "check-added-large-files"
+
+[[repos.hooks]]
+id = "check-case-conflict"
+
+[[repos.hooks]]
+id = "check-illegal-windows-names"
+
+[[repos.hooks]]
+id = "check-merge-conflict"
+
+[[repos.hooks]]
+id = "check-symlinks"
+
+[[repos.hooks]]
+id = "check-toml"
+
+[[repos.hooks]]
+id = "check-vcs-permalinks"
+
+[[repos.hooks]]
+id = "check-yaml"
+{%- if 'typescript' in languages %}
+# pnpm-lock.yaml holds more than one document.
+args = ["--allow-multiple-documents"]
+{%- endif %}
+
+[[repos.hooks]]
+id = "detect-private-key"
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+
+# Licensing
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+rev = "{{ hook_reuse }}"
+
+[[repos.hooks]]
+id = "reuse"
+
+# Markdown
+[[repos]]
+repo = "https://github.com/DavidAnson/markdownlint-cli2"
+rev = "{{ hook_markdownlint_cli2 }}"
+
+[[repos.hooks]]
+id = "markdownlint-cli2"
+
+# TOML
+[[repos]]
+repo = "https://github.com/tombi-toml/tombi-pre-commit"
+rev = "{{ hook_tombi }}"
+
+[[repos.hooks]]
+id = "tombi-format"
+args = ["--check"]
+# Lock files are generated, so they aren't formatted.
+exclude = '(^|/)(Cargo|uv)\.lock$'
+
+# GitHub Actions security
+[[repos]]
+repo = "https://github.com/zizmorcore/zizmor-pre-commit"
+rev = "{{ hook_zizmor }}"
+
+[[repos.hooks]]
+id = "zizmor"
+args = ["--pedantic"]
+
+# Conventional commits
+[[repos]]
+repo = "https://github.com/compilerla/conventional-pre-commit"
+rev = "{{ hook_conventional_pre_commit }}"
+
+[[repos.hooks]]
+id = "conventional-pre-commit"
+stages = ["commit-msg"]
+args = ["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]
+
+# norms: commit messages, and the project against the standards
+[[repos]]
+repo = "https://github.com/aexoden/norms"
+rev = "{{ hook_norms }}"
+
+[[repos.hooks]]
+id = "norms-commit-msg"
+
+[[repos.hooks]]
+id = "norms-verify"
+args = ["--deny-warnings"]
+{%- if 'rust' in languages %}
+{%- set manifest = '' if rust_prefix == '' else ' --manifest-path ' ~ rust_prefix ~ 'Cargo.toml' %}
+
+# Rust
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "cargo-lock"
+name = "cargo lock"
+description = "Check that Cargo.lock is up to date"
+entry = "cargo update{{ manifest }} --workspace --locked"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "rustfmt"
+name = "rustfmt"
+description = "Format Rust code using rustfmt"
+entry = "cargo fmt --all --check{{ manifest }}"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "clippy"
+name = "clippy"
+description = "Lint Rust code using clippy"
+entry = "cargo clippy{{ manifest }} --workspace --all-targets --all-features -- -D warnings"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "cargo-test"
+name = "cargo llvm-cov"
+description = "Run Rust tests with coverage using cargo-llvm-cov"
+entry = "cargo llvm-cov{{ manifest }} --workspace --all-features --show-missing-lines"
+language = "system"
+pass_filenames = false
+{%- if project_type == 'library' %}
+
+[[repos.hooks]]
+id = "cargo-doctest"
+name = "cargo test --doc"
+description = "Run Rust doctests using cargo test"
+entry = "cargo test{{ manifest }} --workspace --all-features --doc"
+language = "system"
+pass_filenames = false
+{%- endif %}
+
+[[repos.hooks]]
+id = "cargo-deny"
+name = "cargo-deny"
+description = "Check Rust dependency bans, licenses and sources using cargo-deny"
+entry = "cargo deny{{ manifest }} --workspace --all-features check -D warnings bans licenses sources"
+language = "system"
+pass_filenames = false
+{%- endif %}
+{%- if 'python' in languages %}
+{%- set uv = 'uv' if python_prefix == '' else 'uv --directory ' ~ python_dir %}
+
+# Python
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "uv-lock"
+name = "uv lock"
+description = "Check that uv.lock is up to date"
+entry = "{{ uv }} lock --check"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff format"
+description = "Check Python formatting using Ruff"
+entry = "{{ uv }} run ruff format --check"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "ruff-check"
+name = "ruff check"
+description = "Lint Python code using Ruff"
+entry = "{{ uv }} run ruff check"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "mypy"
+name = "mypy"
+description = "Type check Python code using mypy"
+entry = "{{ uv }} run mypy ."
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "pytest"
+name = "pytest"
+description = "Run Python tests using pytest"
+entry = "{{ uv }} run pytest --cov=src/{{ python_package }} --cov-report=term-missing"
+language = "system"
+pass_filenames = false
+{%- endif %}
+{%- if 'typescript' in languages %}
+{%- set pnpm = 'pnpm' if typescript_prefix == '' else 'pnpm --dir ' ~ typescript_dir %}
+{#- pnpm only switches to the devEngines version in the current directory, so
+    pnpm's own commands run through exec when the project is in a subdirectory. #}
+{%- set pnpm_self = 'pnpm' if typescript_prefix == '' else pnpm ~ ' exec pnpm' %}
+
+# TypeScript
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "pnpm-lock"
+name = "pnpm lock"
+description = "Check that pnpm-lock.yaml is up to date"
+entry = "{{ pnpm_self }} install --frozen-lockfile"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "pnpm-peer-dependencies"
+name = "pnpm peer dependencies"
+description = "Check for missing or invalid peer dependencies"
+entry = "{{ pnpm_self }} peers check"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "prettier"
+name = "prettier"
+description = "Check formatting using Prettier"
+entry = "{{ pnpm }} exec prettier --check ."
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "eslint"
+name = "eslint"
+description = "Lint TypeScript code using ESLint"
+entry = "{{ pnpm }} exec eslint . --max-warnings 0"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "tsc"
+name = "tsc"
+description = "Type check TypeScript code using tsc"
+entry = "{{ pnpm }} exec tsc -b --noEmit"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "vite-build"
+name = "vite build"
+description = "Build the TypeScript application using Vite"
+entry = "{{ pnpm }} exec vite build"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "vitest"
+name = "vitest"
+description = "Run TypeScript tests using Vitest"
+entry = "{{ pnpm }} exec vitest run --coverage"
+language = "system"
+pass_filenames = false
+{%- endif %}

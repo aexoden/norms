@@ -60,7 +60,7 @@
 //! A language's checks of its own files run once for each component of that
 //! language, inside [`Report::with_component`], so each result they record
 //! names its component. Checks of files that belong to the whole repository,
-//! such as `.pre-commit-config.yaml`, record no component.
+//! such as `prek.toml`, record no component.
 
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -618,15 +618,15 @@ mod tests {
     #[test]
     fn check_records_each_issue_at_its_own_severity() {
         let mut report = Report::new(PathBuf::new(), Vec::new());
-        report.check("precommit-reuse", "Pre-commit: reuse hook", Ok(()));
+        report.check("precommit-reuse", "prek: reuse hook", Ok(()));
         report.check(
             "precommit-reuse",
-            "Pre-commit: reuse hook",
+            "prek: reuse hook",
             Err(Issue::fail("No reuse hook")),
         );
         report.check(
             "precommit-reuse",
-            "Pre-commit: reuse hook",
+            "prek: reuse hook",
             Err(Issue::warn(
                 "The reuse hook doesn't run in the pre-commit stage",
             )),
