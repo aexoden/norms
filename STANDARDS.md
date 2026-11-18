@@ -782,13 +782,16 @@ check = 200
 Each language's lock file check (`cargo-lock`, `uv-lock` and `pnpm-lock`) has
 `priority = "lock"`, so that the lock checks finish before the other hooks:
 `pnpm install` may rewrite `node_modules` while ESLint reads it. Every other
-`pre-commit` hook outside the builtin repository has `priority = "check"`. The
-builtin hooks have no priority, so they run first, one at a time in
-configuration order, and the two that fix files run on their own. (prek 0.5.11
-and later run the read-only ones together.) A hook that modifies tracked files
-never shares a priority, since prek's results are undefined when two hooks of
-one priority change the same file; build output the hooks write, such as
-`dist/` or coverage data, is ignored. On a project in all three languages, the priorities
+`pre-commit` hook outside the builtin repository has `priority = "check"`,
+except `reuse`. The builtin hooks and `reuse` have no priority, so they run
+first, one at a time in configuration order, and the two that fix files run on
+their own. (prek 0.5.11 and later run the read-only ones together.) `reuse`
+lists the files Git ignores once, when it starts, so a cache that mypy, Ruff or
+Cargo creates while it runs, such as `.mypy_cache`, would count as files without
+licensing information. A hook that modifies tracked files never shares a
+priority, since prek's results are undefined when two hooks of one priority
+change the same file; build output the hooks write, such as `dist/` or coverage
+data, is ignored. On a project in all three languages, the priorities
 make `prek run --all-files` about three times faster. A hook without a priority
 only runs more slowly, so `norms verify` doesn't check them.
 

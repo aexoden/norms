@@ -82,9 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ci-prek` and `ci-prek-skip`. Rename any waivers of them in `norms.toml`.
 - The template's hooks run concurrently with prek's hook priorities: the lock
   file checks first (`priority = "lock"`), then every other hook outside the
-  builtin repository (`priority = "check"`), which makes `prek run` about three
-  times faster on a project in all three languages. To adopt them, copy the
-  template's `[priorities]` table and the `priority` of each hook.
+  builtin repository (`priority = "check"`) except `reuse`, which runs alone
+  before them so that caches the other hooks create don't fail it. This makes
+  `prek run` about three times faster on a project in all three languages. To
+  adopt them, copy the template's `[priorities]` table and the `priority` of
+  each hook.
 - The template's `prek.toml` sets `minimum_prek_version` to 0.4.11, the oldest
   prek that runs it, so that an older prek reports that it is too old rather
   than failing on the priority aliases.

@@ -66,9 +66,10 @@ id = "trailing-whitespace"
 repo = "https://github.com/fsfe/reuse-tool"
 rev = "{{ hook_reuse }}"
 
+# No priority, so reuse runs alone before the hooks that write ignored files:
+# it lists the ignored files once, then counts any created later as unlicensed.
 [[repos.hooks]]
 id = "reuse"
-priority = "check"
 
 # Markdown
 [[repos]]
