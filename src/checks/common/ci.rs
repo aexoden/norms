@@ -99,13 +99,11 @@ fn is_prek_pin(word: &str) -> bool {
     PREK_PIN.is_match(word.trim_matches(['"', '\'']))
 }
 
-/// Whether `job` installs a pinned prek with [`INSTALL_ACTION`], among the comma-separated tools of its `tool` input.
+/// Whether `job` installs a pinned prek with [`INSTALL_ACTION`], among the tools of its `tool` input.
 fn installs_pinned_prek(job: &WorkflowJob) -> bool {
     job.steps_using(INSTALL_ACTION).any(|step| {
         step.input("tool").is_some_and(|tools| {
-            tools
-                .split(',')
-                .any(|tool| PREK_TOOL_PIN.is_match(tool.trim()))
+            install_action_tools(&tools).any(|tool| PREK_TOOL_PIN.is_match(tool))
         })
     })
 }
@@ -1646,6 +1644,8 @@ repos = [{repo = "local", hooks = [{id = "clippy", stages = ["pre-commit", "push
             "prek@0.5.11",
             "prek@${{ env.PREK_VERSION }}",
             "cargo-deny@0.20.2, prek@0.5.11",
+            "cargo-deny@0.20.2 prek@0.5.11",
+            "cargo-deny\nprek@${{ env.PREK_VERSION }}\n",
         ] {
             assert_eq!(installed(tool, "prek"), Ok(()), "{tool}");
         }
