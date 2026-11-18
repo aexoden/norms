@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 //! Checks that each hook norms ships in `.pre-commit-hooks.yaml` matches the
-//! local copy norms runs on itself in `prek.toml`.
+//! local copy norms runs on itself in `prek.toml`, and that norms' `prek.toml`
+//! keeps the template's settings.
 
 #[cfg(test)]
 mod tests {
@@ -63,10 +64,14 @@ mod tests {
                 .find(|local| get(local, "id") == id)
                 .unwrap_or_else(|| panic!("{id}: no local copy"));
 
-            // A project chooses the hook's args, so only the local copy has them.
+            // A project chooses the hook's args and priority, so only the local
+            // copy has them.
             assert_eq!(
                 keys(hook.as_object().unwrap(), &["entry", "language"]),
-                keys(copy.as_object().unwrap(), &["entry", "language", "args"]),
+                keys(
+                    copy.as_object().unwrap(),
+                    &["entry", "language", "args", "priority"]
+                ),
                 "{id}"
             );
             for key in ["name", "description", "stages"] {
@@ -96,5 +101,15 @@ mod tests {
             .find(|local| get(local, "id") == "norms-verify")
             .unwrap();
         assert_eq!(get(verify, "args"), &serde_json::json!(["--deny-warnings"]));
+    }
+
+    #[test]
+    fn settings_match_the_template() {
+        let own: Value = toml::from_str(&read("prek.toml")).unwrap();
+        // A render of the template, which the fixtures job keeps current.
+        let render: Value = toml::from_str(&read("tests/fixtures/rust/prek.toml")).unwrap();
+
+        assert!(!get(&render, "priorities").is_null());
+        assert_eq!(get(&own, "priorities"), get(&render, "priorities"));
     }
 }

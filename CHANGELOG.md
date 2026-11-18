@@ -80,6 +80,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `typescript-precommit-*` become `rust-prek-*`, `python-prek-*` and
   `typescript-prek-*`, and `ci-pre-commit` and `ci-pre-commit-skip` become
   `ci-prek` and `ci-prek-skip`. Rename any waivers of them in `norms.toml`.
+- The template's hooks run concurrently with prek's hook priorities: the lock
+  file checks first (`priority = "lock"`), then every other hook outside the
+  builtin repository (`priority = "check"`), which makes `prek run` about three
+  times faster on a project in all three languages. To adopt them, copy the
+  template's `[priorities]` table and the `priority` of each hook.
 - `norms --version` reports the version `git describe` gives in a build from
   a git checkout, such as `0.2.0-5-gf8a4d2b` between releases.
 - The template starts Rust packages at version `0.0.0`, as TypeScript ones

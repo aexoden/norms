@@ -8,6 +8,14 @@ default_install_hook_types = ["pre-commit", "commit-msg"]
 # Hooks without their own stages run only before a commit, not on its message.
 default_stages = ["pre-commit"]
 
+# Hooks of one priority run together, and lower priorities first. The lock
+# checks finish before the other hooks, since pnpm install may rewrite
+# node_modules, and hooks without a priority, such as the builtin hooks, run
+# before both in their own order.
+[priorities]
+lock = 100
+check = 200
+
 # General hooks, built into prek
 [[repos]]
 repo = "builtin"
@@ -56,6 +64,7 @@ rev = "{{ hook_reuse }}"
 
 [[repos.hooks]]
 id = "reuse"
+priority = "check"
 
 # Markdown
 [[repos]]
@@ -64,6 +73,7 @@ rev = "{{ hook_markdownlint_cli2 }}"
 
 [[repos.hooks]]
 id = "markdownlint-cli2"
+priority = "check"
 
 # TOML
 [[repos]]
@@ -75,6 +85,7 @@ id = "tombi-format"
 args = ["--check"]
 # Lock files are generated, so they aren't formatted.
 exclude = '(^|/)(Cargo|uv)\.lock$'
+priority = "check"
 
 # GitHub Actions security
 [[repos]]
@@ -84,6 +95,7 @@ rev = "{{ hook_zizmor }}"
 [[repos.hooks]]
 id = "zizmor"
 args = ["--pedantic"]
+priority = "check"
 
 # Conventional commits
 [[repos]]
@@ -106,6 +118,7 @@ id = "norms-commit-msg"
 [[repos.hooks]]
 id = "norms-verify"
 args = ["--deny-warnings"]
+priority = "check"
 {%- if 'rust' in languages %}
 {%- set manifest = '' if rust_prefix == '' else ' --manifest-path ' ~ rust_prefix ~ 'Cargo.toml' %}
 
@@ -120,6 +133,7 @@ description = "Check that Cargo.lock is up to date"
 entry = "cargo update{{ manifest }} --workspace --locked"
 language = "system"
 pass_filenames = false
+priority = "lock"
 
 [[repos.hooks]]
 id = "rustfmt"
@@ -128,6 +142,7 @@ description = "Format Rust code using rustfmt"
 entry = "cargo fmt --all --check{{ manifest }}"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "clippy"
@@ -136,6 +151,7 @@ description = "Lint Rust code using clippy"
 entry = "cargo clippy{{ manifest }} --workspace --all-targets --all-features -- -D warnings"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "cargo-test"
@@ -144,6 +160,7 @@ description = "Run Rust tests with coverage using cargo-llvm-cov"
 entry = "cargo llvm-cov{{ manifest }} --workspace --all-features --show-missing-lines"
 language = "system"
 pass_filenames = false
+priority = "check"
 {%- if project_type == 'library' %}
 
 [[repos.hooks]]
@@ -153,6 +170,7 @@ description = "Run Rust doctests using cargo test"
 entry = "cargo test{{ manifest }} --workspace --all-features --doc"
 language = "system"
 pass_filenames = false
+priority = "check"
 {%- endif %}
 
 [[repos.hooks]]
@@ -162,6 +180,7 @@ description = "Check Rust dependency bans, licenses and sources using cargo-deny
 entry = "cargo deny{{ manifest }} --workspace --all-features check -D warnings bans licenses sources"
 language = "system"
 pass_filenames = false
+priority = "check"
 {%- endif %}
 {%- if 'python' in languages %}
 {%- set uv = 'uv' if python_prefix == '' else 'uv --directory ' ~ python_dir %}
@@ -177,6 +196,7 @@ description = "Check that uv.lock is up to date"
 entry = "{{ uv }} lock --check"
 language = "system"
 pass_filenames = false
+priority = "lock"
 
 [[repos.hooks]]
 id = "ruff-format"
@@ -185,6 +205,7 @@ description = "Check Python formatting using Ruff"
 entry = "{{ uv }} run ruff format --check"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "ruff-check"
@@ -193,6 +214,7 @@ description = "Lint Python code using Ruff"
 entry = "{{ uv }} run ruff check"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "mypy"
@@ -201,6 +223,7 @@ description = "Type check Python code using mypy"
 entry = "{{ uv }} run mypy ."
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "pytest"
@@ -209,6 +232,7 @@ description = "Run Python tests using pytest"
 entry = "{{ uv }} run pytest --cov=src/{{ python_package }} --cov-report=term-missing"
 language = "system"
 pass_filenames = false
+priority = "check"
 {%- endif %}
 {%- if 'typescript' in languages %}
 {%- set pnpm = 'pnpm' if typescript_prefix == '' else 'pnpm --dir ' ~ typescript_dir %}
@@ -227,6 +251,7 @@ description = "Check that pnpm-lock.yaml is up to date"
 entry = "{{ pnpm_self }} install --frozen-lockfile"
 language = "system"
 pass_filenames = false
+priority = "lock"
 
 [[repos.hooks]]
 id = "pnpm-peer-dependencies"
@@ -235,6 +260,7 @@ description = "Check for missing or invalid peer dependencies"
 entry = "{{ pnpm_self }} peers check"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "prettier"
@@ -243,6 +269,7 @@ description = "Check formatting using Prettier"
 entry = "{{ pnpm }} exec prettier --check ."
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "eslint"
@@ -251,6 +278,7 @@ description = "Lint TypeScript code using ESLint"
 entry = "{{ pnpm }} exec eslint . --max-warnings 0"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "tsc"
@@ -259,6 +287,7 @@ description = "Type check TypeScript code using tsc"
 entry = "{{ pnpm }} exec tsc -b --noEmit"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "vite-build"
@@ -267,6 +296,7 @@ description = "Build the TypeScript application using Vite"
 entry = "{{ pnpm }} exec vite build"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "vitest"
@@ -275,4 +305,5 @@ description = "Run TypeScript tests using Vitest"
 entry = "{{ pnpm }} exec vitest run --coverage"
 language = "system"
 pass_filenames = false
+priority = "check"
 {%- endif %}

@@ -11,6 +11,14 @@ default_stages = ["pre-commit"]
 # The test fixtures are projects for norms to check, kept exactly as written.
 exclude = "^tests/fixtures/"
 
+# Hooks of one priority run together, and lower priorities first. The lock
+# checks finish before the other hooks, since pnpm install may rewrite
+# node_modules, and hooks without a priority, such as the builtin hooks, run
+# before both in their own order.
+[priorities]
+lock = 100
+check = 200
+
 # General hooks, built into prek
 [[repos]]
 repo = "builtin"
@@ -57,6 +65,7 @@ rev = "v6.3.0"
 
 [[repos.hooks]]
 id = "reuse"
+priority = "check"
 
 # Markdown
 [[repos]]
@@ -65,6 +74,7 @@ rev = "v0.24.1"
 
 [[repos.hooks]]
 id = "markdownlint-cli2"
+priority = "check"
 
 # TOML
 [[repos]]
@@ -76,6 +86,7 @@ id = "tombi-format"
 args = ["--check"]
 # Lock files are generated, so they aren't formatted.
 exclude = '(^|/)(Cargo|uv)\.lock$'
+priority = "check"
 
 # GitHub Actions security
 [[repos]]
@@ -85,6 +96,7 @@ rev = "v1.32.0"
 [[repos.hooks]]
 id = "zizmor"
 args = ["--pedantic"]
+priority = "check"
 
 # Conventional commits
 [[repos]]
@@ -119,6 +131,7 @@ pass_filenames = false
 always_run = true
 stages = ["pre-commit"]
 args = ["--deny-warnings"]
+priority = "check"
 
 # Rust
 [[repos]]
@@ -131,6 +144,7 @@ description = "Check that Cargo.lock is up to date"
 entry = "cargo update --workspace --locked"
 language = "system"
 pass_filenames = false
+priority = "lock"
 
 [[repos.hooks]]
 id = "rustfmt"
@@ -139,6 +153,7 @@ description = "Format Rust code using rustfmt"
 entry = "cargo fmt --all --check"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "clippy"
@@ -147,6 +162,7 @@ description = "Lint Rust code using clippy"
 entry = "cargo clippy --workspace --all-targets --all-features -- -D warnings"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "cargo-test"
@@ -155,6 +171,7 @@ description = "Run Rust tests with coverage using cargo-llvm-cov"
 entry = "cargo llvm-cov --workspace --all-features --show-missing-lines"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "cargo-doctest"
@@ -163,6 +180,7 @@ description = "Run Rust doctests using cargo test"
 entry = "cargo test --workspace --all-features --doc"
 language = "system"
 pass_filenames = false
+priority = "check"
 
 [[repos.hooks]]
 id = "cargo-deny"
@@ -171,3 +189,4 @@ description = "Check Rust dependency bans, licenses and sources using cargo-deny
 entry = "cargo deny --workspace --all-features check -D warnings bans licenses sources"
 language = "system"
 pass_filenames = false
+priority = "check"
