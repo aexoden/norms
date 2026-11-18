@@ -12,8 +12,8 @@ use regex::Regex;
 use serde_json::Value;
 
 use crate::config::{
-    GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program, program_args,
-    program_name,
+    Command, GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program,
+    program_args, program_name,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, PR_TITLE_WORKFLOW, ProjectContext,
@@ -141,7 +141,7 @@ fn prek_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         let action = installs_pinned_prek(job);
         let mut installed = false;
         for line in job.run_lines() {
-            for words in commands(&line) {
+            for words in commands(&line).iter().map(Command::words) {
                 if prek_run_start(&words).is_none() {
                     installed |= words.iter().any(|word| is_prek_pin(word));
                     continue;
@@ -370,7 +370,7 @@ fn root_prek_runs(workflow: &Workflow) -> Vec<RootPrekRun<'_>> {
         {
             let mut shell_skip: Option<String> = None;
             for line in step.run_lines() {
-                for words in commands(&line) {
+                for words in commands(&line).iter().map(Command::words) {
                     let Some(PrekRun { prefix, stage, .. }) = prek_run_all(&words) else {
                         let assignment = match words.as_slice() {
                             ["export", word] | [word] => skip_assignment(word),
@@ -476,7 +476,7 @@ fn norms_verify_in_ci(config: Option<&PrekConfig>, workflow: &Workflow) -> Resul
     let mut issues = Vec::new();
     for (job_id, job) in &workflow.jobs {
         for line in job.run_lines() {
-            for words in commands(&line) {
+            for words in commands(&line).iter().map(Command::words) {
                 let mut problems = Vec::new();
                 if let Some(args) = norms_verify_args(&words) {
                     if !args.contains(&"--deny-warnings") {
@@ -559,6 +559,8 @@ fn check_pr_title_workflow(workflow: &Workflow, report: &mut Report) {
         "CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)",
         workflow.run_lines().any(|line| {
             commands(&line)
+                .iter()
+                .map(Command::words)
                 .any(|words| prek_run_all(&words).is_some_and(|run| run.stage == "commit-msg"))
         }),
     );
@@ -658,7 +660,10 @@ pub(crate) fn is_exact_uv_version(version: &str) -> bool {
 /// doesn't run it.
 fn job_runs_uv(job: &WorkflowJob) -> bool {
     job.run_lines().any(|line| {
-        commands(&line).any(|words| words.first().is_some_and(|word| program_name(word) == "uv"))
+        commands(&line)
+            .iter()
+            .map(Command::words)
+            .any(|words| words.first().is_some_and(|word| program_name(word) == "uv"))
     })
 }
 
@@ -1081,7 +1086,7 @@ fn tool_versions(workflow: &Workflow) -> Result<(), String> {
             }
         }
         for line in job.run_lines() {
-            for words in commands(&line) {
+            for words in commands(&line).iter().map(Command::words) {
                 for spec in uv_package_specs(&words)
                     .into_iter()
                     .filter(|spec| LITERAL_PIN.is_match(spec))
@@ -1321,7 +1326,7 @@ fn is_light_job(id: &str, job: &WorkflowJob) -> bool {
         && job.steps.iter().all(|step| match (&step.uses, &step.run) {
             (Some(_), _) => light(step) || step.uses_action("actions/checkout"),
             (None, Some(_)) => step.run_lines().iter().all(|line| {
-                commands(line).all(|words| {
+                commands(line).iter().map(Command::words).all(|words| {
                     words
                         .first()
                         .is_none_or(|word| *word == "tombi" || word.starts_with('#'))
@@ -2488,6 +2493,25 @@ jobs:
     }
 
     #[test]
+    fn tool_versions_follow_quotes_and_unbalanced_lines() {
+        assert_eq!(
+            tool_versions_of(
+                "
+jobs:
+  shell:
+    steps:
+      - run: |
+          echo 'a && uvx y@1.0' && echo \"don't; cargo install z@1.0\"
+          echo don't && uvx 'ruff@0.1.0' check # cargo install q@1.0
+"
+            )
+            .unwrap_err(),
+            "Versions written inline, which Renovate doesn't update: shell (ruff@0.1.0) \
+             (pin each in a _VERSION variable under a # renovate: comment)"
+        );
+    }
+
+    #[test]
     fn cargo_install_pins_follow_cargo_options() {
         for (command, pins) in [
             (
@@ -2545,6 +2569,25 @@ jobs:
             result,
             "No # renovate: comment, so Renovate doesn't update: COPIER_VERSION, NODE_VERSION, PREK_VERSION, X_VERSION, \
              Y_VERSION"
+        );
+    }
+
+    #[test]
+    fn tool_versions_read_quoted_words_whole() {
+        assert_eq!(
+            tool_versions_of(
+                "
+jobs:
+  quoted:
+    steps:
+      - run: |
+          uv run --with 'x[a]==1.0' pytest && npx -c 'tsc x@1.0' && echo 'uvx y@1.0 && z'
+          cargo install \"cargo-hack\" --version \"0.6.0\"  # cargo install q@1.0
+"
+            )
+            .unwrap_err(),
+            "Versions written inline, which Renovate doesn't update: quoted (x[a]==1.0), quoted (cargo-hack@0.6.0) \
+             (pin each in a _VERSION variable under a # renovate: comment)"
         );
     }
 

@@ -146,7 +146,7 @@ impl WorkflowStep {
     fn exits_with_error(&self) -> bool {
         self.run.as_deref().is_some_and(|run| {
             join_continued_lines(run).iter().any(|line| {
-                commands(line).any(|words| {
+                commands(line).iter().map(Command::words).any(|words| {
                     // A comment ends the command, and a command may follow a keyword such as `then`.
                     let end = words
                         .iter()
@@ -594,7 +594,12 @@ impl Workflow {
     pub(crate) fn filter_map_commands<T>(&self, mut f: impl FnMut(&[&str]) -> Option<T>) -> Vec<T> {
         let mut results = Vec::new();
         for line in self.run_lines() {
-            results.extend(commands(&line).filter_map(|words| f(&words)));
+            results.extend(
+                commands(&line)
+                    .iter()
+                    .map(Command::words)
+                    .filter_map(|words| f(&words)),
+            );
         }
         results
     }
@@ -631,10 +636,12 @@ impl Workflow {
         tool: &str,
         mut runs: impl FnMut(&[&str]) -> bool,
     ) -> Issue {
-        if self
-            .run_lines()
-            .any(|line| commands(&line).any(|words| runs(&words)))
-        {
+        if self.run_lines().any(|line| {
+            commands(&line)
+                .iter()
+                .map(Command::words)
+                .any(|words| runs(&words))
+        }) {
             Issue::warn(format!("A step runs {tool} rather than using {action}"))
         } else {
             Issue::fail(format!("No step uses {action}"))
@@ -788,10 +795,103 @@ impl FormatterRun {
     }
 }
 
-/// The commands of a script line, split at the shell operators `&&`, `||`, `|` and `;`, each as its words.
-pub(crate) fn commands(line: &str) -> impl Iterator<Item = Vec<&str>> {
-    line.split(['&', '|', ';'])
-        .map(|command| command.split_whitespace().collect())
+/// The commands of a script line, each as its words. The line is split at the shell operators `&&`, `||`, `|`, `&`
+/// and `;` outside quotes, and ends at a comment, a word starting with `#`. Each command is split into words with the
+/// `shlex` crate, as a POSIX shell splits them, so a quoted word such as `'x[a,b]==1.0'` stays whole without its
+/// quotes. From a quote left open, which a shell would continue on the next line, the rest of the line is read as
+/// [`split_unbalanced`] reads it.
+pub(crate) fn commands(line: &str) -> Vec<Command> {
+    let (commands, unclosed) = split_operators(line);
+    let mut result: Vec<_> = commands
+        .into_iter()
+        .map(|command| {
+            Command(shlex::split(command).unwrap_or_else(|| {
+                split_unbalanced(command)
+                    .into_iter()
+                    .flat_map(|command| command.0)
+                    .collect()
+            }))
+        })
+        .collect();
+    if let Some(rest) = unclosed {
+        result.extend(split_unbalanced(rest));
+    }
+    result
+}
+
+/// A command of a script line, as [`commands`] splits it.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Command(Vec<String>);
+
+impl Command {
+    /// The command's words, borrowed for the functions that read them.
+    pub(crate) fn words(&self) -> Vec<&str> {
+        self.0.iter().map(String::as_str).collect()
+    }
+}
+
+/// The commands of `text`, whose quotes don't balance, as norms read every script line before it followed quotes: split
+/// at the shell operators and whitespace alone, with the quotes around each word removed, up to a word starting with
+/// `#`, which starts a comment.
+fn split_unbalanced(text: &str) -> Vec<Command> {
+    let mut commands = Vec::new();
+    for command in text.split(['&', '|', ';']) {
+        let mut words = Vec::new();
+        for word in command.split_whitespace() {
+            if word.starts_with('#') {
+                commands.push(Command(words));
+                return commands;
+            }
+            words.push(word.trim_matches(['"', '\'']).to_owned());
+        }
+        commands.push(Command(words));
+    }
+    commands
+}
+
+/// The commands of a script line split at the shell operators outside quotes and before any comment, and the rest of
+/// the line from a command whose quote is left open, if one is. A backslash outside single quotes escapes the next
+/// character.
+fn split_operators(line: &str) -> (Vec<&str>, Option<&str>) {
+    let mut commands = Vec::new();
+    let mut start = 0;
+    let mut quote = None;
+    let mut escaped = false;
+    let mut word_start = true;
+    for (index, char) in line.char_indices() {
+        let at_word_start = std::mem::replace(&mut word_start, false);
+        if escaped {
+            escaped = false;
+        } else if let Some(open) = quote {
+            if char == open {
+                quote = None;
+            } else if char == '\\' && open == '"' {
+                escaped = true;
+            }
+        } else {
+            match char {
+                '\'' | '"' => quote = Some(char),
+                '\\' => escaped = true,
+                '#' if at_word_start => {
+                    commands.push(line.get(start..index).unwrap_or_default());
+                    return (commands, None);
+                }
+                '&' | '|' | ';' => {
+                    commands.push(line.get(start..index).unwrap_or_default());
+                    start = index + char.len_utf8();
+                    word_start = true;
+                }
+                _ => word_start = matches!(char, ' ' | '\t' | '\n'),
+            }
+        }
+    }
+    let rest = line.get(start..).unwrap_or_default();
+    if quote.is_some() {
+        (commands, Some(rest))
+    } else {
+        commands.push(rest);
+        (commands, None)
+    }
 }
 
 /// The program a word of a command runs: the word itself, or the last part of a path to it.
@@ -1029,6 +1129,95 @@ jobs:
             .filter_map(|step| step.input("toolchain"))
             .collect();
         assert_eq!(toolchains, ["1.85"]);
+    }
+
+    #[test]
+    fn splits_commands_as_the_shell_does() {
+        let split = |line| -> Vec<Vec<String>> {
+            commands(line)
+                .into_iter()
+                .map(|command| command.0)
+                .collect()
+        };
+        for (line, expected) in [
+            (
+                "a b&&c||d|e;f &g",
+                vec![
+                    vec!["a", "b"],
+                    vec![],
+                    vec!["c"],
+                    vec![],
+                    vec!["d"],
+                    vec!["e"],
+                    vec!["f"],
+                    vec!["g"],
+                ],
+            ),
+            (
+                "uv run --with 'x[a,b]==1.0' --with=\"y==2\" z",
+                vec![vec![
+                    "uv",
+                    "run",
+                    "--with",
+                    "x[a,b]==1.0",
+                    "--with=y==2",
+                    "z",
+                ]],
+            ),
+            (
+                "npx -c 'tsc && x@1.0'; echo \"a | b\"",
+                vec![vec!["npx", "-c", "tsc && x@1.0"], vec!["echo", "a | b"]],
+            ),
+            (
+                "echo a\\;b \"c\\\"&\" 'd\\' e",
+                vec![vec!["echo", "a;b", "c\"&", "d\\", "e"]],
+            ),
+            ("uvx x@1.0 # don't && y@2.0", vec![vec!["uvx", "x@1.0"]]),
+            (
+                "a#b && c# d; #e",
+                vec![vec!["a#b"], vec![], vec!["c#", "d"], vec![]],
+            ),
+            ("# only a comment", vec![vec![]]),
+            (
+                "a && echo don't && uvx x@1.0",
+                vec![
+                    vec!["a"],
+                    vec![],
+                    vec!["echo", "don't"],
+                    vec![],
+                    vec!["uvx", "x@1.0"],
+                ],
+            ),
+            (
+                "echo don't 'stop' && uvx 'x@1.0'",
+                vec![vec!["echo", "don't", "stop"], vec![], vec!["uvx", "x@1.0"]],
+            ),
+            (
+                "a; echo it's; # cargo build && \"b\"",
+                vec![vec!["a"], vec!["echo", "it's"], vec![]],
+            ),
+            ("a \\", vec![vec!["a", "\\"]]),
+            ("echo a\u{a0}#b c", vec![vec!["echo", "a\u{a0}#b", "c"]]),
+            (
+                "echo \"a $(b \\\"c\\\")\" d",
+                vec![vec!["echo", "a $(b \"c\")", "d"]],
+            ),
+            ("", vec![vec![]]),
+        ] {
+            let expected: Vec<Vec<String>> = expected
+                .into_iter()
+                .map(|words| words.into_iter().map(str::to_owned).collect())
+                .collect();
+            assert_eq!(split(line), expected, "{line:?}");
+        }
+    }
+
+    #[test]
+    fn command_words_borrow_the_words() {
+        assert_eq!(
+            commands("a 'b c'").first().map(Command::words),
+            Some(vec!["a", "b c"])
+        );
     }
 
     #[test]

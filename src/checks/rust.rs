@@ -9,9 +9,9 @@ use std::path::Path;
 use semver::Comparator;
 
 use crate::config::{
-    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, DENY_TOML, FormatterRun,
-    HIDDEN_CLIPPY_TOML, LintLevel, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands,
-    is_other_deny_toml, is_program,
+    CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, Command, DENY_TOML,
+    FormatterRun, HIDDEN_CLIPPY_TOML, LintLevel, PrekConfig, Workflow, WorkflowJob, WorkflowStep,
+    commands, is_other_deny_toml, is_program,
 };
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
@@ -495,7 +495,7 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
 /// Whether a script line compiles the crate: `cargo check`, `cargo build` or `cargo test`, with or without a
 /// `+toolchain`.
 fn compiles_crate(line: &str) -> bool {
-    commands(line).any(|words| {
+    commands(line).iter().map(Command::words).any(|words| {
         cargo_subcommand(&words)
             .is_some_and(|(subcommand, _)| matches!(subcommand, "check" | "build" | "test"))
     })
@@ -1229,9 +1229,12 @@ fn job_builds_nothing(job: &WorkflowJob) -> bool {
             || NON_BUILDING_ACTIONS
                 .iter()
                 .any(|action| step.uses_action(action))
-    }) && job
-        .run_lines()
-        .all(|line| commands(&line).all(|words| builds_nothing(&words)))
+    }) && job.run_lines().all(|line| {
+        commands(&line)
+            .iter()
+            .map(Command::words)
+            .all(|words| builds_nothing(&words))
+    })
 }
 
 /// The jobs of `workflow`, by ID, that build no Rust code but cache it: a setup-rust-toolchain step in them doesn't
@@ -1311,7 +1314,7 @@ fn cargo_subcommand<'a>(words: &[&'a str]) -> Option<(&'a str, Vec<&'a str>)> {
 /// implies it), which fails instead of changing the lock file, and `--workspace` (or `-w`), which limits it to the
 /// workspace's own packages so that a current lock file needs no change.
 fn checks_cargo_lock(line: &str) -> bool {
-    commands(line).any(|words| {
+    commands(line).iter().map(Command::words).any(|words| {
         cargo_subcommand(&words).is_some_and(|(subcommand, args)| {
             subcommand == "update"
                 && args

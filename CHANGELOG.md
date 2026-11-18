@@ -114,6 +114,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recognize Cargo commands that pass global options before the subcommand,
   such as `cargo --locked test` or `cargo -C rust clippy`, in the Rust hook and
   CI checks.
+- Split the commands of workflow `run` scripts and `package.json` scripts,
+  which the checks read for the tools they run, as the shell splits them: a
+  quoted word stays whole without its quotes, and a shell operator or `#`
+  inside quotes doesn't end the command. A command such as
+  `echo 'a && uvx x@1.0'` no longer counts as running the quoted one.
 - List `coverage/` and `dist/` in the `.prettierignore` of the template's
   TypeScript component in a subdirectory, since Prettier, run there, doesn't
   read the root `.gitignore`. The `prettier` hook no longer fails after a

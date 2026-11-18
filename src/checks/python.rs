@@ -7,8 +7,9 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
-    FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook, PyprojectToml, PytestConfig, Workflow,
-    check_python_version_exact, check_release_age_value, commands, program_args, sets_attribute,
+    Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook, PyprojectToml, PytestConfig,
+    Workflow, check_python_version_exact, check_release_age_value, commands, program_args,
+    sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -813,7 +814,7 @@ fn uv_subcommand<'a, 'b>(words: &'b [&'a str]) -> Option<(&'a str, &'b [&'a str]
 /// Whether a script line checks that `uv.lock` is up to date: `uv lock` with `--check`, or `--locked`, its older
 /// spelling, which fail instead of changing the lock file.
 fn checks_uv_lock(line: &str) -> bool {
-    commands(line).any(|words| {
+    commands(line).iter().map(Command::words).any(|words| {
         matches!(uv_subcommand(&words), Some(("lock", args))
             if args.iter().any(|arg| matches!(*arg, "--check" | "--locked")))
     })
@@ -830,7 +831,7 @@ fn jobs_running_unlocked(workflow: &Workflow) -> Vec<&str> {
         .filter(|(_, job)| {
             let mut synced = false;
             for line in job.run_lines() {
-                for words in commands(&line) {
+                for words in commands(&line).iter().map(Command::words) {
                     match uv_subcommand(&words) {
                         Some(("sync", args)) if args.contains(&"--locked") => synced = true,
                         Some(("run", args)) if !synced && !args.contains(&"--locked") => {
@@ -859,7 +860,10 @@ fn pytest_coverage(words: &[&str]) -> Option<bool> {
 
 /// Whether a script line runs pytest.
 fn runs_pytest(line: &str) -> bool {
-    commands(line).any(|words| pytest_coverage(&words).is_some())
+    commands(line)
+        .iter()
+        .map(Command::words)
+        .any(|words| pytest_coverage(&words).is_some())
 }
 
 /// Whether a pytest hook measures coverage, from its entry and the args prek appends to it.

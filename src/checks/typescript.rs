@@ -9,8 +9,8 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::config::{
-    FormatterRun, PackageJson, PrekConfig, PrekHook, TsCompilerOptions, TsConfig, Workflow,
-    check_dev_engine, commands, program_args,
+    Command, FormatterRun, PackageJson, PrekConfig, PrekHook, TsCompilerOptions, TsConfig,
+    Workflow, check_dev_engine, commands, program_args,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::models::Language;
@@ -1009,9 +1009,12 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "typescript-ci-pnpm-peer-dependencies",
         "TypeScript CI: peer dependencies",
-        workflow
-            .run_lines()
-            .any(|line| commands(&line).any(|words| checks_peer_dependencies(&words))),
+        workflow.run_lines().any(|line| {
+            commands(&line)
+                .iter()
+                .map(Command::words)
+                .any(|words| checks_peer_dependencies(&words))
+        }),
     );
 
     // Lint step
@@ -1088,7 +1091,11 @@ fn eslint_max_warnings_zero(words: &[&str]) -> Option<bool> {
 /// Whether a `lint` script fails on warnings from `eslint`: each command of it that runs `eslint` passes
 /// `--max-warnings 0`. A script that doesn't run `eslint` itself, such as one running another script, isn't judged.
 fn lint_script_strict(script: &str) -> Result<(), String> {
-    if commands(script).any(|words| eslint_max_warnings_zero(&words) == Some(false)) {
+    if commands(script)
+        .iter()
+        .map(Command::words)
+        .any(|words| eslint_max_warnings_zero(&words) == Some(false))
+    {
         Err("The lint script runs eslint without --max-warnings 0".to_owned())
     } else {
         Ok(())
@@ -1100,6 +1107,8 @@ fn lint_script_strict(script: &str) -> Result<(), String> {
 /// isn't judged.
 fn format_script_checks(script: &str) -> Result<(), Issue> {
     let runs: Vec<_> = commands(script)
+        .iter()
+        .map(Command::words)
         .filter_map(|words| prettier_run(&words))
         .collect();
     FormatterRun::check_each(
@@ -1219,7 +1228,11 @@ fn every_tsconfig_solution_style(ctx: &ProjectContext) -> bool {
 /// build mode, as [`tsc_builds`] tells. `solution_style` tells whether the component's `tsconfig.json` is.
 fn script_type_checks(script: Option<&str>, name: &str, solution_style: bool) -> Result<(), Issue> {
     let script = script.ok_or_else(|| Issue::warn(format!("Missing '{name}' script")))?;
-    if commands(script).any(|words| tsc_builds(&words) == Some(false)) {
+    if commands(script)
+        .iter()
+        .map(Command::words)
+        .any(|words| tsc_builds(&words) == Some(false))
+    {
         Err(tsc_without_build(solution_style))
     } else {
         Ok(())
