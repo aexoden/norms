@@ -259,6 +259,20 @@ jobs:
           PREK_SKIP: cargo-deny,cargo-doctest,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
         run: prek run --all-files --show-diff-on-failure
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      # The hooks run with the template's prek, so this checks that the oldest prek the config
+      # allows still reads it, as the template job does for each render.
+      - name: Validate the config with its minimum prek
+        run: |
+          minimum="$(sed -n 's/^minimum_prek_version = "\(.*\)"$/\1/p' prek.toml)"
+          if [ -z "$minimum" ]; then
+            echo "::error::prek.toml sets no minimum_prek_version."
+            exit 1
+          fi
+          uvx "prek@$minimum" validate-config prek.toml
+
   reuse:
     name: Check REUSE compliance
     runs-on: ubuntu-latest
@@ -398,6 +412,18 @@ jobs:
             echo "::error::The render's norms repository wasn't replaced with this checkout."
             exit 1
           fi
+
+      # The hooks run with the latest prek, so this checks that the oldest prek the config allows
+      # still reads it, catching a feature such as a builtin hook added after that version.
+      - name: Validate the rendered config with its minimum prek
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          minimum="$(sed -n 's/^minimum_prek_version = "\(.*\)"$/\1/p' prek.toml)"
+          if [ -z "$minimum" ]; then
+            echo "::error::The render's prek.toml sets no minimum_prek_version."
+            exit 1
+          fi
+          uvx "prek@$minimum" validate-config prek.toml
 
       # The norms-verify hook would build norms, so the step below verifies the project with the
       # build-norms job's build instead.

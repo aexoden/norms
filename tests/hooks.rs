@@ -109,7 +109,9 @@ mod tests {
         // A render of the template, which the fixtures job keeps current.
         let render: Value = toml::from_str(&read("tests/fixtures/rust/prek.toml")).unwrap();
 
-        assert!(!get(&render, "priorities").is_null());
-        assert_eq!(get(&own, "priorities"), get(&render, "priorities"));
+        for key in ["minimum_prek_version", "priorities"] {
+            assert!(!get(&render, key).is_null(), "{key}");
+            assert_eq!(get(&own, key), get(&render, key), "{key}");
+        }
     }
 }

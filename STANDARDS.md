@@ -792,6 +792,20 @@ one priority change the same file; build output the hooks write, such as
 make `prek run --all-files` about three times faster. A hook without a priority
 only runs more slowly, so `norms verify` doesn't check them.
 
+Priority aliases need prek 0.4.11, which the configuration's
+`minimum_prek_version` names, so that an older prek reports that it is too old
+rather than failing to parse the configuration:
+
+```toml
+minimum_prek_version = "0.4.11"
+```
+
+It is the oldest prek that runs the configuration, raised only when the
+configuration starts using a feature of a newer one. It doesn't follow the
+`PREK_VERSION` that CI pins, which Renovate updates, so that an update doesn't
+make every developer upgrade prek. prek enforces it, so `norms verify` doesn't
+check it.
+
 Each repository is a `[[repos]]` table and each of its hooks a
 `[[repos.hooks]]` table, rather than inline tables, which Tombi would join
 into one long line. A remote repository's `rev` is pinned to a release tag and

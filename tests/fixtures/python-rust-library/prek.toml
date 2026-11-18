@@ -4,6 +4,10 @@
 # prek configuration
 # Install: prek install
 
+# The oldest prek that runs this configuration, which priority aliases need.
+# Raise it only when the configuration needs a newer prek.
+minimum_prek_version = "0.4.11"
+
 default_install_hook_types = ["pre-commit", "commit-msg"]
 # Hooks without their own stages run only before a commit, not on its message.
 default_stages = ["pre-commit"]

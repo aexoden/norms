@@ -85,6 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builtin repository (`priority = "check"`), which makes `prek run` about three
   times faster on a project in all three languages. To adopt them, copy the
   template's `[priorities]` table and the `priority` of each hook.
+- The template's `prek.toml` sets `minimum_prek_version` to 0.4.11, the oldest
+  prek that runs it, so that an older prek reports that it is too old rather
+  than failing on the priority aliases.
 - `norms --version` reports the version `git describe` gives in a build from
   a git checkout, such as `0.2.0-5-gf8a4d2b` between releases.
 - The template starts Rust packages at version `0.0.0`, as TypeScript ones
