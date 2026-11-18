@@ -781,8 +781,11 @@ const UV_VALUE_OPTIONS: &[&str] = &[
     "-w",
 ];
 
-/// The options of uv's `run` and `tool` commands whose values are packages, each a comma-separated list of them.
+/// The options of uv's `run` and `tool` commands whose values are packages.
 const UV_PACKAGE_OPTIONS: &[&str] = &["--from", "--with", "--with-executables-from", "-w"];
+
+/// The options of [`UV_PACKAGE_OPTIONS`] whose values are comma-separated lists of packages, rather than one package.
+const UV_PACKAGE_LIST_OPTIONS: &[&str] = &["--with", "--with-executables-from", "-w"];
 
 /// The words of `args` from the first that isn't an option or an option's value, as `value_options` lists those that
 /// take one, or those after a word that is only `--`, which ends the options.
@@ -803,15 +806,15 @@ fn skip_options<'a, 'b>(args: &'b [&'a str], value_options: &[&str]) -> &'b [&'a
     rest
 }
 
-/// The package specifications among a command's arguments, `args`: the values of
-/// the options `package_options` lists, whose comma-separated packages are each one, and, if `tool`, the command's
-/// first word that isn't an option or the value of one `value_options` lists, or that follows a `--`, which ends the
-/// options. The arguments after the tool (or after a `--` without `tool`) are left out. Short options
-/// written together (`-qp 3.14`) aren't taken apart.
+/// The package specifications among a command's arguments, `args`: the values of the options `package_options` lists,
+/// or each package of a value of one of `list_options` ([`split_packages`]), and, if `tool`, the command's first word
+/// that isn't an option or the value of one `value_options` lists, or that follows a `--`, which ends the options. The
+/// arguments after the tool (or after a `--` without `tool`) are left out. Short options written together (`-qp 3.14`)
+/// aren't taken apart.
 fn package_specs<'a>(
     args: &[&'a str],
     value_options: &[&str],
-    package_options: &[&str],
+    (package_options, list_options): (&[&str], &[&str]),
     tool: bool,
 ) -> Vec<&'a str> {
     let mut specs = Vec::new();
@@ -822,17 +825,21 @@ fn package_specs<'a>(
             break;
         }
         if word.starts_with('-') {
-            let value = match word.split_once('=') {
-                Some((name, value)) => package_options.contains(&name).then_some(value),
-                None if package_options.contains(&word) => words.next(),
+            let (name, value) = match word.split_once('=') {
+                Some((name, value)) => (name, package_options.contains(&name).then_some(value)),
+                None if package_options.contains(&word) => (word, words.next()),
                 None => {
                     if value_options.contains(&word) {
                         words.next();
                     }
-                    None
+                    (word, None)
                 }
             };
-            specs.extend(value.into_iter().flat_map(|value| value.split(',')));
+            if list_options.contains(&name) {
+                specs.extend(value.into_iter().flat_map(split_packages));
+            } else {
+                specs.extend(value);
+            }
         } else {
             if tool {
                 specs.push(word);
@@ -843,11 +850,43 @@ fn package_specs<'a>(
     specs
 }
 
+/// The packages of a comma-separated list, as uv's `--with` takes them: split at the commas outside the brackets of
+/// an extra, so that `x[a,b]==1.0` stays whole, each trimmed of whitespace, leaving out empty ones.
+fn split_packages(list: &str) -> Vec<&str> {
+    let mut packages = Vec::new();
+    let mut start = 0;
+    let mut depth = 0_usize;
+    for (index, char) in list.char_indices() {
+        match char {
+            '[' => depth += 1,
+            ']' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                packages.extend(list.get(start..index));
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    packages.extend(list.get(start..));
+    packages
+        .into_iter()
+        .map(str::trim)
+        .filter(|package| !package.is_empty())
+        .collect()
+}
+
 /// The package specifications of a command that runs a tool through uv, `uvx` or `uv tool run`, installs one with
 /// `uv tool install`, or adds packages to `uv run` with `--with`, as [`package_specs`] finds them. uv's own options
 /// may come before its command.
 fn uv_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
-    let specs = |args, tool| package_specs(args, UV_VALUE_OPTIONS, UV_PACKAGE_OPTIONS, tool);
+    let specs = |args, tool| {
+        package_specs(
+            args,
+            UV_VALUE_OPTIONS,
+            (UV_PACKAGE_OPTIONS, UV_PACKAGE_LIST_OPTIONS),
+            tool,
+        )
+    };
     if let Some(args) = program_args(words, "uvx") {
         return specs(args, true);
     }
@@ -916,7 +955,7 @@ fn npm_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
             .split(|word| matches!(*word, "-c" | "--call") || word.starts_with("--call="))
             .next()
             .unwrap_or_default();
-        package_specs(args, NPX_VALUE_OPTIONS, NPX_PACKAGE_OPTIONS, true)
+        package_specs(args, NPX_VALUE_OPTIONS, (NPX_PACKAGE_OPTIONS, &[]), true)
     };
     if let Some(args) = program_args(words, "npx") {
         return npx(args);
@@ -927,7 +966,8 @@ fn npm_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
             _ => Vec::new(),
         };
     }
-    let pnpm = |args, tool| package_specs(args, PNPM_VALUE_OPTIONS, PNPM_PACKAGE_OPTIONS, tool);
+    let pnpm =
+        |args, tool| package_specs(args, PNPM_VALUE_OPTIONS, (PNPM_PACKAGE_OPTIONS, &[]), tool);
     if let Some(args) = program_args(words, "pnpx") {
         return pnpm(args, true);
     }
@@ -2376,8 +2416,14 @@ jobs:
                 vec!["y==2.0"],
             ),
             ("uv pip install x==1.0", vec![]),
+            ("uvx --from 'x==1.0,!=1.0.1' x", vec!["x==1.0,!=1.0.1", "x"]),
+            (
+                "uv run -w 'x[a,b]==1.0, y' --with=z pytest",
+                vec!["x[a,b]==1.0", "y", "z"],
+            ),
         ] {
-            let words: Vec<&str> = command.split_whitespace().collect();
+            let commands = commands(command);
+            let words = commands.first().map_or_else(Vec::new, Command::words);
             assert_eq!(uv_package_specs(&words), specs, "{command}");
         }
     }
@@ -2571,14 +2617,28 @@ jobs:
   quoted:
     steps:
       - run: |
-          uv run --with 'x[a]==1.0' pytest && npx -c 'tsc x@1.0' && echo 'uvx y@1.0 && z'
+          uv run --with 'x[a,b]==1.0,y' pytest && npx -c 'tsc x@1.0' && echo 'uvx y@1.0 && z'
           cargo install \"cargo-hack\" --version \"0.6.0\"  # cargo install q@1.0
 "
             )
             .unwrap_err(),
-            "Versions written inline, which Renovate doesn't update: quoted (x[a]==1.0), quoted (cargo-hack@0.6.0) \
+            "Versions written inline, which Renovate doesn't update: quoted (x[a,b]==1.0), quoted (cargo-hack@0.6.0) \
              (pin each in a _VERSION variable under a # renovate: comment)"
         );
+    }
+
+    #[test]
+    fn package_lists_split_outside_extras() {
+        for (list, packages) in [
+            ("x", vec!["x"]),
+            ("x,y==1.0", vec!["x", "y==1.0"]),
+            ("x[a,b]==1.0,y[c],z", vec!["x[a,b]==1.0", "y[c]", "z"]),
+            ("x],y", vec!["x]", "y"]),
+            ("x, y==1.0,,", vec!["x", "y==1.0"]),
+            ("", vec![]),
+        ] {
+            assert_eq!(split_packages(list), packages, "{list}");
+        }
     }
 
     #[test]
