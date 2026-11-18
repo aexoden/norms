@@ -147,12 +147,7 @@ impl WorkflowStep {
         self.run.as_deref().is_some_and(|run| {
             join_continued_lines(run).iter().any(|line| {
                 commands(line).iter().map(Command::words).any(|words| {
-                    // A comment ends the command, and a command may follow a keyword such as `then`.
-                    let end = words
-                        .iter()
-                        .position(|word| word.starts_with('#'))
-                        .unwrap_or(words.len());
-                    let words = words.get(..end).unwrap_or_default();
+                    // A command may follow a keyword such as `then`.
                     let start = words
                         .iter()
                         .position(|word| !matches!(*word, "then" | "else" | "do" | "{"))

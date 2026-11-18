@@ -66,9 +66,8 @@ fn markdownlint_in_ci(workflow: &Workflow) -> Result<(), Issue> {
 // prek in CI
 //
 
-/// A word of a shell command, with any quotes around it removed, that pins prek to a version: as uvx takes it
-/// (`prek@x.y.z`), or as pip and `uvx --from` do (`prek==x.y.z`, also after `--from=`). A version from a shell
-/// variable counts, since its value can't be seen here.
+/// A word of a shell command that pins prek to a version: as uvx takes it (`prek@x.y.z`), or as pip and `uvx --from` do
+/// (`prek==x.y.z`, also after `--from=`). A version from a shell variable counts, since its value can't be seen here.
 static PREK_PIN: LazyLock<Regex> = LazyLock::new(|| {
     #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
     Regex::new(
@@ -96,7 +95,7 @@ fn install_action_tools(tools: &str) -> impl Iterator<Item = &str> {
 
 /// Whether a word of a shell command pins prek to a version.
 fn is_prek_pin(word: &str) -> bool {
-    PREK_PIN.is_match(word.trim_matches(['"', '\'']))
+    PREK_PIN.is_match(word)
 }
 
 /// Whether `job` installs a pinned prek with [`INSTALL_ACTION`], among the tools of its `tool` input.
@@ -108,10 +107,8 @@ fn installs_pinned_prek(job: &WorkflowJob) -> bool {
     })
 }
 
-/// Whether a word of a shell command, with any quotes around it removed, invokes prek: `prek`, a path to it, or a
-/// versioned `prek@x.y.z` as uvx takes it.
+/// Whether a word of a shell command invokes prek: `prek`, a path to it, or a versioned `prek@x.y.z` as uvx takes it.
 fn is_prek_command(word: &str) -> bool {
-    let word = word.trim_matches(['"', '\'']);
     let name = program_name(word);
     name == "prek" || name.starts_with("prek@")
 }
@@ -238,8 +235,8 @@ const PREK_STAGE_OPTIONS: [&str; 2] = ["--stage", "--hook-stage"];
 struct PrekRun<'a, 'b> {
     /// The words before prek, such as `uvx` or `PREK_SKIP=...`.
     prefix: &'b [&'a str],
-    /// The stage, `--stage`'s value or else `pre-commit`, without quotes around it. Unlike `prek.toml`, prek's command
-    /// line doesn't take a stage's old name, such as `commit`.
+    /// The stage, `--stage`'s value or else `pre-commit`. Unlike `prek.toml`, prek's command line doesn't take a
+    /// stage's old name, such as `commit`.
     stage: &'a str,
     /// Whether it passes `--all-files` (or `-a`).
     all_files: bool,
@@ -260,15 +257,15 @@ fn stage_assignment(arg: &str) -> Option<&str> {
 }
 
 /// The command, as its words, if it runs `prek run` for every hook of a stage, however prek is invoked, or `None` if it
-/// doesn't run it or names the one hook it runs. Option values aren't hook IDs or other options, the words after
-/// `--files` are files, and those after a `#` are a comment.
+/// doesn't run it or names the one hook it runs. Option values aren't hook IDs or other options, and the words after
+/// `--files` are files.
 fn prek_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PrekRun<'a, 'b>> {
     let start = prek_run_start(words)?;
     let mut stage = "pre-commit";
     let mut all_files = false;
     let mut args = words.iter().skip(start + 2);
     while let Some(arg) = args.next() {
-        if *arg == "--files" || arg.starts_with('#') {
+        if *arg == "--files" {
             break;
         }
         if !arg.starts_with('-') {
@@ -289,15 +286,14 @@ fn prek_run_all<'a, 'b>(words: &'b [&'a str]) -> Option<PrekRun<'a, 'b>> {
     }
     Some(PrekRun {
         prefix: words.get(..start)?,
-        stage: stage.trim_matches(['"', '\'']),
+        stage,
         all_files,
     })
 }
 
-/// The value a word of a shell command assigns to `PREK_SKIP`, as `PREK_SKIP=<value>` does, without quotes around it.
+/// The value a word of a shell command assigns to `PREK_SKIP`, as `PREK_SKIP=<value>` does.
 fn skip_assignment(word: &str) -> Option<&str> {
     word.strip_prefix("PREK_SKIP=")
-        .map(|value| value.trim_matches(['"', '\'']))
 }
 
 /// The hooks whose jobs in `ci.yaml` may have other IDs than theirs: the job each of them gets in the standards.
@@ -436,9 +432,9 @@ const NORMS_VERIFY_HOOK: &str = "norms-verify";
 /// The arguments of `norms verify`, if the words of a command run it: `norms`, or a path to it, quoted or not, then
 /// `verify`.
 fn norms_verify_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
-    let start = words.windows(2).position(|pair| {
-        matches!(pair, [program, "verify"] if program_name(program.trim_matches(['"', '\''])) == "norms")
-    })?;
+    let start = words
+        .windows(2)
+        .position(|pair| matches!(pair, [program, "verify"] if program_name(program) == "norms"))?;
     words.get(start + 2..)
 }
 
@@ -449,12 +445,12 @@ fn prek_runs_hook(words: &[&str], id: &str) -> bool {
     };
     let mut args = words.iter().skip(start + 2);
     while let Some(arg) = args.next() {
-        if *arg == "--files" || arg.starts_with('#') {
+        if *arg == "--files" {
             return false;
         }
         if PREK_RUN_VALUE_OPTIONS.contains(arg) {
             args.next();
-        } else if arg.trim_matches(['"', '\'']) == id {
+        } else if *arg == id {
             return true;
         }
     }
@@ -807,10 +803,10 @@ fn skip_options<'a, 'b>(args: &'b [&'a str], value_options: &[&str]) -> &'b [&'a
     rest
 }
 
-/// The package specifications among a command's arguments, `args`, with any quotes around them removed: the values of
+/// The package specifications among a command's arguments, `args`: the values of
 /// the options `package_options` lists, whose comma-separated packages are each one, and, if `tool`, the command's
 /// first word that isn't an option or the value of one `value_options` lists, or that follows a `--`, which ends the
-/// options. The arguments after the tool (or after a `--` without `tool`) and a shell comment are left out. Short options
+/// options. The arguments after the tool (or after a `--` without `tool`) are left out. Short options
 /// written together (`-qp 3.14`) aren't taken apart.
 fn package_specs<'a>(
     args: &[&'a str],
@@ -819,20 +815,15 @@ fn package_specs<'a>(
     tool: bool,
 ) -> Vec<&'a str> {
     let mut specs = Vec::new();
-    let mut words = args.iter().map(|word| word.trim_matches(['"', '\'']));
+    let mut words = args.iter().copied();
     while let Some(word) = words.next() {
-        if word.starts_with('#') {
-            break;
-        }
         if word == "--" {
             specs.extend(words.next().filter(|_| tool));
             break;
         }
         if word.starts_with('-') {
             let value = match word.split_once('=') {
-                Some((name, value)) => package_options
-                    .contains(&name)
-                    .then(|| value.trim_matches(['"', '\''])),
+                Some((name, value)) => package_options.contains(&name).then_some(value),
                 None if package_options.contains(&word) => words.next(),
                 None => {
                     if value_options.contains(&word) {
@@ -995,8 +986,7 @@ fn is_literal_cargo_version(version: &str) -> bool {
 /// The crates a `cargo install` or `cargo binstall` command pins to a version written out, perhaps after a `+toolchain`
 /// and Cargo's own options:
 /// each written as `name@1.2.3`, and, with a `--version` (`--vers`) written out, the crates it names, as
-/// `name@version`, or the option itself if it names none. Quotes around a word are removed, and a shell comment is left
-/// out.
+/// `name@version`, or the option itself if it names none.
 fn cargo_install_pins(words: &[&str]) -> Vec<String> {
     let Some(args) = program_args(words, "cargo") else {
         return Vec::new();
@@ -1010,15 +1000,15 @@ fn cargo_install_pins(words: &[&str]) -> Vec<String> {
     };
     let mut crates = Vec::new();
     let mut version = None;
-    let mut args = args.iter().map(|word| word.trim_matches(['"', '\'']));
+    let mut args = args.iter().copied();
     while let Some(word) = args.next() {
-        if word.starts_with('#') || word == "--" {
+        if word == "--" {
             break;
         }
         if word.starts_with('-') {
             match word.split_once('=') {
                 Some(("--version" | "--vers", value)) => {
-                    version = Some(value.trim_matches(['"', '\'']));
+                    version = Some(value);
                 }
                 Some(_) => {}
                 None if matches!(word, "--version" | "--vers") => version = args.next(),
@@ -1326,11 +1316,10 @@ fn is_light_job(id: &str, job: &WorkflowJob) -> bool {
         && job.steps.iter().all(|step| match (&step.uses, &step.run) {
             (Some(_), _) => light(step) || step.uses_action("actions/checkout"),
             (None, Some(_)) => step.run_lines().iter().all(|line| {
-                commands(line).iter().map(Command::words).all(|words| {
-                    words
-                        .first()
-                        .is_none_or(|word| *word == "tombi" || word.starts_with('#'))
-                })
+                commands(line)
+                    .iter()
+                    .map(Command::words)
+                    .all(|words| words.first().is_none_or(|word| *word == "tombi"))
             }),
             (None, None) => true,
         })
@@ -1537,7 +1526,8 @@ mod tests {
             ("uvx prek@0.5.11 run # norms-verify", false),
             ("echo norms-verify", false),
         ] {
-            let words: Vec<_> = run.split_whitespace().collect();
+            let commands = commands(run);
+            let words = commands.first().map_or_else(Vec::new, Command::words);
             assert_eq!(prek_runs_hook(&words, NORMS_VERIFY_HOOK), runs, "{run}");
         }
     }
@@ -2619,8 +2609,12 @@ jobs:
             ("npm x --package=a@1.0 a", vec!["a@1.0", "a"]),
             ("npm install x@1.0.0 && pnpm exec x@1.0.0", vec![]),
         ] {
-            let words: Vec<&str> = command.split_whitespace().collect();
-            assert_eq!(npm_package_specs(&words), specs, "{command}");
+            let commands = commands(command);
+            let found: Vec<_> = commands
+                .iter()
+                .flat_map(|each| npm_package_specs(&each.words()))
+                .collect();
+            assert_eq!(found, specs, "{command}");
         }
     }
 }

@@ -1206,12 +1206,11 @@ const NON_BUILDING_CARGO_SUBCOMMANDS: [&str; 9] = [
     "--version",
 ];
 
-/// Whether a command, as its words, builds no Rust code: it is empty or a comment, runs `rustfmt`, runs `rustup` other
-/// than `rustup run`, which runs any command, or runs one of the Cargo subcommands that don't build. Any other command
-/// may build.
+/// Whether a command, as its words, builds no Rust code: it is empty, runs `rustfmt`, runs `rustup` other than
+/// `rustup run`, which runs any command, or runs one of the Cargo subcommands that don't build. Any other command may
+/// build.
 fn builds_nothing(words: &[&str]) -> bool {
     match words.first() {
-        Some(word) if word.starts_with('#') => true,
         None | Some(&"rustfmt") => true,
         Some(&"rustup") => words.get(1) != Some(&"run"),
         Some(&"cargo") => cargo_subcommand(words)
