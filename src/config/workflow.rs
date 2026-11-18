@@ -629,24 +629,35 @@ impl Workflow {
         &self,
         action: &str,
         tool: &str,
-        mut runs: impl FnMut(&[&str]) -> bool,
+        runs: impl FnMut(&[&str]) -> bool,
     ) -> Issue {
-        if self.run_lines().any(|line| {
-            commands(&line)
-                .iter()
-                .map(Command::words)
-                .any(|words| runs(&words))
-        }) {
+        if self.runs(runs) {
             Issue::warn(format!("A step runs {tool} rather than using {action}"))
         } else {
             Issue::fail(format!("No step uses {action}"))
         }
     }
 
-    /// Whether any step's `run` script contains `command`. Commands that reach a script only through an expression,
+    /// Whether `f` holds for the words of some command of some step's `run` script, split as [`commands`] splits a line.
+    pub(crate) fn runs(&self, mut f: impl FnMut(&[&str]) -> bool) -> bool {
+        self.run_lines().any(|line| {
+            commands(&line)
+                .iter()
+                .map(Command::words)
+                .any(|words| f(&words))
+        })
+    }
+
+    /// Whether some step's `run` script has a command that runs `command`, its first word a program and the rest the
+    /// arguments that follow it, as [`runs_program`] tells. Commands that reach a script only through an expression,
     /// such as `${{ matrix.command }}`, are not seen.
     pub(crate) fn runs_command(&self, command: &str) -> bool {
-        self.run_scripts().any(|run| run.contains(command))
+        let mut parts = command.split_whitespace();
+        let Some(program) = parts.next() else {
+            return false;
+        };
+        let args: Vec<_> = parts.collect();
+        self.runs(|words| runs_program(words, program, &args))
     }
 
     /// Whether any step's `run` script matches `pattern`, for a command that a plain substring would confuse with
@@ -904,6 +915,17 @@ pub(crate) fn is_program(word: &str, name: &str) -> bool {
         })
 }
 
+/// Whether a command's words run the program `name`, as [`is_program`] names it, directly followed by `args`, such as
+/// `ruff` and `check` in `uv run ruff check`.
+pub(crate) fn runs_program(words: &[&str], name: &str, args: &[&str]) -> bool {
+    words.iter().enumerate().any(|(index, word)| {
+        is_program(word, name)
+            && words
+                .get(index + 1..)
+                .is_some_and(|rest| rest.starts_with(args))
+    })
+}
+
 /// The arguments that follow the first word of a command that runs the program `name`, itself or through a path to it.
 pub(crate) fn program_args<'a, 'b>(words: &'b [&'a str], name: &str) -> Option<&'b [&'a str]> {
     let start = words.iter().position(|word| program_name(word) == name)?;
@@ -1032,6 +1054,60 @@ jobs:
         let workflow = workflow();
         assert!(workflow.runs_command("cargo test"));
         assert!(workflow.runs_command("cargo build"));
+    }
+
+    #[test]
+    fn finds_commands_by_their_words() {
+        let workflow = |run: &str| {
+            serde_saphyr::from_str::<Workflow>(&format!(
+                "jobs:\n  check:\n    steps:\n      - run: {}\n",
+                serde_json::to_string(run).expect("the script serializes")
+            ))
+            .expect("workflow parses")
+        };
+        for run in [
+            "ruff check",
+            "uv run ruff check --fix",
+            "uvx ruff@0.15.0 check",
+            "~/.local/bin/ruff check .",
+            "cd api && uv run ruff check",
+            "uv sync --locked\nuv run ruff check",
+            "uv run \\\n  ruff check",
+        ] {
+            assert!(workflow(run).runs_command("ruff check"), "{run}");
+        }
+        for run in [
+            "echo 'ruff check'",
+            "# ruff check",
+            "uv sync # then ruff check",
+            "ruff format --check",
+            "ruff --fix check",
+            "ruffle check",
+            "uv run ruff\ncheck",
+        ] {
+            assert!(!workflow(run).runs_command("ruff check"), "{run}");
+        }
+        assert!(workflow("uv run mypy .").runs_command("mypy"));
+        assert!(!workflow("uv run dmypy run").runs_command("mypy"));
+        assert!(!workflow("echo hi").runs_command(""));
+    }
+
+    #[test]
+    fn programs_run_with_their_arguments() {
+        assert!(runs_program(
+            &["pnpm", "run", "lint"],
+            "pnpm",
+            &["run", "lint"]
+        ));
+        assert!(runs_program(
+            &["npx", "vite@7", "build"],
+            "vite",
+            &["build"]
+        ));
+        assert!(runs_program(&["mypy"], "mypy", &[]));
+        assert!(!runs_program(&["pnpm", "lint:fix"], "pnpm", &["lint"]));
+        assert!(!runs_program(&["pnpm"], "pnpm", &["lint"]));
+        assert!(!runs_program(&["echo", "pnpm"], "vite", &[]));
     }
 
     #[test]

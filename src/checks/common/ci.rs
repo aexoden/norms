@@ -553,12 +553,7 @@ fn check_pr_title_workflow(workflow: &Workflow, report: &mut Report) {
     report.must(
         "pr-title-yaml-commit-msg",
         "CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)",
-        workflow.run_lines().any(|line| {
-            commands(&line)
-                .iter()
-                .map(Command::words)
-                .any(|words| prek_run_all(&words).is_some_and(|run| run.stage == "commit-msg"))
-        }),
+        workflow.runs(|words| prek_run_all(words).is_some_and(|run| run.stage == "commit-msg")),
     );
 }
 

@@ -1009,12 +1009,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "typescript-ci-pnpm-peer-dependencies",
         "TypeScript CI: peer dependencies",
-        workflow.run_lines().any(|line| {
-            commands(&line)
-                .iter()
-                .map(Command::words)
-                .any(|words| checks_peer_dependencies(&words))
-        }),
+        workflow.runs(checks_peer_dependencies),
     );
 
     // Lint step

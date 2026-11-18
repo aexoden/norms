@@ -119,6 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quoted word stays whole without its quotes, and a shell operator or `#`
   inside quotes doesn't end the command. A command such as
   `echo 'a && uvx x@1.0'` no longer counts as running the quoted one.
+- Read workflow `run` scripts as commands, not text, where CI must run
+  `ruff check`, `mypy`, `uv audit`, `pnpm audit`, or the `lint` or `test`
+  script: a quoted or commented-out mention, such as `echo 'ruff check'` or
+  `# uv audit`, no longer counts as running the tool.
 - List `coverage/` and `dist/` in the `.prettierignore` of the template's
   TypeScript component in a subdirectory, since Prettier, run there, doesn't
   read the root `.gitignore`. The `prettier` hook no longer fails after a
