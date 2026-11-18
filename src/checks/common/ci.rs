@@ -868,6 +868,108 @@ fn uv_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
     }
 }
 
+/// The options of Cargo itself, before its command, that take the next word as their value (unless given as
+/// `--option=value`), as Cargo 1.100's help lists them.
+const CARGO_VALUE_OPTIONS: &[&str] = &["--color", "--config", "--explain", "-C", "-Z"];
+
+/// The options of `cargo install` that take the next word as their value (unless given as `--option=value`), as Cargo
+/// 1.100's help lists them, besides `--version`. `cargo binstall` is read with these too, so the value of one of its own
+/// options may be taken for a crate, which only names it in the warning.
+const CARGO_INSTALL_VALUE_OPTIONS: &[&str] = &[
+    "--bin",
+    "--branch",
+    "--color",
+    "--config",
+    "--example",
+    "--features",
+    "--git",
+    "--index",
+    "--jobs",
+    "--message-format",
+    "--path",
+    "--profile",
+    "--registry",
+    "--rev",
+    "--root",
+    "--tag",
+    "--target",
+    "--target-dir",
+    "-F",
+    "-Z",
+    "-j",
+];
+
+/// Whether a version requirement is written out, as `cargo install` takes it after `--version` or `name@` (`1.2.3`,
+/// `=1.2.3`, `~1.2`, ...).
+fn is_literal_cargo_version(version: &str) -> bool {
+    version
+        .trim_start_matches(['=', '^', '~', '<', '>'])
+        .starts_with(|c: char| c.is_ascii_digit())
+}
+
+/// The crates a `cargo install` or `cargo binstall` command pins to a version written out, perhaps after a `+toolchain`
+/// and Cargo's own options:
+/// each written as `name@1.2.3`, and, with a `--version` (`--vers`) written out, the crates it names, as
+/// `name@version`, or the option itself if it names none. Quotes around a word are removed, and a shell comment is left
+/// out.
+fn cargo_install_pins(words: &[&str]) -> Vec<String> {
+    let Some(args) = program_args(words, "cargo") else {
+        return Vec::new();
+    };
+    let args = match args {
+        [toolchain, rest @ ..] if toolchain.starts_with('+') => rest,
+        _ => args,
+    };
+    let ["install" | "binstall", args @ ..] = skip_options(args, CARGO_VALUE_OPTIONS) else {
+        return Vec::new();
+    };
+    let mut crates = Vec::new();
+    let mut version = None;
+    let mut args = args.iter().map(|word| word.trim_matches(['"', '\'']));
+    while let Some(word) = args.next() {
+        if word.starts_with('#') || word == "--" {
+            break;
+        }
+        if word.starts_with('-') {
+            match word.split_once('=') {
+                Some(("--version" | "--vers", value)) => {
+                    version = Some(value.trim_matches(['"', '\'']));
+                }
+                Some(_) => {}
+                None if matches!(word, "--version" | "--vers") => version = args.next(),
+                None => {
+                    if CARGO_INSTALL_VALUE_OPTIONS.contains(&word) {
+                        args.next();
+                    }
+                }
+            }
+        } else {
+            crates.push(word);
+        }
+    }
+
+    let mut pins: Vec<String> = crates
+        .iter()
+        .filter(|name| {
+            name.split_once('@')
+                .is_some_and(|(_, pin)| is_literal_cargo_version(pin))
+        })
+        .map(|name| (*name).to_owned())
+        .collect();
+    if let Some(version) = version.filter(|version| is_literal_cargo_version(version)) {
+        let unpinned: Vec<&str> = crates
+            .iter()
+            .copied()
+            .filter(|name| !name.contains('@'))
+            .collect();
+        if unpinned.is_empty() && pins.is_empty() {
+            pins.push(format!("--version {version}"));
+        }
+        pins.extend(unpinned.into_iter().map(|name| format!("{name}@{version}")));
+    }
+    pins
+}
+
 /// Whether an `env` value is a version written out, rather than empty or given by an expression.
 fn is_literal_value(value: &Value) -> bool {
     match value {
@@ -878,8 +980,8 @@ fn is_literal_value(value: &Value) -> bool {
 }
 
 /// Check that Renovate can update every tool version `workflow` pins where no manager of its own reads it: no version is
-/// written inline, in [`INSTALL_ACTION`]'s `tool` input or a uv command, and every environment variable whose name
-/// ends in `_VERSION` and whose value is written out has a `# renovate:` comment above it, as
+/// written inline, in [`INSTALL_ACTION`]'s `tool` input, a uv command or `cargo install`, and every environment
+/// variable whose name ends in `_VERSION` and whose value is written out has a `# renovate:` comment above it, as
 /// [`RENOVATE_VERSION_VARIABLE`] finds one. A variable set in several places needs a comment above each.
 fn tool_versions(workflow: &Workflow) -> Result<(), String> {
     let mut inline: Vec<String> = Vec::new();
@@ -905,6 +1007,9 @@ fn tool_versions(workflow: &Workflow) -> Result<(), String> {
                     .filter(|spec| LITERAL_PIN.is_match(spec))
                 {
                     add(id, spec);
+                }
+                for pin in cargo_install_pins(&words) {
+                    add(id, &pin);
                 }
             }
         }
@@ -2232,6 +2337,9 @@ jobs:
           uvx --with=\"jinja2-time\" -p python3.14 prek run  # was prek@0.5.10
           uv run --group lint --with \"ruff==$RUFF_VERSION\" ruff check --with x==1.0
           uv run -- pytest --with=y==1.0 && uv --directory sub tool list x==1.0
+          cargo install cross --locked --version \"$CROSS_VERSION\" && cargo install --path . --root out
+          cargo install --git https://github.com/x/y --tag v1.0.0 y && cargo build --features x@1.0
+          cargo install cargo-hack@\"$HACK_VERSION\" # cargo install x@1.0
 "
             ),
             Ok(())
@@ -2266,18 +2374,54 @@ jobs:
       - run: uv --quiet tool run zizmor@1.1 . && uv --directory sub tool --offline install mypy==1.0
       - run: uv run --python 3.14 --group test -w pytest-cov==6.0,pytest --with=hypothesis==6.0 pytest
       - run: uvx --from='copier==9.19.1' --with=\"jinja2-time==0.2.0\" copier copy . out
+  cargo:
+    steps:
+      - run: cargo install cargo-hack --locked --version 0.6.0 && cargo +stable binstall cargo-nextest@0.9.0
+      - run: cargo install --features x --vers='=1.0.0' cargo-a cargo-b
+      - run: cargo install --git https://github.com/x/y --version ~2.1
 ",
         )
         .unwrap_err();
         assert_eq!(
             result,
-            "Versions written inline, which Renovate doesn't update: deny (cargo-deny@0.20.2), deny (cargo-hack@0.6.0), \
-             deny (cargo-nextest@0.9.0), hooks (prek@0.5.10), \
+            "Versions written inline, which Renovate doesn't update: cargo (cargo-hack@0.6.0), \
+             cargo (cargo-nextest@0.9.0), cargo (cargo-a@=1.0.0), cargo (cargo-b@=1.0.0), cargo (--version ~2.1), \
+             deny (cargo-deny@0.20.2), deny (cargo-hack@0.6.0), deny (cargo-nextest@0.9.0), hooks (prek@0.5.10), \
              hooks (copier==9.19.1), hooks (jinja2-time==0.2.0), hooks (ruff[extra]@0.14.0), hooks (zizmor@1.0), \
              options (black@24.1.0), options (zizmor@1.1), options (mypy==1.0), options (pytest-cov==6.0), \
              options (hypothesis==6.0), options (copier==9.19.1), options (jinja2-time==0.2.0) \
              (pin each in a _VERSION variable under a # renovate: comment)"
         );
+    }
+
+    #[test]
+    fn cargo_install_pins_follow_cargo_options() {
+        for (command, pins) in [
+            (
+                "cargo -q --color never install cargo-hack@0.6.0",
+                vec!["cargo-hack@0.6.0"],
+            ),
+            (
+                "cargo +nightly --locked install x --version 1.0",
+                vec!["x@1.0"],
+            ),
+            (
+                "cargo install cargo-hack@~0.6 x@=1.0.0 y@$Y z@latest",
+                vec!["cargo-hack@~0.6", "x@=1.0.0"],
+            ),
+            (
+                "cargo install --target x86_64-unknown-linux-musl --bin rg -F pcre2 -j 2 ripgrep --version 14.0.0",
+                vec!["ripgrep@14.0.0"],
+            ),
+            (
+                "cargo install --git https://github.com/x/y --example e --version 1.0",
+                vec!["--version 1.0"],
+            ),
+            ("cargo --config x=1 build", vec![]),
+        ] {
+            let words: Vec<&str> = command.split_whitespace().collect();
+            assert_eq!(cargo_install_pins(&words), pins, "{command}");
+        }
     }
 
     #[test]
