@@ -47,5 +47,5 @@ pub(crate) use rust_toolchain::RustToolchain;
 pub(crate) use tsconfig::{TsCompilerOptions, TsConfig};
 pub(crate) use workflow::{
     Command, FormatterRun, GATE_JOB, Workflow, WorkflowJob, WorkflowStep, commands, is_program,
-    program_args, program_name,
+    program_args, program_name, runs_program,
 };

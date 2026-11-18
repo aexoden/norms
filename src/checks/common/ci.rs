@@ -1172,11 +1172,14 @@ fn tool_versions(workflow: &Workflow) -> Result<(), String> {
     }
 }
 
-/// `tombi format --check` in a CI script, which fails on unformatted files instead of rewriting them.
-static TOMBI_FORMAT_CHECK: LazyLock<Regex> = LazyLock::new(|| {
-    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
-    Regex::new(r"(?m)\btombi\s+format\b[^\n]*\s--check\b").unwrap()
-});
+/// Whether a command's words run `tombi format` with `--check`, which fails on unformatted files instead of rewriting
+/// them.
+fn tombi_format_checks(words: &[&str]) -> bool {
+    words.iter().enumerate().any(|(index, word)| {
+        is_program(word, "tombi")
+            && matches!(words.get(index + 1..), Some(["format", args @ ..]) if args.contains(&"--check"))
+    })
+}
 
 pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
     let workflows_dir = ctx.path().join(".github/workflows");
@@ -1279,7 +1282,7 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
     report.must(
         "ci-tombi",
         "CI: TOML formatting",
-        workflow.runs_matching(&TOMBI_FORMAT_CHECK),
+        workflow.runs(tombi_format_checks),
     );
     report.check("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
     report.check(
@@ -2381,20 +2384,28 @@ jobs:
 
     #[test]
     fn tombi_format_must_check() {
+        let runs = |line: &str| {
+            commands(line)
+                .iter()
+                .any(|command| tombi_format_checks(&command.words()))
+        };
         for run in [
             "tombi format --check",
             "tombi format --check --diagnostics-format github",
             "uvx tombi format . --check",
         ] {
-            assert!(TOMBI_FORMAT_CHECK.is_match(run), "{run}");
+            assert!(runs(run), "{run}");
         }
         for run in [
             "tombi format",
-            "tombi format\necho --check",
+            "tombi format && echo --check",
             "tombi lint --check",
             "tombi format --checked",
+            "echo 'tombi format --check'",
+            "tombi format # --check",
+            "uvx --check tombi format",
         ] {
-            assert!(!TOMBI_FORMAT_CHECK.is_match(run), "{run}");
+            assert!(!runs(run), "{run}");
         }
     }
 

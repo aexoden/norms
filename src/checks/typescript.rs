@@ -10,7 +10,7 @@ use regex::Regex;
 
 use crate::config::{
     Command, FormatterRun, PackageJson, PrekConfig, PrekHook, TsCompilerOptions, TsConfig,
-    Workflow, check_dev_engine, commands, program_args,
+    Workflow, check_dev_engine, commands, program_args, runs_program,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::models::Language;
@@ -991,14 +991,14 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
 // CI integration
 //
 
-/// A Vite build in a CI script: `vite build`, directly or through `pnpm exec`, or the `build` script, which runs it
-/// after `tsc -b`. CI sets the job's working directory for a component in a subdirectory, so pnpm options before the
-/// script, such as `--dir`, aren't recognized.
-static VITE_BUILD: LazyLock<Regex> = LazyLock::new(|| {
-    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
-    Regex::new(r"(?m)(?:^|[^\w-])(?:vite[ \t]+build|pnpm[ \t]+(?:run[ \t]+)?build)(?:$|[^\w:-])")
-        .unwrap()
-});
+/// Whether a command's words run a Vite build: `vite build`, directly or through `pnpm exec`, or the `build` script,
+/// which runs it after `tsc -b`. CI sets the job's working directory for a component in a subdirectory, so pnpm options
+/// before the script, such as `--dir`, aren't recognized.
+fn vite_build(words: &[&str]) -> bool {
+    runs_program(words, "vite", &["build"])
+        || runs_program(words, "pnpm", &["build"])
+        || runs_program(words, "pnpm", &["run", "build"])
+}
 
 pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(workflow) = ctx.ci_workflow() else {
@@ -1044,7 +1044,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "typescript-ci-vite-build",
         "TypeScript CI: Vite build",
-        workflow.runs_matching(&VITE_BUILD),
+        workflow.runs(vite_build),
     );
 }
 
@@ -1618,22 +1618,29 @@ mod tests {
 
     #[test]
     fn vite_build_runs_vite_or_the_build_script() {
-        for run in [
+        let runs = |line: &str| {
+            commands(line)
+                .iter()
+                .any(|command| vite_build(&command.words()))
+        };
+        for line in [
             "pnpm exec vite build",
             "vite build --mode production",
             "pnpm run build",
-            "pnpm build\npnpm exec vitest run",
+            "pnpm install && pnpm build",
+            "npx vite@7.1.0 build",
         ] {
-            assert!(VITE_BUILD.is_match(run), "{run}");
+            assert!(runs(line), "{line}");
         }
-        for run in [
+        for line in [
             "pnpm run build:docs",
             "pnpm build-storybook",
             "vite preview",
             "pnpm exec vite",
-            "pnpm exec vite\nbuild",
+            "echo 'vite build'",
+            "pnpm install # then pnpm build",
         ] {
-            assert!(!VITE_BUILD.is_match(run), "{run}");
+            assert!(!runs(line), "{line}");
         }
     }
 

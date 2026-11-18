@@ -11,7 +11,6 @@ use github_actions_expressions::context::Context;
 use github_actions_expressions::literal::Literal;
 use github_actions_expressions::op::{BinExpr, BinOp};
 use github_actions_expressions::{Expr, SpannedExpr};
-use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -542,7 +541,7 @@ impl Workflow {
     }
 
     /// Every step's `run` script.
-    pub(crate) fn run_scripts(&self) -> impl Iterator<Item = &str> {
+    fn run_scripts(&self) -> impl Iterator<Item = &str> {
         self.steps().filter_map(|step| step.run.as_deref())
     }
 
@@ -658,12 +657,6 @@ impl Workflow {
         };
         let args: Vec<_> = parts.collect();
         self.runs(|words| runs_program(words, program, &args))
-    }
-
-    /// Whether any step's `run` script matches `pattern`, for a command that a plain substring would confuse with
-    /// another, such as `reuse lint` and `reuse lint-file`.
-    pub(crate) fn runs_matching(&self, pattern: &Regex) -> bool {
-        self.run_scripts().any(|run| pattern.is_match(run))
     }
 
     /// Whether any step uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
@@ -1164,13 +1157,6 @@ jobs:
             "./.github/actions/rustfmt",
             "actions-rust-lang/rustfmt"
         ));
-    }
-
-    #[test]
-    fn matches_commands_by_pattern() {
-        let workflow = workflow();
-        assert!(workflow.runs_matching(&Regex::new(r"(?m)^\s*cargo test\b").unwrap()));
-        assert!(!workflow.runs_matching(&Regex::new(r"\bcargo fmt\b").unwrap()));
     }
 
     #[test]
