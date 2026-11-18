@@ -35,8 +35,8 @@ re-renders them, as `AGENTS.md` describes.
 - `devbox` has a services-only `devbox.json` beside a stub marker file for each
   language.
 - `invalid-ci` has a malformed `ci.yaml` beside a stub `Cargo.toml`, with a
-  malformed and a valid workflow beside it and files that aren't workflows,
-  which norms skips.
+  malformed workflow named `.yml` and a valid one beside it, and files that
+  aren't workflows, which norms skips.
 - `components` has stub markers laid out to exercise detection: a Cargo
   workspace member and a nested pnpm package to fold, two TypeScript
   components, a Python one, and markers under `node_modules/`, a hidden

@@ -7,6 +7,9 @@
 
 _subdirectory: template
 _min_copier_version: "9.10"
+# Copier's default name, which `copier update` looks for unless given `-a`. It
+# can become .copier-answers.yaml once Copier finds that name too
+# (copier-org/copier#2196).
 _answers_file: .copier-answers.yml
 
 # Each component gets its lock file when it first appears, whether on copy or on

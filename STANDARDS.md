@@ -90,8 +90,9 @@ reason = "The repository holds no binary files."
   the scripts, which belong in the root's alone.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search
-  them. An entry must be a plain relative path, without `.` or `..`; one that
-  names no directory is reported as a warning.
+  them for components or for `.yml` files (see [YAML Files](#yaml-files)). An
+  entry must be a plain relative path, without `.` or `..`; one that names no
+  directory is reported as a warning.
 - Each `[[waivers]]` entry names a check by its ID and gives the reason for the
   exception. A waived check is reported as skipped, with the reason, instead of
   failing or warning; a check that inspects several files or components is
@@ -197,6 +198,22 @@ Additional project-specific options can be included if required.
 every file, YAML, JSON and TOML files, and, with TypeScript, `.prettierrc`,
 whichever sections set them, so other sections may change them for other
 files.
+
+## YAML Files
+
+YAML files use the `.yaml` extension. The exceptions are files whose tools
+document only a `.yml` name:
+
+- `.copier-answers.yml`, Copier's answers file, which `copier update` finds by
+  that name unless given another on every run.
+- `.github/FUNDING.yml` and `.github/ISSUE_TEMPLATE/config.yml`, GitHub's
+  sponsor button and issue template chooser configuration, whose documentation
+  names no other. The issue templates themselves take `.yaml`.
+
+`norms verify` warns about any other `.yml` file in the project, searching
+hidden directories such as `.github/` too, but not what the project's
+`.gitignore` files exclude, `node_modules`, `target`, `.venv`, or the
+directories `[components] exclude` lists.
 
 ## Documentation
 

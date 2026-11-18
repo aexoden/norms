@@ -23,6 +23,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_gitignore(ctx, report);
     common::check_gitattributes(ctx, report);
     common::check_editorconfig(ctx, report);
+    common::check_yaml_extension(ctx, report);
     common::check_markdownlint(ctx, report);
     common::check_devbox(ctx, report);
     common::check_prek(ctx, report);
@@ -723,6 +724,54 @@ mod tests {
             needed.as_slice(),
             [r] if r.status == Status::Warn && r.message == "The check passes without it"
         ));
+    }
+
+    #[test]
+    fn yml_files_are_reported_but_forced_names() {
+        let project = TempProject::new(None);
+        for dir in [
+            ".github/workflows",
+            ".github/ISSUE_TEMPLATE",
+            "docs/.github",
+            "docs/template",
+        ] {
+            fs::create_dir_all(project.path().join(dir)).unwrap();
+        }
+        for file in [
+            ".copier-answers.yml",
+            "docs/template/.copier-answers.yml",
+            ".github/FUNDING.yml",
+            ".github/ISSUE_TEMPLATE/config.yml",
+            "docs/mkdocs.yaml",
+        ] {
+            fs::write(project.path().join(file), "{}\n").unwrap();
+        }
+        let extension = |temp: &TempProject| -> Vec<(Status, String)> {
+            find(&temp.verify(), "yaml-extension")
+                .into_iter()
+                .map(|r| (r.status, r.message.clone()))
+                .collect()
+        };
+        assert_eq!(extension(&project), [(Status::Pass, String::new())]);
+
+        // GitHub's files keep their names only where GitHub reads them.
+        fs::write(project.path().join("docs/.github/FUNDING.yml"), "{}\n").unwrap();
+        fs::write(
+            project.path().join(".github/ISSUE_TEMPLATE/bug.yml"),
+            "{}\n",
+        )
+        .unwrap();
+        fs::write(project.path().join(".github/dependabot.yml"), "{}\n").unwrap();
+        fs::write(project.path().join(".github/workflows/ci.yml"), "{}\n").unwrap();
+        assert_eq!(
+            extension(&project),
+            [(
+                Status::Warn,
+                "Rename to .yaml: .github/ISSUE_TEMPLATE/bug.yml, .github/dependabot.yml, .github/workflows/ci.yml, \
+                 docs/.github/FUNDING.yml"
+                    .to_owned()
+            )]
+        );
     }
 
     #[test]

@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   component's own `package.json` is checked: each must parse, carry the
   release's version, use ESM, be private, pin its dependencies exactly, and
   leave out Corepack's `packageManager`. Fix or waive what each package reports.
+- Warn about YAML files named `.yml`, anywhere in the project but `.git`,
+  `node_modules`, `target`, `.venv` and the directories `.gitignore` or
+  `[components] exclude` leave out. Rename them to
+  `.yaml`; `.copier-answers.yml`, `.github/FUNDING.yml` and
+  `.github/ISSUE_TEMPLATE/config.yml` keep their names, the only ones Copier
+  and GitHub document for them.
 - Warn about Prettier configuration in a TypeScript component's subdirectories,
   such as a `.prettierrc` there or a `prettier` key in a workspace package's
   `package.json`, which takes the place of the component's `.prettierrc` for the

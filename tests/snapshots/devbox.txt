@@ -17,6 +17,7 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
+pass  yaml-extension  YAML files use .yaml
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
 pass  devbox-exists  devbox.json: exists

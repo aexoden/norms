@@ -180,7 +180,7 @@ fn ignore_matcher(root: &Path, errors: &mut Vec<String>) -> Gitignore {
 }
 
 /// `path` with its components joined by `/`.
-fn slashed(path: &Path) -> String {
+pub(crate) fn slashed(path: &Path) -> String {
     path.iter()
         .map(|part| part.to_string_lossy())
         .collect::<Vec<_>>()

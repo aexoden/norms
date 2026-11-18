@@ -45,6 +45,49 @@ const MARKDOWNLINT_CONFIGS: &[&str] = &[
 /// skipped. Like component detection, it doesn't descend into symlinked directories. A directory that can't be read is
 /// left out.
 pub(crate) fn find_markdownlint_configs(root: &Path) -> Vec<PathBuf> {
+    find_committed_files(
+        root,
+        |_| false,
+        |entry| {
+            MARKDOWNLINT_CONFIGS
+                .iter()
+                .any(|&name| entry.file_name() == name)
+        },
+    )
+}
+
+/// Find the project's files with the `.yml` extension, by their paths relative to the root, in a stable order.
+///
+/// The search covers what the project's own `.gitignore` files leave in, hidden directories such as `.github/`
+/// included, untracked files too: it skips `.git`, the directories in [`SKIPPED_DIRS`], and the `excluded` paths
+/// (relative to the root). Like component detection, it doesn't descend into symlinked directories. A directory that
+/// can't be read is left out.
+pub(crate) fn find_yml_files(root: &Path, excluded: &[PathBuf]) -> Vec<PathBuf> {
+    let filter_root = root.to_path_buf();
+    let excluded = excluded.to_vec();
+
+    find_committed_files(
+        root,
+        move |entry| is_skipped(entry, &filter_root, &excluded),
+        |entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "yml")
+        },
+    )
+}
+
+/// Find the files below `root` that `matches` accepts, by their paths relative to the root, in a stable order.
+///
+/// The search covers what the project's own `.gitignore` files leave in, hidden directories included, and skips `.git`
+/// and the entries `skip` rejects, with everything inside them. Like component detection, it doesn't descend into
+/// symlinked directories. A directory that can't be read is left out.
+fn find_committed_files(
+    root: &Path,
+    skip: impl Fn(&DirEntry) -> bool + Send + Sync + 'static,
+    matches: impl Fn(&DirEntry) -> bool,
+) -> Vec<PathBuf> {
     let walker = WalkBuilder::new(root)
         .hidden(false)
         .ignore(false)
@@ -53,23 +96,24 @@ pub(crate) fn find_markdownlint_configs(root: &Path) -> Vec<PathBuf> {
         .git_exclude(false)
         .require_git(false)
         .follow_links(false)
-        .filter_entry(|entry| !(entry.depth() > 0 && entry.file_name() == ".git"))
+        .filter_entry(move |entry| {
+            let is_git = entry.depth() > 0 && entry.file_name() == ".git";
+            !is_git && !skip(entry)
+        })
         .build();
 
-    let mut configs: Vec<PathBuf> = walker
+    let mut files: Vec<PathBuf> = walker
         .filter_map(Result::ok)
         .filter(|entry| {
-            MARKDOWNLINT_CONFIGS
-                .iter()
-                .any(|&name| entry.file_name() == name)
+            matches(entry)
                 && entry
                     .file_type()
                     .is_some_and(|file_type| !file_type.is_dir())
         })
         .filter_map(|entry| Some(entry.path().strip_prefix(root).ok()?.to_path_buf()))
         .collect();
-    configs.sort();
-    configs
+    files.sort();
+    files
 }
 
 /// The result of searching a project for its components.
@@ -301,6 +345,40 @@ mod tests {
                 "docs/.markdownlint-cli2.yaml",
                 "docs/api/.markdownlint.jsonc",
                 "node_modules/pkg/.markdownlint.json"
+            ]
+        );
+    }
+
+    #[test]
+    fn finds_yml_files_in_every_committed_directory() {
+        let dir = project(&[
+            "mkdocs.yml",
+            "compose.yaml",
+            ".copier-answers.yml",
+            ".github/dependabot.yml",
+            ".github/workflows/ci.yml",
+            "docs/yml",
+            "docs/notes.yml.md",
+            "node_modules/pkg/config.yml",
+            "target/out.yml",
+            "build/out.yml",
+            "tests/fixtures/ci.yml",
+            ".git/config.yml",
+        ]);
+        fs::create_dir_all(dir.path().join("dir.yml")).unwrap();
+        fs::write(dir.path().join(".gitignore"), "/build/\n").unwrap();
+
+        let found: Vec<_> = find_yml_files(dir.path(), &[PathBuf::from("tests/fixtures")])
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            found,
+            [
+                ".copier-answers.yml",
+                ".github/dependabot.yml",
+                ".github/workflows/ci.yml",
+                "mkdocs.yml"
             ]
         );
     }

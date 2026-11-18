@@ -137,6 +137,7 @@ pub(crate) struct ProjectContext {
     claude_md: OnceLock<ConfigStatus<String>>,
     workflows: OnceLock<BTreeMap<String, ConfigStatus<Workflow>>>,
     markdownlint_configs: OnceLock<Vec<PathBuf>>,
+    yml_files: OnceLock<Vec<PathBuf>>,
     release_tags: OnceLock<Vec<String>>,
     release: OnceLock<Release>,
 }
@@ -162,6 +163,7 @@ impl ProjectContext {
             claude_md: OnceLock::new(),
             workflows: OnceLock::new(),
             markdownlint_configs: OnceLock::new(),
+            yml_files: OnceLock::new(),
             release_tags: OnceLock::new(),
             release: OnceLock::new(),
         }
@@ -262,6 +264,21 @@ impl ProjectContext {
     pub(crate) fn markdownlint_configs(&self) -> &[PathBuf] {
         self.markdownlint_configs
             .get_or_init(|| crate::detection::find_markdownlint_configs(&self.path))
+    }
+
+    /// The project's files with the `.yml` extension (cached), by their paths relative to the root. See
+    /// [`crate::detection::find_yml_files`].
+    ///
+    /// The directories `norms.toml` excludes aren't searched; if `norms.toml` is malformed, none are excluded.
+    pub(crate) fn yml_files(&self) -> &[PathBuf] {
+        self.yml_files.get_or_init(|| {
+            let excluded = self
+                .norms()
+                .as_ref_ok()
+                .map_or_default(NormsConfig::excluded_paths);
+
+            crate::detection::find_yml_files(&self.path, &excluded)
+        })
     }
 
     /// Parsed `norms.toml` (cached).

@@ -17,6 +17,8 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
+warn  yaml-extension  YAML files use .yaml
+      Rename to .yaml: .github/workflows/audit.yml
 fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
       File not found
 fail  prek-config-exists  prek.toml: exists

@@ -16,6 +16,7 @@ use crate::config::{
 };
 use crate::context::{ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG, ProjectContext};
 use crate::models::Language;
+use crate::prettier_configs::slashed;
 use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
@@ -615,6 +616,45 @@ fn devbox_toolchains(config: &DevboxConfig) -> Result<(), String> {
 }
 
 //
+// YAML
+//
+
+/// Copier's answers file, which `copier update` finds by this name unless told another. It keeps the name in any
+/// directory, since a project may be rendered into a subdirectory.
+const COPIER_ANSWERS_FILE: &str = ".copier-answers.yml";
+
+/// GitHub's configuration files that it documents by these names and paths alone: the sponsor button's and the issue
+/// template chooser's.
+const GITHUB_YML_FILES: [&str; 2] = [".github/FUNDING.yml", ".github/ISSUE_TEMPLATE/config.yml"];
+
+/// Check that YAML files use the `.yaml` extension, except the files whose tools document only a `.yml` name:
+/// [`COPIER_ANSWERS_FILE`] and [`GITHUB_YML_FILES`].
+pub(crate) fn check_yaml_extension(ctx: &ProjectContext, report: &mut Report) {
+    let others: Vec<String> = ctx
+        .yml_files()
+        .iter()
+        .filter(|path| {
+            !GITHUB_YML_FILES
+                .iter()
+                .any(|&file| path.as_path() == Path::new(file))
+                && path
+                    .file_name()
+                    .is_none_or(|name| name != COPIER_ANSWERS_FILE)
+        })
+        .map(|path| slashed(path))
+        .collect();
+    report.should(
+        "yaml-extension",
+        "YAML files use .yaml",
+        if others.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("Rename to .yaml: {}", others.join(", ")))
+        },
+    );
+}
+
+//
 // Markdown
 //
 
@@ -666,12 +706,7 @@ fn other_markdownlint_configs(
         // A config applies to the Markdown files of its directory, whether or not `ignores` matches the config itself, so
         // it counts unless a Markdown file beside it would be ignored.
         .filter(|path| !ignores.is_match(path.with_file_name("file.md")))
-        .map(|path| {
-            path.iter()
-                .map(|part| part.to_string_lossy())
-                .collect::<Vec<_>>()
-                .join("/")
-        })
+        .map(|path| slashed(path))
         .collect();
     if others.is_empty() {
         Ok(())

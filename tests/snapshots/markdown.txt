@@ -18,6 +18,7 @@ fail  gitattributes-exists  .gitattributes: exists
       File not found
 fail  editorconfig-exists  .editorconfig: exists
       File not found
+pass  yaml-extension  YAML files use .yaml
 pass  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
 pass  markdownlint-cli2-valid  .markdownlint-cli2.jsonc: valid
 warn  markdownlint-cli2-rules  .markdownlint-cli2.jsonc: every default rule enabled
