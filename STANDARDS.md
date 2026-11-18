@@ -1619,7 +1619,11 @@ ES2022.
 #### Formatting and Linting
 
 Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc`,
-along with a `.prettierignore`. The `.prettierrc` is:
+along with a `.prettierignore`. Prettier reads the ignore files of only the
+directory it runs in, so a component in a subdirectory, which the root
+`.gitignore` doesn't reach, lists its build output (`dist/`) and any coverage
+report written to files (`coverage/`) in its `.prettierignore`. The
+`.prettierrc` is:
 
 ```json
 {

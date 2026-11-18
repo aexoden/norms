@@ -2,7 +2,12 @@
 # SPDX-FileCopyrightText: {{ copyright_year }} {{ author_name }} <{{ author_email }}>
 
 pnpm-lock.yaml
-{%- if not typescript_prefix %}
+{%- if typescript_prefix %}
+
+# Ignored by the root .gitignore, which Prettier doesn't read here
+coverage/
+dist/
+{%- else %}
 
 # Files formatted by other tools
 .copier-answers.yml

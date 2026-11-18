@@ -98,6 +98,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recognize Cargo commands that pass global options before the subcommand,
   such as `cargo --locked test` or `cargo -C rust clippy`, in the Rust hook and
   CI checks.
+- List `coverage/` and `dist/` in the `.prettierignore` of the template's
+  TypeScript component in a subdirectory, since Prettier, run there, doesn't
+  read the root `.gitignore`. The `prettier` hook no longer fails after a
+  `vite build`.
 
 ## [0.2.0] - 2026-11-10
 

@@ -2,3 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 pnpm-lock.yaml
+
+# Ignored by the root .gitignore, which Prettier doesn't read here
+coverage/
+dist/
