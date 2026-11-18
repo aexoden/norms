@@ -13,9 +13,11 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      CROSS_VERSION: "0.2.5"
     steps:
       - name: Build
-        run: echo build
+        run: cargo install cross --locked --version "$CROSS_VERSION"
 
   publish:
     name: Publish

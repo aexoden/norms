@@ -61,6 +61,7 @@ warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: prek, reuse
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
+pass  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
 fail  ci-reuse  CI: REUSE compliance
       No step uses fsfe/reuse-action
 fail  ci-markdownlint  CI: Markdown linting (every file)

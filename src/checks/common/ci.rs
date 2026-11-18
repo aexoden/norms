@@ -5,14 +5,15 @@
 //! concurrency, uv pins, runners and the gate job.
 
 use std::borrow::Cow;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 use regex::Regex;
 use serde_json::Value;
 
 use crate::config::{
-    GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program, program_name,
+    GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program, program_args,
+    program_name,
 };
 use crate::context::{
     AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, PR_TITLE_WORKFLOW, ProjectContext,
@@ -85,6 +86,13 @@ static PREK_TOOL_PIN: LazyLock<Regex> = LazyLock::new(|| {
 
 /// The action that installs prek in CI, as it does cargo-llvm-cov.
 const INSTALL_ACTION: &str = "taiki-e/install-action";
+
+/// The tools of [`INSTALL_ACTION`]'s `tool` input, which separates them with commas or whitespace.
+fn install_action_tools(tools: &str) -> impl Iterator<Item = &str> {
+    tools
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .filter(|tool| !tool.is_empty())
+}
 
 /// Whether a word of a shell command pins prek to a version.
 fn is_prek_pin(word: &str) -> bool {
@@ -689,6 +697,147 @@ fn setup_uv_exact(workflow: &Workflow) -> Option<Result<(), String>> {
     })
 }
 
+//
+// Tool versions
+//
+
+/// What the shared preset's `customManagers:githubActionsVersions` updates, as Renovate's own pattern matches it: a
+/// `# renovate:` comment naming a datasource and package, with only these optional fields and in this order, then after
+/// whitespace a variable whose name ends in `_VERSION`, captured.
+static RENOVATE_VERSION_VARIABLE: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(
+        r"# renovate: datasource=[a-zA-Z0-9\-._]+? depName=\S+?(?: (?:lookupName|packageName)=\S+?)?(?: versioning=\S+?)?(?: extractVersion=\S+?)?(?: registryUrl=\S+?)?\s+([A-Za-z0-9_]+?_VERSION)\s*:",
+    )
+    .unwrap()
+});
+
+/// A package pinned to a version written out, as [`INSTALL_ACTION`]'s `tool` input takes it (`name@1.2.3`) or as uv
+/// does (`name@1.2.3`, or `name==1.2.3`, perhaps with extras). A version from a variable or expression doesn't match.
+static LITERAL_PIN: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._\-]*(?:\[[^\]]*\])?(?:@|==)[0-9]").unwrap()
+});
+
+/// The arguments of a command that runs a tool through uv, `uvx` or `uv tool run` or installs one with `uv tool
+/// install`, or `None` for any other command.
+fn uv_tool_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
+    program_args(words, "uvx").or_else(|| match program_args(words, "uv")? {
+        ["tool", "run" | "install", args @ ..] => Some(args),
+        _ => None,
+    })
+}
+
+/// The package specifications among a uv command's arguments, `args`, with any quotes around them removed: the values
+/// of its `--from` and `--with` (`-w`) options, whose comma-separated packages are each one, and the tool, its first
+/// argument that starts with a letter and isn't an option's value. The tool's own arguments, and a shell comment, are
+/// left out.
+fn uv_package_specs<'a>(args: &[&'a str]) -> Vec<&'a str> {
+    let mut specs = Vec::new();
+    let mut words = args.iter().map(|word| word.trim_matches(['"', '\'']));
+    while let Some(word) = words.next() {
+        if word.starts_with('#') {
+            break;
+        }
+        if let Some(option) = word.strip_prefix('-') {
+            let value = match option.split_once('=') {
+                Some((name, value)) => matches!(name, "-from" | "-with" | "w").then_some(value),
+                None if matches!(option, "-from" | "-with" | "w") => words.next(),
+                None => None,
+            };
+            specs.extend(value.into_iter().flat_map(|value| value.split(',')));
+        } else if word.starts_with(|c: char| c.is_ascii_alphabetic()) {
+            specs.push(word);
+            break;
+        }
+    }
+    specs
+}
+
+/// Whether an `env` value is a version written out, rather than empty or given by an expression.
+fn is_literal_value(value: &Value) -> bool {
+    match value {
+        Value::String(value) => !value.is_empty() && !value.contains("${{"),
+        Value::Number(_) => true,
+        Value::Null | Value::Bool(_) | Value::Array(_) | Value::Object(_) => false,
+    }
+}
+
+/// Check that Renovate can update every tool version `workflow` pins where no manager of its own reads it: no version is
+/// written inline, in [`INSTALL_ACTION`]'s `tool` input or a uv command, and every environment variable whose name
+/// ends in `_VERSION` and whose value is written out has a `# renovate:` comment above it, as
+/// [`RENOVATE_VERSION_VARIABLE`] finds one. A variable set in several places needs a comment above each.
+fn tool_versions(workflow: &Workflow) -> Result<(), String> {
+    let mut inline: Vec<String> = Vec::new();
+    let mut add = |id: &str, spec: &str| {
+        let pin = format!("{id} ({spec})");
+        if !inline.contains(&pin) {
+            inline.push(pin);
+        }
+    };
+    for (id, job) in &workflow.jobs {
+        for tools in job
+            .steps_using(INSTALL_ACTION)
+            .filter_map(|step| step.input("tool"))
+        {
+            for tool in install_action_tools(&tools).filter(|tool| LITERAL_PIN.is_match(tool)) {
+                add(id, tool);
+            }
+        }
+        for line in job.run_lines() {
+            for words in commands(&line) {
+                for spec in uv_tool_args(&words)
+                    .map_or_else(Vec::new, uv_package_specs)
+                    .into_iter()
+                    .filter(|spec| LITERAL_PIN.is_match(spec))
+                {
+                    add(id, spec);
+                }
+            }
+        }
+    }
+
+    // Each comment Renovate finds updates one variable, so a name set in several places needs as many.
+    let mut comments: BTreeMap<&str, usize> = BTreeMap::new();
+    for name in RENOVATE_VERSION_VARIABLE
+        .captures_iter(&workflow.source)
+        .filter_map(|captures| captures.get(1))
+    {
+        *comments.entry(name.as_str()).or_default() += 1;
+    }
+    let mut uncommented: BTreeSet<&str> = BTreeSet::new();
+    for (name, _) in workflow.env_maps().flatten().filter(|(name, value)| {
+        name.len() > "_VERSION".len() && name.ends_with("_VERSION") && is_literal_value(value)
+    }) {
+        match comments.get_mut(name.as_str()) {
+            Some(count) if *count > 0 => *count -= 1,
+            _ => {
+                uncommented.insert(name);
+            }
+        }
+    }
+
+    let mut problems = Vec::new();
+    if !inline.is_empty() {
+        problems.push(format!(
+            "Versions written inline, which Renovate doesn't update: {} (pin each in a _VERSION variable under a \
+             # renovate: comment)",
+            inline.join(", ")
+        ));
+    }
+    if !uncommented.is_empty() {
+        problems.push(format!(
+            "No # renovate: comment, so Renovate doesn't update: {}",
+            uncommented.into_iter().collect::<Vec<_>>().join(", ")
+        ));
+    }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(problems.join("; "))
+    }
+}
+
 /// `tombi format --check` in a CI script, which fails on unformatted files instead of rewriting them.
 static TOMBI_FORMAT_CHECK: LazyLock<Regex> = LazyLock::new(|| {
     #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
@@ -773,6 +922,11 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
                 exact,
             );
         }
+        report.should(
+            "workflow-tool-versions",
+            format!("CI: {name}: Renovate can update every tool version"),
+            tool_versions(workflow),
+        );
     }
 
     if let ConfigStatus::Ok(workflow) = ctx.ci_workflow() {
@@ -1906,5 +2060,110 @@ jobs:
         ] {
             assert!(!TOMBI_FORMAT_CHECK.is_match(run), "{run}");
         }
+    }
+
+    fn tool_versions_of(yaml: &str) -> Result<(), String> {
+        tool_versions(&Workflow::parse(yaml.to_owned()).unwrap())
+    }
+
+    #[test]
+    fn tool_versions_pinned_in_commented_variables_pass() {
+        assert_eq!(
+            tool_versions_of(
+                "
+env:
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: \"0.5.10\"
+  # renovate: datasource=github-releases depName=x/y packageName=x/z versioning=semver extractVersion=^v(?<version>.*)$
+  Y_VERSION: 1.2.3
+  RUST_VERSION: ${{ vars.RUST }}
+  EMPTY_VERSION: ''
+  VERSION: 1.0.0
+  NOT_A_VERSION_FILE: 1.0.0
+jobs:
+  test:
+    env:
+      # renovate: datasource=crate depName=cargo-llvm-cov
+
+      CARGO_LLVM_COV_VERSION: 0.9.1
+    steps:
+      - uses: taiki-e/install-action@abc # v2.90.5
+        with:
+          tool: prek@${{ env.PREK_VERSION }}, cargo-llvm-cov@${{ env.CARGO_LLVM_COV_VERSION }}, just
+      - run: |
+          uvx \"prek@$PREK_VERSION\" run --all-files
+          uvx --python 3.14 --from \"copier==$COPIER\" copier copy . out
+          echo uvx-like@1.0.0 && pip install ruff==0.1.0
+          uvx copier copy --data dep==1.2 gh:x/y@1.0 out
+          uvx --with=\"jinja2-time\" -p python3.14 prek run  # was prek@0.5.10
+"
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn tool_versions_written_inline_warn() {
+        let result = tool_versions_of(
+            "
+jobs:
+  deny:
+    steps:
+      - uses: taiki-e/install-action@abc
+        with:
+          tool: cargo-deny@0.20.2,prek@${{ env.PREK_VERSION }}
+      - uses: taiki-e/install-action@abc
+        with:
+          tool: |
+            just cargo-hack@0.6.0
+            cargo-nextest@0.9.0
+  hooks:
+    steps:
+      - run: >-
+          uvx 'prek@0.5.10' run -a &&
+          uvx --from=copier==9.19.1 --with jinja2-time==0.2.0,plumbum copier copy . out
+      - run: uv tool install ruff[extra]@0.14.0 && uv tool run zizmor@1.0 . && uv run pytest==8
+      - run: uvx --from=copier==9.19.1 copier --version
+",
+        )
+        .unwrap_err();
+        assert_eq!(
+            result,
+            "Versions written inline, which Renovate doesn't update: deny (cargo-deny@0.20.2), deny (cargo-hack@0.6.0), \
+             deny (cargo-nextest@0.9.0), hooks (prek@0.5.10), \
+             hooks (copier==9.19.1), hooks (jinja2-time==0.2.0), hooks (ruff[extra]@0.14.0), hooks (zizmor@1.0) \
+             (pin each in a _VERSION variable under a # renovate: comment)"
+        );
+    }
+
+    #[test]
+    fn tool_versions_without_a_renovate_comment_warn() {
+        let result = tool_versions_of(
+            "
+env:
+  # renovate: datasource=pypi depName=prek
+  PREK_VERSION: 0.5.10
+  # A comment of another kind.
+  COPIER_VERSION: 9.19.1
+  # renovate: datasource=pypi depName=x unknownField=y
+  X_VERSION: 1.0.0
+  # renovate: depName=y datasource=pypi
+  Y_VERSION: 1.0.0
+jobs:
+  test:
+    steps:
+      - run: true
+        env:
+          NODE_VERSION: 24
+          # A job's own value needs a comment of its own.
+          PREK_VERSION: 0.5.9
+",
+        )
+        .unwrap_err();
+        assert_eq!(
+            result,
+            "No # renovate: comment, so Renovate doesn't update: COPIER_VERSION, NODE_VERSION, PREK_VERSION, X_VERSION, \
+             Y_VERSION"
+        );
     }
 }

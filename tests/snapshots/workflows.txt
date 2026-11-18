@@ -61,15 +61,22 @@ pass  audit-yaml-dispatch  CI: audit.yaml: runs on manual dispatch (workflow_dis
 pass  workflow-valid  CI: release.yaml: valid
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
+pass  workflow-tool-versions  CI: audit.yaml: Renovate can update every tool version
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: zizmor-run
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
+warn  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
+      Versions written inline, which Renovate doesn't update: norms-verify (prek@0.5.10) (pin each in a _VERSION variable under a # renovate: comment)
 pass  workflow-job-timeouts  CI: pr-title.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: pr-title.yaml: concurrency cancels superseded runs
+warn  workflow-tool-versions  CI: pr-title.yaml: Renovate can update every tool version
+      Versions written inline, which Renovate doesn't update: pr-title (prek@0.5.10) (pin each in a _VERSION variable under a # renovate: comment)
 pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
       concurrency doesn't set cancel-in-progress: true
+warn  workflow-tool-versions  CI: release.yaml: Renovate can update every tool version
+      No # renovate: comment, so Renovate doesn't update: CROSS_VERSION
 fail  ci-reuse  CI: REUSE compliance
       No step uses fsfe/reuse-action
 fail  ci-markdownlint  CI: Markdown linting (every file)

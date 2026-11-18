@@ -57,6 +57,7 @@ fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+pass  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
 fail  ci-reuse  CI: REUSE compliance
       No step uses fsfe/reuse-action
 warn  ci-markdownlint  CI: Markdown linting (every file)

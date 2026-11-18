@@ -56,6 +56,8 @@ warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
       No timeout-minutes: eslint, mypy, pnpm-peer-dependencies, prettier, pytest, ruff-check, ruff-format, uv-lock
 warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
+warn  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
+      Versions written inline, which Renovate doesn't update: prek (prek@0.5.10) (pin each in a _VERSION variable under a # renovate: comment)
 fail  ci-reuse  CI: REUSE compliance
       No step uses fsfe/reuse-action
 fail  ci-markdownlint  CI: Markdown linting (every file)

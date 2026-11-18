@@ -62,10 +62,13 @@ pass  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
 pass  audit-yaml-dispatch  CI: audit.yaml: runs on manual dispatch (workflow_dispatch)
 pass  workflow-job-timeouts  CI: audit.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: audit.yaml: concurrency cancels superseded runs
+pass  workflow-tool-versions  CI: audit.yaml: Renovate can update every tool version
 pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
+pass  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
 pass  workflow-job-timeouts  CI: pr-title.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: pr-title.yaml: concurrency cancels superseded runs
+pass  workflow-tool-versions  CI: pr-title.yaml: Renovate can update every tool version
 pass  ci-reuse  CI: REUSE compliance
 pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting

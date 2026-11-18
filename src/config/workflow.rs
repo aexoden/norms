@@ -60,6 +60,9 @@ pub(crate) struct Workflow {
     /// The defaults of every job's steps, such as `run.working-directory`, kept as YAML wrote them.
     pub defaults: Option<Value>,
     pub jobs: BTreeMap<String, WorkflowJob>,
+    /// The file's text, for what parsing drops, such as comments.
+    #[serde(skip)]
+    pub source: String,
 }
 
 /// A single job in a workflow.
@@ -247,6 +250,23 @@ impl WorkflowJob {
 }
 
 impl Workflow {
+    /// Parse a workflow's text, `source`, keeping it.
+    pub(crate) fn parse(source: String) -> Result<Self, String> {
+        let workflow: Self =
+            serde_saphyr::from_str(&source).map_err(|e| format!("Invalid YAML: {e}"))?;
+        Ok(Self { source, ..workflow })
+    }
+
+    /// Every `env` mapping of the workflow: its own, then each job's and each of the job's steps'. An `env` given by an
+    /// expression has no mapping.
+    pub(crate) fn env_maps(&self) -> impl Iterator<Item = &serde_json::Map<String, Value>> {
+        std::iter::once(&self.env)
+            .chain(self.jobs.values().flat_map(|job| {
+                std::iter::once(&job.env).chain(job.steps.iter().map(|step| &step.env))
+            }))
+            .filter_map(|env| env.as_ref()?.as_object())
+    }
+
     fn steps(&self) -> impl Iterator<Item = &WorkflowStep> {
         self.jobs.values().flat_map(|job| &job.steps)
     }

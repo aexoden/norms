@@ -330,7 +330,10 @@ impl ProjectContext {
                 })
                 .map(|entry| {
                     let name = entry.file_name().to_string_lossy().into_owned();
-                    (name, parse_yaml_file::<Workflow>(&entry.path()))
+                    (
+                        name,
+                        read_text_file(&entry.path()).parse_with(Workflow::parse),
+                    )
                 })
                 .collect()
         })
