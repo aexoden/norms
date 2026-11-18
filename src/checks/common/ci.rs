@@ -868,6 +868,86 @@ fn uv_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
     }
 }
 
+/// A package pinned to a version written out, as npm and pnpm take it: `name@1.2.3` or `@scope/name@1.2.3`, perhaps as
+/// a range (`name@^1.2`) or with a `v`. A version from a variable, or a tag such as `latest`, doesn't match.
+static LITERAL_NPM_PIN: LazyLock<Regex> = LazyLock::new(|| {
+    #[expect(clippy::unwrap_used, reason = "the pattern is a valid constant")]
+    Regex::new(r"^(?:@[A-Za-z0-9][A-Za-z0-9._\-~]*/)?[A-Za-z0-9][A-Za-z0-9._\-~]*@[=^~<>]*v?[0-9]")
+        .unwrap()
+});
+
+/// The options of npm and `npx` (`npm exec`) that take the next word as their value (unless given as
+/// `--option=value`): the latter's own, as npm 11's help lists them, and npm's common configuration options.
+const NPX_VALUE_OPTIONS: &[&str] = &[
+    "--cache",
+    "--call",
+    "--loglevel",
+    "--package",
+    "--prefix",
+    "--registry",
+    "--userconfig",
+    "--workspace",
+    "-c",
+    "-p",
+    "-w",
+];
+
+/// The options of `npx` whose values are packages.
+const NPX_PACKAGE_OPTIONS: &[&str] = &["--package", "-p"];
+
+/// The options of pnpm and `pnpm dlx` that take the next word as their value (unless given as `--option=value`), as
+/// pnpm 10's help lists them. pnpm's `-w` and `pnpm dlx`'s `-c` don't take one.
+const PNPM_VALUE_OPTIONS: &[&str] = &[
+    "--allow-build",
+    "--dir",
+    "--filter",
+    "--loglevel",
+    "--package",
+    "--reporter",
+    "-C",
+    "-F",
+];
+
+/// The options of pnpm and `pnpm dlx` whose values are packages.
+const PNPM_PACKAGE_OPTIONS: &[&str] = &["--package"];
+
+/// The package specifications of a command that runs a package through `npx`, `npm exec`, `pnpm dlx` or `pnpx`, as
+/// [`package_specs`] finds them. npm's and pnpm's own options may come before `exec` and `dlx`, with pnpm's `--package`
+/// there too. A command `npx` runs in a shell (`-c`, `--call`) is left out, since its words aren't the command's own.
+fn npm_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
+    let npx = |args: &[&'a str]| {
+        let args = args
+            .split(|word| matches!(*word, "-c" | "--call") || word.starts_with("--call="))
+            .next()
+            .unwrap_or_default();
+        package_specs(args, NPX_VALUE_OPTIONS, NPX_PACKAGE_OPTIONS, true)
+    };
+    if let Some(args) = program_args(words, "npx") {
+        return npx(args);
+    }
+    if let Some(args) = program_args(words, "npm") {
+        return match skip_options(args, NPX_VALUE_OPTIONS) {
+            ["exec" | "x", args @ ..] => npx(args),
+            _ => Vec::new(),
+        };
+    }
+    let pnpm = |args, tool| package_specs(args, PNPM_VALUE_OPTIONS, PNPM_PACKAGE_OPTIONS, tool);
+    if let Some(args) = program_args(words, "pnpx") {
+        return pnpm(args, true);
+    }
+    let Some(args) = program_args(words, "pnpm") else {
+        return Vec::new();
+    };
+    match skip_options(args, PNPM_VALUE_OPTIONS) {
+        ["dlx", dlx_args @ ..] => {
+            let mut specs = pnpm(args, false);
+            specs.extend(pnpm(dlx_args, true));
+            specs
+        }
+        _ => Vec::new(),
+    }
+}
+
 /// The options of Cargo itself, before its command, that take the next word as their value (unless given as
 /// `--option=value`), as Cargo 1.100's help lists them.
 const CARGO_VALUE_OPTIONS: &[&str] = &["--color", "--config", "--explain", "-C", "-Z"];
@@ -980,9 +1060,9 @@ fn is_literal_value(value: &Value) -> bool {
 }
 
 /// Check that Renovate can update every tool version `workflow` pins where no manager of its own reads it: no version is
-/// written inline, in [`INSTALL_ACTION`]'s `tool` input, a uv command or `cargo install`, and every environment
-/// variable whose name ends in `_VERSION` and whose value is written out has a `# renovate:` comment above it, as
-/// [`RENOVATE_VERSION_VARIABLE`] finds one. A variable set in several places needs a comment above each.
+/// written inline, in [`INSTALL_ACTION`]'s `tool` input, a uv command, `cargo install` or `cargo binstall`, or `npx`,
+/// `npm exec` or `pnpm dlx`, and every environment variable whose name ends in `_VERSION` and whose value is written
+/// out has a `# renovate:` comment above it, as [`RENOVATE_VERSION_VARIABLE`] finds one. A variable set in several places needs a comment above each.
 fn tool_versions(workflow: &Workflow) -> Result<(), String> {
     let mut inline: Vec<String> = Vec::new();
     let mut add = |id: &str, spec: &str| {
@@ -1005,6 +1085,12 @@ fn tool_versions(workflow: &Workflow) -> Result<(), String> {
                 for spec in uv_package_specs(&words)
                     .into_iter()
                     .filter(|spec| LITERAL_PIN.is_match(spec))
+                {
+                    add(id, spec);
+                }
+                for spec in npm_package_specs(&words)
+                    .into_iter()
+                    .filter(|spec| LITERAL_NPM_PIN.is_match(spec))
                 {
                     add(id, spec);
                 }
@@ -2340,6 +2426,8 @@ jobs:
           cargo install cross --locked --version \"$CROSS_VERSION\" && cargo install --path . --root out
           cargo install --git https://github.com/x/y --tag v1.0.0 y && cargo build --features x@1.0
           cargo install cargo-hack@\"$HACK_VERSION\" # cargo install x@1.0
+          npx eslint . && npx -y prettier@latest --check . && pnpm dlx \"create-vite@$VITE_VERSION\" app
+          pnpm --dir frontend exec eslint@9.0.0 && pnpm install x@1.0.0 && npx -c 'tsc@5.0.0'
 "
             ),
             Ok(())
@@ -2379,6 +2467,10 @@ jobs:
       - run: cargo install cargo-hack --locked --version 0.6.0 && cargo +stable binstall cargo-nextest@0.9.0
       - run: cargo install --features x --vers='=1.0.0' cargo-a cargo-b
       - run: cargo install --git https://github.com/x/y --version ~2.1
+  npm:
+    steps:
+      - run: npx -y prettier@3.6.2 --check . && npx --package=@biomejs/biome@2.0.0 -p x@^1.0 biome
+      - run: pnpm --dir frontend dlx @vue/cli@v5.0.8 create && pnpx 'tsx@~4.0' script.ts
 ",
         )
         .unwrap_err();
@@ -2388,6 +2480,7 @@ jobs:
              cargo (cargo-nextest@0.9.0), cargo (cargo-a@=1.0.0), cargo (cargo-b@=1.0.0), cargo (--version ~2.1), \
              deny (cargo-deny@0.20.2), deny (cargo-hack@0.6.0), deny (cargo-nextest@0.9.0), hooks (prek@0.5.10), \
              hooks (copier==9.19.1), hooks (jinja2-time==0.2.0), hooks (ruff[extra]@0.14.0), hooks (zizmor@1.0), \
+             npm (prettier@3.6.2), npm (@biomejs/biome@2.0.0), npm (x@^1.0), npm (@vue/cli@v5.0.8), npm (tsx@~4.0), \
              options (black@24.1.0), options (zizmor@1.1), options (mypy==1.0), options (pytest-cov==6.0), \
              options (hypothesis==6.0), options (copier==9.19.1), options (jinja2-time==0.2.0) \
              (pin each in a _VERSION variable under a # renovate: comment)"
@@ -2453,5 +2546,38 @@ jobs:
             "No # renovate: comment, so Renovate doesn't update: COPIER_VERSION, NODE_VERSION, PREK_VERSION, X_VERSION, \
              Y_VERSION"
         );
+    }
+
+    #[test]
+    fn npm_package_specs_follow_npm_and_pnpm_options() {
+        for (command, specs) in [
+            (
+                "pnpm --package=@angular/cli@17.0.0 dlx ng new app",
+                vec!["@angular/cli@17.0.0", "ng"],
+            ),
+            (
+                "pnpm -w dlx create-vite@5.0.0 app",
+                vec!["create-vite@5.0.0"],
+            ),
+            ("pnpm --loglevel error dlx -c tsx@4.0.0", vec!["tsx@4.0.0"]),
+            ("pnpm dlx x@1.2.3", vec!["x@1.2.3"]),
+            ("pnpx --package y@1.0 y", vec!["y@1.0", "y"]),
+            (
+                "npx --registry https://r.example --prefix web prettier@3.6.2",
+                vec!["prettier@3.6.2"],
+            ),
+            ("npx -- prettier@3.6.2 --check .", vec!["prettier@3.6.2"]),
+            ("npx -p x@1.0 -c 'tsc --project y@1.0.0'", vec!["x@1.0"]),
+            ("npx --call='tsc z@1.0'", vec![]),
+            (
+                "npm --prefix web exec -- eslint@9.0.0 .",
+                vec!["eslint@9.0.0"],
+            ),
+            ("npm x --package=a@1.0 a", vec!["a@1.0", "a"]),
+            ("npm install x@1.0.0 && pnpm exec x@1.0.0", vec![]),
+        ] {
+            let words: Vec<&str> = command.split_whitespace().collect();
+            assert_eq!(npm_package_specs(&words), specs, "{command}");
+        }
     }
 }
