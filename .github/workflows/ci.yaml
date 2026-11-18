@@ -99,7 +99,7 @@ jobs:
       # The version the template pins for rendered projects, which the template job installs too.
       - name: Read the template's cargo-llvm-cov version
         id: versions
-        run: echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+        run: echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
@@ -246,7 +246,7 @@ jobs:
       # norms uses the prek version the template pins.
       - name: Read the template's prek version
         id: versions
-        run: echo "prek=$(yq '.prek_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+        run: echo "prek=$(yq '.prek_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
 
       - name: Install prek
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
@@ -356,10 +356,10 @@ jobs:
       - name: Read the template's tool versions
         id: versions
         run: |
-          echo "pnpm=$(yq '.pnpm_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
-          echo "prek=$(yq '.prek_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
-          echo "uv=$(yq '.uv_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
-          echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+          echo "pnpm=$(yq '.pnpm_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
+          echo "prek=$(yq '.prek_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
+          echo "uv=$(yq '.uv_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
+          echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
@@ -393,10 +393,10 @@ jobs:
         env:
           ANSWERS: ${{ matrix.answers }}
         run: |
-          printf '%s\n' "$ANSWERS" > "$RUNNER_TEMP/answers.yml"
+          printf '%s\n' "$ANSWERS" > "$RUNNER_TEMP/answers.yaml"
           git init "$RUNNER_TEMP/project"
           uvx "copier@$COPIER_VERSION" copy --trust --defaults --vcs-ref HEAD \
-            --data-file "$RUNNER_TEMP/answers.yml" \
+            --data-file "$RUNNER_TEMP/answers.yaml" \
             --data project_name=demo-project --data "description=A demonstration project." \
             . "$RUNNER_TEMP/project"
           git -C "$RUNNER_TEMP/project" add --all

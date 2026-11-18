@@ -36,7 +36,7 @@ jobs:
       # As in CI's prek job, norms uses the prek version the template pins.
       - name: Read the template's prek version
         id: versions
-        run: echo "prek=$(yq '.prek_version.default' versions.yml)" >> "$GITHUB_OUTPUT"
+        run: echo "prek=$(yq '.prek_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1

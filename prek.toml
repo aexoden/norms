@@ -50,7 +50,7 @@ id = "check-vcs-permalinks"
 
 [[repos.hooks]]
 id = "check-yaml"
-# copier.yml holds several documents.
+# copier.yaml holds several documents.
 args = ["--allow-multiple-documents"]
 
 [[repos.hooks]]

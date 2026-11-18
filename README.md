@@ -21,7 +21,7 @@ uvx copier copy --trust gh:aexoden/norms <path>
 
 Run `uvx copier update --trust` in a project to bring it up to date with the
 template of the latest norms release. Every version the template uses is kept in
-`versions.yml`.
+`versions.yaml`.
 
 ## Versioning
 

@@ -5,7 +5,7 @@
     {
       "customType": "regex",
       "description": "Update the Copier template's actions, ranking a full tag (v25.0.0) above a floating one (v25) on the same release",
-      "managerFilePatterns": ["/^versions\\.yml$/"],
+      "managerFilePatterns": ["/^versions\\.yaml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: packageName=(?<packageName>\\S+))?\\n\\w+:\\n\\s+default: \"(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>[^\"]+)\""
       ],
@@ -14,7 +14,7 @@
     {
       "customType": "regex",
       "description": "Update the Copier template's other versions",
-      "managerFilePatterns": ["/^versions\\.yml$/"],
+      "managerFilePatterns": ["/^versions\\.yaml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: packageName=(?<packageName>\\S+))?\\n\\w+:\\n\\s+default: \"(?<currentValue>[^\"#]+)\""
       ]

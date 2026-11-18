@@ -10,7 +10,7 @@ norms is three things in one repository:
   the `norms-verify` and `norms-commit-msg` hooks from `.pre-commit-hooks.yaml`;
   norms runs both on itself as local hooks, which `tests/hooks.rs` keeps in step
   with the shipped ones.
-- A Copier template (`copier.yml`, `template/`) that renders new projects
+- A Copier template (`copier.yaml`, `template/`) that renders new projects
   following the standards.
 
 When changing a standard, update `STANDARDS.md`, the template and, where
@@ -147,13 +147,13 @@ a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 
 ## Template
 
-- `copier.yml` holds the questions and post-copy `_tasks` (lock file
-  generation). It `!include`s `versions.yml` in a document of its own, so the
+- `copier.yaml` holds the questions and post-copy `_tasks` (lock file
+  generation). It `!include`s `versions.yaml` in a document of its own, so the
   `check-yaml` hook allows multiple documents.
-- `versions.yml` holds every version the template pins, as hidden variables.
+- `versions.yaml` holds every version the template pins, as hidden variables.
   Each entry's `# renovate:` comment feeds the regex managers in
   `renovate.json`, so keep that comment format when adding entries.
-- `versions.yml` pins actions as `"<sha> # <version>"` with a full `vX.Y.Z`
+- `versions.yaml` pins actions as `"<sha> # <version>"` with a full `vX.Y.Z`
   tag. `tests/versions.rs` fails unless each is pinned identically in
   `.github/workflows/`, so every template action must also be used by norms'
   own workflows.
@@ -207,7 +207,7 @@ At a release, in one commit:
   tag with the new one, and `Unreleased` the new tag with `HEAD`.
 - Set `version` in `Cargo.toml` to the new version, and run `cargo check` to
   update `Cargo.lock` (`norms verify` fails until it matches the release).
-- Set `hook_norms` in `versions.yml` to the new tag, so that projects rendered
+- Set `hook_norms` in `versions.yaml` to the new tag, so that projects rendered
   from the release run its hooks (`tests/versions.rs` fails until it matches
   the latest release in `CHANGELOG.md`).
 - Re-render the language fixtures, bringing in the versions Renovate has

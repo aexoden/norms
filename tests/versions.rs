@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Consistency checks between the template's `versions.yml` and this
+//! Consistency checks between the template's `versions.yaml` and this
 //! repository's own workflows, which Renovate updates through different
 //! managers, and its latest release, which the template's norms hooks pin.
 
@@ -14,7 +14,7 @@ mod tests {
     use regex::Regex;
     use serde_json::Value;
 
-    /// An action entry in `versions.yml`.
+    /// An action entry in `versions.yaml`.
     struct TemplateAction {
         dep: String,
         var: String,
@@ -37,7 +37,7 @@ mod tests {
     }
 
     /// Returns the pattern of the Renovate manager that updates the actions
-    /// in `versions.yml`, so these checks see the entries Renovate sees.
+    /// in `versions.yaml`, so these checks see the entries Renovate sees.
     fn renovate_action_pattern() -> Regex {
         let config: Value = serde_json::from_str(&read(&root().join("renovate.json"))).unwrap();
         let manager = config
@@ -57,10 +57,10 @@ mod tests {
         Regex::new(pattern.as_str().unwrap()).unwrap()
     }
 
-    /// Returns each action entry in `versions.yml`, failing if Renovate
+    /// Returns each action entry in `versions.yaml`, failing if Renovate
     /// would not see one of them.
     fn template_actions() -> Vec<TemplateAction> {
-        let text = read(&root().join("versions.yml"));
+        let text = read(&root().join("versions.yaml"));
         let entry = renovate_action_pattern();
         let var = Regex::new(r"\n(?<var>action_\w+):\n").unwrap();
 
@@ -84,7 +84,7 @@ mod tests {
             .collect();
         assert!(
             unmatched.is_empty(),
-            "these versions.yml entries don't match the actions manager's pattern in \
+            "these versions.yaml entries don't match the actions manager's pattern in \
              renovate.json, so Renovate won't update them: {unmatched:?}"
         );
         actions
@@ -142,7 +142,7 @@ mod tests {
 
         assert!(
             invalid.is_empty(),
-            "versions.yml actions must be \"<sha> # vX.Y.Z\":\n{}",
+            "versions.yaml actions must be \"<sha> # vX.Y.Z\":\n{}",
             invalid.join("\n")
         );
     }
@@ -157,7 +157,7 @@ mod tests {
 
         assert!(
             vars.is_empty(),
-            "versions.yml lists these actions more than once: {vars:?}"
+            "versions.yaml lists these actions more than once: {vars:?}"
         );
     }
 
@@ -171,17 +171,17 @@ mod tests {
             .captures(&changelog)
             .expect("CHANGELOG.md has a release")["version"]
             .to_owned();
-        let versions = read(&root().join("versions.yml"));
+        let versions = read(&root().join("versions.yaml"));
         let pin = Regex::new(r#"\nhook_norms:\n\s+default: "(?<rev>[^"]+)""#)
             .unwrap()
             .captures(&versions)
-            .expect("versions.yml has hook_norms")["rev"]
+            .expect("versions.yaml has hook_norms")["rev"]
             .to_owned();
 
         assert_eq!(
             pin,
             format!("v{release}"),
-            "versions.yml's hook_norms must be the latest release in CHANGELOG.md"
+            "versions.yaml's hook_norms must be the latest release in CHANGELOG.md"
         );
     }
 
@@ -209,7 +209,7 @@ mod tests {
 
         assert!(
             problems.is_empty(),
-            "versions.yml and the workflows disagree:\n{}",
+            "versions.yaml and the workflows disagree:\n{}",
             problems.join("\n")
         );
     }

@@ -25,7 +25,7 @@ _tasks:
     when: "{{ 'typescript' in languages }}"
 
 ---
-!include versions.yml
+!include versions.yaml
 ---
 
 project_name:
