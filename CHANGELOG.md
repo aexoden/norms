@@ -54,10 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preset can't update: one not written as `repo = "https://github.com/..."`
   with `rev = "..."` on the next line, as with inline tables.
 - Warn about a tool version in a workflow that Renovate can't update: one
-  written inline, as in `taiki-e/install-action`'s `tool: x@1.2.3` or
-  `uvx x@1.2.3`, or an environment variable ending in `_VERSION` without a
-  `# renovate:` comment above it. Pin each in such a variable under such a
-  comment.
+  written inline, as in `taiki-e/install-action`'s `tool: x@1.2.3`,
+  `uvx x@1.2.3` or `uv run --with x==1.2.3`, or an environment variable ending
+  in `_VERSION` without a `# renovate:` comment above it. Pin each in such a
+  variable under such a comment.
 
 ### Changed
 

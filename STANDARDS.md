@@ -990,9 +990,9 @@ env:
 
 Steps refer to one as `${{ env.PREK_VERSION }}` in an input, such as
 `tool: prek@${{ env.PREK_VERSION }}`, or as `"$PREK_VERSION"` in a script.
-`norms verify` warns about a version written inline in that `tool` input or in a
-`uvx` or `uv tool` command, and about a `_VERSION` variable whose value is
-written out without the comment.
+`norms verify` warns about a version written inline in that `tool` input, in a
+`uvx` or `uv tool` command or `uv run`'s `--with`, and about a `_VERSION`
+variable whose value is written out without the comment.
 
 ### Version Pinning
 

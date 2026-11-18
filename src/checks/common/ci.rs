@@ -717,39 +717,155 @@ static LITERAL_PIN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._\-]*(?:\[[^\]]*\])?(?:@|==)[0-9]").unwrap()
 });
 
-/// The arguments of a command that runs a tool through uv, `uvx` or `uv tool run` or installs one with `uv tool
-/// install`, or `None` for any other command.
-fn uv_tool_args<'a, 'b>(words: &'b [&'a str]) -> Option<&'b [&'a str]> {
-    program_args(words, "uvx").or_else(|| match program_args(words, "uv")? {
-        ["tool", "run" | "install", args @ ..] => Some(args),
-        _ => None,
-    })
+/// The options of uv, and of its `run` and `tool` commands, that take the next word as their value (unless given as
+/// `--option=value`), as uv 0.13's help lists them.
+const UV_VALUE_OPTIONS: &[&str] = &[
+    "--allow-insecure-host",
+    "--build-constraints",
+    "--cache-dir",
+    "--color",
+    "--config-file",
+    "--config-setting",
+    "--config-settings-package",
+    "--constraints",
+    "--default-index",
+    "--directory",
+    "--env-file",
+    "--exclude-newer",
+    "--exclude-newer-package",
+    "--excludes",
+    "--extra",
+    "--extra-index-url",
+    "--find-links",
+    "--fork-strategy",
+    "--from",
+    "--group",
+    "--index",
+    "--index-strategy",
+    "--index-url",
+    "--keyring-provider",
+    "--link-mode",
+    "--no-binary-package",
+    "--no-build-isolation-package",
+    "--no-build-package",
+    "--no-editable-package",
+    "--no-extra",
+    "--no-group",
+    "--no-sources-package",
+    "--only-group",
+    "--overrides",
+    "--package",
+    "--prerelease",
+    "--prerelease-package",
+    "--project",
+    "--python",
+    "--python-platform",
+    "--refresh-package",
+    "--reinstall-package",
+    "--resolution",
+    "--torch-backend",
+    "--upgrade-group",
+    "--upgrade-package",
+    "--with",
+    "--with-editable",
+    "--with-executables-from",
+    "--with-requirements",
+    "-C",
+    "-P",
+    "-b",
+    "-c",
+    "-f",
+    "-i",
+    "-p",
+    "-w",
+];
+
+/// The options of uv's `run` and `tool` commands whose values are packages, each a comma-separated list of them.
+const UV_PACKAGE_OPTIONS: &[&str] = &["--from", "--with", "--with-executables-from", "-w"];
+
+/// The words of `args` from the first that isn't an option or an option's value, as `value_options` lists those that
+/// take one, or those after a word that is only `--`, which ends the options.
+fn skip_options<'a, 'b>(args: &'b [&'a str], value_options: &[&str]) -> &'b [&'a str] {
+    let mut rest = args;
+    while let [word, tail @ ..] = rest {
+        if *word == "--" {
+            return tail;
+        }
+        if !word.starts_with('-') {
+            break;
+        }
+        rest = match tail {
+            [_, after @ ..] if value_options.contains(word) => after,
+            _ => tail,
+        };
+    }
+    rest
 }
 
-/// The package specifications among a uv command's arguments, `args`, with any quotes around them removed: the values
-/// of its `--from` and `--with` (`-w`) options, whose comma-separated packages are each one, and the tool, its first
-/// argument that starts with a letter and isn't an option's value. The tool's own arguments, and a shell comment, are
-/// left out.
-fn uv_package_specs<'a>(args: &[&'a str]) -> Vec<&'a str> {
+/// The package specifications among a command's arguments, `args`, with any quotes around them removed: the values of
+/// the options `package_options` lists, whose comma-separated packages are each one, and, if `tool`, the command's
+/// first word that isn't an option or the value of one `value_options` lists, or that follows a `--`, which ends the
+/// options. The arguments after the tool (or after a `--` without `tool`) and a shell comment are left out. Short options
+/// written together (`-qp 3.14`) aren't taken apart.
+fn package_specs<'a>(
+    args: &[&'a str],
+    value_options: &[&str],
+    package_options: &[&str],
+    tool: bool,
+) -> Vec<&'a str> {
     let mut specs = Vec::new();
     let mut words = args.iter().map(|word| word.trim_matches(['"', '\'']));
     while let Some(word) = words.next() {
         if word.starts_with('#') {
             break;
         }
-        if let Some(option) = word.strip_prefix('-') {
-            let value = match option.split_once('=') {
-                Some((name, value)) => matches!(name, "-from" | "-with" | "w").then_some(value),
-                None if matches!(option, "-from" | "-with" | "w") => words.next(),
-                None => None,
+        if word == "--" {
+            specs.extend(words.next().filter(|_| tool));
+            break;
+        }
+        if word.starts_with('-') {
+            let value = match word.split_once('=') {
+                Some((name, value)) => package_options
+                    .contains(&name)
+                    .then(|| value.trim_matches(['"', '\''])),
+                None if package_options.contains(&word) => words.next(),
+                None => {
+                    if value_options.contains(&word) {
+                        words.next();
+                    }
+                    None
+                }
             };
             specs.extend(value.into_iter().flat_map(|value| value.split(',')));
-        } else if word.starts_with(|c: char| c.is_ascii_alphabetic()) {
-            specs.push(word);
+        } else {
+            if tool {
+                specs.push(word);
+            }
             break;
         }
     }
     specs
+}
+
+/// The package specifications of a command that runs a tool through uv, `uvx` or `uv tool run`, installs one with
+/// `uv tool install`, or adds packages to `uv run` with `--with`, as [`package_specs`] finds them. uv's own options
+/// may come before its command.
+fn uv_package_specs<'a>(words: &[&'a str]) -> Vec<&'a str> {
+    let specs = |args, tool| package_specs(args, UV_VALUE_OPTIONS, UV_PACKAGE_OPTIONS, tool);
+    if let Some(args) = program_args(words, "uvx") {
+        return specs(args, true);
+    }
+    let Some(args) = program_args(words, "uv") else {
+        return Vec::new();
+    };
+    match skip_options(args, UV_VALUE_OPTIONS) {
+        ["tool", args @ ..] => match skip_options(args, UV_VALUE_OPTIONS) {
+            ["run" | "install", args @ ..] => specs(args, true),
+            _ => Vec::new(),
+        },
+        ["run", args @ ..] => specs(args, false),
+        _ => Vec::new(),
+    }
 }
 
 /// Whether an `env` value is a version written out, rather than empty or given by an expression.
@@ -784,8 +900,7 @@ fn tool_versions(workflow: &Workflow) -> Result<(), String> {
         }
         for line in job.run_lines() {
             for words in commands(&line) {
-                for spec in uv_tool_args(&words)
-                    .map_or_else(Vec::new, uv_package_specs)
+                for spec in uv_package_specs(&words)
                     .into_iter()
                     .filter(|spec| LITERAL_PIN.is_match(spec))
                 {
@@ -2062,6 +2177,25 @@ jobs:
         }
     }
 
+    #[test]
+    fn uv_package_specs_follow_uv_options_and_the_end_of_options() {
+        for (command, specs) in [
+            ("uvx -- ruff@0.1.0 check", vec!["ruff@0.1.0"]),
+            ("uv tool run --offline -- ruff@0.1.0", vec!["ruff@0.1.0"]),
+            ("uv -q run --with x==1.0 -- pytest", vec!["x==1.0"]),
+            ("uv run -- pytest --with y==1.0", vec![]),
+            ("uv --directory=sub tool run x@1.0", vec!["x@1.0"]),
+            (
+                "uv --directory sub --color never tool install y==2.0",
+                vec!["y==2.0"],
+            ),
+            ("uv pip install x==1.0", vec![]),
+        ] {
+            let words: Vec<&str> = command.split_whitespace().collect();
+            assert_eq!(uv_package_specs(&words), specs, "{command}");
+        }
+    }
+
     fn tool_versions_of(yaml: &str) -> Result<(), String> {
         tool_versions(&Workflow::parse(yaml.to_owned()).unwrap())
     }
@@ -2096,6 +2230,8 @@ jobs:
           echo uvx-like@1.0.0 && pip install ruff==0.1.0
           uvx copier copy --data dep==1.2 gh:x/y@1.0 out
           uvx --with=\"jinja2-time\" -p python3.14 prek run  # was prek@0.5.10
+          uv run --group lint --with \"ruff==$RUFF_VERSION\" ruff check --with x==1.0
+          uv run -- pytest --with=y==1.0 && uv --directory sub tool list x==1.0
 "
             ),
             Ok(())
@@ -2124,6 +2260,12 @@ jobs:
           uvx --from=copier==9.19.1 --with jinja2-time==0.2.0,plumbum copier copy . out
       - run: uv tool install ruff[extra]@0.14.0 && uv tool run zizmor@1.0 . && uv run pytest==8
       - run: uvx --from=copier==9.19.1 copier --version
+  options:
+    steps:
+      - run: uvx -p python3.14 --index pytorch black@24.1.0 .
+      - run: uv --quiet tool run zizmor@1.1 . && uv --directory sub tool --offline install mypy==1.0
+      - run: uv run --python 3.14 --group test -w pytest-cov==6.0,pytest --with=hypothesis==6.0 pytest
+      - run: uvx --from='copier==9.19.1' --with=\"jinja2-time==0.2.0\" copier copy . out
 ",
         )
         .unwrap_err();
@@ -2131,7 +2273,9 @@ jobs:
             result,
             "Versions written inline, which Renovate doesn't update: deny (cargo-deny@0.20.2), deny (cargo-hack@0.6.0), \
              deny (cargo-nextest@0.9.0), hooks (prek@0.5.10), \
-             hooks (copier==9.19.1), hooks (jinja2-time==0.2.0), hooks (ruff[extra]@0.14.0), hooks (zizmor@1.0) \
+             hooks (copier==9.19.1), hooks (jinja2-time==0.2.0), hooks (ruff[extra]@0.14.0), hooks (zizmor@1.0), \
+             options (black@24.1.0), options (zizmor@1.1), options (mypy==1.0), options (pytest-cov==6.0), \
+             options (hypothesis==6.0), options (copier==9.19.1), options (jinja2-time==0.2.0) \
              (pin each in a _VERSION variable under a # renovate: comment)"
         );
     }
