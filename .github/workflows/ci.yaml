@@ -232,15 +232,17 @@ jobs:
           "$RUNNER_TEMP/norms/norms" verify --deny-warnings .
 
   prek:
-    name: Run the remaining prek hooks
+    name: Run the remaining prek hooks and check the commit message
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
+      # A pull request's head commit is the second parent of the merge commit CI checks out.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 2
           persist-credentials: false
 
       # norms uses the prek version the template pins.
@@ -258,6 +260,36 @@ jobs:
         env:
           PREK_SKIP: cargo-deny,cargo-doctest,cargo-lock,cargo-test,clippy,markdownlint-cli2,norms-verify,reuse,rustfmt,tombi-format,zizmor
         run: prek run --all-files --show-diff-on-failure
+
+      # The norms-commit-msg hook runs norms from this checkout with cargo run.
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      # As in the template's norms-verify job, the commit-msg hooks check the message of the commit
+      # CI tests: the one pushed, or a pull request's head commit, unless it's a merge commit, which
+      # linear history keeps off main. norms' norms-verify job runs the norms build-norms built
+      # rather than its hooks, so they run here. They pass autosquash and merge subjects, which
+      # shouldn't reach main, so those are rejected first. The commit is already made, so lines over
+      # 72 characters are only a warning. GIT_EDITOR=: tells norms, as git does, that the message
+      # wasn't edited, so a line starting with git's comment character is checked as it's recorded.
+      - name: Check the commit message
+        env:
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          GIT_EDITOR: ":"
+          NORMS_COMMIT_MSG_LENGTH: warn
+        run: |
+          if [ "$(git cat-file commit "$COMMIT" | sed '/^$/q' | grep -c '^parent ')" -gt 1 ]; then
+            echo "The commit is a merge, such as GitHub's Update branch makes, which never reaches main."
+            exit 0
+          fi
+          git log -1 --format=%B "$COMMIT" > "$RUNNER_TEMP/commit-msg.txt"
+          case "$(head -n 1 "$RUNNER_TEMP/commit-msg.txt")" in
+            'fixup! '* | 'squash! '* | 'amend! '* | Merge*)
+              echo "::error::The subject is an autosquash or merge subject, not a conventional commit subject."
+              exit 1
+              ;;
+          esac
+          prek run --stage commit-msg --commit-msg-filename "$RUNNER_TEMP/commit-msg.txt"
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3

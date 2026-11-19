@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 //! Checks that each hook norms ships in `.pre-commit-hooks.yaml` matches the
-//! local copy norms runs on itself in `prek.toml`, and that norms' `prek.toml`
-//! keeps the template's settings.
+//! local copy norms runs on itself in `prek.toml`, that norms' `prek.toml`
+//! keeps the template's settings, and that norms' CI checks commit messages as
+//! the template's does.
 
 #[cfg(test)]
 mod tests {
@@ -113,5 +114,28 @@ mod tests {
             assert!(!get(&render, key).is_null(), "{key}");
             assert_eq!(get(&own, key), get(&render, key), "{key}");
         }
+    }
+
+    /// The step of a workflow at `path` named `Check the commit message`, in whichever job runs it.
+    fn commit_msg_step(path: &str) -> Value {
+        let workflow: Value = serde_saphyr::from_str(&read(path)).unwrap();
+        let steps: Vec<&Value> = get(&workflow, "jobs")
+            .as_object()
+            .unwrap()
+            .values()
+            .flat_map(|job| get(job, "steps").as_array().unwrap())
+            .filter(|step| get(step, "name") == "Check the commit message")
+            .collect();
+        assert_eq!(steps.len(), 1, "{path}");
+        (*steps.first().unwrap()).clone()
+    }
+
+    #[test]
+    fn ci_checks_commit_messages_as_the_template_does() {
+        // The rust fixture is rendered from the template.
+        assert_eq!(
+            commit_msg_step(".github/workflows/ci.yaml"),
+            commit_msg_step("tests/fixtures/rust/.github/workflows/ci.yaml")
+        );
     }
 }

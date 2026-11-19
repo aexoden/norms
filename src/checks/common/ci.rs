@@ -15,9 +15,7 @@ use crate::config::{
     Command, GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program,
     program_args, program_name,
 };
-use crate::context::{
-    AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, PR_TITLE_WORKFLOW, ProjectContext,
-};
+use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
 
 //
@@ -525,36 +523,9 @@ fn norms_verify_in_ci(config: Option<&PrekConfig>, workflow: &Workflow) -> Resul
     }
 }
 
-/// Check `pr-title.yaml`, `workflow`: it runs when a pull request is opened or reopened and when its title is edited,
-/// and runs the `commit-msg` hooks. One that runs on no pull request, or no hooks, never checks a title, so it fails.
-fn check_pr_title_workflow(workflow: &Workflow, report: &mut Report) {
-    const TYPES: [&str; 3] = ["opened", "reopened", "edited"];
-
-    report.check(
-        "pr-title-yaml-trigger",
-        "CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled",
-        if workflow.runs_on("pull_request") {
-            let missing: Vec<_> = TYPES
-                .into_iter()
-                .filter(|activity| !workflow.runs_on_pull_request_activity(activity))
-                .collect();
-            if missing.is_empty() {
-                Ok(())
-            } else {
-                Err(Issue::warn(format!(
-                    "pull_request types omit {}",
-                    missing.join(", ")
-                )))
-            }
-        } else {
-            Err(Issue::fail("Doesn't run on pull_request"))
-        },
-    );
-    report.must(
-        "pr-title-yaml-commit-msg",
-        "CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)",
-        workflow.runs(|words| prek_run_all(words).is_some_and(|run| run.stage == "commit-msg")),
-    );
+/// Whether the words of a command run the `commit-msg` hooks, as `prek run --stage commit-msg`.
+fn runs_commit_msg_hooks(words: &[&str]) -> bool {
+    prek_run_all(words).is_some_and(|run| run.stage == "commit-msg")
 }
 
 //
@@ -1195,14 +1166,6 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
 
     report.require_parsed("ci-yaml", "CI: ci.yaml", ctx.ci_workflow());
 
-    if let Some(pr_title) = report.require_parsed(
-        "pr-title-yaml",
-        "CI: pr-title.yaml",
-        ctx.pr_title_workflow(),
-    ) {
-        check_pr_title_workflow(pr_title, report);
-    }
-
     if let Some(audit) = report.require_parsed("audit-yaml", "CI: audit.yaml", ctx.audit_workflow())
     {
         report.check(
@@ -1217,10 +1180,12 @@ pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
         );
     }
 
-    // Every other workflow must parse too. The checks above already cover ci.yaml, audit.yaml and pr-title.yaml.
-    for (name, status) in ctx.workflows().iter().filter(|(name, _)| {
-        ![CI_WORKFLOW, AUDIT_WORKFLOW, PR_TITLE_WORKFLOW].contains(&name.as_str())
-    }) {
+    // Every other workflow must parse too. The checks above already cover ci.yaml and audit.yaml.
+    for (name, status) in ctx
+        .workflows()
+        .iter()
+        .filter(|(name, _)| ![CI_WORKFLOW, AUDIT_WORKFLOW].contains(&name.as_str()))
+    {
         report.must(
             "workflow-valid",
             format!("CI: {name}: valid"),
@@ -1294,6 +1259,11 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
         "ci-norms-verify",
         "CI: norms verify (--deny-warnings, whole history)",
         norms_verify_in_ci(ctx.prek().as_ref_ok(), workflow),
+    );
+    report.must(
+        "ci-commit-msg",
+        "CI: commit-msg hooks on the commit message (prek run --stage commit-msg)",
+        workflow.runs(runs_commit_msg_hooks),
     );
     if let ConfigStatus::Ok(config) = ctx.prek()
         && let Some(skip) = prek_skip(config, workflow)
@@ -1478,7 +1448,6 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
 mod tests {
     use super::*;
     use crate::config::PrekHook;
-    use crate::models::Status;
 
     fn skip(prek: &str, workflow: &str) -> Option<Result<(), String>> {
         prek_skip(
@@ -1622,59 +1591,28 @@ mod tests {
         );
     }
 
-    /// The statuses of the checks of `pr-title.yaml`, `workflow`: its trigger and its run of the commit-msg hooks.
-    fn pr_title(workflow: &str) -> Vec<(String, Status)> {
-        let mut report = Report::new(std::path::PathBuf::new(), Vec::new());
-        check_pr_title_workflow(&serde_saphyr::from_str(workflow).unwrap(), &mut report);
-        report
-            .results
-            .iter()
-            .map(|result| (result.id.clone(), result.status))
-            .collect()
-    }
-
-    /// The results of [`pr_title`] with the statuses `trigger` and `commit_msg`.
-    fn pr_title_results(trigger: Status, commit_msg: Status) -> Vec<(String, Status)> {
-        vec![
-            ("pr-title-yaml-trigger".to_owned(), trigger),
-            ("pr-title-yaml-commit-msg".to_owned(), commit_msg),
-        ]
-    }
-
-    const PR_TITLE_RUN: &str = "jobs:\n  pr-title:\n    steps:\n      - run: |\n          uvx prek@0.5.11 run \
-                                --stage commit-msg \\\n            --commit-msg-filename subject.txt\n";
-
     #[test]
-    fn pr_title_runs_on_title_edits_and_the_commit_msg_hooks() {
-        assert_eq!(
-            pr_title(&format!(
-                "on:\n  pull_request:\n    types: [opened, reopened, edited]\n{PR_TITLE_RUN}"
-            )),
-            pr_title_results(Status::Pass, Status::Pass)
-        );
-        // The default types leave out edited.
-        assert_eq!(
-            pr_title(&format!("on: [pull_request]\n{PR_TITLE_RUN}")),
-            pr_title_results(Status::Warn, Status::Pass)
-        );
-        assert_eq!(
-            pr_title(&format!(
-                "on:\n  pull_request:\n    types: edited\n{PR_TITLE_RUN}"
-            )),
-            pr_title_results(Status::Warn, Status::Pass)
-        );
-        assert_eq!(
-            pr_title(&format!("on: [push]\n{PR_TITLE_RUN}")),
-            pr_title_results(Status::Fail, Status::Pass)
-        );
-        // Every pre-commit hook, rather than the commit-msg ones, never checks the title.
-        assert_eq!(
-            pr_title(
-                "on:\n  pull_request:\n    types: [opened, reopened, edited]\njobs:\n  pr-title:\n    steps:\n      \
-                 - run: uvx prek@0.5.11 run --all-files\n"
-            ),
-            pr_title_results(Status::Pass, Status::Fail)
-        );
+    fn commit_msg_hooks_run_as_prek_run_with_their_stage() {
+        let runs = |run: &str| {
+            serde_saphyr::from_str::<Workflow>(&format!(
+                "jobs:\n  norms-verify:\n    steps:\n      - run: {run:?}\n"
+            ))
+            .unwrap()
+            .runs(runs_commit_msg_hooks)
+        };
+        for run in [
+            "prek run --stage commit-msg --commit-msg-filename \"$RUNNER_TEMP/commit-msg.txt\"",
+            "uvx prek@0.5.11 run --hook-stage=commit-msg --commit-msg-filename msg.txt",
+        ] {
+            assert!(runs(run), "{run}");
+        }
+        // Every pre-commit hook, or one commit-msg hook by name, isn't every commit-msg hook.
+        for run in [
+            "prek run --all-files",
+            "prek run --stage commit-msg norms-commit-msg --commit-msg-filename msg.txt",
+        ] {
+            assert!(!runs(run), "{run}");
+        }
     }
 
     #[test]

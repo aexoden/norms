@@ -54,10 +54,6 @@ pass  renovate-extends-preset  renovate.json: extends the shared preset
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
-pass  pr-title-yaml-exists  CI: pr-title.yaml: exists
-pass  pr-title-yaml-valid  CI: pr-title.yaml: valid
-pass  pr-title-yaml-trigger  CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled
-pass  pr-title-yaml-commit-msg  CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
 pass  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
@@ -70,15 +66,13 @@ pass  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
 pass  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
 pass  workflow-setup-uv-version  CI: ci.yaml: setup-uv pins an exact uv version in jobs running uv
 pass  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
-pass  workflow-job-timeouts  CI: pr-title.yaml: every job sets timeout-minutes
-pass  workflow-concurrency  CI: pr-title.yaml: concurrency cancels superseded runs
-pass  workflow-tool-versions  CI: pr-title.yaml: Renovate can update every tool version
 pass  ci-reuse  CI: REUSE compliance
 pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-prek  CI: remaining prek hooks (pinned, --all-files)
 pass  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
+pass  ci-commit-msg  CI: commit-msg hooks on the commit message (prek run --stage commit-msg)
 pass  ci-prek-skip  CI: the prek job's PREK_SKIP lists every hook with a job of its own
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
 pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev

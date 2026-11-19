@@ -49,8 +49,6 @@ fail  renovate-exists  renovate.json: exists
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
-fail  pr-title-yaml-exists  CI: pr-title.yaml: exists
-      File not found
 fail  audit-yaml-exists  CI: audit.yaml: exists
       File not found
 warn  workflow-job-timeouts  CI: ci.yaml: every job sets timeout-minutes
@@ -69,6 +67,7 @@ fail  ci-zizmor  CI: zizmor (pedantic)
 pass  ci-prek  CI: remaining prek hooks (pinned, --all-files)
 fail  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
       No job runs norms verify, as the norms-verify hook or itself
+fail  ci-commit-msg  CI: commit-msg hooks on the commit message (prek run --stage commit-msg)
 warn  ci-prek-skip  CI: the prek job's PREK_SKIP lists every hook with a job of its own
       PREK_SKIP in prek doesn't list these hooks, which have jobs of their own: pytest, eslint, mypy, ruff-check
 pass  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request

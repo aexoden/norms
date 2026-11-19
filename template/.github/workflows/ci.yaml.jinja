@@ -127,12 +127,37 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@{{ action_markdownlint_cli2 }}
         with:
           globs: '**/*.md'
-{{ job('norms-verify', 'Verify the project with norms', '', timeout=30, history=true) }}
+{{ job('norms-verify', 'Verify the project and the commit message', '', timeout=30, history=true) }}
 {{- install_prek() }}
 
       # prek builds norms at the revision prek.toml pins.
       - name: Verify the project with norms
         run: prek run norms-verify --all-files
+
+      # The commit-msg hooks check the message of the commit CI tests: the one pushed, or a pull
+      # request's head commit, unless it's a merge commit, which linear history keeps off main. They
+      # pass autosquash and merge subjects, which shouldn't reach main, so those are rejected first.
+      # The commit is already made, so lines over 72 characters are only a warning. GIT_EDITOR=:
+      # tells norms, as git does, that the message wasn't edited, so a line starting with git's
+      # comment character is checked as it's recorded.
+      - name: Check the commit message
+        env:
+          COMMIT: {% raw %}${{ github.event.pull_request.head.sha || github.sha }}{% endraw %}
+          GIT_EDITOR: ":"
+          NORMS_COMMIT_MSG_LENGTH: warn
+        run: |
+          if [ "$(git cat-file commit "$COMMIT" | sed '/^$/q' | grep -c '^parent ')" -gt 1 ]; then
+            echo "The commit is a merge, such as GitHub's Update branch makes, which never reaches main."
+            exit 0
+          fi
+          git log -1 --format=%B "$COMMIT" > "$RUNNER_TEMP/commit-msg.txt"
+          case "$(head -n 1 "$RUNNER_TEMP/commit-msg.txt")" in
+            'fixup! '* | 'squash! '* | 'amend! '* | Merge*)
+              echo "::error::The subject is an autosquash or merge subject, not a conventional commit subject."
+              exit 1
+              ;;
+          esac
+          prek run --stage commit-msg --commit-msg-filename "$RUNNER_TEMP/commit-msg.txt"
 {{ job('prek', 'Run the remaining prek hooks', '') }}
 {{- install_prek() }}
 

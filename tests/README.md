@@ -98,17 +98,14 @@ re-renders them, as `AGENTS.md` describes.
   - a gate job and a zizmor-action job on `ubuntu-latest`, the gate without
     `if: always()` that misses a job and doesn't fail on every result, and
     that, like another job, sets `continue-on-error`;
-  - a `norms-verify` job running the hook from a shallow checkout;
-  - a `pr-title.yaml` on the default `pull_request` types, which leave out
-    `edited`, that runs the `pre-commit` stage's hooks rather than
-    `commit-msg`'s;
+  - a `norms-verify` job running the hook from a shallow checkout, and no
+    step running the `commit-msg` hooks;
   - an unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
     advisories check;
   - a `release.yaml` job that only checks formatting but leaves
     setup-rust-toolchain's cache on, beside jobs that build or turn it off,
     and a job pinning a tool in a `_VERSION` variable without a `# renovate:`
-    comment, beside the inline prek versions of `ci.yaml` and
-    `pr-title.yaml`.
+    comment, beside the inline prek versions of `ci.yaml`.
 - `prek` has only a `prek.toml`, which breaks the Git hook standards: its
   `default_install_hook_types` lacks `pre-commit`, it runs only some of the
   common hooks, from pre-commit-hooks rather than prek's builtin repo, its

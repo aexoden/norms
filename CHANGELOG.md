@@ -10,12 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add the `norms-commit-msg` and `norms-verify` hooks to the template, with a
-  `norms-verify` CI job that runs the pinned hook and a `pr-title.yaml` workflow
-  that checks pull request titles with the commit message hooks.
+  `norms-verify` CI job that runs the pinned hooks: `norms-verify`, and the
+  commit message hooks on the message of the commit CI tests, rejecting
+  autosquash and merge subjects and only warning about long lines.
 - **Breaking:** Check that projects run norms: the `norms-commit-msg` and
   `norms-verify` hooks, the latter with `--deny-warnings`, a CI job running
-  `norms verify` with the whole history, and a `pr-title.yaml` workflow running
-  the commit message hooks on pull request titles. Add them as the template
+  `norms verify` with the whole history, and a CI step running the commit
+  message hooks (`prek run --stage commit-msg`). Add them as the template
   does.
 - Add `--long-lines warn` to `norms commit-msg`, also set by
   `NORMS_COMMIT_MSG_LENGTH=warn`, which reports lines over 72 characters
@@ -88,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.pre-commit-config.yaml`, which norms no longer reads. Language hooks have
   `language = "system"`. CI installs prek with `taiki-e/install-action` at the
   version in `PREK_VERSION`, and runs `prek run` in a `prek` job, in the
-  `norms-verify` job and in `pr-title.yaml` (`prek run --stage commit-msg`).
+  `norms-verify` job, where it also runs `prek run --stage commit-msg`.
   To upgrade, install prek, run `prek util yaml-to-toml`, lay the result out as
   the template does, with a `[[repos]]` table for each repository and a
   `[[repos.hooks]]` table for each hook, delete `.pre-commit-config.yaml`, run

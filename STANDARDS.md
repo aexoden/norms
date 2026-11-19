@@ -454,7 +454,8 @@ Include only the language blocks that apply. Python projects also mark
 Commit messages follow [Conventional
 Commits](https://www.conventionalcommits.org/), checked by the
 `conventional-pre-commit` and `norms-commit-msg` hooks (see
-[Git Hooks](#git-hooks)). The
+[Git Hooks](#git-hooks)), which CI also runs on the commit it tests (see
+[Checks](#checks)). The
 [Conventional Commit Types
 Cheatsheet](https://www.bavaga.com/blog/2025/01/27/my-ultimate-conventional-commit-types-cheatsheet/)
 is a useful reference for choosing types.
@@ -541,29 +542,10 @@ Pull requests are squash-merged, so the pull request title becomes the commit
 subject. The repository's merge settings allow only squash merging, with the
 default commit message set to "Pull request title and commit details"
 (`squash_merge_commit_title: PR_TITLE` and
-`squash_merge_commit_message: COMMIT_MESSAGES` in the API). GitHub's own default
-takes the subject of a pull request with a single commit from that commit
-rather than the title, so the title check below wouldn't check the subject
-that is merged. Every pull request title, whoever opens it, must follow the
-subject rules above, including the `!` when the pull request makes a breaking
-change.
-
-A `pr-title.yaml` workflow checks each title by running the `commit-msg` hooks
-on the subject the squash merge would create, which is the title followed by
-its number, as in `(#123)`, so the number takes part of the 72 characters. It
-first rejects a title starting with `fixup!`, `squash!`, `amend!` or `Merge`,
-which the hooks let through in local commits but a squash merge keeps. It runs
-when a pull request is opened or reopened and when its title is edited: its
-job is skipped for other edits, which also get a concurrency group of their own
-so that they don't cancel a check in progress. It's separate from `ci.yaml`,
-so editing a pull request doesn't rerun CI, and advisory: the
-[gate job](#gate-job) doesn't depend on it, and
-[branch protection](#branch-protection) doesn't require it.
-
-`norms verify` fails a project without `pr-title.yaml`, or whose
-`pr-title.yaml` doesn't run on pull requests or doesn't run `prek run --stage
-commit-msg`, and warns when its `pull_request` types leave out
-`opened`, `reopened` or `edited`.
+`squash_merge_commit_message: COMMIT_MESSAGES` in the API). Every pull request
+title, whoever opens it, must follow the subject rules above, including the `!`
+when the pull request makes a breaking change. CI checks the pull request's
+head commit rather than its title, so whoever merges checks the title.
 
 ### Branch Protection
 
@@ -583,8 +565,8 @@ GitHub Actions as its source means a commit status of the same name from
 anywhere else cannot satisfy it. Requiring branches to be up to date means the
 tree CI tested is the tree that is merged. Checks that do not report on every
 commit are never required, since a required check that never reports blocks the
-merge. This excludes `audit.yaml`, which runs on a schedule, `pr-title.yaml`,
-which runs when a pull request's title changes, and Renovate's commit statuses
+merge. This excludes `audit.yaml`, which runs on a schedule, and Renovate's
+commit statuses
 such as `renovate/artifacts`, which appear only on some Renovate branches.
 Renovate waits for those itself, because the shared preset disables platform
 automerge.
@@ -613,7 +595,6 @@ following workflows:
 |-----------------------------------|-------------------------------------------------|-------------------------------------------------|
 | `.github/workflows/ci.yaml`       | Pushes to `main` (and `dev`), all pull requests | Every check the Git hooks run                   |
 | `.github/workflows/audit.yaml`    | Daily schedule, manual dispatch                 | Security advisory audit of dependencies         |
-| `.github/workflows/pr-title.yaml` | Pull requests opened, reopened or retitled      | Commit message checks on pull request titles    |
 
 ### Checks
 
@@ -636,8 +617,7 @@ this job until it gets one. (prek also reads pre-commit's `SKIP`, but only when
 `PREK_SKIP` isn't set.)
 A hook's job has the hook's ID, or for the `markdownlint-cli2` and
 `tombi-format` hooks, is the `markdownlint` or `tombi` job.
-The `commit-msg` hooks don't run in it, but in the `pr-title.yaml` workflow on
-pull request titles (see [Branches](#branches)).
+The `commit-msg` hooks don't run in it, but in the `norms-verify` hook's job.
 
 The `norms-verify` hook's job runs it as `prek run norms-verify --all-files`,
 so that prek builds the norms that the hook's `rev` pins.
@@ -648,6 +628,22 @@ carry (see [Versioning](#versioning)). `norms verify` fails a `ci.yaml` in
 which no job runs it, as the hook or itself, and warns when that job's checkout
 lacks `fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook
 runs only in the `prek` job.
+
+The same job then runs the `commit-msg` hooks with the norms prek has built, as
+`prek run --stage commit-msg --commit-msg-filename <file>`, on the message of
+the commit CI tests: the commit pushed, or a pull request's head commit
+(`github.event.pull_request.head.sha`), which the whole history includes. So
+a commit made without the hooks installed fails CI when it is the last one
+pushed, and `main` can't be fast-forwarded to it; the commits before it in the
+same push aren't checked. A merge commit, such as GitHub's **Update branch**
+button makes on a pull request, isn't checked either, since linear history
+keeps it off `main`. The step first rejects a subject starting with `fixup!`,
+`squash!`, `amend!` or `Merge`, which the hooks let through in local commits.
+It sets `NORMS_COMMIT_MSG_LENGTH=warn`, so that lines over 72 characters only
+warn, since the commit has already been made and a bot's subject may run long,
+and `GIT_EDITOR=:`, which tells norms, as git does, that the message wasn't
+edited, so it checks lines starting with git's comment character as recorded.
+`norms verify` fails a `ci.yaml` in which no step runs the `commit-msg` hooks.
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -941,8 +937,8 @@ Every project uses these hooks:
   `squash!` and `amend!` prefixes that `git rebase --autosquash` removes. Its
   type isn't checked when it has one of those prefixes, since the rebase drops
   it, or when it is a merge subject git writes, starting with `Merge`, which may
-  also be of any length. CI applies the same rules to pull request titles (see
-  [Branches](#branches)).
+  also be of any length. CI runs it on the message of the commit it tests,
+  where lines over 72 characters only warn (see [Checks](#checks)).
 
   `norms-verify`, in the `pre-commit` stage, runs `norms verify` on the whole
   project, whichever files a commit changes. Like the other hooks that check

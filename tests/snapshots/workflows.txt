@@ -49,11 +49,6 @@ fail  renovate-exists  renovate.json: exists
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid
-pass  pr-title-yaml-exists  CI: pr-title.yaml: exists
-pass  pr-title-yaml-valid  CI: pr-title.yaml: valid
-warn  pr-title-yaml-trigger  CI: pr-title.yaml: runs when a pull request is opened, reopened or retitled
-      pull_request types omit edited
-fail  pr-title-yaml-commit-msg  CI: pr-title.yaml: runs the commit-msg hooks (prek run --stage commit-msg)
 pass  audit-yaml-exists  CI: audit.yaml: exists
 pass  audit-yaml-valid  CI: audit.yaml: valid
 fail  audit-yaml-schedule  CI: audit.yaml: runs on a daily schedule
@@ -69,10 +64,6 @@ warn  workflow-concurrency  CI: ci.yaml: concurrency cancels superseded runs
       No concurrency group
 warn  workflow-tool-versions  CI: ci.yaml: Renovate can update every tool version
       Versions written inline, which Renovate doesn't update: norms-verify (prek@0.5.10) (pin each in a _VERSION variable under a # renovate: comment)
-pass  workflow-job-timeouts  CI: pr-title.yaml: every job sets timeout-minutes
-pass  workflow-concurrency  CI: pr-title.yaml: concurrency cancels superseded runs
-warn  workflow-tool-versions  CI: pr-title.yaml: Renovate can update every tool version
-      Versions written inline, which Renovate doesn't update: pr-title (prek@0.5.10) (pin each in a _VERSION variable under a # renovate: comment)
 pass  workflow-job-timeouts  CI: release.yaml: every job sets timeout-minutes
 warn  workflow-concurrency  CI: release.yaml: concurrency cancels superseded runs
       concurrency doesn't set cancel-in-progress: true
@@ -89,6 +80,7 @@ fail  ci-prek  CI: remaining prek hooks (pinned, --all-files)
       prek run only runs named hooks or another --stage's, not every pre-commit hook
 warn  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
       norms-verify runs norms verify from a checkout without the whole history (fetch-depth: 0), so it sees no release tags
+fail  ci-commit-msg  CI: commit-msg hooks on the commit message (prek run --stage commit-msg)
 warn  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       pull_request filters by branches, paths-ignore
 warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
