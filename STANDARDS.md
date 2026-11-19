@@ -1406,8 +1406,16 @@ convention = "google"
 ```
 
 `line-length` is 120, as is Prettier's `printWidth`. The ignored rule conflicts
-with the Ruff formatter, which warns when it is enabled. Any further ignore
-needs a comment in `pyproject.toml` explaining why.
+with the Ruff formatter, which warns when it is enabled. Any further ignore,
+per-file ones included, needs a comment on its line in `pyproject.toml`
+explaining why, which `norms verify` warns without:
+
+```toml
+ignore = [
+  "missing-trailing-comma",
+  "line-contains-todo",  # Tracked in issues instead.
+]
+```
 
 #### Type Checking
 

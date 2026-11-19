@@ -373,7 +373,8 @@ impl ProjectContext {
 
 /// Lazy-loading context for one component of a project.
 ///
-/// Like [`ProjectContext`], each config file is parsed at most once. Paths are relative to the component's directory,
+/// Like [`ProjectContext`], each config file is parsed at most once, though `pyproject.toml` is parsed both into its
+/// model and, keeping its comments, into a document. Paths are relative to the component's directory,
 /// which may be the project root or a subdirectory. A component has a single language, so only that language's
 /// getters are ever called.
 pub(crate) struct ComponentContext {
@@ -389,6 +390,7 @@ pub(crate) struct ComponentContext {
     member_clippy_tomls: OnceLock<Vec<(String, ConfigStatus<ClippyToml>)>>,
     deny_toml: OnceLock<(String, ConfigStatus<DenyToml>)>,
     pyproject: OnceLock<ConfigStatus<PyprojectToml>>,
+    pyproject_document: OnceLock<ConfigStatus<toml_edit::Document<String>>>,
     python_version: OnceLock<ConfigStatus<Version>>,
     git_archival: OnceLock<ConfigStatus<String>>,
     eslint_config: OnceLock<ConfigStatus<String>>,
@@ -417,6 +419,7 @@ impl ComponentContext {
             member_clippy_tomls: OnceLock::new(),
             deny_toml: OnceLock::new(),
             pyproject: OnceLock::new(),
+            pyproject_document: OnceLock::new(),
             python_version: OnceLock::new(),
             git_archival: OnceLock::new(),
             eslint_config: OnceLock::new(),
@@ -571,6 +574,16 @@ impl ComponentContext {
     pub(crate) fn pyproject(&self) -> &ConfigStatus<PyprojectToml> {
         self.pyproject
             .get_or_init(|| parse_toml_file::<PyprojectToml>(&self.path.join("pyproject.toml")))
+    }
+
+    /// `pyproject.toml` parsed with its comments and layout (cached), for the checks that read comments, which
+    /// [`Self::pyproject`] drops.
+    pub(crate) fn pyproject_document(&self) -> &ConfigStatus<toml_edit::Document<String>> {
+        self.pyproject_document.get_or_init(|| {
+            read_text_file(&self.path.join("pyproject.toml")).parse_with(|raw| {
+                toml_edit::Document::parse(raw).map_err(|e| format!("Invalid TOML: {e}"))
+            })
+        })
     }
 
     /// Parsed `.python-version` in the component's own directory (cached). uv reads it only at the root of the

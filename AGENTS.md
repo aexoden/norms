@@ -76,9 +76,11 @@ version its Rust application and Vite build report against `git describe`.
 prints a `Report`, exiting 1 if any check failed, or with `--deny-warnings` if
 any check failed or warned.
 
-- `context.rs`: `ProjectContext` parses each config file at most once and
-  returns a `ConfigStatus<T>` (`NotFound`, `ParseError` or `Ok`). Checks read
-  files through it rather than themselves. It holds the repository-wide files
+- `context.rs`: `ProjectContext` parses each config file at most once (and
+  `pyproject.toml` once more with `toml_edit`, keeping the comments that the
+  Ruff ignore check reads) and returns a `ConfigStatus<T>` (`NotFound`,
+  `ParseError` or `Ok`). Checks read files through it rather than themselves.
+  It holds the repository-wide files
   and the detected components; each component's own files (`Cargo.toml`,
   `package.json`, ...) are in its `ComponentContext`.
 - `config/`: serde models of only the fields checks inspect, with

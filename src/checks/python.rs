@@ -9,7 +9,7 @@ use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
     BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook,
     PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
-    check_release_age_value, commands, program_args, sets_attribute,
+    check_release_age_value, commands, program_args, sets_attribute, unexplained_ruff_ignores,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -564,6 +564,22 @@ pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
             "ruff-lint-ignores",
             "Ruff lint: has ignore list",
             lint.has_ignores(),
+        );
+    }
+
+    if let Some(document) = ctx.pyproject_document().as_ref_ok() {
+        let unexplained = unexplained_ruff_ignores(document);
+        report.should(
+            "ruff-lint-ignore-reasons",
+            "Ruff lint: ignores beyond the baseline explained",
+            if unexplained.is_empty() {
+                Outcome::Pass
+            } else {
+                Outcome::issue(format!(
+                    "Ignored without a comment on the same line saying why: {}",
+                    unexplained.join(", ")
+                ))
+            },
         );
     }
 

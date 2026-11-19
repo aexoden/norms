@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when `pyproject.toml` has Ruff ignore a rule beyond the template's,
+  in `ignore` or `per-file-ignores`, without a comment on the rule's line
+  saying why (`ruff-lint-ignore-reasons`), as the standards require. Add one,
+  as in `"line-contains-todo",  # Tracked in issues instead.`
 - Warn when a `package.json` depends on `eslint-plugin-prettier`
   (`package-json-no-eslint-plugin-prettier`), which runs Prettier again inside
   ESLint. Remove it and its import from `eslint.config.ts`.

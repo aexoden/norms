@@ -179,6 +179,11 @@ re-renders them, as `AGENTS.md` describes.
   namespace package, but no package with an `__init__.py`, while a `ruff.toml`,
   `mypy.ini`, `pyrightconfig.json`, `pytest.ini` and `uv.toml` beside its
   `pyproject.toml` take the place of its tables.
+- `ruff-ignores` is a Python component whose Ruff configuration ignores rules
+  beyond the template's: one explained by a comment on its line, one by a
+  comment above it, which doesn't count, and one not at all, and in
+  `per-file-ignores`, an unexplained extra rule for tests and an explained
+  rule for another pattern.
 
 Symlinks and `.gitignore` handling have no fixture, and are covered by the unit
 tests in `src/detection.rs` instead: a fixture's `.gitignore` would also apply

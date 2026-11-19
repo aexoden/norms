@@ -1,0 +1,79 @@
+exit: 1
+languages: python
+components: python (.)
+
+fail  readme-exists  README.md
+      Not found: README.md
+warn  security-md-exists  SECURITY.md
+      Not found: SECURITY.md
+fail  license-exists  LICENSE
+fail  licenses-dir-exists  LICENSES/: holds the license texts
+      No license texts in LICENSES/
+fail  reuse-toml-exists  REUSE.toml: exists
+      File not found
+fail  changelog-exists  CHANGELOG.md
+      Not found: CHANGELOG.md, which the project needs because the Python component at . is a published library
+fail  gitignore-exists  .gitignore
+      Not found: .gitignore
+fail  gitattributes-exists  .gitattributes: exists
+      File not found
+fail  editorconfig-exists  .editorconfig: exists
+      File not found
+pass  yaml-extension  YAML files use .yaml
+fail  markdownlint-cli2-exists  .markdownlint-cli2.jsonc: exists
+      File not found
+fail  prek-config-exists  prek.toml: exists
+      File not found
+fail  renovate-exists  renovate.json: exists
+      File not found
+fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
+      Not found: workflows
+pass  components-search  Components: every directory searched
+pass  pyproject-exists  [.] pyproject.toml: exists
+pass  pyproject-valid  [.] pyproject.toml: valid
+pass  pyproject-project  [.] pyproject.toml: has [project] section
+fail  python-version-exists  [.] Python: .python-version
+      Not found: .python-version
+warn  pyproject-python-classifiers  [.] pyproject.toml: Python classifiers match requires-python
+      pyproject.toml sets no requires-python
+warn  pyproject-version-dynamic  [.] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [.] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [.] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [.] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
+fail  python-git-archival  [.] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
+warn  python-src-layout  [.] Python: src/ directory
+      No src/ directory
+fail  uv-lock-exists  [.] Python: uv.lock
+      Not found: uv.lock
+pass  uv-config  [.] uv: settings in [tool.uv], without a uv.toml
+warn  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  uv-required-version  [.] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
+warn  python-dependency-groups  [.] Python: has dependency-groups
+      Missing [dependency-groups]
+pass  ruff-configured  [.] Ruff: configured
+pass  ruff-line-length  [.] Ruff: line-length is 120
+pass  ruff-format-configured  [.] Ruff format: configured
+pass  ruff-format-lf  [.] Ruff format: LF line endings
+pass  ruff-lint-configured  [.] Ruff lint: configured
+pass  ruff-lint-preview  [.] Ruff lint: preview mode
+pass  ruff-lint-rules  [.] Ruff lint: has rules selected
+pass  ruff-lint-all  [.] Ruff lint: uses ALL rule
+pass  ruff-lint-ignores  [.] Ruff lint: has ignore list
+warn  ruff-lint-ignore-reasons  [.] Ruff lint: ignores beyond the baseline explained
+      Ignored without a comment on the same line saying why: line-contains-fixme, print, tests/*.py: magic-value-comparison
+pass  ruff-lint-pydocstyle  [.] Ruff lint: pydocstyle convention
+pass  ruff-lint-isort  [.] Ruff lint: isort configured
+pass  ruff-lint-copyright  [.] Ruff lint: copyright notice regex
+fail  mypy-configured  [.] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [.] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
+warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml

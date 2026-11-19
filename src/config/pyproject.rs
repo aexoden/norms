@@ -722,6 +722,69 @@ impl RuffLintConfig {
     }
 }
 
+/// The rules the baseline configuration in STANDARDS has Ruff ignore, which need no comment in a project.
+const RUFF_BASELINE_IGNORES: [&str; 1] = ["missing-trailing-comma"];
+
+/// The rules the baseline configuration has Ruff ignore in some files, by file pattern.
+const RUFF_BASELINE_PER_FILE_IGNORES: [(&str, &[&str]); 1] =
+    [("tests/*.py", &["assert", "private-member-access"])];
+
+/// The rules `pyproject.toml` has Ruff ignore beyond the baseline without a comment on the same line explaining
+/// them: `[tool.ruff.lint]`'s `ignore`, each as its rule, and `per-file-ignores`, each as `pattern: rule`. A comment
+/// anywhere after a rule on its line counts, as in `"rule",  # why`, or `ignore = [..., "rule"]  # why` for a list on
+/// one line. Any `#` there counts, since rule names hold none.
+pub(crate) fn unexplained_ruff_ignores(document: &toml_edit::Document<String>) -> Vec<String> {
+    let raw = document.raw();
+    let explained = |value: &toml_edit::Value| {
+        value.span().is_some_and(|span| {
+            raw.get(span.end..)
+                .and_then(|rest| rest.lines().next())
+                .is_some_and(|line| line.contains('#'))
+        })
+    };
+    let unexplained = |array: Option<&toml_edit::Array>, baseline: &[&str]| -> Vec<String> {
+        // Ruff rejects an entry that isn't a string, so that needs no comment here.
+        array
+            .into_iter()
+            .flatten()
+            .filter(|value| !explained(value))
+            .filter_map(toml_edit::Value::as_str)
+            .filter(|rule| !baseline.contains(rule))
+            .map(str::to_owned)
+            .collect()
+    };
+
+    let Some(lint) = document
+        .get("tool")
+        .and_then(|tool| tool.get("ruff"))
+        .and_then(|ruff| ruff.get("lint"))
+    else {
+        return Vec::new();
+    };
+
+    let mut rules = unexplained(
+        lint.get("ignore").and_then(toml_edit::Item::as_array),
+        &RUFF_BASELINE_IGNORES,
+    );
+    if let Some(per_file) = lint
+        .get("per-file-ignores")
+        .and_then(toml_edit::Item::as_table_like)
+    {
+        for (pattern, item) in per_file.iter() {
+            let baseline = RUFF_BASELINE_PER_FILE_IGNORES
+                .iter()
+                .find_map(|&(p, baseline)| (p == pattern).then_some(baseline))
+                .unwrap_or_default();
+            rules.extend(
+                unexplained(item.as_array(), baseline)
+                    .into_iter()
+                    .map(|rule| format!("{pattern}: {rule}")),
+            );
+        }
+    }
+    rules
+}
+
 /// `[tool.ruff.lint.pydocstyle]`.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -882,6 +945,70 @@ mod tests {
 
     fn parse(pyproject: &str) -> PyprojectToml {
         toml::from_str(pyproject).unwrap()
+    }
+
+    fn unexplained(pyproject: &str) -> Vec<String> {
+        unexplained_ruff_ignores(&toml_edit::Document::parse(pyproject.to_owned()).unwrap())
+    }
+
+    #[test]
+    fn ruff_ignores_beyond_the_baseline_need_a_comment_on_their_line() {
+        const NONE: [&str; 0] = [];
+
+        // The template's configuration has nothing to explain.
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint]\nignore = [\"missing-trailing-comma\"]\n\n\
+                 [tool.ruff.lint.per-file-ignores]\n\"tests/*.py\" = [\"assert\", \"private-member-access\"]\n"
+            ),
+            NONE
+        );
+        assert_eq!(unexplained("[project]\nname = 'app'\n"), NONE);
+        assert_eq!(unexplained("[tool.ruff.lint]\npreview = true\n"), NONE);
+
+        // A comment after each rule on its line explains it, with or without a trailing comma.
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint]\nignore = [\n  \"missing-trailing-comma\",\n  \"line-contains-todo\",  # why\n  \"line-contains-fixme\"  # why\n]\n"
+            ),
+            NONE
+        );
+        // As does one after a list on one line.
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint]\nignore = [\"missing-trailing-comma\", \"line-contains-todo\"]  # why\n"
+            ),
+            NONE
+        );
+
+        // A comment above a rule, or on another rule's line, doesn't.
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint]\nignore = [\n  # why\n  \"line-contains-todo\",\n  \"line-contains-fixme\",\n  \"missing-trailing-comma\",  # why\n]\n"
+            ),
+            ["line-contains-todo", "line-contains-fixme"]
+        );
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint]\nignore = [\"missing-trailing-comma\", \"line-contains-todo\"]\n"
+            ),
+            ["line-contains-todo"]
+        );
+        // Per-file ignores are explained the same way, beyond the baseline's rules for tests.
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint.per-file-ignores]\n\
+                 \"tests/*.py\" = [\"assert\", \"private-member-access\", \"line-contains-todo\"]\n\
+                 \"scripts/*.py\" = [\n  \"print\",  # why\n  \"assert\",\n]\n"
+            ),
+            ["tests/*.py: line-contains-todo", "scripts/*.py: assert"]
+        );
+        assert_eq!(
+            unexplained(
+                "[tool.ruff.lint]\nper-file-ignores = { \"scripts/*.py\" = [\"print\"] }\n"
+            ),
+            ["scripts/*.py: print"]
+        );
     }
 
     #[test]
