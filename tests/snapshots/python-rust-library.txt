@@ -128,7 +128,7 @@ pass  basedpyright-mode  [.] basedpyright: recommended mode ([tool.basedpyright]
 pass  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
 pass  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
 pass  python-prek-uv-lock  Python prek: uv-lock hook (uv lock --check)
-pass  python-prek-ruff-check  Python prek: ruff-check hook
+pass  python-prek-ruff-check  Python prek: ruff-check hook (without --fix)
 pass  python-prek-ruff-format  Python prek: ruff-format hook (--check)
 pass  python-prek-mypy  Python prek: mypy hook
 pass  python-prek-basedpyright  Python prek: basedpyright hook
@@ -137,7 +137,7 @@ pass  python-prek-local-hooks  Python prek: language hooks are local, system, ta
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 pass  python-ci-ruff-format  Python CI: format check
-pass  python-ci-ruff-check  Python CI: lint check
+pass  python-ci-ruff-check  Python CI: lint check (without --fix)
 pass  python-ci-mypy  Python CI: type check
 pass  python-ci-basedpyright  Python CI: basedpyright type check
 pass  python-ci-pytest  Python CI: tests (with coverage)

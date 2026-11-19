@@ -121,7 +121,7 @@ warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
 pass  python-prek-uv-lock  Python prek: uv-lock hook (uv lock --check)
-pass  python-prek-ruff-check  Python prek: ruff-check hook
+pass  python-prek-ruff-check  Python prek: ruff-check hook (without --fix)
 warn  python-prek-ruff-format  Python prek: ruff-format hook (--check)
       ruff format runs with --diff rather than --check
 pass  python-prek-mypy  Python prek: mypy hook
@@ -136,7 +136,7 @@ warn  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
       Jobs that uv run without uv sync --locked first: pytest, ruff-check
 fail  python-ci-ruff-format  Python CI: format check
       ruff format runs without --check, so it rewrites files instead of failing on them
-pass  python-ci-ruff-check  Python CI: lint check
+pass  python-ci-ruff-check  Python CI: lint check (without --fix)
 pass  python-ci-mypy  Python CI: type check
 fail  python-ci-basedpyright  Python CI: basedpyright type check
 warn  python-ci-pytest  Python CI: tests (with coverage)

@@ -9,7 +9,8 @@ use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
     BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook,
     PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
-    check_release_age_value, commands, program_args, sets_attribute, unexplained_ruff_ignores,
+    check_release_age_value, commands, is_program, program_args, sets_attribute,
+    unexplained_ruff_ignores,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -747,8 +748,21 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "python-prek-ruff-check",
-        "Python prek: ruff-check hook",
-        config.check_commit_hook("ruff-check"),
+        "Python prek: ruff-check hook (without --fix)",
+        config.commit_hooks("ruff-check").and_then(|hooks| {
+            if hooks.iter().any(|hook| {
+                hook.filter_map_commands("ruff check", ruff_check_run)
+                    .iter()
+                    .any(|run| run.fixes)
+            }) {
+                Err(Issue::warn(
+                    "The ruff-check hook runs ruff check with --fix, so it rewrites files rather than only failing \
+                     on them",
+                ))
+            } else {
+                Ok(())
+            }
+        }),
     );
     report.check(
         "python-prek-ruff-format",
@@ -819,8 +833,8 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
     report.must(
         "python-ci-ruff-check",
-        "Python CI: lint check",
-        workflow.runs_command("ruff check"),
+        "Python CI: lint check (without --fix)",
+        ruff_check_in_ci(workflow),
     );
     report.must(
         "python-ci-mypy",
@@ -874,6 +888,50 @@ fn uv_subcommand<'a, 'b>(words: &'b [&'a str]) -> Option<(&'a str, &'b [&'a str]
             return Some((word, tail));
         }
     }
+}
+
+/// Check that some step runs `ruff check` without `--fix`. One that fixes what it can passes on code that should
+/// fail, so it counts as none.
+fn ruff_check_in_ci(workflow: &Workflow) -> Result<(), String> {
+    let runs = workflow.filter_map_commands(ruff_check_run);
+    if runs.iter().any(|run| run.fails) {
+        Ok(())
+    } else if runs.is_empty() {
+        Err("No step runs ruff check".to_owned())
+    } else {
+        Err(
+            "ruff check runs with --fix, so it fixes what it can and passes rather than failing"
+                .to_owned(),
+        )
+    }
+}
+
+/// How a command runs `ruff check`: whether it rewrites files, with `--fix` (or `--fix-only`), and whether it still
+/// fails on what it finds, as it does without them or with `--exit-non-zero-on-fix`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RuffCheckRun {
+    fixes: bool,
+    fails: bool,
+}
+
+/// How a command's words run `ruff check`, if they do, after `ruff` anywhere among them, as in
+/// `uvx --from ruff ruff check`.
+fn ruff_check_run(words: &[&str]) -> Option<RuffCheckRun> {
+    words.iter().enumerate().find_map(|(index, word)| {
+        if !is_program(word, "ruff") {
+            return None;
+        }
+        let ["check", args @ ..] = words.get(index + 1..)? else {
+            return None;
+        };
+        let fixes = args
+            .iter()
+            .any(|arg| matches!(*arg, "--fix" | "--fix-only"));
+        Some(RuffCheckRun {
+            fixes,
+            fails: !fixes || args.contains(&"--exit-non-zero-on-fix"),
+        })
+    })
 }
 
 /// Whether a script line checks that `uv.lock` is up to date: `uv lock` with `--check`, or `--locked`, its older
@@ -1114,6 +1172,64 @@ pub(crate) fn check_min_python_job(
 mod tests {
     use super::*;
     use crate::models::{Component, Language};
+
+    #[test]
+    fn ruff_check_hooks_warn_on_fix() {
+        let hook = |toml: &str| {
+            let config = crate::config::PrekConfig::parse(toml.to_owned()).unwrap();
+            config
+                .commit_hooks("ruff-check")
+                .unwrap()
+                .iter()
+                .any(|hook| {
+                    hook.filter_map_commands("ruff check", ruff_check_run)
+                        .iter()
+                        .any(|run| run.fixes)
+                })
+        };
+        // Ruff's own remote hook takes its command from its repository, and --fix from the args.
+        assert!(hook(
+            "[[repos]]\nrepo = \"https://github.com/astral-sh/ruff-pre-commit\"\nrev = \"v0.15.0\"\n\
+             hooks = [{ id = \"ruff-check\", args = [\"--fix\"] }]\n"
+        ));
+        assert!(!hook(
+            "[[repos]]\nrepo = \"local\"\nhooks = [{ id = \"ruff-check\", entry = \"uv run ruff check\" }]\n"
+        ));
+    }
+
+    #[test]
+    fn ruff_check_runs_tell_fixes() {
+        let run = |line: &str| {
+            ruff_check_run(&line.split_whitespace().collect::<Vec<_>>())
+                .map(|run| (run.fixes, run.fails))
+        };
+        assert_eq!(run("uv run ruff check"), Some((false, true)));
+        assert_eq!(run("uvx ruff@0.15.0 check ."), Some((false, true)));
+        assert_eq!(run("uvx --from ruff ruff check"), Some((false, true)));
+        assert_eq!(run("uv run ruff check --fix"), Some((true, false)));
+        assert_eq!(run("ruff check --fix-only"), Some((true, false)));
+        assert_eq!(
+            run("ruff check --fix --exit-non-zero-on-fix"),
+            Some((true, true))
+        );
+        assert_eq!(run("uv run ruff format --check"), None);
+
+        let ci = |script: &str| {
+            ruff_check_in_ci(
+                &serde_saphyr::from_str(&format!(
+                    "jobs:\n  ruff:\n    steps:\n      - run: {script}\n"
+                ))
+                .unwrap(),
+            )
+        };
+        assert_eq!(ci("uv run ruff check"), Ok(()));
+        assert_eq!(ci("ruff check --fix --exit-non-zero-on-fix"), Ok(()));
+        assert!(ci("uv run ruff check --fix").unwrap_err().contains("--fix"));
+        assert_eq!(
+            ci("uv run mypy ."),
+            Err("No step runs ruff check".to_owned())
+        );
+    }
 
     #[test]
     fn ruff_line_length_is_120() {

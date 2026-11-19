@@ -258,6 +258,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Don't count `ruff check --fix` as checking: it fails `python-ci-ruff-check`
+  in CI, where it fixes what it can and passes, and warns in the `ruff-check`
+  hook (`python-prek-ruff-check`), where it rewrites files. Run `ruff check`
+  without `--fix`, as the template does.
 - Check the values of Ruff's settings, not only that they're set: warn unless
   `ignore` lists `missing-trailing-comma` (`ruff-lint-ignores`), pydocstyle's
   `convention` is `google` (`ruff-lint-pydocstyle`), and isort's
