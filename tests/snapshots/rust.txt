@@ -103,6 +103,7 @@ pass  clippy-lints  [.] Cargo.toml: Clippy lints configured
 pass  clippy-pedantic  [.] Cargo.toml: Clippy pedantic enabled
 pass  clippy-nursery  [.] Cargo.toml: Clippy nursery enabled
 pass  clippy-cargo  [.] Cargo.toml: Clippy cargo enabled
+pass  clippy-restriction-lints  [.] Cargo.toml: Clippy restriction lints set
 pass  rustc-lints  [.] Cargo.toml: compiler lints configured ([lints.rust])
 pass  clippy-toml-exists  [.] clippy.toml: exists
 pass  clippy-toml-valid  [.] clippy.toml: valid

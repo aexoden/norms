@@ -80,6 +80,8 @@ warn  clippy-nursery  [.] crates/cli/Cargo.toml: Clippy nursery enabled
       nursery isn't set
 warn  clippy-cargo  [.] crates/cli/Cargo.toml: Clippy cargo enabled
       cargo isn't set
+warn  clippy-restriction-lints  [.] crates/cli/Cargo.toml: Clippy restriction lints set
+      None of the standard's restriction lints are set
 warn  rustc-lints  [.] crates/cli/Cargo.toml: compiler lints configured ([lints.rust])
       Inherits the workspace's lints, but there is no [workspace.lints.rust] section
 fail  clippy-lints  [.] crates/core/Cargo.toml: Clippy lints configured
@@ -92,6 +94,8 @@ warn  clippy-nursery  [.] tools/helper/Cargo.toml: Clippy nursery enabled
       nursery isn't set
 warn  clippy-cargo  [.] tools/helper/Cargo.toml: Clippy cargo enabled
       cargo isn't set
+warn  clippy-restriction-lints  [.] tools/helper/Cargo.toml: Clippy restriction lints set
+      None of the standard's restriction lints are set
 warn  rustc-lints  [.] tools/helper/Cargo.toml: compiler lints configured ([lints.rust])
       Inherits the workspace's lints, but there is no [workspace.lints.rust] section
 fail  clippy-toml-exists  [.] clippy.toml: exists

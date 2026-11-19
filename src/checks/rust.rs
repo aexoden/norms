@@ -327,6 +327,94 @@ const CLIPPY_GROUPS: [(&str, &str); 3] = [
     ("clippy-cargo", "cargo"),
 ];
 
+/// The Clippy restriction lints the standard enables. A package may set any of them to any level, `allow` included,
+/// but leaving one out is taken for drift.
+const CLIPPY_RESTRICTION_LINTS: [&str; 66] = [
+    "absolute_paths",
+    "allow_attributes",
+    "allow_attributes_without_reason",
+    "as_pointer_underscore",
+    "cfg_not_test",
+    "clone_on_ref_ptr",
+    "create_dir",
+    "dbg_macro",
+    "decimal_literal_representation",
+    "default_union_representation",
+    "definition_in_module_root",
+    "doc_paragraphs_missing_punctuation",
+    "empty_enum_variants_with_brackets",
+    "empty_structs_with_brackets",
+    "exit",
+    "expect_used",
+    "field_scoped_visibility_modifiers",
+    "filetype_is_file",
+    "float_cmp_const",
+    "fn_to_numeric_cast_any",
+    "if_then_some_else_none",
+    "indexing_slicing",
+    "infinite_loop",
+    "inline_modules",
+    "lossy_float_literal",
+    "map_err_ignore",
+    "map_with_unused_argument_over_ranges",
+    "mem_forget",
+    "mixed_read_write_in_expression",
+    "multiple_inherent_impl",
+    "multiple_unsafe_ops_per_block",
+    "needless_raw_strings",
+    "non_zero_suggestions",
+    "panic",
+    "panic_in_result_fn",
+    "partial_pub_fields",
+    "pathbuf_init_then_push",
+    "pointer_format",
+    "precedence_bits",
+    "rc_buffer",
+    "rc_mutex",
+    "redundant_test_prefix",
+    "redundant_type_annotations",
+    "renamed_function_params",
+    "return_and_then",
+    "same_name_method",
+    "self_named_module_files",
+    "semicolon_inside_block",
+    "shadow_unrelated",
+    "str_to_string",
+    "string_add",
+    "string_slice",
+    "suspicious_xor_used_as_pow",
+    "tests_outside_test_module",
+    "todo",
+    "try_err",
+    "unimplemented",
+    "unnecessary_rest_pattern",
+    "unneeded_field_pattern",
+    "unseparated_literal_suffix",
+    "unused_result_ok",
+    "unused_trait_names",
+    "unwrap_used",
+    "use_debug",
+    "verbose_file_reads",
+    "wildcard_enum_match_arm",
+];
+
+/// Check that `lints`, a package's Clippy lints, set every restriction lint the standard enables, naming those it
+/// leaves out.
+fn restriction_lints_set(lints: &HashMap<String, toml::Value>) -> Result<(), String> {
+    let missing: Vec<&str> = CLIPPY_RESTRICTION_LINTS
+        .into_iter()
+        .filter(|lint| !lints.contains_key(*lint))
+        .collect();
+    match missing.as_slice() {
+        [] => Ok(()),
+        all if all.len() == CLIPPY_RESTRICTION_LINTS.len() => {
+            Err("None of the standard's restriction lints are set".to_owned())
+        }
+        [lint] => Err(format!("{lint} isn't set")),
+        some => Err(format!("{} aren't set", some.join(", "))),
+    }
+}
+
 /// The compiler's lints and lint groups the standard sets in `[lints.rust]`, with the least level each needs.
 const RUSTC_LINTS: [(&str, LintLevel); 5] = [
     ("future_incompatible", LintLevel::Warn),
@@ -376,6 +464,11 @@ fn check_package_lints(
                     lint_at_least(lints, group, LintLevel::Warn),
                 );
             }
+            report.should(
+                "clippy-restriction-lints",
+                format!("{label}: Clippy restriction lints set"),
+                restriction_lints_set(lints),
+            );
         }
         Err(error) => {
             report.must("clippy-lints", name, Outcome::issue(error));
@@ -2556,6 +2649,11 @@ jobs:
                 ),
                 ("clippy-cargo", Status::Pass, ""),
                 (
+                    "clippy-restriction-lints",
+                    Status::Warn,
+                    "None of the standard's restriction lints are set",
+                ),
+                (
                     "rustc-lints",
                     Status::Warn,
                     "unreachable_pub isn't set; unsafe_code is deny, not forbid"
@@ -2589,5 +2687,54 @@ jobs:
         for (lint, level) in RUSTC_LINTS {
             assert_eq!(lint_at_least(&rust, lint, level), Ok(()), "{lint}");
         }
+    }
+
+    #[test]
+    fn restriction_lints_may_be_set_to_any_level() {
+        let mut lints: HashMap<String, toml::Value> = CLIPPY_RESTRICTION_LINTS
+            .into_iter()
+            .map(|lint| (lint.to_owned(), toml::Value::from("warn")))
+            .collect();
+        assert_eq!(restriction_lints_set(&lints), Ok(()));
+
+        lints.insert("exit".to_owned(), toml::Value::from("allow"));
+        assert_eq!(restriction_lints_set(&lints), Ok(()));
+
+        lints.remove("todo");
+        assert_eq!(
+            restriction_lints_set(&lints),
+            Err("todo isn't set".to_owned())
+        );
+        lints.remove("panic");
+        assert_eq!(
+            restriction_lints_set(&lints),
+            Err("panic, todo aren't set".to_owned())
+        );
+    }
+
+    /// The Clippy lints a `[lints.clippy]` table in `text` sets, up to the next table, with their values as written.
+    fn clippy_lint_lines(text: &str) -> Vec<&str> {
+        text.lines()
+            .skip_while(|line| *line != "[lints.clippy]")
+            .skip(1)
+            .take_while(|line| !line.starts_with('['))
+            .filter(|line| !line.is_empty())
+            .collect()
+    }
+
+    #[test]
+    fn restriction_lints_match_the_template_and_the_standard() {
+        let template = include_str!("../../template/{{ rust_dir }}/Cargo.toml.jinja");
+        let standard = include_str!("../../STANDARDS.md");
+        let lines = clippy_lint_lines(template);
+        assert_eq!(lines, clippy_lint_lines(standard));
+        assert_eq!(lines, clippy_lint_lines(include_str!("../../Cargo.toml")));
+
+        // Apart from the groups and the lints of theirs it allows, the template sets the restriction lints.
+        let restriction: Vec<&str> = lines
+            .iter()
+            .filter_map(|line| line.strip_suffix(" = \"warn\""))
+            .collect();
+        assert_eq!(restriction, CLIPPY_RESTRICTION_LINTS);
     }
 }

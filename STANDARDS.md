@@ -1333,8 +1333,7 @@ so on.
 #### Lints
 
 The baseline enables the `pedantic`, `nursery` and `cargo` Clippy groups, plus
-a selection of restriction lints. The selection is interim and will be revised
-as cases come up:
+a selection of restriction lints:
 
 ```toml
 [lints.clippy]
@@ -1423,8 +1422,10 @@ override them.
 
 `norms verify` warns when a package doesn't set the `pedantic`, `nursery` and
 `cargo` groups to `warn` or stricter, or any of the `[lints.rust]` entries
-above to its level or stricter. The restriction lints aren't checked while the
-selection is interim.
+above to its level or stricter. It also warns when a package leaves out any of
+the restriction lints. Setting one to `allow` counts as a deliberate choice, so
+a package that needs to, such as an application calling `std::process::exit`,
+allows that lint alone, with a comment saying why.
 
 In a workspace, the lints may be set once in `[workspace.lints.clippy]` and
 `[workspace.lints.rust]`. Cargo applies them only to packages that inherit them

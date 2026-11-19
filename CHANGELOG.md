@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   files below it. Directories Prettier skips, those its `.gitignore` and
   `.prettierignore` match included, aren't searched, while those `[components]
   exclude` lists are, as Prettier formats them.
+- **Breaking:** Settle the Clippy restriction lints in `STANDARDS.md`, and warn
+  when a package, or a member of its workspace, leaves out any of them
+  (`clippy-restriction-lints`). Set each, as the template does. Setting one to
+  `allow` is accepted as a deliberate choice.
 - Warn when no hook, or no CI step, runs the doctests of a Rust library
   target, beside a binary or not, as `cargo test` does unless it selects other
   targets.
