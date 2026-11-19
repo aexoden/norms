@@ -258,6 +258,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Check the values of Ruff's settings, not only that they're set: warn unless
+  `ignore` lists `missing-trailing-comma` (`ruff-lint-ignores`), pydocstyle's
+  `convention` is `google` (`ruff-lint-pydocstyle`), and isort's
+  `lines-between-types` is 1 (`ruff-lint-isort`), as the standards give them.
 - Fail `rust-ci-rustfmt`, rather than only warning about the step's form, when
   CI runs `cargo fmt` without `--check` in place of
   `actions-rust-lang/rustfmt`: such a step rewrites the files and passes every

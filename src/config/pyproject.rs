@@ -716,9 +716,48 @@ impl RuffLintConfig {
         self.select.as_ref().is_some_and(|s| !s.is_empty())
     }
 
-    /// Whether an ignore list is present and non-empty.
-    pub(crate) fn has_ignores(&self) -> bool {
-        self.ignore.as_ref().is_some_and(|i| !i.is_empty())
+    /// Check that Ruff ignores the baseline's rules, [`RUFF_BASELINE_IGNORES`]: `missing-trailing-comma`, which
+    /// conflicts with the Ruff formatter.
+    pub(crate) fn check_baseline_ignore(&self) -> Result<(), String> {
+        let missing: Vec<&str> = RUFF_BASELINE_IGNORES
+            .into_iter()
+            .filter(|rule| {
+                !self
+                    .ignore
+                    .as_ref()
+                    .is_some_and(|ignore| ignore.iter().any(|ignored| ignored == rule))
+            })
+            .collect();
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "{} isn't ignored, though it conflicts with the Ruff formatter",
+                missing.join(", ")
+            ))
+        }
+    }
+
+    /// Check that pydocstyle's convention is Google's.
+    pub(crate) fn check_pydocstyle_convention(&self) -> Result<(), String> {
+        match self
+            .pydocstyle
+            .as_ref()
+            .and_then(|p| p.convention.as_deref())
+        {
+            Some("google") => Ok(()),
+            Some(convention) => Err(format!("convention is {convention}, not google")),
+            None => Err("Missing convention".to_owned()),
+        }
+    }
+
+    /// Check that isort separates the kinds of imported names with one blank line, `lines-between-types = 1`.
+    pub(crate) fn check_isort(&self) -> Result<(), String> {
+        match self.isort.as_ref().and_then(|i| i.lines_between_types) {
+            Some(1) => Ok(()),
+            Some(lines) => Err(format!("lines-between-types is {lines}, not 1")),
+            None => Err("Missing lines-between-types".to_owned()),
+        }
     }
 }
 
@@ -949,6 +988,42 @@ mod tests {
 
     fn unexplained(pyproject: &str) -> Vec<String> {
         unexplained_ruff_ignores(&toml_edit::Document::parse(pyproject.to_owned()).unwrap())
+    }
+
+    #[test]
+    fn ruff_lint_settings_match_the_standard() {
+        let lint = |toml: &str| -> RuffLintConfig { toml::from_str(toml).unwrap() };
+        let standard = lint(
+            "ignore = [\"missing-trailing-comma\", \"line-contains-todo\"]\n\
+             pydocstyle = { convention = \"google\" }\nisort = { lines-between-types = 1 }\n",
+        );
+        assert_eq!(standard.check_baseline_ignore(), Ok(()));
+        assert_eq!(standard.check_pydocstyle_convention(), Ok(()));
+        assert_eq!(standard.check_isort(), Ok(()));
+
+        let other = lint(
+            "ignore = [\"line-contains-todo\"]\npydocstyle = { convention = \"numpy\" }\n\
+             isort = { lines-between-types = 0 }\n",
+        );
+        assert!(other.check_baseline_ignore().is_err());
+        assert_eq!(
+            other.check_pydocstyle_convention(),
+            Err("convention is numpy, not google".to_owned())
+        );
+        assert_eq!(
+            other.check_isort(),
+            Err("lines-between-types is 0, not 1".to_owned())
+        );
+
+        let empty = lint("isort = {}\n");
+        assert_eq!(
+            empty.check_pydocstyle_convention(),
+            Err("Missing convention".to_owned())
+        );
+        assert_eq!(
+            empty.check_isort(),
+            Err("Missing lines-between-types".to_owned())
+        );
     }
 
     #[test]

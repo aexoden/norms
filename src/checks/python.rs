@@ -562,8 +562,8 @@ pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
     if lint.selects_all() {
         report.should(
             "ruff-lint-ignores",
-            "Ruff lint: has ignore list",
-            lint.has_ignores(),
+            "Ruff lint: ignores missing-trailing-comma",
+            lint.check_baseline_ignore(),
         );
     }
 
@@ -586,18 +586,15 @@ pub(crate) fn check_ruff_lint(ctx: &ComponentContext, report: &mut Report) {
     // Pydocstyle convention
     report.should(
         "ruff-lint-pydocstyle",
-        "Ruff lint: pydocstyle convention",
-        lint.pydocstyle
-            .as_ref()
-            .and_then(|p| p.convention.as_ref())
-            .is_some(),
+        "Ruff lint: pydocstyle convention is google",
+        lint.check_pydocstyle_convention(),
     );
 
     // Isort
     report.should(
         "ruff-lint-isort",
-        "Ruff lint: isort configured",
-        lint.isort.is_some(),
+        "Ruff lint: isort lines-between-types is 1",
+        lint.check_isort(),
     );
 
     // Copyright notice
