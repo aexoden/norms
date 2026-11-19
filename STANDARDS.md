@@ -742,7 +742,7 @@ from `ci.yaml` because new advisories appear without code changes, and
 shouldn't block unrelated pull requests:
 
 - Rust: `cargo deny --workspace --all-features check -D warnings advisories`.
-- Python: `uv audit`.
+- Python: `uv audit --locked`.
 - TypeScript: `pnpm audit`.
 
 ## Dependency Management
@@ -1091,6 +1091,9 @@ project/
 └── README.md
 ```
 
+A library also ships a `py.typed` marker in its package, and lists the
+`Typing :: Typed` classifier, so that type checkers read its annotations.
+
 Ruff, mypy, basedpyright, pytest and uv are configured in `pyproject.toml` alone:
 there is no `ruff.toml`, `mypy.ini`, `pyrightconfig.json`, `pytest.ini`,
 `uv.toml` or similar file, which would replace its settings (for `uv.toml`, the
@@ -1337,8 +1340,12 @@ application and `tsconfig.node.json` for tooling files such as
 "noUnusedParameters": true,
 "verbatimModuleSyntax": true,
 "erasableSyntaxOnly": true,
-"moduleDetection": "force"
+"moduleDetection": "force",
+"noEmit": true
 ```
+
+`noEmit` leaves the output to Vite, so that the `build` script's `tsc -b`
+writes no JavaScript beside the sources.
 
 `verbatimModuleSyntax` implies `isolatedModules`, which therefore need not be
 set. `erasableSyntaxOnly` rejects TypeScript syntax with runtime effects, such
@@ -1374,9 +1381,9 @@ configuration in subdirectories:
 
 [prettier-plugin-packagejson](https://github.com/matzkoh/prettier-plugin-packagejson)
 sorts `package.json`'s fields, scripts and dependencies. Every component has a
-`.prettierignore`. In a subdirectory, where Prettier doesn't read the root
-`.gitignore`, it also lists build output (`dist/`) and coverage reports
-(`coverage/`).
+`.prettierignore`, which lists `pnpm-lock.yaml`, since pnpm writes it. In a
+subdirectory, where Prettier doesn't read the root `.gitignore`, it also lists
+build output (`dist/`) and coverage reports (`coverage/`).
 
 Use [ESLint](https://eslint.org/) for linting, configured in `eslint.config.ts`
 alone, which ESLint loads through [jiti](https://github.com/unjs/jiti), a
