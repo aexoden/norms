@@ -258,6 +258,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fail `rust-ci-test` when CI runs only the doctests (`cargo test --doc` or
+  `cargo llvm-cov --doc`) or builds the tests without running them
+  (`cargo test --no-run`), rather than passing: the unit and integration tests
+  never ran. Run them with `cargo llvm-cov`, as the template does.
 - Require a committed `Cargo.lock` in Rust libraries too (`cargo-lock-exists`),
   as the standards require of every project, not only in applications. Commit
   the lock file.

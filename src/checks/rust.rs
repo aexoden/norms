@@ -744,9 +744,11 @@ pub(crate) fn check_msrv_job(
 // Tests
 //
 
-/// How a command runs a component's tests: whether it measures their coverage, and whether it runs the doctests too.
+/// How a command runs a component's tests: whether it runs any tests besides the doctests, whether it measures their
+/// coverage, and whether it runs the doctests too.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TestRun {
+    units: bool,
     coverage: bool,
     doctests: bool,
 }
@@ -795,9 +797,16 @@ fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
     match subcommand {
         "test" => {
             let selects = |name| options.iter().any(|option| is_option(option, name));
+            let selects_targets = CARGO_TEST_TARGET_OPTIONS.into_iter().any(selects);
             Some(TestRun {
+                units: !selects("--no-run")
+                    && (!selects_targets
+                        || CARGO_TEST_TARGET_OPTIONS
+                            .into_iter()
+                            .filter(|name| !matches!(*name, "--doc" | "--no-run"))
+                            .any(selects)),
                 coverage: false,
-                doctests: selects("--doc") || !CARGO_TEST_TARGET_OPTIONS.into_iter().any(selects),
+                doctests: selects("--doc") || !selects_targets,
             })
         }
         "llvm-cov" => {
@@ -812,6 +821,7 @@ fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
                 return None;
             }
             Some(TestRun {
+                units: !options.contains(&"--doc"),
                 coverage: !options.contains(&"--no-report"),
                 doctests: !nextest
                     && options
@@ -830,6 +840,7 @@ fn cargo_test_hooks(config: &PrekConfig) -> Result<(), Issue> {
         .commit_hooks("cargo-test")?
         .into_iter()
         .flat_map(|hook| hook.filter_map_commands("", cargo_test_run))
+        .filter(|run| run.units)
         .collect();
     if runs.iter().any(|run| run.coverage) {
         Ok(())
@@ -857,9 +868,14 @@ fn reports_coverage(words: &[&str]) -> bool {
 }
 
 /// Check that some step runs the tests with coverage, through cargo-llvm-cov, reporting it at once or, after
-/// `--no-report`, in a later `cargo llvm-cov report`. One that runs them only without coverage warns.
+/// `--no-report`, in a later `cargo llvm-cov report`. One that runs them only without coverage warns, and one that runs
+/// only the doctests, as `cargo test --doc` does, doesn't count.
 fn tests_in_ci(workflow: &Workflow) -> Result<(), Issue> {
-    let runs = workflow.filter_map_commands(cargo_test_run);
+    let runs: Vec<TestRun> = workflow
+        .filter_map_commands(cargo_test_run)
+        .into_iter()
+        .filter(|run| run.units)
+        .collect();
     let reported_later = || {
         !workflow
             .filter_map_commands(|words| defers_coverage_report(words).then_some(()))
@@ -871,7 +887,9 @@ fn tests_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     if runs.iter().any(|run| run.coverage) || reported_later() {
         Ok(())
     } else if runs.is_empty() {
-        Err(Issue::fail("No step runs cargo test or cargo llvm-cov"))
+        Err(Issue::fail(
+            "No step runs the tests with cargo test or cargo llvm-cov, other than the doctests",
+        ))
     } else {
         Err(Issue::warn(
             "No step runs the tests with coverage, as cargo llvm-cov does",
@@ -2477,33 +2495,37 @@ jobs:
     fn cargo_test_runs_tell_coverage_and_doctests() {
         let run = |line: &str| {
             let words: Vec<&str> = line.split_whitespace().collect();
-            cargo_test_run(&words).map(|run| (run.coverage, run.doctests))
+            cargo_test_run(&words).map(|run| (run.units, run.coverage, run.doctests))
         };
         for (line, expected) in [
-            ("cargo test --workspace --all-features", (false, true)),
+            ("cargo test --workspace --all-features", (true, false, true)),
             (
                 "cargo +1.99.1 test --manifest-path rust/Cargo.toml",
-                (false, true),
+                (true, false, true),
             ),
             (
                 "cargo test --workspace -- --test-threads 1 --lib",
-                (false, true),
+                (true, false, true),
             ),
-            ("cargo test --workspace --all-features --doc", (false, true)),
-            ("cargo test --doc --features extra", (false, true)),
-            ("cargo test --lib", (false, false)),
-            ("cargo test --test=cli", (false, false)),
-            ("cargo test --all-targets", (false, false)),
-            ("cargo test --no-run", (false, false)),
+            (
+                "cargo test --workspace --all-features --doc",
+                (false, false, true),
+            ),
+            ("cargo test --doc --features extra", (false, false, true)),
+            ("cargo test --doc --lib", (true, false, true)),
+            ("cargo test --lib", (true, false, false)),
+            ("cargo test --test=cli", (true, false, false)),
+            ("cargo test --all-targets", (true, false, false)),
+            ("cargo test --no-run", (false, false, false)),
             (
                 "cargo llvm-cov --workspace --all-features --show-missing-lines",
-                (true, false),
+                (true, true, false),
             ),
-            ("cargo llvm-cov test --workspace", (true, false)),
-            ("cargo +nightly llvm-cov --doctests", (true, true)),
-            ("cargo +nightly llvm-cov --doc", (true, true)),
-            ("cargo llvm-cov nextest --workspace", (true, false)),
-            ("cargo llvm-cov --no-report", (false, false)),
+            ("cargo llvm-cov test --workspace", (true, true, false)),
+            ("cargo +nightly llvm-cov --doctests", (true, true, true)),
+            ("cargo +nightly llvm-cov --doc", (false, true, true)),
+            ("cargo llvm-cov nextest --workspace", (true, true, false)),
+            ("cargo llvm-cov --no-report", (true, false, false)),
         ] {
             assert_eq!(run(line), Some(expected), "{line}");
         }
@@ -2536,6 +2558,7 @@ jobs:
         assert_eq!(hooks(&["cargo test --workspace --all-features"]), uncovered);
         assert_eq!(hooks(&["cargo llvm-cov --no-report"]), uncovered);
         assert_eq!(hooks(&["cargo check"]), uncovered);
+        assert_eq!(hooks(&["cargo +nightly llvm-cov --doc"]), uncovered);
         // Any copy of the hook that measures coverage is enough.
         assert_eq!(
             hooks(&["cargo test --workspace", "cargo llvm-cov --workspace"]),
@@ -2587,10 +2610,18 @@ jobs:
             ci(&["cargo test --workspace", "cargo llvm-cov report"]),
             uncovered_in_ci
         );
+        let untested_in_ci = Err(Issue::fail(
+            "No step runs the tests with cargo test or cargo llvm-cov, other than the doctests",
+        ));
         assert_eq!(
             ci(&["cargo build", "cargo llvm-cov report"]),
-            Err(Issue::fail("No step runs cargo test or cargo llvm-cov"))
+            untested_in_ci
         );
+        assert_eq!(
+            ci(&["cargo test --workspace --all-features --doc"]),
+            untested_in_ci
+        );
+        assert_eq!(ci(&["cargo test --no-run"]), untested_in_ci);
     }
 
     #[test]

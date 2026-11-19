@@ -195,7 +195,7 @@ fail  rust-ci-rustfmt  Rust CI: format check
 fail  rust-ci-clippy  Rust CI: clippy check (denies warnings)
       No step runs cargo clippy
 fail  rust-ci-test  Rust CI: tests (with coverage)
-      No step runs cargo test or cargo llvm-cov
+      No step runs the tests with cargo test or cargo llvm-cov, other than the doctests
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
       No step uses EmbarkStudios/cargo-deny-action
 pass  rust-ci-separate-cache  Rust CI: no separate Swatinem/rust-cache step
