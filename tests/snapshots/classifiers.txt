@@ -67,6 +67,7 @@ fail  mypy-configured  [app] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [app] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [app] basedpyright: rules turned off explained
 warn  pytest-strict  [app] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [bad-pin] pyproject.toml: exists
@@ -104,6 +105,7 @@ fail  mypy-configured  [bad-pin] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [bad-pin] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [bad-pin] basedpyright: rules turned off explained
 warn  pytest-strict  [bad-pin] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [capped] pyproject.toml: exists
@@ -141,6 +143,7 @@ fail  mypy-configured  [capped] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [capped] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [capped] basedpyright: rules turned off explained
 warn  pytest-strict  [capped] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [lib] pyproject.toml: exists
@@ -180,6 +183,7 @@ fail  mypy-configured  [lib] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [lib] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [lib] basedpyright: rules turned off explained
 warn  pytest-strict  [lib] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [parent-pin/open] pyproject.toml: exists
@@ -218,5 +222,6 @@ fail  mypy-configured  [parent-pin/open] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [parent-pin/open] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [parent-pin/open] basedpyright: rules turned off explained
 warn  pytest-strict  [parent-pin/open] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml

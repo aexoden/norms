@@ -10,7 +10,7 @@ use crate::config::{
     BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook,
     PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
     check_release_age_value, commands, is_program, program_args, sets_attribute,
-    unexplained_ruff_ignores,
+    unexplained_basedpyright_rules, unexplained_ruff_ignores,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -677,6 +677,22 @@ pub(crate) fn check_basedpyright(ctx: &ComponentContext, report: &mut Report) {
                 )
         },
     );
+
+    if let Some(document) = ctx.pyproject_document().as_ref_ok() {
+        let unexplained = unexplained_basedpyright_rules(document);
+        report.should(
+            "basedpyright-rule-reasons",
+            "basedpyright: rules turned off explained",
+            if unexplained.is_empty() {
+                Outcome::Pass
+            } else {
+                Outcome::issue(format!(
+                    "Turned off without a comment on the same line saying why: {}",
+                    unexplained.join(", ")
+                ))
+            },
+        );
+    }
 }
 
 //
@@ -1507,6 +1523,7 @@ jobs:
             report
                 .results
                 .iter()
+                .filter(|result| result.id != "basedpyright-rule-reasons")
                 .map(|result| result.message.clone())
                 .collect::<Vec<_>>()
         };

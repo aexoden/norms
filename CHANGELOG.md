@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when `[tool.basedpyright]` turns a rule off (`false`, `"none"`,
+  `"information"` or `"hint"`) without a comment on its line saying why
+  (`basedpyright-rule-reasons`), as the standards require. Add one, as in
+  `reportAny = false  # The JSON API returns Any.` `basedpyright-mode` also
+  warns on `failOnWarnings = false`, which lets the warnings most rules report
+  pass.
 - Warn when a hook that runs before each commit isn't in its priority group
   (`prek-priorities`): the lock file hooks in `priority = "lock"`, the builtin
   hooks and `reuse` in none, and the rest in `priority = "check"`. Otherwise a

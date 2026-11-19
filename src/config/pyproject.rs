@@ -772,19 +772,23 @@ const RUFF_BASELINE_IGNORES: [&str; 1] = ["missing-trailing-comma"];
 const RUFF_BASELINE_PER_FILE_IGNORES: [(&str, &[&str]); 1] =
     [("tests/*.py", &["assert", "private-member-access"])];
 
+/// Whether a comment follows `value` on the rest of its line in `document`, as in `"rule",  # why`.
+fn commented(document: &toml_edit::Document<String>, value: &toml_edit::Value) -> bool {
+    value.span().is_some_and(|span| {
+        document
+            .raw()
+            .get(span.end..)
+            .and_then(|rest| rest.lines().next())
+            .is_some_and(|line| line.contains('#'))
+    })
+}
+
 /// The rules `pyproject.toml` has Ruff ignore beyond the baseline without a comment on the same line explaining
 /// them: `[tool.ruff.lint]`'s `ignore`, each as its rule, and `per-file-ignores`, each as `pattern: rule`. A comment
 /// anywhere after a rule on its line counts, as in `"rule",  # why`, or `ignore = [..., "rule"]  # why` for a list on
 /// one line. Any `#` there counts, since rule names hold none.
 pub(crate) fn unexplained_ruff_ignores(document: &toml_edit::Document<String>) -> Vec<String> {
-    let raw = document.raw();
-    let explained = |value: &toml_edit::Value| {
-        value.span().is_some_and(|span| {
-            raw.get(span.end..)
-                .and_then(|rest| rest.lines().next())
-                .is_some_and(|line| line.contains('#'))
-        })
-    };
+    let explained = |value: &toml_edit::Value| commented(document, value);
     let unexplained = |array: Option<&toml_edit::Array>, baseline: &[&str]| -> Vec<String> {
         // Ruff rejects an entry that isn't a string, so that needs no comment here.
         array
@@ -826,6 +830,39 @@ pub(crate) fn unexplained_ruff_ignores(document: &toml_edit::Document<String>) -
         }
     }
     rules
+}
+
+/// The rules `[tool.basedpyright]` turns off, its `report*` keys set to `false`, `"none"`, `"information"` or `"hint"`,
+/// none of which fails the check, without a comment on the same line saying why, as the standards ask. Any `#` after
+/// the value counts, since a rule's level holds none.
+pub(crate) fn unexplained_basedpyright_rules(
+    document: &toml_edit::Document<String>,
+) -> Vec<String> {
+    let Some(basedpyright) = document
+        .get("tool")
+        .and_then(|tool| tool.get("basedpyright"))
+        .and_then(toml_edit::Item::as_table_like)
+    else {
+        return Vec::new();
+    };
+    basedpyright
+        .iter()
+        .filter(|(key, item)| {
+            key.starts_with("report")
+                && item.as_value().is_some_and(|value| {
+                    value.as_bool() == Some(false)
+                        || value
+                            .as_str()
+                            .is_some_and(|level| matches!(level, "none" | "information" | "hint"))
+                })
+        })
+        .filter(|(_, item)| {
+            !item
+                .as_value()
+                .is_some_and(|value| commented(document, value))
+        })
+        .map(|(key, _)| key.to_owned())
+        .collect()
 }
 
 /// `[tool.ruff.lint.pydocstyle]`.
@@ -898,14 +935,25 @@ const MYPY_ERROR_CODES: [&str; 11] = [
 pub(crate) struct BasedpyrightConfig {
     /// Kept unparsed, so that a malformed value fails only the check reading it.
     pub type_checking_mode: Option<toml::Value>,
+    /// Whether basedpyright fails on warnings, as the `recommended` mode does unless this turns it off.
+    pub fail_on_warnings: Option<toml::Value>,
 }
 
 impl BasedpyrightConfig {
-    /// Check that basedpyright runs in its `recommended` mode. The rules the project sets on top of it aren't
-    /// inspected.
+    /// Check that basedpyright runs in its `recommended` mode, failing on warnings, which most of its rules report.
+    /// The rules the project turns off are [`unexplained_basedpyright_rules`]'s concern.
     pub(crate) fn check_mode(&self) -> Result<(), String> {
         match &self.type_checking_mode {
-            Some(toml::Value::String(mode)) if mode == "recommended" => Ok(()),
+            Some(toml::Value::String(mode)) if mode == "recommended" => {
+                if self.fail_on_warnings == Some(toml::Value::Boolean(false)) {
+                    Err(
+                        "failOnWarnings = false lets the warnings that most rules report pass"
+                            .to_owned(),
+                    )
+                } else {
+                    Ok(())
+                }
+            }
             Some(value) => Err(format!("typeCheckingMode is {value}, not \"recommended\"")),
             None => {
                 Err("[tool.basedpyright] doesn't set typeCheckingMode = \"recommended\"".to_owned())
@@ -992,6 +1040,29 @@ mod tests {
 
     fn unexplained(pyproject: &str) -> Vec<String> {
         unexplained_ruff_ignores(&toml_edit::Document::parse(pyproject.to_owned()).unwrap())
+    }
+
+    #[test]
+    fn basedpyright_rules_need_a_comment_on_their_line() {
+        const NONE: [&str; 0] = [];
+        let unexplained = |pyproject: &str| {
+            unexplained_basedpyright_rules(
+                &toml_edit::Document::parse(pyproject.to_owned()).unwrap(),
+            )
+        };
+        assert_eq!(
+            unexplained("[tool.basedpyright]\ntypeCheckingMode = \"recommended\"\n"),
+            NONE
+        );
+        assert_eq!(unexplained("[project]\nname = \"app\"\n"), NONE);
+        assert_eq!(
+            unexplained(
+                "[tool.basedpyright]\ntypeCheckingMode = \"recommended\"\n\
+                 reportAny = false  # The JSON API returns Any.\nreportImplicitOverride = \"none\"\n\
+                 reportUnusedCallResult = \"hint\"\nreportMissingTypeStubs = \"error\"\nexclude = [\"build\"]\n"
+            ),
+            ["reportImplicitOverride", "reportUnusedCallResult"]
+        );
     }
 
     #[test]
@@ -1120,6 +1191,12 @@ mod tests {
         assert_eq!(
             mode("[tool.basedpyright]\ntypeCheckingMode = \"recommended\"\nreportAny = false\n"),
             Ok(())
+        );
+        assert_eq!(
+            mode(
+                "[tool.basedpyright]\ntypeCheckingMode = \"recommended\"\nfailOnWarnings = false\n"
+            ),
+            Err("failOnWarnings = false lets the warnings that most rules report pass".to_owned())
         );
         assert_eq!(
             mode("[tool.basedpyright]\ntypeCheckingMode = \"strict\"\n"),

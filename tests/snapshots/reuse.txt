@@ -125,6 +125,7 @@ fail  mypy-configured  [py] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [py] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [py] basedpyright: rules turned off explained
 warn  pytest-strict  [py] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [py] Python CI: tests on the oldest supported Python (library)

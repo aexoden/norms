@@ -62,6 +62,7 @@ warn  mypy-configured  [py] mypy: configured
       mypy uses mypy.ini, which takes the place of [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [py] basedpyright: recommended mode ([tool.basedpyright])
       basedpyright uses pyrightconfig.json, which takes the place of [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [py] basedpyright: rules turned off explained
 warn  pytest-strict  [py] pytest: strict mode ([tool.pytest] strict = true)
       pytest uses pytest.ini, which takes the place of [tool.pytest] in pyproject.toml
 pass  package-json-exists  [web] package.json: exists

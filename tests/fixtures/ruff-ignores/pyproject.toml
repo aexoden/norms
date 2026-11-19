@@ -30,3 +30,9 @@ lines-between-types = 1
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
+reportAny = false  # explained
+reportUnusedCallResult = "none"
+reportMissingTypeStubs = "error"

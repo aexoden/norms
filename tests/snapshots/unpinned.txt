@@ -68,6 +68,7 @@ fail  mypy-configured  [python-app] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [python-app] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [python-app] basedpyright: rules turned off explained
 warn  pytest-strict  [python-app] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [python-lib] pyproject.toml: exists
@@ -106,6 +107,7 @@ fail  mypy-configured  [python-lib] mypy: configured
       Missing [tool.mypy] in pyproject.toml
 warn  basedpyright-mode  [python-lib] basedpyright: recommended mode ([tool.basedpyright])
       Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [python-lib] basedpyright: rules turned off explained
 warn  pytest-strict  [python-lib] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  cargo-toml-exists  [.] Cargo.toml: exists

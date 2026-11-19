@@ -37,7 +37,8 @@ pub(crate) use pnpmworkspace::PnpmWorkspace;
 pub(crate) use prek::{PrekConfig, PrekHook, PrekRepo};
 pub(crate) use prettier::PrettierConfig;
 pub(crate) use pyproject::{
-    BasedpyrightConfig, PyprojectToml, PytestConfig, unexplained_ruff_ignores,
+    BasedpyrightConfig, PyprojectToml, PytestConfig, unexplained_basedpyright_rules,
+    unexplained_ruff_ignores,
 };
 pub(crate) use python_version::{
     PYTHON_VERSION, check_exact as check_python_version_exact, parse_python_version,

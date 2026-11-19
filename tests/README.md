@@ -184,7 +184,9 @@ re-renders them, as `AGENTS.md` describes.
   beyond the template's: one explained by a comment on its line, one by a
   comment above it, which doesn't count, and one not at all, and in
   `per-file-ignores`, an unexplained extra rule for tests and an explained
-  rule for another pattern.
+  rule for another pattern. Its basedpyright configuration turns one rule off
+  with a comment and one without, and makes another stricter, which needs
+  none.
 
 Symlinks and `.gitignore` handling have no fixture, and are covered by the unit
 tests in `src/detection.rs` instead: a fixture's `.gitignore` would also apply

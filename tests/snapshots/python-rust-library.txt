@@ -127,6 +127,7 @@ pass  mypy-configured  [.] mypy: configured
 pass  mypy-strict  [.] mypy: strict mode
 pass  mypy-optional-checks  [.] mypy: the checks strict mode leaves out enabled
 pass  basedpyright-mode  [.] basedpyright: recommended mode ([tool.basedpyright])
+pass  basedpyright-rule-reasons  [.] basedpyright: rules turned off explained
 pass  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
 pass  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
 pass  python-prek-uv-lock  Python prek: uv-lock hook (uv lock --check)
