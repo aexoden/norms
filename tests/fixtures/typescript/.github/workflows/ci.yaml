@@ -21,18 +21,6 @@ env:
   PREK_VERSION: "0.5.11"
 
 jobs:
-  ci-success:
-    name: CI success
-    if: always()
-    needs: [eslint, markdownlint, norms-verify, pnpm-peer-dependencies, prek, prettier, reuse, tombi, tsc, vite-build, vitest, zizmor]
-    runs-on: ubuntu-slim
-    timeout-minutes: 10
-    permissions: {}
-    steps:
-      - name: Fail unless every job succeeded
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: exit 1
-
   markdownlint:
     name: Lint Markdown with markdownlint
     runs-on: ubuntu-slim
@@ -281,3 +269,16 @@ jobs:
 
       - name: Run TypeScript tests
         run: pnpm exec vitest run --coverage
+
+  # The gate, which the ruleset requires, after the jobs it needs.
+  ci-success:
+    name: CI success
+    if: always()
+    needs: [eslint, markdownlint, norms-verify, pnpm-peer-dependencies, prek, prettier, reuse, tombi, tsc, vite-build, vitest, zizmor]
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - name: Fail unless every job succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

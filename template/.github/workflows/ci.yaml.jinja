@@ -109,19 +109,7 @@ env:
   CARGO_LLVM_COV_VERSION: "{{ cargo_llvm_cov_version }}"
 {%- endif %}
 
-jobs:
-  ci-success:
-    name: CI success
-    if: always()
-    needs: [{{ jobs | sort | join(', ') }}]
-    runs-on: ubuntu-slim
-    timeout-minutes: 10
-    permissions: {}
-    steps:
-      - name: Fail unless every job succeeded
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: exit 1
-{{ job('markdownlint', 'Lint Markdown with markdownlint', '', 'ubuntu-slim') }}
+jobs:{{ job('markdownlint', 'Lint Markdown with markdownlint', '', 'ubuntu-slim') }}
 
       - name: Lint Markdown with markdownlint
         uses: DavidAnson/markdownlint-cli2-action@{{ action_markdownlint_cli2 }}
@@ -329,3 +317,16 @@ jobs:
       - name: Run TypeScript tests
         run: pnpm exec vitest run --coverage
 {%- endif %}
+
+  # The gate, which the ruleset requires, after the jobs it needs.
+  ci-success:
+    name: CI success
+    if: always()
+    needs: [{{ jobs | sort | join(', ') }}]
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - name: Fail unless every job succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

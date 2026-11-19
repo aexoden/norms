@@ -879,10 +879,11 @@ that does not run leaves the pull request blocked.
 
 ### Gate Job
 
-`ci.yaml` ends with a gate job, `ci-success`, that succeeds only if every other
-job in the workflow succeeded. Branch protection requires this single check
-rather than each job, so jobs can be added, renamed, split or given new matrix
-entries without changing repository settings:
+`ci.yaml` has a gate job, `ci-success`, that succeeds only if every other job
+in the workflow succeeded. Branch protection requires this single check rather
+than each job, so jobs can be added, renamed, split or given new matrix entries
+without changing repository settings. The order of jobs doesn't affect when
+they run, but the gate is listed last, after the jobs it waits for:
 
 ```yaml
 ci-success:
@@ -891,6 +892,7 @@ ci-success:
   needs: [lint, test]
   runs-on: ubuntu-slim
   timeout-minutes: 10
+  permissions: {}
   steps:
     - name: Fail unless every job succeeded
       if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')

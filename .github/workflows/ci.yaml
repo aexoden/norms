@@ -21,173 +21,6 @@ env:
   COPIER_VERSION: "9.19.1"
 
 jobs:
-  build-norms:
-    name: Build norms
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-
-      - name: Build norms
-        run: cargo build --release --locked
-
-      - name: Upload norms
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: norms
-          path: target/release/norms
-          retention-days: 1
-
-  cargo-deny:
-    name: Run cargo-deny check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Run cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2.1.2
-        with:
-          arguments: --workspace --all-features
-          command: check -D warnings bans licenses sources
-
-  cargo-lock:
-    name: Check that Cargo.lock is up to date
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-        with:
-          cache: false
-
-      - name: Check that Cargo.lock is up to date
-        run: cargo update --workspace --locked
-
-  cargo-test:
-    name: Run Rust tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # The version the template pins for rendered projects, which the template job installs too.
-      - name: Read the template's cargo-llvm-cov version
-        id: versions
-        run: echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
-        with:
-          tool: cargo-llvm-cov@${{ steps.versions.outputs.cargo-llvm-cov }}
-
-      - name: Run Rust tests with coverage
-        run: cargo llvm-cov --workspace --all-features --show-missing-lines
-
-  cargo-doctest:
-    name: Run Rust doctests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-
-      # cargo-llvm-cov runs doctests only on a nightly toolchain.
-      - name: Run Rust doctests
-        run: cargo test --workspace --all-features --doc
-
-  ci-success:
-    name: CI success
-    if: always()
-    needs: [build-norms, cargo-deny, cargo-doctest, cargo-lock, cargo-test, clippy, fixtures, markdownlint, norms-verify, prek, reuse, rustfmt, template, tombi, zizmor]
-    runs-on: ubuntu-slim
-    timeout-minutes: 10
-    permissions: {}
-    steps:
-      - name: Fail unless every job succeeded
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: exit 1
-
-  clippy:
-    name: Lint Rust code with Clippy
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-
-      - name: Lint Rust code with Clippy
-        run: cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'
-
-  fixtures:
-    name: Check the fixtures against fresh renders
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      # Copier clones the checkout to render it, and warns when it's shallow.
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-
-      # Renovate updates the versions the template pins without re-rendering the fixtures, which
-      # the snapshots don't see. This fails only when a change the checks see wasn't re-rendered.
-      - name: Re-render the language fixtures and compare their snapshots
-        env:
-          NORMS_RENDER: "1"
-        run: cargo test --locked --test fixtures
-
   markdownlint:
     name: Lint Markdown with markdownlint
     runs-on: ubuntu-slim
@@ -320,6 +153,148 @@ jobs:
       - name: Check REUSE compliance
         uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
 
+  tombi:
+    name: Check TOML formatting with Tombi
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Tombi
+        uses: tombi-toml/setup-tombi@7417bd6e820cf0d4f89d77b48d13ba5d060435bf # v1.11.3
+        with:
+          enable-cache: false
+
+      - name: Check TOML formatting with Tombi
+        run: tombi format --check --diagnostics-format github
+
+  zizmor:
+    name: GitHub Actions security analysis with zizmor 🌈
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor 🌈
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          advanced-security: false
+          annotations: true
+          persona: pedantic
+
+  cargo-deny:
+    name: Run cargo-deny check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2.1.2
+        with:
+          arguments: --workspace --all-features
+          command: check -D warnings bans licenses sources
+
+  cargo-lock:
+    name: Check that Cargo.lock is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+
+      - name: Check that Cargo.lock is up to date
+        run: cargo update --workspace --locked
+
+  cargo-test:
+    name: Run Rust tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The version the template pins for rendered projects, which the template job installs too.
+      - name: Read the template's cargo-llvm-cov version
+        id: versions
+        run: echo "cargo-llvm-cov=$(yq '.cargo_llvm_cov_version.default' versions.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-llvm-cov@${{ steps.versions.outputs.cargo-llvm-cov }}
+
+      - name: Run Rust tests with coverage
+        run: cargo llvm-cov --workspace --all-features --show-missing-lines
+
+  cargo-doctest:
+    name: Run Rust doctests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      # cargo-llvm-cov runs doctests only on a nightly toolchain.
+      - name: Run Rust doctests
+        run: cargo test --workspace --all-features --doc
+
+  clippy:
+    name: Lint Rust code with Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Lint Rust code with Clippy
+        run: cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'
+
   rustfmt:
     name: Check Rust code formatting
     runs-on: ubuntu-latest
@@ -339,6 +314,58 @@ jobs:
 
       - name: Check Rust code formatting
         uses: actions-rust-lang/rustfmt@4066006ec54a31931b9b1fddfd38f2fdf2d27143 # v1.1.2
+
+  build-norms:
+    name: Build norms
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Build norms
+        run: cargo build --release --locked
+
+      - name: Upload norms
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: norms
+          path: target/release/norms
+          retention-days: 1
+
+  fixtures:
+    name: Check the fixtures against fresh renders
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Copier clones the checkout to render it, and warns when it's shallow.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      # Renovate updates the versions the template pins without re-rendering the fixtures, which
+      # the snapshots don't see. This fails only when a change the checks see wasn't re-rendered.
+      - name: Re-render the language fixtures and compare their snapshots
+        env:
+          NORMS_RENDER: "1"
+        run: cargo test --locked --test fixtures
 
   template:
     name: Check the template (${{ matrix.name }})
@@ -528,41 +555,15 @@ jobs:
           for dir in "${typescript[@]}"; do echo "// A change." >> "$dir/src/main.ts"; done
           check "0.1.0-1-g$(git rev-parse --short HEAD)-dirty"
 
-  tombi:
-    name: Check TOML formatting with Tombi
+  # The gate, which the ruleset requires, after the jobs it needs.
+  ci-success:
+    name: CI success
+    if: always()
+    needs: [build-norms, cargo-deny, cargo-doctest, cargo-lock, cargo-test, clippy, fixtures, markdownlint, norms-verify, prek, reuse, rustfmt, template, tombi, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
-    permissions:
-      contents: read
+    permissions: {}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Tombi
-        uses: tombi-toml/setup-tombi@7417bd6e820cf0d4f89d77b48d13ba5d060435bf # v1.11.3
-        with:
-          enable-cache: false
-
-      - name: Check TOML formatting with Tombi
-        run: tombi format --check --diagnostics-format github
-
-  zizmor:
-    name: GitHub Actions security analysis with zizmor 🌈
-    runs-on: ubuntu-slim
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
-        with:
-          advanced-security: false
-          annotations: true
-          persona: pedantic
+      - name: Fail unless every job succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

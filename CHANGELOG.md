@@ -100,6 +100,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The template's `ci.yaml` lists the `ci-success` gate job last, after the
+  jobs it waits for, rather than first, as `STANDARDS.md` now describes it.
+  Job order doesn't change how CI runs.
 - `STANDARDS.md`'s Urgent Updates section says that a package manager still
   applies its release age to Renovate's vulnerability alert PRs, which show an
   artifact error until their branch updates the package early. For Cargo, it
