@@ -42,7 +42,7 @@ pass  prek-hook-ids-unique  prek: each hook has a unique ID or alias
 pass  prek-builtin-hooks  prek: the common hooks from prek's builtin repo
 pass  prek-reuse  prek: reuse hook
 pass  prek-markdownlint  prek: markdownlint-cli2 hook
-pass  prek-tombi  prek: tombi-format hook
+pass  prek-tombi  prek: tombi-format hook (with --check)
 pass  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
 pass  prek-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
 pass  prek-norms-verify  prek: norms-verify hook (--deny-warnings)
@@ -126,7 +126,7 @@ pass  mypy-strict  [.] mypy: strict mode
 pass  mypy-optional-checks  [.] mypy: the checks strict mode leaves out enabled
 pass  basedpyright-mode  [.] basedpyright: recommended mode ([tool.basedpyright])
 pass  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
-pass  python-prek-uv-lock  Python prek: uv-lock hook
+pass  python-prek-uv-lock  Python prek: uv-lock hook (uv lock --check)
 pass  python-prek-ruff-check  Python prek: ruff-check hook
 pass  python-prek-ruff-format  Python prek: ruff-format hook (--check)
 pass  python-prek-mypy  Python prek: mypy hook

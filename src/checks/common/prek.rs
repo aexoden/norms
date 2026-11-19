@@ -7,7 +7,7 @@
 use std::collections::BTreeSet;
 
 use super::ci::zizmor_command_pedantic;
-use crate::config::{PrekConfig, PrekHook, PrekRepo, program_name};
+use crate::config::{FormatterRun, PrekConfig, PrekHook, PrekRepo, is_program, program_name};
 use crate::context::ProjectContext;
 use crate::report::{Issue, Report};
 
@@ -125,8 +125,8 @@ pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "prek-tombi",
-        "prek: tombi-format hook",
-        config.check_commit_hook("tombi-format"),
+        "prek: tombi-format hook (with --check)",
+        config.check_formatter_hook("tombi-format", "tombi format", tombi_format_run),
     );
     report.check(
         "prek-conventional-pre-commit",
@@ -370,6 +370,20 @@ fn conventional_hook_in(config: &PrekConfig) -> Result<(), Issue> {
     }
 }
 
+/// How a command's words run `tombi format`, if they do, after `tombi` anywhere among them, as in
+/// `uvx tombi format`: the tombi-format hook's own entry runs it, and it checks only with `--check`.
+fn tombi_format_run(words: &[&str]) -> Option<FormatterRun> {
+    words
+        .iter()
+        .enumerate()
+        .find_map(|(index, word)| match words.get(index + 1..)? {
+            ["format", args @ ..] if is_program(word, "tombi") => {
+                Some(FormatterRun::from_args(args, &["--check"], &[]))
+            }
+            _ => None,
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -387,6 +401,15 @@ mod tests {
 
     /// The recognized commit types, as a TOML list.
     const TYPES: &str = r#"["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]"#;
+
+    #[test]
+    fn tombi_format_checks_only_with_the_check_flag() {
+        let run = |line: &str| tombi_format_run(&line.split_whitespace().collect::<Vec<_>>());
+        assert_eq!(run("tombi format --check"), Some(FormatterRun::Checks));
+        assert_eq!(run("tombi format"), Some(FormatterRun::Rewrites));
+        assert_eq!(run("uvx tombi format --check"), Some(FormatterRun::Checks));
+        assert_eq!(run("tombi lint"), None);
+    }
 
     #[test]
     fn conventional_pre_commit_runs_as_the_last_program_word_or_module() {

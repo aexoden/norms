@@ -991,8 +991,14 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "rust-prek-cargo-lock",
-        "Rust prek: cargo-lock hook",
-        config.check_commit_hook("cargo-lock"),
+        "Rust prek: cargo-lock hook (cargo update --workspace --locked)",
+        config.check_hook_command(
+            "cargo-lock",
+            "",
+            cargo_update_checks,
+            "The cargo-lock hook doesn't run cargo update with --workspace and --locked, so it doesn't only check \
+             that Cargo.lock is up to date: it may update it, or fail on newer compatible versions",
+        ),
     );
 
     report.check(
@@ -1524,14 +1530,20 @@ fn cargo_subcommand<'a>(words: &[&'a str]) -> Option<(&'a str, Vec<&'a str>)> {
 /// implies it), which fails instead of changing the lock file, and `--workspace` (or `-w`), which limits it to the
 /// workspace's own packages so that a current lock file needs no change.
 fn checks_cargo_lock(line: &str) -> bool {
-    commands(line).iter().map(Command::words).any(|words| {
-        cargo_subcommand(&words).is_some_and(|(subcommand, args)| {
-            subcommand == "update"
-                && args
-                    .iter()
-                    .any(|arg| matches!(*arg, "--locked" | "--frozen"))
-                && args.iter().any(|arg| matches!(*arg, "--workspace" | "-w"))
-        })
+    commands(line)
+        .iter()
+        .map(Command::words)
+        .any(|words| cargo_update_checks(&words))
+}
+
+/// Whether a command's words check that `Cargo.lock` is up to date, as [`checks_cargo_lock`] tells.
+fn cargo_update_checks(words: &[&str]) -> bool {
+    cargo_subcommand(words).is_some_and(|(subcommand, args)| {
+        subcommand == "update"
+            && args
+                .iter()
+                .any(|arg| matches!(*arg, "--locked" | "--frozen"))
+            && args.iter().any(|arg| matches!(*arg, "--workspace" | "-w"))
     })
 }
 

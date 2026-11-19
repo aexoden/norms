@@ -41,7 +41,7 @@ pass  prek-hook-ids-unique  prek: each hook has a unique ID or alias
 pass  prek-builtin-hooks  prek: the common hooks from prek's builtin repo
 pass  prek-reuse  prek: reuse hook
 pass  prek-markdownlint  prek: markdownlint-cli2 hook
-pass  prek-tombi  prek: tombi-format hook
+pass  prek-tombi  prek: tombi-format hook (with --check)
 pass  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
 pass  prek-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
 pass  prek-norms-verify  prek: norms-verify hook (--deny-warnings)
@@ -152,7 +152,7 @@ pass  package-json-script-lint  [.] Scripts: has 'lint' (eslint with --max-warni
 pass  package-json-script-format  [.] Scripts: has 'format' (prettier --check)
 pass  package-json-script-typecheck  [.] Scripts: has 'typecheck' (tsc -b)
 pass  package-json-script-test  [.] Scripts: has 'test'
-pass  typescript-prek-pnpm-lock  TypeScript prek: pnpm-lock hook
+pass  typescript-prek-pnpm-lock  TypeScript prek: pnpm-lock hook (pnpm install --frozen-lockfile)
 pass  typescript-prek-pnpm-peer-dependencies  TypeScript prek: pnpm-peer-dependencies hook
 pass  typescript-prek-eslint  TypeScript prek: eslint hook (--max-warnings 0)
 pass  typescript-prek-prettier  TypeScript prek: prettier hook (--check)

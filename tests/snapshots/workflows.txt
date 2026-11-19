@@ -36,7 +36,7 @@ fail  prek-reuse  prek: reuse hook
       No reuse hook
 fail  prek-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  prek-tombi  prek: tombi-format hook
+fail  prek-tombi  prek: tombi-format hook (with --check)
       No tombi-format hook
 fail  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
@@ -140,7 +140,7 @@ warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
-fail  python-prek-uv-lock  Python prek: uv-lock hook
+fail  python-prek-uv-lock  Python prek: uv-lock hook (uv lock --check)
       No uv-lock hook
 fail  python-prek-ruff-check  Python prek: ruff-check hook
       No ruff-check hook
@@ -196,7 +196,7 @@ warn  rust-ci-doctest  [.] Rust CI: doctests run (library target)
       No step runs the doctests, as cargo test --doc does
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
-fail  rust-prek-cargo-lock  Rust prek: cargo-lock hook
+fail  rust-prek-cargo-lock  Rust prek: cargo-lock hook (cargo update --workspace --locked)
       No cargo-lock hook
 fail  rust-prek-rustfmt  Rust prek: rustfmt hook (--check)
       No rustfmt hook

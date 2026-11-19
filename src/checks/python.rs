@@ -738,8 +738,14 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "python-prek-uv-lock",
-        "Python prek: uv-lock hook",
-        config.check_commit_hook("uv-lock"),
+        "Python prek: uv-lock hook (uv lock --check)",
+        config.check_hook_command(
+            "uv-lock",
+            "uv lock",
+            uv_lock_checks,
+            "The uv-lock hook doesn't run uv lock with --check, so it updates a stale uv.lock rather than failing on \
+             it",
+        ),
     );
 
     report.check(
@@ -876,10 +882,16 @@ fn uv_subcommand<'a, 'b>(words: &'b [&'a str]) -> Option<(&'a str, &'b [&'a str]
 /// Whether a script line checks that `uv.lock` is up to date: `uv lock` with `--check`, or `--locked`, its older
 /// spelling, which fail instead of changing the lock file.
 fn checks_uv_lock(line: &str) -> bool {
-    commands(line).iter().map(Command::words).any(|words| {
-        matches!(uv_subcommand(&words), Some(("lock", args))
-            if args.iter().any(|arg| matches!(*arg, "--check" | "--locked")))
-    })
+    commands(line)
+        .iter()
+        .map(Command::words)
+        .any(|words| uv_lock_checks(&words))
+}
+
+/// Whether a command's words check that `uv.lock` is up to date, as [`checks_uv_lock`] tells.
+fn uv_lock_checks(words: &[&str]) -> bool {
+    matches!(uv_subcommand(words), Some(("lock", args))
+        if args.iter().any(|arg| matches!(*arg, "--check" | "--locked")))
 }
 
 /// The jobs of `workflow` with a `uv run` that has no `--locked` of its own and comes before any `uv sync --locked`.

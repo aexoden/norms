@@ -415,6 +415,29 @@ impl PrekConfig {
         }
     }
 
+    /// Check that each hook with ID `id` that runs before each commit, as [`commit_hooks`](Self::commit_hooks) finds
+    /// them, runs a command whose words `checks` accepts, warning with `issue` if one doesn't: a hook that should fail
+    /// on a stale lock file, say, but updates it instead. A hook without an entry, as a remote hook may leave it to the
+    /// hook's repository, is taken to run `default_entry`, with its args.
+    pub(crate) fn check_hook_command(
+        &self,
+        id: &str,
+        default_entry: &str,
+        mut checks: impl FnMut(&[&str]) -> bool,
+        issue: &str,
+    ) -> Result<(), Issue> {
+        let hooks = self.commit_hooks(id)?;
+        if hooks.iter().all(|hook| {
+            !hook
+                .filter_map_commands(default_entry, |words| checks(words).then_some(()))
+                .is_empty()
+        }) {
+            Ok(())
+        } else {
+            Err(Issue::warn(issue))
+        }
+    }
+
     /// Whether a hook with ID `id` runs before each commit. See [`commit_hooks`](Self::commit_hooks).
     pub(crate) fn check_commit_hook(&self, id: &str) -> Result<(), Issue> {
         self.commit_hooks(id).map(|_| ())
@@ -805,6 +828,33 @@ mod tests {
 
     fn commit_hook(toml: &str) -> Result<(), Issue> {
         parse(toml).check_commit_hook("markdownlint-cli2")
+    }
+
+    #[test]
+    fn hook_commands_are_checked_in_every_copy() {
+        let check = |hooks: &str| {
+            local(hooks).check_hook_command(
+                "uv-lock",
+                "uv lock",
+                |words| words.contains(&"--check"),
+                "stale",
+            )
+        };
+        assert_eq!(
+            check(r#"[{id = "uv-lock", entry = "uv lock --check"}]"#),
+            Ok(())
+        );
+        assert_eq!(
+            check(r#"[{id = "uv-lock", entry = "uv lock"}]"#),
+            Err(Issue::warn("stale"))
+        );
+        assert_eq!(
+            check(
+                r#"[{id = "uv-lock", entry = "uv lock --check"}, {id = "uv-lock", alias = "uv-lock-api", entry = "uv lock"}]"#
+            ),
+            Err(Issue::warn("stale"))
+        );
+        assert!(check("[]").is_err());
     }
 
     #[test]

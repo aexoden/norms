@@ -960,8 +960,14 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "typescript-prek-pnpm-lock",
-        "TypeScript prek: pnpm-lock hook",
-        prek.check_commit_hook("pnpm-lock"),
+        "TypeScript prek: pnpm-lock hook (pnpm install --frozen-lockfile)",
+        prek.check_hook_command(
+            "pnpm-lock",
+            "",
+            installs_frozen,
+            "The pnpm-lock hook doesn't run pnpm install with --frozen-lockfile, so it updates a stale \
+             pnpm-lock.yaml rather than failing on it",
+        ),
     );
     report.check(
         "typescript-prek-pnpm-peer-dependencies",
@@ -1288,6 +1294,15 @@ fn tsc_in_ci(workflow: &Workflow, solution_style: bool) -> Result<(), Issue> {
     }
 }
 
+/// Whether a command's words install with `pnpm install --frozen-lockfile`, which fails on a stale `pnpm-lock.yaml`
+/// rather than updating it, as for [`checks_peer_dependencies`].
+fn installs_frozen(words: &[&str]) -> bool {
+    program_args(words, "pnpm").is_some_and(|rest| {
+        rest.iter().any(|word| matches!(*word, "install" | "i"))
+            && rest.contains(&"--frozen-lockfile")
+    })
+}
+
 /// Whether a command's words check peer dependencies with `pnpm peers check`, which may follow pnpm options such as
 /// `--dir`, or a second `pnpm` run through `exec`.
 fn checks_peer_dependencies(words: &[&str]) -> bool {
@@ -1610,6 +1625,25 @@ mod tests {
             "import prettier from \"eslint-config-prettier-extended\";",
         ] {
             assert!(!CONFIG_PRETTIER_IMPORT.is_match(code), "{code}");
+        }
+    }
+
+    #[test]
+    fn lock_file_is_checked_by_a_frozen_install() {
+        let checks = |line: &str| installs_frozen(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "pnpm install --frozen-lockfile",
+            "pnpm --dir web exec pnpm install --frozen-lockfile",
+            "pnpm i --frozen-lockfile",
+        ] {
+            assert!(checks(line), "{line}");
+        }
+        for line in [
+            "pnpm install",
+            "pnpm peers check",
+            "npm install --frozen-lockfile",
+        ] {
+            assert!(!checks(line), "{line}");
         }
     }
 

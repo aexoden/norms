@@ -36,7 +36,7 @@ warn  prek-reuse  prek: reuse hook
       The reuse hook doesn't run in the pre-commit stage
 fail  prek-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  prek-tombi  prek: tombi-format hook
+fail  prek-tombi  prek: tombi-format hook (with --check)
       The tombi-format hook runs only in the manual stage, so it never runs on its own
 fail  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       conventional-pre-commit doesn't run in the commit-msg stage and doesn't allow perf, refactor, style, test, build, ci, revert and also allows wip

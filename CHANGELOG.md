@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a hook that should only check rewrites files: a `tombi-format`
+  hook without `--check` (`prek-tombi`), or a lock file hook that updates a
+  stale lock file rather than failing on it, a `cargo-lock` hook without
+  `cargo update --workspace --locked` (`rust-prek-cargo-lock`), a `uv-lock`
+  hook without `uv lock --check` (`python-prek-uv-lock`) or a `pnpm-lock` hook
+  without `pnpm install --frozen-lockfile` (`typescript-prek-pnpm-lock`). Add
+  the flags, as the template does.
 - **Breaking:** Fail when `ci.yaml`'s gate job isn't named `CI success`
   (`ci-gate-name`), the check branch protection requires: GitHub shows a job's
   check by its `name`, so the required check would never report. Set

@@ -36,7 +36,7 @@ fail  prek-reuse  prek: reuse hook
       No reuse hook
 fail  prek-markdownlint  prek: markdownlint-cli2 hook
       No markdownlint-cli2 hook
-fail  prek-tombi  prek: tombi-format hook
+fail  prek-tombi  prek: tombi-format hook (with --check)
       No tombi-format hook
 fail  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-msg stage, recognized types)
       No conventional-pre-commit hook
@@ -120,7 +120,7 @@ warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
       No job sets setup-uv's python-version input and runs pytest
-pass  python-prek-uv-lock  Python prek: uv-lock hook
+pass  python-prek-uv-lock  Python prek: uv-lock hook (uv lock --check)
 pass  python-prek-ruff-check  Python prek: ruff-check hook
 warn  python-prek-ruff-format  Python prek: ruff-format hook (--check)
       ruff format runs with --diff rather than --check
@@ -181,7 +181,7 @@ warn  package-json-script-typecheck  [.] Scripts: has 'typecheck' (tsc -b)
       Missing 'typecheck' script
 warn  package-json-script-test  [.] Scripts: has 'test'
       Missing 'test' script
-fail  typescript-prek-pnpm-lock  TypeScript prek: pnpm-lock hook
+fail  typescript-prek-pnpm-lock  TypeScript prek: pnpm-lock hook (pnpm install --frozen-lockfile)
       No pnpm-lock hook
 pass  typescript-prek-pnpm-peer-dependencies  TypeScript prek: pnpm-peer-dependencies hook
 warn  typescript-prek-eslint  TypeScript prek: eslint hook (--max-warnings 0)
