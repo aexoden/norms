@@ -1482,7 +1482,14 @@ The Git hooks and CI both run:
 | `pytest`       | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
 
 CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the
-checks.
+checks. Jobs that install nothing, namely `uv-lock` and the `uv audit` job of
+`audit.yaml`, set `enable-cache: false`. setup-uv's cache key names neither the
+job nor the workflow, so every job on the same Python version shares one cache,
+and the first job to finish saves it: one that installs nothing, and so usually
+finishes first, would save it without the packages the others install, and they
+would then restore it as an exact match and never save their own. `norms
+verify` warns on a job that runs only `uv lock` or `uv audit` with the cache
+on.
 
 ### Rust
 

@@ -140,6 +140,7 @@ pass  python-ci-mypy  Python CI: type check
 pass  python-ci-basedpyright  Python CI: basedpyright type check
 pass  python-ci-pytest  Python CI: tests (with coverage)
 pass  python-audit-uv  Python audit: uv audit
+pass  python-ci-uv-cache  Python CI: jobs that install nothing set enable-cache: false
 pass  cargo-toml-exists  [rust] Cargo.toml: exists
 pass  cargo-toml-valid  [rust] Cargo.toml: valid
 pass  cargo-toml-license  [rust] Cargo.toml: has license

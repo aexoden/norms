@@ -8,8 +8,8 @@ use pep508_rs::pep440_rs::Version;
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
     BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook,
-    PyprojectToml, PytestConfig, Workflow, check_python_version_exact, check_release_age_value,
-    commands, program_args, sets_attribute,
+    PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
+    check_release_age_value, commands, program_args, sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -985,6 +985,84 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// The actions that install nothing with uv, so that a job using no others caches nothing of its own.
+const NON_INSTALLING_ACTIONS: [&str; 2] = ["actions/checkout", SETUP_UV];
+
+/// The uv subcommands that install nothing: `uv lock` resolves the project's dependencies, and `uv audit` reads the
+/// lock file.
+const NON_INSTALLING_UV_SUBCOMMANDS: [&str; 2] = ["audit", "lock"];
+
+/// Whether a job installs nothing with uv, so that caching it is wasted: each of its steps uses one of
+/// [`NON_INSTALLING_ACTIONS`], and every command of its scripts runs one of [`NON_INSTALLING_UV_SUBCOMMANDS`] or is a
+/// `cd` into the component's directory. A job
+/// running an unrecognized action or command may install, so it is never counted.
+fn job_installs_nothing(job: &WorkflowJob) -> bool {
+    job.steps.iter().all(|step| {
+        step.uses.is_none()
+            || NON_INSTALLING_ACTIONS
+                .iter()
+                .any(|action| step.uses_action(action))
+    }) && job.run_lines().all(|line| {
+        commands(&line).iter().map(Command::words).all(|words| {
+            matches!(words.first(), None | Some(&"cd"))
+                || uv_subcommand(&words).is_some_and(|(subcommand, _)| {
+                    NON_INSTALLING_UV_SUBCOMMANDS.contains(&subcommand)
+                })
+        })
+    })
+}
+
+/// The jobs of `workflow`, by ID, that install nothing with uv but cache it: a setup-uv step in them doesn't set
+/// `enable-cache: false`.
+fn jobs_caching_nothing(workflow: &Workflow) -> Vec<&str> {
+    workflow
+        .jobs
+        .iter()
+        .filter(|(_, job)| {
+            job_installs_nothing(job)
+                && job
+                    .steps_using(SETUP_UV)
+                    .any(|step| step.input("enable-cache").as_deref() != Some("false"))
+        })
+        .map(|(id, _)| id.as_str())
+        .collect()
+}
+
+/// Check that the jobs of every workflow that install nothing with uv, such as `uv lock --check` and `uv audit`, turn
+/// off setup-uv's cache with `enable-cache: false`. setup-uv's cache key doesn't name the job, so the jobs of a
+/// workflow share one cache, and one of these jobs, which finish first, would save it without the packages the other
+/// jobs install. Those jobs then restore it as an exact match and never save their own.
+pub(crate) fn check_uv_cache(ctx: &ProjectContext, report: &mut Report) {
+    let mut parsed = false;
+    let mut caching = Vec::new();
+    for (name, status) in ctx.workflows() {
+        if let ConfigStatus::Ok(workflow) = status {
+            parsed = true;
+            caching.extend(
+                jobs_caching_nothing(workflow)
+                    .into_iter()
+                    .map(|job| format!("{name}: {job}")),
+            );
+        }
+    }
+    if !parsed {
+        return;
+    }
+
+    report.should(
+        "python-ci-uv-cache",
+        "Python CI: jobs that install nothing set enable-cache: false",
+        if caching.is_empty() {
+            Outcome::Pass
+        } else {
+            Outcome::issue(format!(
+                "These jobs install nothing, but setup-uv caches them: {}",
+                caching.join(", ")
+            ))
+        },
+    );
+}
+
 /// Check that a library's CI runs its tests on the oldest Python it supports.
 pub(crate) fn check_min_python_job(
     project: &ProjectContext,
@@ -1126,6 +1204,76 @@ jobs:
         )
         .unwrap();
         assert_eq!(jobs_running_unlocked(&workflow), ["frozen", "late-sync"]);
+    }
+
+    #[test]
+    fn jobs_installing_nothing_disable_the_cache() {
+        let workflow: Workflow = serde_saphyr::from_str(
+            "
+jobs:
+  lock:
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8
+      - run: |
+          # Fails if the lock file is stale.
+          uv --directory backend lock --check
+  audit:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: auto
+      - run: uv audit --locked && uv lock --check
+  uncached:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: \"false\"
+      - run: uv lock --check
+  sync:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+      - run: uv lock --check; uv sync --locked
+  uvx:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+      - run: uvx prek validate-config prek.toml
+  other-command:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+      - run: uv lock --check && pip install .
+  other-action:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+      - uses: actions/setup-python@v6
+      - run: uv lock --check
+  no-setup-uv:
+    steps:
+      - run: uv lock --check
+  cd:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: false
+      - run: cd backend && uv lock --check
+  cd-cached:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+      - run: cd backend && uv lock --check
+  one-of-two-uncached:
+    steps:
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: false
+      - uses: astral-sh/setup-uv@v8
+      - run: uv lock --check
+",
+        )
+        .unwrap();
+        assert_eq!(
+            jobs_caching_nothing(&workflow),
+            ["audit", "cd-cached", "lock", "one-of-two-uncached"]
+        );
     }
 
     #[test]

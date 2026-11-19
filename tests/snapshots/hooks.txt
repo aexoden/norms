@@ -141,6 +141,7 @@ pass  python-ci-mypy  Python CI: type check
 fail  python-ci-basedpyright  Python CI: basedpyright type check
 warn  python-ci-pytest  Python CI: tests (with coverage)
       No step runs pytest with --cov
+pass  python-ci-uv-cache  Python CI: jobs that install nothing set enable-cache: false
 pass  package-json-exists  [.] package.json: exists
 pass  package-json-valid  [.] package.json: valid
 warn  package-json-esm  [.] package.json: uses ESM (type: module)

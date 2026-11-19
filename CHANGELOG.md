@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The template's `uv-lock` job and `uv audit` job set `enable-cache: false`,
+  and norms warns on a job that runs only `uv lock` or `uv audit` with
+  setup-uv's cache on (`python-ci-uv-cache`). setup-uv shares one cache among
+  all jobs on the same Python version, in every workflow, so such a job,
+  finishing first, saved it without the packages the others install. Add
+  `enable-cache: false` to the `astral-sh/setup-uv` step of those jobs.
 - Set Cargo's own `pedantic` lint group, new in Rust 1.100, to `warn` in the
   template's `[lints.cargo]`, and warn when a package doesn't
   (`cargo-lints`). Add the table as the template does, or inherit it from

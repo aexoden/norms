@@ -53,6 +53,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
                 python::check_prek_hooks(ctx, report);
                 python::check_ci(ctx, report);
                 python::check_audit(ctx, report);
+                python::check_uv_cache(ctx, report);
             }
             Language::Rust => {
                 rust::check_cargo_config(ctx, report);

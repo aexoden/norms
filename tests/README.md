@@ -129,8 +129,9 @@ re-renders them, as `AGENTS.md` describes.
   marked `export-subst`, and one uv doesn't build (`package = false`), which
   the versioning checks skip. Its `ci.yaml` has setup-uv steps that pin uv
   exactly, that pin no version in a job running `uv`, and that pin none in a
-  job only running `uvx`, which needn't, and the components' `required-version`
-  is a minimum the pin satisfies, an exact version, or a minimum above the pin.
+  job only running `uvx`, which needn't; its `uv-lock` job, which installs
+  nothing, leaves setup-uv's cache on. The components' `required-version` is a
+  minimum the pin satisfies, an exact version, or a minimum above the pin.
   Its `.gitattributes` sets `diff=python` on `*.py` but not on `*.pyi`.
 - `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files:
