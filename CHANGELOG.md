@@ -258,6 +258,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fail `rust-ci-rustfmt`, rather than only warning about the step's form, when
+  CI runs `cargo fmt` without `--check` in place of
+  `actions-rust-lang/rustfmt`: such a step rewrites the files and passes every
+  commit. Use the action, as the template does.
 - Fail `rust-ci-test` when CI runs only the doctests (`cargo test --doc` or
   `cargo llvm-cov --doc`) or builds the tests without running them
   (`cargo test --no-run`), rather than passing: the unit and integration tests

@@ -17,7 +17,7 @@ use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
 use crate::models::Language;
-use crate::report::{Issue, Outcome, Report, file_exists};
+use crate::report::{Issue, Outcome, Report, Severity, file_exists};
 
 /// Whether the package whose manifest, `config`, is in `dir` builds a binary, from an explicit `[[bin]]` target or,
 /// unless `autobins = false`, `src/main.rs` or `src/bin/`. A virtual manifest, without a `[package]`, builds nothing.
@@ -1157,13 +1157,19 @@ fn cargo_deny_in_ci(workflow: &Workflow) -> Result<(), Issue> {
 }
 
 /// Whether `workflow` checks formatting with [`RUSTFMT_ACTION`]. With no such step, a step running rustfmt itself
-/// warns.
+/// warns, unless every such step rewrites files without `--check`, which passes every commit and so fails.
 fn rustfmt_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     if workflow.uses_action(RUSTFMT_ACTION) {
-        Ok(())
-    } else {
-        Err(workflow.missing_action(RUSTFMT_ACTION, "rustfmt", runs_rustfmt))
+        return Ok(());
     }
+    let missing = workflow.missing_action(RUSTFMT_ACTION, "rustfmt", runs_rustfmt);
+    if missing.severity == Severity::Warn
+        && let Err(issue) = workflow.check_formatter("rustfmt", rustfmt_run)
+        && issue.severity == Severity::Fail
+    {
+        return Err(issue);
+    }
+    Err(missing)
 }
 
 /// Whether a command's words run the Cargo subcommand `subcommand`, through `cargo` or as the command
@@ -2395,17 +2401,26 @@ jobs:
             ci("      - uses: actions-rust-lang/rustfmt@abc # v1.1.2\n"),
             Ok(())
         );
-        // Running rustfmt itself works, but isn't the template's form, so its arguments aren't read: a run that
-        // rewrites files rather than failing on them warns too.
-        for run in ["cargo fmt --all --check", "cargo fmt --all"] {
-            assert_eq!(
-                ci(&format!("      - run: {run}\n")),
-                Err(Issue::warn(
-                    "A step runs rustfmt rather than using actions-rust-lang/rustfmt"
-                )),
-                "{run}"
-            );
-        }
+        // Running rustfmt itself works, but isn't the template's form.
+        assert_eq!(
+            ci("      - run: cargo fmt --all --check\n"),
+            Err(Issue::warn(
+                "A step runs rustfmt rather than using actions-rust-lang/rustfmt"
+            ))
+        );
+        // A run that rewrites files rather than failing on them passes every commit, unless another run checks.
+        assert_eq!(
+            ci("      - run: cargo fmt --all\n      - run: cargo fmt --all --check\n"),
+            Err(Issue::warn(
+                "A step runs rustfmt rather than using actions-rust-lang/rustfmt"
+            ))
+        );
+        assert_eq!(
+            ci("      - run: cargo fmt --all\n"),
+            Err(Issue::fail(
+                "rustfmt runs without --check, so it rewrites files instead of failing on them"
+            ))
+        );
         // cargo-deny's own run doesn't count as rustfmt's.
         assert_eq!(
             ci("      - run: cargo deny check\n"),
