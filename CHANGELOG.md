@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when the `pnpm-lock` or `pnpm-peer-dependencies` hook of a TypeScript
+  component in a subdirectory runs pnpm with `--dir` rather than through
+  `exec pnpm` (`typescript-prek-pinned-pnpm`). pnpm switches to the version
+  `devEngines` pins only in the directory it starts in, so the hook ran
+  whichever pnpm was installed. Write `pnpm --dir <path> exec pnpm install
+  --frozen-lockfile`, as the template does.
 - Warn when a hook that should only check rewrites files: a `tombi-format`
   hook without `--check` (`prek-tombi`), or a lock file hook that updates a
   stale lock file rather than failing on it, a `cargo-lock` hook without

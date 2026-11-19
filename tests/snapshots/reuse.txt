@@ -236,6 +236,7 @@ fail  typescript-prek-pnpm-lock  TypeScript prek: pnpm-lock hook (pnpm install -
       No pnpm-lock hook
 fail  typescript-prek-pnpm-peer-dependencies  TypeScript prek: pnpm-peer-dependencies hook
       No pnpm-peer-dependencies hook
+pass  typescript-prek-pinned-pnpm  TypeScript prek: pnpm's own commands run the pinned pnpm
 fail  typescript-prek-eslint  TypeScript prek: eslint hook (--max-warnings 0)
       No eslint hook
 fail  typescript-prek-prettier  TypeScript prek: prettier hook (--check)

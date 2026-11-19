@@ -184,6 +184,7 @@ warn  package-json-script-test  [.] Scripts: has 'test'
 fail  typescript-prek-pnpm-lock  TypeScript prek: pnpm-lock hook (pnpm install --frozen-lockfile)
       No pnpm-lock hook
 pass  typescript-prek-pnpm-peer-dependencies  TypeScript prek: pnpm-peer-dependencies hook
+pass  typescript-prek-pinned-pnpm  TypeScript prek: pnpm's own commands run the pinned pnpm
 warn  typescript-prek-eslint  TypeScript prek: eslint hook (--max-warnings 0)
       The eslint hook doesn't pass --max-warnings 0
 warn  typescript-prek-prettier  TypeScript prek: prettier hook (--check)

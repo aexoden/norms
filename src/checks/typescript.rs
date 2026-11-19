@@ -974,6 +974,11 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
         "TypeScript prek: pnpm-peer-dependencies hook",
         prek.check_commit_hook("pnpm-peer-dependencies"),
     );
+    report.should(
+        "typescript-prek-pinned-pnpm",
+        "TypeScript prek: pnpm's own commands run the pinned pnpm",
+        pnpm_hooks_pinned(prek),
+    );
     report.check(
         "typescript-prek-eslint",
         "TypeScript prek: eslint hook (--max-warnings 0)",
@@ -1292,6 +1297,44 @@ fn tsc_in_ci(workflow: &Workflow, solution_style: bool) -> Result<(), Issue> {
     } else {
         Ok(())
     }
+}
+
+/// Check that the hooks running pnpm's own commands, `pnpm-lock` and `pnpm-peer-dependencies`, run the pnpm that
+/// `devEngines` pins. pnpm switches to that version only in the directory it starts in, so in a component in a
+/// subdirectory, `pnpm --dir <path> install` runs whichever pnpm is installed, and `pnpm --dir <path> exec pnpm
+/// install` the pinned one.
+fn pnpm_hooks_pinned(prek: &PrekConfig) -> Result<(), String> {
+    let unpinned: Vec<&str> = ["pnpm-lock", "pnpm-peer-dependencies"]
+        .into_iter()
+        .filter(|id| {
+            prek.commit_hooks(id).is_ok_and(|hooks| {
+                hooks.iter().any(|hook| {
+                    !hook
+                        .filter_map_commands("", |words| runs_unpinned_pnpm(words).then_some(()))
+                        .is_empty()
+                })
+            })
+        })
+        .collect();
+    if unpinned.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{} run pnpm with --dir rather than through exec pnpm, so they run the pnpm installed globally rather \
+             than the one devEngines pins",
+            unpinned.join(" and ")
+        ))
+    }
+}
+
+/// Whether a command's words run one of pnpm's own commands in another directory, with `--dir` or `-C`, other than
+/// through `exec`, as [`pnpm_hooks_pinned`] describes.
+fn runs_unpinned_pnpm(words: &[&str]) -> bool {
+    program_args(words, "pnpm").is_some_and(|rest| {
+        rest.iter()
+            .any(|word| matches!(*word, "--dir" | "-C") || word.starts_with("--dir="))
+            && !rest.contains(&"exec")
+    })
 }
 
 /// Whether a command's words install with `pnpm install --frozen-lockfile`, which fails on a stale `pnpm-lock.yaml`
@@ -1625,6 +1668,26 @@ mod tests {
             "import prettier from \"eslint-config-prettier-extended\";",
         ] {
             assert!(!CONFIG_PRETTIER_IMPORT.is_match(code), "{code}");
+        }
+    }
+
+    #[test]
+    fn pnpm_runs_its_own_commands_elsewhere_through_exec() {
+        let unpinned =
+            |line: &str| runs_unpinned_pnpm(&line.split_whitespace().collect::<Vec<_>>());
+        for line in [
+            "pnpm --dir web install --frozen-lockfile",
+            "pnpm -C web peers check",
+            "pnpm --dir=web install",
+        ] {
+            assert!(unpinned(line), "{line}");
+        }
+        for line in [
+            "pnpm --dir web exec pnpm install --frozen-lockfile",
+            "pnpm install --frozen-lockfile",
+            "pnpm peers check",
+        ] {
+            assert!(!unpinned(line), "{line}");
         }
     }
 
