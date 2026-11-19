@@ -18,7 +18,7 @@ permissions: {}
 # comment above each one.
 env:
   # renovate: datasource=pypi depName=prek
-  PREK_VERSION: "0.5.10"
+  PREK_VERSION: "0.5.11"
   # renovate: datasource=crate depName=cargo-llvm-cov
   CARGO_LLVM_COV_VERSION: "0.9.1"
 
@@ -150,7 +150,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Tombi
-        uses: tombi-toml/setup-tombi@8ddc6b91b6fa3ad0ce192a68b409930851e4886c # v1.11.2
+        uses: tombi-toml/setup-tombi@7417bd6e820cf0d4f89d77b48d13ba5d060435bf # v1.11.3
         with:
           enable-cache: false
 
@@ -189,7 +189,7 @@ jobs:
           persist-credentials: false
 
       - name: Run cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2.1.2
         with:
           arguments: --workspace --all-features
           command: check -D warnings bans licenses sources
