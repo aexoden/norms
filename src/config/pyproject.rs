@@ -145,10 +145,10 @@ impl PyprojectToml {
         Ok((requires, specifiers))
     }
 
-    /// Whether the project is a library: a package, with a `[project]` table and without `[tool.uv] package = false`,
-    /// that installs no command.
+    /// Whether the project is a library: one with a `[project]` table that isn't an
+    /// [application](Self::is_application).
     pub(crate) fn is_library(&self) -> bool {
-        self.project.is_some() && !self.is_unpackaged() && !self.is_application()
+        self.project.is_some() && !self.is_application()
     }
 
     /// Whether uv is told not to build and install the project as a package, with `[tool.uv] package = false`.
@@ -392,8 +392,12 @@ impl PyprojectToml {
     }
 
     /// Whether the project is an application rather than a library: whether it installs a command, through a
-    /// non-empty `[project.scripts]` or `[project.gui-scripts]`.
+    /// non-empty `[project.scripts]` or `[project.gui-scripts]`, or isn't built at all, with `[tool.uv] package = false`,
+    /// as a service run with `uv run` is, so that nothing depends on it.
     pub(crate) fn is_application(&self) -> bool {
+        if self.is_unpackaged() {
+            return true;
+        }
         let installs = |scripts: Option<&toml::Value>| {
             scripts
                 .and_then(toml::Value::as_table)
@@ -1544,6 +1548,15 @@ cache-keys = [{ git = { commit = true } }]
         for requires in ["==3.15.2", "== 3.15.2", "==3.15.2.0"] {
             assert_eq!(application(requires), Ok(()), "{requires}");
         }
+        // A project uv doesn't build is an application too, so a range doesn't do.
+        let unbuilt = |requires: &str| {
+            parse(&format!(
+                "[project]\nrequires-python = \"{requires}\"\n[tool.uv]\npackage = false\n"
+            ))
+            .check_requires_python_pin(&pin)
+        };
+        assert_eq!(unbuilt("==3.15.2"), Ok(()));
+        assert!(unbuilt(">=3.12").is_err());
         for requires in [
             "==3.15.1",
             "==3.15.*",
@@ -1654,6 +1667,10 @@ cache-keys = [{ git = { commit = true } }]
         assert!(!parse("[project]\nname = \"demo\"\n").is_application());
         assert!(!parse("[project.scripts]\n").is_application());
         assert!(!parse("").is_application());
+        // A project uv doesn't build is deployed, not depended on.
+        let unbuilt = parse("[project]\nname = \"service\"\n\n[tool.uv]\npackage = false\n");
+        assert!(unbuilt.is_application());
+        assert!(!unbuilt.is_library());
     }
 
     #[test]

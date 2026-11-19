@@ -148,6 +148,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** A Python component that uv doesn't build
+  (`[tool.uv] package = false`), such as a service run with `uv run`, is an
+  application: its dependencies are pinned exactly, its `requires-python` names
+  the pinned version, and it needs no `pytest-min-python` job. Some checks
+  treated it as a library. Pin its dependencies with `==`, and set
+  `requires-python` to `==` the version in `.python-version`.
 - `STANDARDS.md` describes only the standards, more concisely, leaving how
   norms checks them to the README and the code. It's reorganized, with the
   GitHub settings in a GitHub Repository section and each language's

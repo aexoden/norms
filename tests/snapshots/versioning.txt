@@ -110,6 +110,7 @@ warn  python-src-layout  [service] Python: src/ directory
       No src/ directory
 fail  uv-lock-exists  [service] Python: uv.lock
       Not found: uv.lock
+pass  pyproject-dependencies-exact  [service] pyproject.toml: dependencies pinned exactly (application)
 pass  uv-config  [service] uv: settings in [tool.uv], without a uv.toml
 warn  uv-exclude-newer  [service] uv: release age of 3 days (exclude-newer)
       Missing [tool.uv] exclude-newer
@@ -128,8 +129,6 @@ warn  basedpyright-mode  [service] basedpyright: recommended mode ([tool.basedpy
       Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [service] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
-fail  python-ci-min-python  [service] Python CI: tests on the oldest supported Python (library)
-      No job sets setup-uv's python-version input and runs pytest
 pass  pyproject-exists  [tool] pyproject.toml: exists
 pass  pyproject-valid  [tool] pyproject.toml: valid
 pass  pyproject-project  [tool] pyproject.toml: has [project] section

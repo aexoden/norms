@@ -21,7 +21,8 @@ Some standards differ between applications and libraries:
   `src/bin/`, unless `autobins = false`, or a `[[bin]]` target), even alongside
   a library. A Cargo workspace is an application if any of its members is.
 - A Python component is an application if it installs a command (a non-empty
-  `[project.scripts]` or `[project.gui-scripts]`).
+  `[project.scripts]` or `[project.gui-scripts]`), or if uv doesn't build it
+  (`[tool.uv] package = false`), as for a service run with `uv run`.
 - A TypeScript component is always an application.
 
 Other components are libraries. In short, applications pin exact dependency
