@@ -109,6 +109,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `deny-toml-exists` warns on a `.config/deny.toml`, which cargo-deny reads
+  since 0.21.0, as it does on `.deny.toml` and `.cargo/deny.toml`: rename it
+  `deny.toml`. Before, norms looked past it to a `deny.toml` further up.
 - The template's `ci.yaml` lists the `ci-success` gate job last, after the
   jobs it waits for, rather than first, as `STANDARDS.md` now describes it.
   Job order doesn't change how CI runs.

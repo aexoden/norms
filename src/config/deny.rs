@@ -15,7 +15,8 @@ pub(crate) const DENY_TOML: &str = "deny.toml";
 
 /// The other names cargo-deny reads its configuration from, after [`DENY_TOML`] within one directory, in the order it
 /// tries them. The standard doesn't use them.
-pub(crate) const OTHER_DENY_TOMLS: [&str; 2] = [".deny.toml", ".cargo/deny.toml"];
+pub(crate) const OTHER_DENY_TOMLS: [&str; 3] =
+    [".deny.toml", ".cargo/deny.toml", ".config/deny.toml"];
 
 /// Whether `path` names one of the [`OTHER_DENY_TOMLS`] rather than [`DENY_TOML`].
 pub(crate) fn is_other_deny_toml(path: &Path) -> bool {

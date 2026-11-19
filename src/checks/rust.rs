@@ -1825,7 +1825,12 @@ jobs:
         );
         // cargo-deny tries deny.toml first within a directory, but any name in a nearer directory.
         assert_eq!(
-            exists(&["rust/deny.toml", "rust/.deny.toml", "rust/.cargo/deny.toml"]),
+            exists(&[
+                "rust/deny.toml",
+                "rust/.deny.toml",
+                "rust/.cargo/deny.toml",
+                "rust/.config/deny.toml"
+            ]),
             exists_as("deny.toml", Status::Pass)
         );
         assert_eq!(
@@ -1833,8 +1838,16 @@ jobs:
             exists_as(".deny.toml", Status::Warn)
         );
         assert_eq!(
-            exists(&["rust/.cargo/deny.toml", "deny.toml"]),
+            exists(&[
+                "rust/.cargo/deny.toml",
+                "rust/.config/deny.toml",
+                "deny.toml"
+            ]),
             exists_as(".cargo/deny.toml", Status::Warn)
+        );
+        assert_eq!(
+            exists(&["rust/.config/deny.toml", "deny.toml"]),
+            exists_as(".config/deny.toml", Status::Warn)
         );
         assert_eq!(
             exists(&[".cargo/deny.toml"]),

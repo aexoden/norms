@@ -547,10 +547,11 @@ impl ComponentContext {
         })
     }
 
-    /// The cargo-deny configuration that applies to the component (cached): the nearest `deny.toml`, `.deny.toml` or
-    /// `.cargo/deny.toml` in the component's directory or a parent, up to the project root, as cargo-deny finds it from
-    /// the component's manifest, with its path relative to the component. If there is none, the path is the bare
-    /// `deny.toml`. A file of another name than `deny.toml` is reported as `NotFound`, since only `deny.toml` is read.
+    /// The cargo-deny configuration that applies to the component (cached): the nearest `deny.toml`, `.deny.toml`,
+    /// `.cargo/deny.toml` or `.config/deny.toml` in the component's directory or a parent, up to the project root, as
+    /// cargo-deny finds it from the component's manifest, with its path relative to the component. If there is none, the
+    /// path is the bare `deny.toml`. A file of another name than `deny.toml` is reported as `NotFound`, since only
+    /// `deny.toml` is read.
     pub(crate) fn deny_toml(&self) -> &(String, ConfigStatus<DenyToml>) {
         self.deny_toml.get_or_init(|| {
             let names: Vec<&str> = std::iter::once(DENY_TOML).chain(OTHER_DENY_TOMLS).collect();
