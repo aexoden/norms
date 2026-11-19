@@ -27,6 +27,7 @@ fail  prek-config-exists  prek.toml: exists
       File not found
 fail  renovate-exists  renovate.json: exists
       File not found
+pass  dependabot-absent  No Dependabot version updates
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 fail  ci-yaml-valid  CI: ci.yaml: valid

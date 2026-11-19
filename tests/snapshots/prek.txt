@@ -48,6 +48,7 @@ fail  prek-zizmor  prek: zizmor hook (pedantic)
       No zizmor hook
 fail  renovate-exists  renovate.json: exists
       File not found
+pass  dependabot-absent  No Dependabot version updates
 fail  ci-workflows-dir-exists  CI: .github/workflows/ exists
       Not found: workflows
 pass  components-search  Components: every directory searched

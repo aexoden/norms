@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when the repository has a `.github/dependabot.yml` or
+  `.github/dependabot.yaml` (`dependabot-absent`), which has Dependabot open
+  version update pull requests beside Renovate's. Remove it. `yaml-extension`
+  no longer asks for it to be renamed.
 - Warn when the `pnpm-lock` or `pnpm-peer-dependencies` hook of a TypeScript
   component in a subdirectory runs pnpm with `--dir` rather than through
   `exec pnpm` (`typescript-prek-pinned-pnpm`). pnpm switches to the version

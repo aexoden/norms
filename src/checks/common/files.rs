@@ -643,8 +643,11 @@ const COPIER_ANSWERS_FILE: &str = ".copier-answers.yml";
 /// template chooser's.
 const GITHUB_YML_FILES: [&str; 2] = [".github/FUNDING.yml", ".github/ISSUE_TEMPLATE/config.yml"];
 
+/// Dependabot's configuration, by the names it reads, which [`check_dependabot`] reports instead.
+const DEPENDABOT_FILES: [&str; 2] = [".github/dependabot.yml", ".github/dependabot.yaml"];
+
 /// Check that YAML files use the `.yaml` extension, except the files whose tools document only a `.yml` name:
-/// [`COPIER_ANSWERS_FILE`] and [`GITHUB_YML_FILES`].
+/// [`COPIER_ANSWERS_FILE`] and [`GITHUB_YML_FILES`], and Dependabot's configuration, which shouldn't exist.
 pub(crate) fn check_yaml_extension(ctx: &ProjectContext, report: &mut Report) {
     let others: Vec<String> = ctx
         .yml_files()
@@ -652,6 +655,7 @@ pub(crate) fn check_yaml_extension(ctx: &ProjectContext, report: &mut Report) {
         .filter(|path| {
             !GITHUB_YML_FILES
                 .iter()
+                .chain(&DEPENDABOT_FILES)
                 .any(|&file| path.as_path() == Path::new(file))
                 && path
                     .file_name()
@@ -737,6 +741,27 @@ fn other_markdownlint_configs(
 //
 // Dependency management
 //
+
+/// Check that Dependabot isn't configured to update dependencies alongside Renovate, as a repository that moved from one
+/// to the other may still be.
+pub(crate) fn check_dependabot(ctx: &ProjectContext, report: &mut Report) {
+    let found: Vec<&str> = DEPENDABOT_FILES
+        .into_iter()
+        .filter(|file| ctx.path().join(file).exists())
+        .collect();
+    report.should(
+        "dependabot-absent",
+        "No Dependabot version updates",
+        if found.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Renovate updates the dependencies, so remove {}",
+                found.join(" and ")
+            ))
+        },
+    );
+}
 
 pub(crate) fn check_renovate(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("renovate", "renovate.json", ctx.renovate()) else {

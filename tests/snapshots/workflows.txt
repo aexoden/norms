@@ -48,6 +48,8 @@ warn  prek-zizmor  prek: zizmor hook (pedantic)
       The zizmor hook doesn't pass --pedantic
 fail  renovate-exists  renovate.json: exists
       File not found
+warn  dependabot-absent  No Dependabot version updates
+      Renovate updates the dependencies, so remove .github/dependabot.yml
 pass  ci-workflows-dir-exists  CI: .github/workflows/ exists
 pass  ci-yaml-exists  CI: ci.yaml: exists
 pass  ci-yaml-valid  CI: ci.yaml: valid

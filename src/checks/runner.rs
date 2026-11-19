@@ -31,6 +31,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     common::check_devbox(ctx, report);
     common::check_prek(ctx, report);
     common::check_renovate(ctx, report);
+    common::check_dependabot(ctx, report);
     common::check_github_actions(ctx, report);
     common::check_components(ctx, report);
 
@@ -743,6 +744,46 @@ mod tests {
     }
 
     #[test]
+    fn dependabot_configs_are_reported_by_either_name() {
+        let project = TempProject::new(None);
+        fs::create_dir_all(project.path().join(".github")).unwrap();
+        let dependabot = |temp: &TempProject| -> Vec<(Status, String)> {
+            find(&temp.verify(), "dependabot-absent")
+                .into_iter()
+                .map(|r| (r.status, r.message.clone()))
+                .collect()
+        };
+        assert_eq!(dependabot(&project), [(Status::Pass, String::new())]);
+
+        fs::write(
+            project.path().join(".github/dependabot.yaml"),
+            "version: 2\n",
+        )
+        .unwrap();
+        assert_eq!(
+            dependabot(&project),
+            [(
+                Status::Warn,
+                "Renovate updates the dependencies, so remove .github/dependabot.yaml".to_owned()
+            )]
+        );
+
+        fs::write(
+            project.path().join(".github/dependabot.yml"),
+            "version: 2\n",
+        )
+        .unwrap();
+        assert_eq!(
+            dependabot(&project),
+            [(
+                Status::Warn,
+                "Renovate updates the dependencies, so remove .github/dependabot.yml and .github/dependabot.yaml"
+                    .to_owned()
+            )]
+        );
+    }
+
+    #[test]
     fn yml_files_are_reported_but_forced_names() {
         let project = TempProject::new(None);
         for dir in [
@@ -777,14 +818,14 @@ mod tests {
             "{}\n",
         )
         .unwrap();
+        // Dependabot's configuration is reported by dependabot-absent instead.
         fs::write(project.path().join(".github/dependabot.yml"), "{}\n").unwrap();
         fs::write(project.path().join(".github/workflows/ci.yml"), "{}\n").unwrap();
         assert_eq!(
             extension(&project),
             [(
                 Status::Warn,
-                "Rename to .yaml: .github/ISSUE_TEMPLATE/bug.yml, .github/dependabot.yml, .github/workflows/ci.yml, \
-                 docs/.github/FUNDING.yml"
+                "Rename to .yaml: .github/ISSUE_TEMPLATE/bug.yml, .github/workflows/ci.yml, docs/.github/FUNDING.yml"
                     .to_owned()
             )]
         );
