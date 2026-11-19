@@ -141,6 +141,11 @@ action_setup_pnpm:
 
 # Python development dependencies
 
+# renovate: datasource=pypi depName=basedpyright
+py_basedpyright:
+  default: "1.40.2"
+  when: false
+
 # renovate: datasource=pypi depName=mypy
 py_mypy:
   default: "2.4.1"

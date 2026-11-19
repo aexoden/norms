@@ -139,6 +139,8 @@ fail  ruff-lint-configured  [.] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [.] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [.] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
@@ -151,6 +153,8 @@ fail  python-prek-ruff-format  Python prek: ruff-format hook (--check)
       No ruff-format hook
 fail  python-prek-mypy  Python prek: mypy hook
       No mypy hook
+fail  python-prek-basedpyright  Python prek: basedpyright hook
+      No basedpyright hook
 fail  python-prek-pytest  Python prek: pytest hook (with coverage)
       No pytest hook
 pass  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
@@ -160,6 +164,7 @@ fail  python-ci-ruff-format  Python CI: format check
       No step runs ruff format
 fail  python-ci-ruff-check  Python CI: lint check
 fail  python-ci-mypy  Python CI: type check
+fail  python-ci-basedpyright  Python CI: basedpyright type check
 fail  python-ci-pytest  Python CI: tests (with coverage)
       No step runs pytest
 pass  python-audit-uv  Python audit: uv audit

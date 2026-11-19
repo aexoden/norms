@@ -7,9 +7,9 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
-    Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook, PyprojectToml, PytestConfig,
-    Workflow, check_python_version_exact, check_release_age_value, commands, program_args,
-    sets_attribute,
+    BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook,
+    PyprojectToml, PytestConfig, Workflow, check_python_version_exact, check_release_age_value,
+    commands, program_args, sets_attribute,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -424,6 +424,9 @@ const RUFF_CONFIGS: [&str; 2] = [".ruff.toml", "ruff.toml"];
 /// The configuration files mypy prefers to `[tool.mypy]` in a `pyproject.toml` beside them, in its order.
 const MYPY_CONFIGS: [&str; 2] = ["mypy.ini", ".mypy.ini"];
 
+/// The configuration file basedpyright prefers to `[tool.basedpyright]` in a `pyproject.toml` beside it.
+const PYRIGHT_CONFIG: &str = "pyrightconfig.json";
+
 /// uv's configuration file, which takes the place of `[tool.uv]` in a `pyproject.toml` beside it.
 const UV_TOML: &str = "uv.toml";
 
@@ -636,6 +639,32 @@ pub(crate) fn check_mypy(ctx: &ComponentContext, report: &mut Report) {
     );
 }
 
+/// Check that basedpyright runs in its `recommended` mode, set in `[tool.basedpyright]`.
+pub(crate) fn check_basedpyright(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+
+    report.should(
+        "basedpyright-mode",
+        "basedpyright: recommended mode ([tool.basedpyright])",
+        if ctx.first_existing(&[PYRIGHT_CONFIG]).is_some() {
+            Err(format!(
+                "basedpyright uses {PYRIGHT_CONFIG}, which takes the place of [tool.basedpyright] in pyproject.toml"
+            ))
+        } else {
+            config
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.basedpyright.as_ref())
+                .map_or_else(
+                    || Err("Missing [tool.basedpyright] in pyproject.toml".to_owned()),
+                    BasedpyrightConfig::check_mode,
+                )
+        },
+    );
+}
+
 //
 // Testing (pytest)
 //
@@ -677,7 +706,14 @@ pub(crate) fn check_pytest(ctx: &ComponentContext, report: &mut Report) {
 //
 
 /// The IDs of Python's language hooks, which the standard's hook table lists.
-const LANGUAGE_HOOKS: [&str; 5] = ["uv-lock", "ruff-format", "ruff-check", "mypy", "pytest"];
+const LANGUAGE_HOOKS: [&str; 6] = [
+    "uv-lock",
+    "ruff-format",
+    "ruff-check",
+    "mypy",
+    "basedpyright",
+    "pytest",
+];
 
 pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = ctx.prek().as_ref_ok() else {
@@ -705,6 +741,11 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
         "python-prek-mypy",
         "Python prek: mypy hook",
         config.check_commit_hook("mypy"),
+    );
+    report.check(
+        "python-prek-basedpyright",
+        "Python prek: basedpyright hook",
+        config.check_commit_hook("basedpyright"),
     );
 
     report.check(
@@ -766,6 +807,11 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
         "python-ci-mypy",
         "Python CI: type check",
         workflow.runs_command("mypy"),
+    );
+    report.must(
+        "python-ci-basedpyright",
+        "Python CI: basedpyright type check",
+        workflow.runs_command("basedpyright"),
     );
     report.check(
         "python-ci-pytest",
@@ -1146,7 +1192,8 @@ jobs:
 
     #[test]
     fn tool_config_files_are_found_as_the_tools_find_them() {
-        // The ruff-configured, mypy-configured and uv-config messages for a component, given its files.
+        // The ruff-configured, mypy-configured, basedpyright-mode and uv-config messages for a component, given its
+        // files.
         let messages = |files: &[&str]| {
             let dir = tempfile::tempdir().unwrap();
             std::fs::write(
@@ -1166,6 +1213,7 @@ jobs:
             let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
             check_ruff(&ctx, &mut report);
             check_mypy(&ctx, &mut report);
+            check_basedpyright(&ctx, &mut report);
             check_uv_config(&ctx, &mut report);
             report
                 .results
@@ -1179,11 +1227,13 @@ jobs:
                 ".ruff.toml",
                 "mypy.ini",
                 ".mypy.ini",
+                "pyrightconfig.json",
                 "uv.toml"
             ]),
             [
                 "Ruff uses .ruff.toml, which takes the place of [tool.ruff] in pyproject.toml",
                 "mypy uses mypy.ini, which takes the place of [tool.mypy] in pyproject.toml",
+                "basedpyright uses pyrightconfig.json, which takes the place of [tool.basedpyright] in pyproject.toml",
                 "uv uses uv.toml, which takes the place of the settings in [tool.uv] in pyproject.toml",
             ]
         );
@@ -1193,6 +1243,7 @@ jobs:
                 "No [tool] section in pyproject.toml".to_owned(),
                 "mypy uses .mypy.ini, which takes the place of [tool.mypy] in pyproject.toml"
                     .to_owned(),
+                "Missing [tool.basedpyright] in pyproject.toml".to_owned(),
                 String::new(),
             ]
         );

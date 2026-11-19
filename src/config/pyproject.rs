@@ -64,6 +64,7 @@ pub(crate) struct ProjectSection {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct ToolSection {
+    pub basedpyright: Option<BasedpyrightConfig>,
     pub ruff: Option<RuffConfig>,
     pub mypy: Option<MypyConfig>,
     pub pytest: Option<PytestConfig>,
@@ -785,6 +786,28 @@ const MYPY_ERROR_CODES: [&str; 11] = [
     "unused-awaitable",
 ];
 
+/// `[tool.basedpyright]` configuration.
+#[derive(Debug, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub(crate) struct BasedpyrightConfig {
+    /// Kept unparsed, so that a malformed value fails only the check reading it.
+    pub type_checking_mode: Option<toml::Value>,
+}
+
+impl BasedpyrightConfig {
+    /// Check that basedpyright runs in its `recommended` mode. The rules the project sets on top of it aren't
+    /// inspected.
+    pub(crate) fn check_mode(&self) -> Result<(), String> {
+        match &self.type_checking_mode {
+            Some(toml::Value::String(mode)) if mode == "recommended" => Ok(()),
+            Some(value) => Err(format!("typeCheckingMode is {value}, not \"recommended\"")),
+            None => {
+                Err("[tool.basedpyright] doesn't set typeCheckingMode = \"recommended\"".to_owned())
+            }
+        }
+    }
+}
+
 /// `[tool.pytest]` configuration, which pytest reads natively as TOML since pytest 9.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -870,6 +893,40 @@ mod tests {
         assert!(!parse("[tool.ruff]\nline-length = 120\n").is_library());
         assert!(!parse("[project]\nname = 'service'\n\n[tool.uv]\npackage = false\n").is_library());
         assert!(parse("[project]\nname = 'lib'\n\n[tool.uv]\npackage = true\n").is_library());
+    }
+
+    #[test]
+    fn basedpyright_runs_in_recommended_mode() {
+        fn mode(pyproject: &str) -> Result<(), String> {
+            parse(pyproject)
+                .tool
+                .unwrap()
+                .basedpyright
+                .unwrap()
+                .check_mode()
+        }
+
+        assert_eq!(
+            mode("[tool.basedpyright]\ntypeCheckingMode = \"recommended\"\n"),
+            Ok(())
+        );
+        // The rules a project sets on top of the mode are its own.
+        assert_eq!(
+            mode("[tool.basedpyright]\ntypeCheckingMode = \"recommended\"\nreportAny = false\n"),
+            Ok(())
+        );
+        assert_eq!(
+            mode("[tool.basedpyright]\ntypeCheckingMode = \"strict\"\n"),
+            Err("typeCheckingMode is \"strict\", not \"recommended\"".to_owned())
+        );
+        assert_eq!(
+            mode("[tool.basedpyright]\ntypeCheckingMode = 1\n"),
+            Err("typeCheckingMode is 1, not \"recommended\"".to_owned())
+        );
+        assert_eq!(
+            mode("[tool.basedpyright]\nreportAny = false\n"),
+            Err("[tool.basedpyright] doesn't set typeCheckingMode = \"recommended\"".to_owned())
+        );
     }
 
     #[test]

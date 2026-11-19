@@ -176,8 +176,8 @@ re-renders them, as `AGENTS.md` describes.
   `package.json` and a `.prettierrc.json`) and in a third that its
   `.prettierignore` skips, and a Python component's `src/` holds a module and a
   namespace package, but no package with an `__init__.py`, while a `ruff.toml`,
-  `mypy.ini`, `pytest.ini` and `uv.toml` beside its `pyproject.toml` take the
-  place of its tables.
+  `mypy.ini`, `pyrightconfig.json`, `pytest.ini` and `uv.toml` beside its
+  `pyproject.toml` take the place of its tables.
 
 Symlinks and `.gitignore` handling have no fixture, and are covered by the unit
 tests in `src/detection.rs` instead: a fixture's `.gitignore` would also apply

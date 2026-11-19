@@ -113,6 +113,8 @@ fail  ruff-lint-configured  [.] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [.] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [.] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [.] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [.] Python CI: tests on the oldest supported Python (library)
@@ -122,6 +124,8 @@ pass  python-prek-ruff-check  Python prek: ruff-check hook
 warn  python-prek-ruff-format  Python prek: ruff-format hook (--check)
       ruff format runs with --diff rather than --check
 pass  python-prek-mypy  Python prek: mypy hook
+fail  python-prek-basedpyright  Python prek: basedpyright hook
+      No basedpyright hook
 warn  python-prek-pytest  Python prek: pytest hook (with coverage)
       The pytest hook doesn't pass --cov
 warn  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
@@ -133,6 +137,7 @@ fail  python-ci-ruff-format  Python CI: format check
       ruff format runs without --check, so it rewrites files instead of failing on them
 pass  python-ci-ruff-check  Python CI: lint check
 pass  python-ci-mypy  Python CI: type check
+fail  python-ci-basedpyright  Python CI: basedpyright type check
 warn  python-ci-pytest  Python CI: tests (with coverage)
       No step runs pytest with --cov
 pass  package-json-exists  [.] package.json: exists

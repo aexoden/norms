@@ -92,6 +92,8 @@ fail  ruff-lint-configured  [api] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [api] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [api] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [api] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [api] Python CI: tests on the oldest supported Python (library)
@@ -121,6 +123,8 @@ fail  ruff-lint-configured  [service] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [service] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [service] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [service] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [service] Python CI: tests on the oldest supported Python (library)
@@ -161,6 +165,8 @@ fail  ruff-lint-configured  [tool] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [tool] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [tool] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [tool] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 fail  python-ci-min-python  [tool] Python CI: tests on the oldest supported Python (library)
@@ -171,4 +177,5 @@ fail  python-ci-ruff-format  Python CI: format check
       No step runs ruff format
 fail  python-ci-ruff-check  Python CI: lint check
 fail  python-ci-mypy  Python CI: type check
+fail  python-ci-basedpyright  Python CI: basedpyright type check
 pass  python-ci-pytest  Python CI: tests (with coverage)

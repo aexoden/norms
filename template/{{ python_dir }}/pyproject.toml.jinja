@@ -43,6 +43,7 @@ Source = "{{ repository_url }}"
 
 [dependency-groups]
 dev = [
+  "basedpyright=={{ py_basedpyright }}",
   "mypy=={{ py_mypy }}",
   "pytest=={{ py_pytest }}",
   "pytest-cov=={{ py_pytest_cov }}",
@@ -52,6 +53,9 @@ dev = [
 [build-system]
 requires = ["hatch-vcs", "hatchling"]
 build-backend = "hatchling.build"
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
 
 [tool.hatch.version]
 source = "vcs"

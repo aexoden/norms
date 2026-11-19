@@ -24,7 +24,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [markdownlint, mypy, norms-verify, prek, pytest, reuse, ruff-check, ruff-format, tombi, uv-lock, zizmor]
+    needs: [basedpyright, markdownlint, mypy, norms-verify, prek, pytest, reuse, ruff-check, ruff-format, tombi, uv-lock, zizmor]
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {}
@@ -92,7 +92,7 @@ jobs:
 
       - name: Run the hooks that have no job of their own
         env:
-          PREK_SKIP: markdownlint-cli2,mypy,norms-verify,pytest,reuse,ruff-check,ruff-format,tombi-format,uv-lock,zizmor
+          PREK_SKIP: basedpyright,markdownlint-cli2,mypy,norms-verify,pytest,reuse,ruff-check,ruff-format,tombi-format,uv-lock,zizmor
         run: prek run --all-files --show-diff-on-failure
 
   reuse:
@@ -148,6 +148,29 @@ jobs:
           advanced-security: false
           annotations: true
           persona: pedantic
+
+  basedpyright:
+    name: Type check Python code with basedpyright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8"
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Type check Python code with basedpyright
+        run: uv run basedpyright
 
   mypy:
     name: Type check Python code with mypy

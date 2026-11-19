@@ -25,6 +25,7 @@ demo-python = "demo_python.main:main"
 
 [dependency-groups]
 dev = [
+  "basedpyright==1.40.2",
   "mypy==2.4.1",
   "pytest==9.2.0",
   "pytest-cov==7.1.0",
@@ -34,6 +35,9 @@ dev = [
 [build-system]
 requires = ["hatch-vcs", "hatchling"]
 build-backend = "hatchling.build"
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
 
 [tool.hatch.version]
 source = "vcs"

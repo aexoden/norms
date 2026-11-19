@@ -11,4 +11,4 @@ from demo_python.greeting import greeting
 
 def main() -> None:
     """Print a greeting."""
-    sys.stdout.write(greeting("world") + "\n")
+    _ = sys.stdout.write(greeting("world") + "\n")

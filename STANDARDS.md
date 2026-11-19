@@ -1108,9 +1108,10 @@ project/
 └── README.md
 ```
 
-Ruff, mypy and uv read their settings from `pyproject.toml`, and nothing takes
-their place: a `ruff.toml` or `.ruff.toml` beside it would replace `[tool.ruff]`,
-a `mypy.ini` or `.mypy.ini` would replace `[tool.mypy]`, and a `uv.toml` would
+Ruff, mypy, basedpyright and uv read their settings from `pyproject.toml`, and
+nothing takes their place: a `ruff.toml` or `.ruff.toml` beside it would replace
+`[tool.ruff]`, a `mypy.ini` or `.mypy.ini` would replace `[tool.mypy]`, a
+`pyrightconfig.json` would replace `[tool.basedpyright]`, and a `uv.toml` would
 replace uv's settings in `[tool.uv]`, such as `exclude-newer` and
 `required-version`, though not the project's own, such as `cache-keys` and
 `package`. `norms verify` warns on such a file and leaves out the checks of the
@@ -1141,7 +1142,7 @@ dependencies:
 
 ```toml
 [dependency-groups]
-dev = ["mypy==...", "pytest==...", "pytest-cov==...", "ruff==..."]
+dev = ["basedpyright==...", "mypy==...", "pytest==...", "pytest-cov==...", "ruff==..."]
 ```
 
 #### Versioning
@@ -1221,8 +1222,12 @@ needs a comment in `pyproject.toml` explaining why.
 
 #### Type Checking
 
-Use [mypy](https://mypy.readthedocs.io/en/stable/) in strict mode, along with
-the checks that strict mode leaves out:
+Type check with both [mypy](https://mypy.readthedocs.io/en/stable/) and
+[basedpyright](https://docs.basedpyright.com/). Each catches errors the other
+misses, and basedpyright's rules go further, such as rejecting `Any` wherever it
+appears.
+
+Run mypy in strict mode, along with the checks that strict mode leaves out:
 
 ```toml
 [tool.mypy]
@@ -1248,9 +1253,23 @@ enable_error_code = [
 a base class, imported from `typing`, or from `typing_extensions` in a library
 that supports Python before 3.12. The other optional checks are left off.
 Ruff's `blanket-type-ignore` already reports what `ignore-without-code` does,
-`disallow_any_explicit` would reject every annotation with `Any`, even where it
-is the honest type, and `disallow_any_unimported` matters only to a project that
-ignores missing imports, which fail by default.
+basedpyright's `reportExplicitAny` already rejects what `disallow_any_explicit`
+does, and `disallow_any_unimported` matters only to a project that ignores
+missing imports, which fail by default.
+
+Run basedpyright, a fork of Pyright whose PyPI package bundles Node.js, in its
+`recommended` mode, which turns on nearly all of its rules and fails on
+warnings as well as errors:
+
+```toml
+[tool.basedpyright]
+typeCheckingMode = "recommended"
+```
+
+`Any` is avoided unless the code can't be written without it. A rule that
+proves a poor fit for a project may be turned off in `[tool.basedpyright]`,
+with a comment saying why. `norms verify` checks the mode, and leaves the rules
+a project sets on top of it alone.
 
 #### Testing
 
@@ -1276,13 +1295,14 @@ any strictness option a later pytest adds. A `pytest.toml`, `.pytest.toml`,
 
 The Git hooks and CI both run:
 
-| Hook ID       | Command                                                          |
-|---------------|------------------------------------------------------------------|
-| `uv-lock`     | `uv lock --check`                                                |
-| `ruff-format` | `uv run ruff format --check`                                     |
-| `ruff-check`  | `uv run ruff check`                                              |
-| `mypy`        | `uv run mypy .`                                                  |
-| `pytest`      | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
+| Hook ID        | Command                                                          |
+|----------------|------------------------------------------------------------------|
+| `uv-lock`      | `uv lock --check`                                                |
+| `ruff-format`  | `uv run ruff format --check`                                     |
+| `ruff-check`   | `uv run ruff check`                                              |
+| `mypy`         | `uv run mypy .`                                                  |
+| `basedpyright` | `uv run basedpyright`                                            |
+| `pytest`       | `uv run pytest --cov=src/package_name --cov-report=term-missing` |
 
 CI installs uv with `astral-sh/setup-uv` and runs `uv sync --locked` before the
 checks.

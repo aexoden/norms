@@ -48,6 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when a package, or a member of its workspace, leaves out any of them
   (`clippy-restriction-lints`). Set each, as the template does. Setting one to
   `allow` is accepted as a deliberate choice.
+- **Breaking:** Type check Python with basedpyright beside mypy: the template
+  adds it to the `dev` group, sets `typeCheckingMode = "recommended"` in
+  `[tool.basedpyright]`, and runs `uv run basedpyright` in a `basedpyright`
+  hook and CI job. Check the hook and the CI step, and warn when
+  `[tool.basedpyright]` doesn't set that mode or a `pyrightconfig.json` takes
+  its place. Add them as the template does, and fix or turn off, with a
+  comment, what basedpyright reports.
 - Warn when no hook, or no CI step, runs the doctests of a Rust library
   target, beside a binary or not, as `cargo test` does unless it selects other
   targets.

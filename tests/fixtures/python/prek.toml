@@ -162,6 +162,15 @@ pass_filenames = false
 priority = "check"
 
 [[repos.hooks]]
+id = "basedpyright"
+name = "basedpyright"
+description = "Type check Python code using basedpyright"
+entry = "uv run basedpyright"
+language = "system"
+pass_filenames = false
+priority = "check"
+
+[[repos.hooks]]
 id = "pytest"
 name = "pytest"
 description = "Run Python tests using pytest"

@@ -63,6 +63,8 @@ fail  ruff-lint-configured  [app-other] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [app-other] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [app-other] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [app-other] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [app-range] pyproject.toml: exists
@@ -101,6 +103,8 @@ fail  ruff-lint-configured  [app-range] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [app-range] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [app-range] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [app-range] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [lib-below] pyproject.toml: exists
@@ -138,6 +142,8 @@ fail  ruff-lint-configured  [lib-below] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [lib-below] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [lib-below] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [lib-below] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml
 pass  pyproject-exists  [minor] pyproject.toml: exists
@@ -174,5 +180,7 @@ fail  ruff-lint-configured  [minor] Ruff lint: configured
       Missing [tool.ruff.lint] in pyproject.toml
 fail  mypy-configured  [minor] mypy: configured
       Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [minor] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
 warn  pytest-strict  [minor] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml

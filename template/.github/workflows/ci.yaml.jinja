@@ -75,7 +75,7 @@
 {%- set jobs = ['markdownlint', 'norms-verify', 'prek', 'reuse', 'tombi', 'zizmor'] %}
 {%- if 'rust' in languages %}{% set jobs = jobs + ['cargo-deny', 'cargo-lock', 'cargo-test', 'clippy', 'rustfmt'] %}{% endif %}
 {%- if 'rust' in languages and project_type == 'library' %}{% set jobs = jobs + ['cargo-doctest'] %}{% endif %}
-{%- if 'python' in languages %}{% set jobs = jobs + ['mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
+{%- if 'python' in languages %}{% set jobs = jobs + ['basedpyright', 'mypy', 'pytest', 'ruff-check', 'ruff-format', 'uv-lock'] %}{% endif %}
 {%- if 'typescript' in languages %}{% set jobs = jobs + ['eslint', 'pnpm-peer-dependencies', 'prettier', 'tsc', 'vite-build', 'vitest'] %}{% endif %}
 {#- The prek job skips the hooks that have a job of their own, the hooks for
     markdownlint and tombi being markdownlint-cli2 and tombi-format, and pnpm-lock,
@@ -234,6 +234,11 @@ jobs:
 {%- endif %}
 {%- endif %}
 {%- if 'python' in languages %}
+{{ job('basedpyright', 'Type check Python code with basedpyright', python_dir, timeout=30) }}
+{{- setup_uv() }}
+
+      - name: Type check Python code with basedpyright
+        run: uv run basedpyright
 {{ job('mypy', 'Type check Python code with mypy', python_dir, timeout=30) }}
 {{- setup_uv() }}
 
