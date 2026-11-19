@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `copier copy` points to the sections of `STANDARDS.md` on configuring the
+  new project's GitHub repository, which the template can't do.
 - Add the `norms-commit-msg` and `norms-verify` hooks to the template, with a
   `norms-verify` CI job that runs the pinned hooks: `norms-verify`, and the
   commit message hooks on the message of the commit CI tests, rejecting
