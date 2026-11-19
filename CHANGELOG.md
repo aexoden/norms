@@ -148,6 +148,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `ci-yaml-push` warns when `ci.yaml`'s `push` has no branch filter, which
+  runs CI on every branch, rather than accepting it. Name the branches, as in
+  `push: branches: [dev, main]`.
 - **Breaking:** A Python component that uv doesn't build
   (`[tool.uv] package = false`), such as a service run with `uv run`, is an
   application: its dependencies are pinned exactly, its `requires-python` names

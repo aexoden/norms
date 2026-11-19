@@ -390,18 +390,25 @@ impl Workflow {
             .is_none_or(|directory| matches!(directory.as_str(), Some("." | "./")))
     }
 
-    /// Whether the workflow runs on pushes to each of `branches`, naming each in its filter: `on` names `push`, either
-    /// without a branch filter or with a `branches` list that has each branch's name as one of its patterns. Patterns
-    /// are compared as written rather than matched as globs, whose syntax GitHub reads differently from glob crates, so
-    /// a glob such as `'**'` or a negated `'!dev'` names no branch, and `branches-ignore` warns. A `push`
-    /// filtered only by `tags` or `tags-ignore` runs on no branch. A filter GitHub rejects, which stops the whole
-    /// workflow from running, fails, and any other issue warns.
+    /// Whether the workflow runs on pushes to each of `branches`, naming each in its filter: `on` names `push`, with a
+    /// `branches` list that has each branch's name as one of its patterns. A `push` without a branch filter runs on
+    /// every branch, which works but isn't the standard's form, so it warns. Patterns are compared as written rather
+    /// than matched as globs, whose syntax GitHub reads differently from glob crates, so a glob such as `'**'` or a
+    /// negated `'!dev'` names no branch, and `branches-ignore` warns. A `push` filtered only by `tags` or `tags-ignore`
+    /// runs on no branch. A filter GitHub rejects, which stops the whole workflow from running, fails, and any other
+    /// issue warns.
     pub(crate) fn runs_on_push_to(&self, branches: &[&str]) -> Result<(), Issue> {
         let not_run = || Err(Issue::warn("Doesn't run on push"));
+        let unfiltered = || {
+            Err(Issue::warn(format!(
+                "push has no branch filter, so it runs on every branch, rather than naming {} in branches",
+                branches.join(", ")
+            )))
+        };
         let config = match &self.on {
-            Some(Value::String(event)) if event == "push" => return Ok(()),
+            Some(Value::String(event)) if event == "push" => return unfiltered(),
             Some(Value::Array(events)) if events.iter().any(|event| event == "push") => {
-                return Ok(());
+                return unfiltered();
             }
             Some(Value::Object(events)) => match events.get("push") {
                 Some(config) => config,
@@ -410,7 +417,7 @@ impl Workflow {
             _ => return not_run(),
         };
         let Value::Object(config) = config else {
-            return Ok(());
+            return unfiltered();
         };
 
         let listed = match (config.get("branches"), config.get("branches-ignore")) {
@@ -432,7 +439,7 @@ impl Workflow {
                     "push is filtered only by tags, so it runs on no branch",
                 ));
             }
-            (None, None) => return Ok(()),
+            (None, None) => return unfiltered(),
         };
 
         let missing: Vec<_> = branches
@@ -1516,15 +1523,22 @@ jobs:
                 .runs_on_push_to(&["main", "dev"])
         };
         for yaml in [
-            "on: push\n",
-            "on: [push, pull_request]\n",
-            "on:\n  push:\n",
             "on:\n  push:\n    branches: [dev, main]\n",
             "on:\n  push:\n    branches: [main, 'release/*', dev]\n",
             "on:\n  push:\n    branches: [main, dev]\n    tags: ['v*']\n",
-            "on:\n  push:\n    paths: [src]\n",
         ] {
             assert_eq!(runs(yaml), Ok(()), "{yaml}");
+        }
+        let unfiltered = Issue::warn(
+            "push has no branch filter, so it runs on every branch, rather than naming main, dev in branches",
+        );
+        for yaml in [
+            "on: push\n",
+            "on: [push, pull_request]\n",
+            "on:\n  push:\n",
+            "on:\n  push:\n    paths: [src]\n",
+        ] {
+            assert_eq!(runs(yaml), Err(unfiltered.clone()), "{yaml}");
         }
         let neither = Issue::warn("push's branches don't name main, dev");
         for (yaml, issue) in [

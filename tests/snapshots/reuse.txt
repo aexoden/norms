@@ -78,7 +78,8 @@ fail  ci-commit-msg  CI: commit-msg hooks on the commit message (prek run --stag
 pass  ci-prek-skip  CI: the prek job's PREK_SKIP lists every hook with a job of its own
 fail  ci-yaml-pull-request  CI: ci.yaml: runs on every pull request
       Doesn't run on pull_request
-pass  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
+warn  ci-yaml-push  CI: ci.yaml: runs on pushes to main and dev
+      push has no branch filter, so it runs on every branch, rather than naming main, dev in branches
 pass  ci-ubuntu-slim  CI: jobs that install nothing run on ubuntu-slim
 pass  ci-gate-continue-on-error  CI: no job, the gate included, sets continue-on-error
 fail  ci-gate-exists  CI: gate job ci-success
