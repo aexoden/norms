@@ -231,6 +231,24 @@ directories `[components] exclude` lists.
 Projects should contain a `README.md` file that gives an overview of the
 project.
 
+### Security Policy
+
+Projects should have a `SECURITY.md` at the repository root, which the
+template renders, saying how to report a vulnerability and which versions get
+fixes:
+
+- Vulnerabilities are reported through the repository's
+  [private vulnerability reporting](#repository-settings), linked to its form,
+  rather than in a public issue.
+- Only the latest release receives security fixes, or, in a project without
+  versioned releases, the latest commit on `main`.
+- Fixes are made on a best-effort basis, with no promised response time.
+
+GitHub shows the file in the repository's **Security** tab and counts it in the
+community profile. A private repository, for which GitHub offers no private
+vulnerability reporting, keeps the file anyway, ready for when it becomes
+public.
+
 ### Changelog
 
 Projects that publish versioned releases keep a hand-written `CHANGELOG.md` in
@@ -670,7 +688,8 @@ the repository, so that the `renovate.json` the template renders takes effect
 **Advanced Security**:
 
 - **Private vulnerability reporting** is on, so that vulnerabilities can be
-  reported without a public issue. GitHub offers it only for public
+  reported without a public issue, as the project's `SECURITY.md` asks (see
+  [Security Policy](#security-policy)). GitHub offers it only for public
   repositories.
 - **Dependabot alerts** are on. Renovate reads them to open its vulnerability
   alert pull requests (see [Urgent Updates](#urgent-updates)).
