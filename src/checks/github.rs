@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::Waiver;
+use crate::config::{GATE_NAME, Waiver};
 use crate::github::{FeatureStatus, Fetched, Ruleset, Settings, StatusCheckParameters};
 use crate::report::{Issue, Outcome, Report};
 
@@ -22,7 +22,7 @@ const PREFIX: &str = "github-";
 const GITHUB_ACTIONS_APP_ID: u64 = 15368;
 
 /// The status check the `Default` ruleset requires: the CI gate job.
-const REQUIRED_CHECK: &str = "CI success";
+const REQUIRED_CHECK: &str = GATE_NAME;
 
 /// Why a setting reported only to admins is skipped.
 const NEEDS_ADMIN: &str = "Reading it needs admin access to the repository";

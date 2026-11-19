@@ -12,8 +12,8 @@ use regex::Regex;
 use serde_json::Value;
 
 use crate::config::{
-    Command, GATE_JOB, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands, is_program,
-    program_args, program_name,
+    Command, GATE_JOB, GATE_NAME, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands,
+    is_program, program_args, program_name,
 };
 use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -1399,6 +1399,12 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
     );
 
     report.must(
+        "ci-gate-name",
+        format!("CI: the gate is named {GATE_NAME}"),
+        check_gate_name(gate),
+    );
+
+    report.must(
         "ci-gate-always",
         "CI: the gate runs whatever the other jobs' results",
         if gate.runs_always() {
@@ -1444,6 +1450,20 @@ fn check_gate(workflow: &Workflow, report: &mut Report) {
     );
 }
 
+/// Check that the gate job is named `CI success`, the check branch protection requires: GitHub shows a job's check by
+/// its `name`, or its ID without one, and a required check that never reports blocks every merge.
+fn check_gate_name(gate: &WorkflowJob) -> Result<(), String> {
+    match gate.name.as_ref() {
+        Some(Value::String(name)) if name == GATE_NAME => Ok(()),
+        Some(Value::String(name)) => Err(format!(
+            "{GATE_JOB} is named {name}, but branch protection requires {GATE_NAME}"
+        )),
+        _ => Err(format!(
+            "{GATE_JOB} has no name, so GitHub shows its check as {GATE_JOB}, but branch protection requires {GATE_NAME}"
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1473,6 +1493,18 @@ mod tests {
             "jobs:\n  norms-verify:\n    steps:\n      - uses: actions/checkout@v7\n        with: {with}\n      \
              - run: {run}\n"
         )
+    }
+
+    #[test]
+    fn gate_is_named_as_branch_protection_requires() {
+        let gate = |job: &str| check_gate_name(&serde_saphyr::from_str(job).unwrap());
+        assert_eq!(gate("name: CI success\nsteps: []\n"), Ok(()));
+        assert!(
+            gate("name: Gate\nsteps: []\n")
+                .unwrap_err()
+                .contains("named Gate")
+        );
+        assert!(gate("steps: []\n").unwrap_err().contains("has no name"));
     }
 
     #[test]

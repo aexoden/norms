@@ -19,6 +19,9 @@ use crate::report::Issue;
 /// The ID of `ci.yaml`'s gate job, which succeeds only if every other job did.
 pub(crate) const GATE_JOB: &str = "ci-success";
 
+/// The `name` of the gate job, which GitHub shows its check by, and the one status check branch protection requires.
+pub(crate) const GATE_NAME: &str = "CI success";
+
 /// A value from a mapping such as `with` or `env` as the step receives it: a string, whether the YAML wrote it as one or
 /// as a boolean or number. A null or collection is no value.
 fn value_text(value: &Value) -> Option<Cow<'_, str>> {
@@ -68,6 +71,8 @@ pub(crate) struct Workflow {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct WorkflowJob {
+    /// The name GitHub shows the job's check by, instead of its ID: a string, or an expression giving one.
+    pub name: Option<Value>,
     /// The condition under which the job runs: an expression, with or without `${{ }}`.
     #[serde(rename = "if")]
     pub condition: Option<Value>,

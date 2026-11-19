@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Breaking:** Fail when `ci.yaml`'s gate job isn't named `CI success`
+  (`ci-gate-name`), the check branch protection requires: GitHub shows a job's
+  check by its `name`, so the required check would never report. Set
+  `name: CI success`.
 - Warn when `pyproject.toml` has Ruff ignore a rule beyond the template's,
   in `ignore` or `per-file-ignores`, without a comment on the rule's line
   saying why (`ruff-lint-ignore-reasons`), as the standards require. Add one,
