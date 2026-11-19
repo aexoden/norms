@@ -329,6 +329,25 @@ const CLIPPY_GROUPS: [(&str, &str); 3] = [
 
 /// The Clippy restriction lints the standard enables. A package may set any of them to any level, `allow` included,
 /// but leaving one out is taken for drift.
+///
+/// `unnecessary_rest_pattern` rejects a `..` that matches no fields, which does nothing today but would let a field
+/// added later go unhandled without a compile error. It covers struct variants of enums as well as structs, so it takes
+/// the place of `rest_pat_in_fully_bound_structs`.
+///
+/// Some restriction lints are left out deliberately, because they work against idiomatic Rust or don't suit
+/// applications:
+///
+/// - `shadow_reuse` and `shadow_same`: shadowing a binding to transform it, as in `let Some(x) = x else { ... }`, is
+///   idiomatic. `shadow_unrelated` is enabled.
+/// - `arbitrary_source_item_ordering`: field and variant order carries meaning for derived `Ord`, serde output and
+///   clap help.
+/// - `impl_trait_in_params`, `exhaustive_enums` and `exhaustive_structs`: these only matter for library APIs.
+/// - `error_impl_error`: a type named `Error` implementing `Error` is the usual convention.
+/// - `get_unwrap`: `unwrap_used` already covers it, and its suggestion trips `indexing_slicing`.
+/// - `module_name_repetitions`: too noisy for its benefit.
+/// - `inline_trait_bounds`: it moves every bound, even `T: Clone`, to a `where` clause, against common usage.
+/// - `rest_pattern_accessible_field`: it rejects every `..` that skips a field, including in a match on an enum variant
+///   whose fields don't matter there and on other crates' types, whose new fields would then break the build.
 const CLIPPY_RESTRICTION_LINTS: [&str; 66] = [
     "absolute_paths",
     "allow_attributes",

@@ -65,7 +65,7 @@ norms verify --deny-warnings --json .
 ```
 
 `norms github <path>` checks the GitHub repository of the checkout at `<path>`
-against the [repository standards](STANDARDS.md#branch-protection). It reads
+against the [repository standards](STANDARDS.md#github-repository). It reads
 the settings through the [GitHub CLI](https://cli.github.com/), so `gh` must be
 installed and logged in, and most settings are readable only with admin access.
 `--repo OWNER/NAME` checks another repository. Nothing runs it automatically,
@@ -155,9 +155,9 @@ such as the workflows, once.
   packages of a pnpm workspace as pnpm does. A member outside the workspace, or
   a pattern norms can't follow, warns.
 
-Some standards differ between applications and libraries. A Rust component is
-an application if it builds a binary, a Python one if it installs a command,
-and a TypeScript one always.
+Whether a component is an [application or a
+library](STANDARDS.md#applications-and-libraries) decides which standards
+apply to it.
 
 ## Project Template
 
@@ -184,8 +184,7 @@ It merges the changes between the template version recorded in
 tags (`vX.Y.Z`).
 
 The template renders only the repository's files. Configure the GitHub
-repository as [Branch Protection](STANDARDS.md#branch-protection) and
-[Repository Settings](STANDARDS.md#repository-settings) describe,
+repository as [GitHub Repository](STANDARDS.md#github-repository) describes,
 then check it with `norms github .`.
 
 ## Platform Support

@@ -29,10 +29,8 @@ _tasks:
 
 # The rulesets and settings live in GitHub, which the template can't reach.
 _message_after_copy: |
-  Configure the GitHub repository as STANDARDS.md describes, in its Branch
-  Protection and Repository Settings sections:
-  https://github.com/aexoden/norms/blob/main/STANDARDS.md#branch-protection
-  https://github.com/aexoden/norms/blob/main/STANDARDS.md#repository-settings
+  Configure the GitHub repository as STANDARDS.md describes:
+  https://github.com/aexoden/norms/blob/main/STANDARDS.md#github-repository
   Then `norms github .` checks them, through the GitHub CLI.
 
 ---

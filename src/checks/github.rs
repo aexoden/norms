@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Checks of a GitHub repository's settings and rulesets, which `norms github` runs, as STANDARDS.md's Branch
-//! Protection and Repository Settings sections describe them.
+//! Checks of a GitHub repository's settings and rulesets, which `norms github` runs, as STANDARDS.md's GitHub
+//! Repository section describes them.
 //!
 //! Their IDs start with `github-`, so that `norms verify` leaves the waivers of these checks to `norms github`, and
 //! `norms github` the others to `norms verify`. A setting the standards make definite fails when it differs; one they

@@ -43,11 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`cargo-lints`). Add the table as the template does, or inherit it from
   `[workspace.lints.cargo]`.
 - Add `norms github <path>`, which checks the GitHub repository's rulesets
-  and settings against `STANDARDS.md`'s Branch Protection and Repository
-  Settings sections, reading them through the GitHub CLI (`gh`). Its checks'
-  IDs start with `github-`, and `norms.toml` waives them as it does the
-  others; `norms verify` ignores those waivers.
-- `copier copy` points to the sections of `STANDARDS.md` on configuring the
+  and settings against `STANDARDS.md`'s GitHub Repository section, reading
+  them through the GitHub CLI (`gh`). Its checks' IDs start with `github-`,
+  and `norms.toml` waives them as it does the others; `norms verify` ignores
+  those waivers.
+- `copier copy` points to the section of `STANDARDS.md` on configuring the
   new project's GitHub repository, which the template can't do.
 - Add a `SECURITY.md` to the template, which asks for vulnerabilities to be
   reported through the repository's private vulnerability reporting and says
@@ -131,6 +131,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `STANDARDS.md` describes only the standards, more concisely, leaving how
+  norms checks them to the README and the code. It's reorganized, with the
+  GitHub settings in a GitHub Repository section and each language's
+  standards in a section of its own.
 - The template's `.editorconfig` indents JSONC files by two spaces, as JSON
   files are, and its `.markdownlint-cli2.jsonc` is indented by two spaces
   rather than four. `editorconfig-indent-size-data` warns unless `*.jsonc` gets
