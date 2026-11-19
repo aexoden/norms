@@ -195,6 +195,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The template's `.gitignore` ignores `.coverage.*`, the files coverage.py
+  writes beside `.coverage` while pytest runs. With a TypeScript component at
+  the root, Prettier checked them too, and failed when one was gone before it
+  was read. Add `.coverage.*` below `.coverage`.
 - The template's workflows pin prek and cargo-llvm-cov in `_VERSION`
   environment variables under `# renovate:` comments, which the shared Renovate
   preset now updates, rather than inline in commands, where Renovate didn't.
