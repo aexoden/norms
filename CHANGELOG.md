@@ -241,6 +241,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Require a committed `Cargo.lock` in Rust libraries too (`cargo-lock-exists`),
+  as the standards require of every project, not only in applications. Commit
+  the lock file.
 - The template's `.gitignore` ignores `.coverage.*`, the files coverage.py
   writes beside `.coverage` while pytest runs. With a TypeScript component at
   the root, Prettier checked them too, and failed when one was gone before it

@@ -172,6 +172,8 @@ fail  clippy-toml-exists  [.] clippy.toml: exists
       File not found
 fail  deny-toml-exists  [.] deny.toml: exists
       File not found
+fail  cargo-lock-exists  [.] Rust: Cargo.lock committed
+      Not found: Cargo.lock
 fail  rust-ci-msrv  [.] Rust CI: MSRV checked (library)
       No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check
 fail  cargo-config-exists  .cargo/config.toml: exists

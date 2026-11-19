@@ -611,17 +611,15 @@ pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
 //
 
 pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
-    let Some(config) = ctx.cargo().as_ref_ok() else {
+    if ctx.cargo().as_ref_ok().is_none() {
         return;
-    };
-
-    if is_application(ctx, config) {
-        report.must(
-            "cargo-lock-exists",
-            "Rust: Cargo.lock committed (binary)",
-            file_exists(&ctx.path().join("Cargo.lock")),
-        );
     }
+
+    report.must(
+        "cargo-lock-exists",
+        "Rust: Cargo.lock committed",
+        file_exists(&ctx.path().join("Cargo.lock")),
+    );
 }
 
 //

@@ -111,7 +111,7 @@ pass  deny-toml-multiple-versions  [.] deny.toml: multiple versions allowed (ban
 pass  deny-toml-std-replacements  [.] deny.toml: crates that std replaces are banned
 pass  deny-toml-ignore-reasons  [.] deny.toml: every ignored advisory has a reason
 pass  deny-toml-ignore-expiry  [.] deny.toml: every ignored advisory expires
-pass  cargo-lock-exists  [.] Rust: Cargo.lock committed (binary)
+pass  cargo-lock-exists  [.] Rust: Cargo.lock committed
 pass  cargo-config-exists  .cargo/config.toml: exists
 pass  cargo-config-valid  .cargo/config.toml: valid
 pass  cargo-config-min-publish-age  Cargo: release age of 3 days (global-min-publish-age)
