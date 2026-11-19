@@ -378,7 +378,7 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
     report.should(
         "tsconfig-strict",
         format!("{label}: strict mode enabled"),
-        opts.strict == Some(true),
+        option_enabled("strict", opts.strict),
     );
 
     // noUncheckedIndexedAccess

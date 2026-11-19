@@ -81,6 +81,7 @@ warn  tsconfig-erasable-syntax-only  [.] tsconfig.app.json: erasableSyntaxOnly e
 pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
 warn  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
+      strict is false
 pass  tsconfig-no-unchecked-indexed-access  [.] tsconfig.node.json: noUncheckedIndexedAccess enabled
 warn  tsconfig-module  [.] tsconfig.node.json: module is nodenext
       module is "ESNext", not "nodenext"
