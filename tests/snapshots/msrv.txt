@@ -4,6 +4,8 @@ components: rust (.)
 
 fail  readme-exists  README.md
       Not found: README.md
+warn  security-md-exists  SECURITY.md
+      Not found: SECURITY.md
 fail  license-exists  LICENSE
 fail  licenses-dir-exists  LICENSES/: holds the license texts
       No license texts in LICENSES/

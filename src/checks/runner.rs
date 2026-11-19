@@ -19,6 +19,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_norms_config(ctx, report);
     common::check_readme(ctx, report);
+    common::check_security_policy(ctx, report);
     common::check_licenses(ctx, report);
     common::check_changelog(ctx, report);
     common::check_agent_guidance(ctx, report);

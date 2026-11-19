@@ -4,6 +4,8 @@ components: python (py), rust (.), typescript (web)
 
 fail  readme-exists  README.md
       Not found: README.md
+warn  security-md-exists  SECURITY.md
+      Not found: SECURITY.md
 pass  license-exists  LICENSE
 pass  licenses-dir-exists  LICENSES/: holds the license texts
 warn  license-copies  LICENSE: root copies match LICENSES/

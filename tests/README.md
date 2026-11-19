@@ -121,7 +121,7 @@ re-renders them, as `AGENTS.md` describes.
   sets other options than the standard's; its markdownlint-cli2 hook has
   another ID, and its CI action lints only the root's files. Its `CLAUDE.md`
   names `AGENTS.md` beside it, but only in prose and a code span, which don't
-  import it.
+  import it. Its `SECURITY.md` is in `.github/` rather than at the root.
 - `versioning` has Python components in subdirectories, checked against the
   versioning standards: one that conforms but lacks the `raw-options` a
   component below the root needs, one with a static version and another build

@@ -3,6 +3,7 @@ languages: rust, typescript
 components: rust (.), typescript (frontend)
 
 pass  readme-exists  README.md
+pass  security-md-exists  SECURITY.md
 pass  license-exists  LICENSE
 pass  licenses-dir-exists  LICENSES/: holds the license texts
 pass  license-copies  LICENSE: root copies match LICENSES/

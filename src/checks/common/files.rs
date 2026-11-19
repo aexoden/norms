@@ -125,6 +125,16 @@ pub(crate) fn check_readme(ctx: &ProjectContext, report: &mut Report) {
     );
 }
 
+/// Check for the security policy, at the root only: GitHub also reads one in `.github/` or `docs/`, but the standards
+/// keep it beside the README.
+pub(crate) fn check_security_policy(ctx: &ProjectContext, report: &mut Report) {
+    report.should(
+        "security-md-exists",
+        "SECURITY.md",
+        file_exists(&ctx.path().join("SECURITY.md")),
+    );
+}
+
 /// The import of `AGENTS.md` in `CLAUDE.md`, as the standards write it on a line of its own.
 const AGENTS_IMPORT: &str = "@AGENTS.md";
 

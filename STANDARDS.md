@@ -247,7 +247,8 @@ fixes:
 GitHub shows the file in the repository's **Security** tab and counts it in the
 community profile. A private repository, for which GitHub offers no private
 vulnerability reporting, keeps the file anyway, ready for when it becomes
-public.
+public. `norms verify` warns if the root has no `SECURITY.md`. One only in
+`.github/` or `docs/`, which GitHub also reads, doesn't count.
 
 ### Changelog
 
