@@ -5,9 +5,11 @@ norms is three things in one repository:
 - `STANDARDS.md`, the standards for the author's projects. norms follows them
   itself, so it is the reference for conventions here too.
 - The `norms` Rust CLI. `norms verify <path> [--json] [--deny-warnings]` checks
-  a project against the standards, and `norms commit-msg <file>` checks the case
-  of a commit message's type and its line lengths. Other projects run them as
-  the `norms-verify` and `norms-commit-msg` hooks from `.pre-commit-hooks.yaml`;
+  a project against the standards, `norms github <path>` checks its GitHub
+  repository's rulesets and settings through `gh api`, and
+  `norms commit-msg <file>` checks the case of a commit message's type and its
+  line lengths. Other projects run `verify` and `commit-msg` as the
+  `norms-verify` and `norms-commit-msg` hooks from `.pre-commit-hooks.yaml`;
   norms runs both on itself as local hooks, which `tests/hooks.rs` keeps in step
   with the shipped ones.
 - A Copier template (`copier.yaml`, `template/`) that renders new projects
@@ -32,6 +34,7 @@ NORMS_RENDER=1 cargo test --test fixtures # re-render the language fixtures
 cargo deny --workspace --all-features check -D warnings bans licenses sources
 cargo run -- verify <path>                # run norms against a project
 cargo run -- verify --deny-warnings .     # run norms against itself
+cargo run -- github .                     # check norms' GitHub settings (gh)
 prek run --all-files                      # every hook, incl. reuse, markdownlint, tombi, zizmor
 ```
 
@@ -120,6 +123,10 @@ any check failed or warned.
   don't see norms' own tags.
 - `release.rs`: the project's latest release, from `CHANGELOG.md` or else its
   tags, whose version the `Cargo.toml` and `package.json` checks expect.
+- `github.rs`: `norms github`'s reads of the GitHub API through `gh api`,
+  behind an `Api` trait that the tests of `checks/github.rs` replace with
+  recorded responses. Its checks' IDs start with `github-`, so that
+  `norms verify` and `norms github` each apply only their own waivers.
 - `commit_msg.rs`: `norms commit-msg`, tested in `tests/commit_msg.rs`.
 - `build.rs` sets the `BUILD_VERSION` that `--version` reports, from
   `git describe`. The template's Rust applications get the same script, which
@@ -128,10 +135,12 @@ any check failed or warned.
 ## Tests
 
 Unit tests sit beside the code they test. `tests/verify.rs` checks
-`norms verify`'s exit codes on a copy of a fixture. `tests/fixtures.rs` runs
-`norms verify --json` on each project in `tests/fixtures/` and compares what it
-reports with `tests/snapshots/<name>.txt`, so any change in findings shows up as
-a snapshot diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
+`norms verify`'s exit codes on a copy of a fixture, and `tests/github.rs`
+`norms github`'s on the errors it reports before reading GitHub.
+`tests/fixtures.rs` runs `norms verify --json` on each project in
+`tests/fixtures/` and compares what it reports with
+`tests/snapshots/<name>.txt`, so any change in findings shows up as a snapshot
+diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 `git diff tests/snapshots`, and commit the snapshots with the change.
 
 - A fix or new check that depends on a project's layout gets a fixture.

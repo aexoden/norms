@@ -109,6 +109,9 @@ reason = "The repository holds no binary files."
   the check's description, which may change between versions while the ID
   doesn't.
 - Unknown keys are errors.
+- The waivers of checks whose IDs start with `github-` apply to
+  `norms github` (see [Checking the Settings](#checking-the-settings)), and
+  `norms verify` ignores them, as `norms github` ignores the others.
 
 `norms verify <path>` reports each check as passed, failed, warned or skipped,
 and exits with failure if any check failed. With `--deny-warnings`, it also
@@ -129,7 +132,9 @@ norms can't be sure: the gate job's failing step, and the
 `actions-rust-lang/setup-rust-toolchain` `toolchain` and `astral-sh/setup-uv`
 `python-version` inputs of the jobs testing a library's oldest supported Rust
 and Python. norms can't tell one written another way from one that doesn't work,
-so written another way, it fails as if absent.
+so written another way, it fails as if absent. `norms github` fails on any
+repository setting that differs, as
+[Checking the Settings](#checking-the-settings) describes.
 
 ## Development Environment
 
@@ -676,6 +681,37 @@ the repository, so that the `renovate.json` the template renders takes effect
   for public repositories. A private repository has them only with GitHub
   Secret Protection, which GitHub sells to organizations, so a personal
   private repository goes without.
+
+### Checking the Settings
+
+`norms github <path>` checks the rulesets and the settings above that the API
+reports, reading them through the [GitHub CLI](https://cli.github.com/), so
+`gh` must be installed and logged in (`gh auth login`). It finds the repository
+from the remotes of the checkout at `<path>`, as `gh` does, or checks the one
+`--repo OWNER/NAME` names, and takes `--json` and `--deny-warnings` as
+`norms verify` does. It exits with failure as `norms verify` does, and with
+status 2 if it couldn't check the settings at all: if the path or `norms.toml`
+is invalid, or `gh` couldn't find or read the repository. Nothing runs it
+automatically: neither a hook nor CI, whose token can't read most of these
+settings.
+
+- Each setting is itself the safeguard, so one that differs from those above
+  fails, even where it is only weaker, except that the wiki and projects being
+  on only warns, since a project may use them.
+- The rulesets are the repository's own, not those it inherits from an
+  organization. The `Development` ruleset is checked only if the repository has
+  a `dev` branch.
+- A setting the token can't read, which is most of them without admin access
+  to the repository, is skipped with the reason. So are the rulesets of a
+  private repository without GitHub Pro, and private vulnerability reporting
+  and secret scanning on a private repository, which GitHub doesn't offer it.
+  A ruleset's bypass actors, which GitHub shows only to those who can edit it,
+  warn when they can't be read, since the rest of the ruleset can.
+- Whether the Renovate app is installed isn't checked, since the API reports
+  it only to an app.
+
+Its check IDs start with `github-`, and its waivers are kept in `norms.toml`
+with the others (see [norms Configuration](#norms-configuration)).
 
 ## Continuous Integration
 

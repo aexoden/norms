@@ -10,9 +10,12 @@
 //! ```
 //!
 //! Registration is explicit - no macros or global side effects. New checks
-//! are added by writing the function and listing it in [`run_all_checks`].
+//! are added by writing the function and listing it in [`run_all_checks`],
+//! or, for a check of the GitHub repository's settings, which `norms github`
+//! runs, in `github::run_github_checks`.
 
 pub(crate) mod common;
+pub(crate) mod github;
 pub(crate) mod python;
 pub(crate) mod rust;
 pub(crate) mod typescript;

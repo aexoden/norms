@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `norms github <path>`, which checks the GitHub repository's rulesets
+  and settings against `STANDARDS.md`'s Branch Protection and Repository
+  Settings sections, reading them through the GitHub CLI (`gh`). Its checks'
+  IDs start with `github-`, and `norms.toml` waives them as it does the
+  others; `norms verify` ignores those waivers.
 - `copier copy` points to the sections of `STANDARDS.md` on configuring the
   new project's GitHub repository, which the template can't do.
 - Add the `norms-commit-msg` and `norms-verify` hooks to the template, with a

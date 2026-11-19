@@ -52,8 +52,13 @@
 //! one written another way from one that doesn't work, so it fails as absent in
 //! any other form.
 //!
-//! `norms verify` exits with failure if any check fails, or with
-//! `--deny-warnings` if any check fails or warns.
+//! `norms github` checks GitHub repository settings, each of which is itself
+//! the safeguard, so a setting that differs from the standard fails, but for
+//! the wiki and projects, which a project may use, and what norms can't be sure
+//! of, which warns.
+//!
+//! `norms verify` and `norms github` exit with failure if any check fails, or
+//! with `--deny-warnings` if any check fails or warns.
 //!
 //! # Components
 //!
@@ -62,7 +67,7 @@
 //! names its component. Checks of files that belong to the whole repository,
 //! such as `prek.toml`, record no component.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use colored::Colorize as _;
@@ -216,8 +221,8 @@ pub(crate) fn is_valid_check_id(id: &str) -> bool {
 
 /// A single recorded check result.
 ///
-/// It serializes as an entry of `norms verify --json`'s `results`, so its fields and their serde attributes are that
-/// output's format: a field added here appears there.
+/// It serializes as an entry of the `results` of `norms verify --json` and `norms github --json`, so its fields and
+/// their serde attributes are those outputs' format: a field added here appears there.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct CheckResult {
     pub id: String,
@@ -241,6 +246,8 @@ pub(crate) struct CheckResult {
 pub(crate) struct Report {
     pub project_path: PathBuf,
     pub components: Vec<Component>,
+    /// The GitHub repository whose settings `norms github` checked, `OWNER/NAME`, in place of the components.
+    pub repository: Option<String>,
     pub results: Vec<CheckResult>,
 }
 
@@ -250,6 +257,18 @@ impl Report {
         Self {
             project_path,
             components,
+            repository: None,
+            results: Vec::new(),
+        }
+    }
+
+    /// Create a new empty report of the settings of the GitHub repository `repository` (`OWNER/NAME`), for the
+    /// project at the given path.
+    pub(crate) const fn for_repository(project_path: PathBuf, repository: String) -> Self {
+        Self {
+            project_path,
+            components: Vec::new(),
+            repository: Some(repository),
             results: Vec::new(),
         }
     }
@@ -311,6 +330,16 @@ impl Report {
             ),
         };
         self.record(id.into(), name.into(), outcome, status)
+    }
+
+    /// Record a check that couldn't run, as `SKIP` with the reason.
+    pub(crate) fn skip(
+        &mut self,
+        id: impl Into<String>,
+        name: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> &mut Self {
+        self.record(id.into(), name.into(), Outcome::issue(reason), Status::Skip)
     }
 
     /// Low-level recording: maps an `Outcome` to the appropriate status.
@@ -377,15 +406,14 @@ impl Report {
         }
     }
 
-    /// Apply the project's waivers. Call this once every other check has been recorded.
+    /// Apply the project's waivers of the checks this report runs: those of `norms verify` or of `norms github`. Call
+    /// this once every other check has been recorded.
     ///
     /// Each failed or warned check that a waiver names becomes `SKIP`, with the waiver's reason as its message. Each
     /// waiver also records a check of its own, which warns if the waiver matched no check or only passing ones, so
     /// that waivers outliving their need, or naming a renamed check, don't linger unnoticed. The checks of `norms.toml`
     /// itself can't be waived, since waiving them would hide problems with the waivers; such a waiver fails.
-    pub(crate) fn apply_waivers(&mut self, waivers: &[Waiver]) {
-        let mut waived = HashSet::new();
-
+    pub(crate) fn apply_waivers<'a>(&mut self, waivers: impl IntoIterator<Item = &'a Waiver>) {
         for waiver in waivers {
             let name = format!("norms.toml: waiver for {} is needed", waiver.check);
 
@@ -410,13 +438,12 @@ impl Report {
                         result.message = format!("Waived: {}", waiver.reason);
                         needed = true;
                     }
-                    // Waived by an earlier, duplicate waiver, rather than skipped by the check itself.
-                    Status::Skip => needed |= waived.contains(waiver.check.as_str()),
+                    // Waived by an earlier, duplicate waiver, or skipped by the check itself, which couldn't tell
+                    // whether the waiver is needed, such as a `norms github` check of a setting the token can't read.
+                    Status::Skip => needed = true,
                     Status::Pass => {}
                 }
             }
-
-            waived.insert(waiver.check.as_str());
 
             let outcome = if needed {
                 Outcome::Pass
@@ -467,9 +494,22 @@ impl Report {
         let separator = "═".repeat(68);
 
         println!("{}", separator.bold());
-        println!("{}", "  Project Standards Verification Report".bold());
+        let title = if self.repository.is_some() {
+            "  GitHub Repository Settings Report"
+        } else {
+            "  Project Standards Verification Report"
+        };
+        println!("{}", title.bold());
         println!("{}", separator.bold());
         println!("  Path:       {}", self.project_path.display());
+
+        if let Some(repository) = &self.repository {
+            println!("  Repository: {repository}");
+            println!("{}", separator.bold());
+            println!();
+            self.print_results();
+            return;
+        }
 
         let components = if self.components.is_empty() {
             "None".dimmed().to_string()
@@ -485,6 +525,12 @@ impl Report {
         println!("  Components: {components}");
         println!("{}", separator.bold());
         println!();
+        self.print_results();
+    }
+
+    /// Print the results, grouped by status, and the summary.
+    fn print_results(&self) {
+        let separator = "═".repeat(68);
 
         // Group by status, showing failures first
         for &status in &[Status::Fail, Status::Warn, Status::Pass, Status::Skip] {

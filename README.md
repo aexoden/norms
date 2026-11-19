@@ -45,11 +45,12 @@ Every check currently runs by default, so:
   well as features.
 - A patch release fixes bugs, and makes no project fail that passed.
 
-A project passes when `norms verify` exits 0 without `--deny-warnings`. A
-project that denies warnings, as the standards' hook does, takes on the risk
-that a minor release adds one. Removing a check isn't a breaking change, though
-a waiver of it then warns. Changes to the files the template renders aren't
-breaking either, since `copier update` presents them for review.
+A project passes when `norms verify` exits 0 without `--deny-warnings`, and its
+GitHub repository when `norms github` does. A project that denies warnings, as
+the standards' hook does, takes on the risk that a minor release adds one.
+Removing a check isn't a breaking change, though a waiver of it then warns.
+Changes to the files the template renders aren't breaking either, since
+`copier update` presents them for review.
 
 Before 1.0, as is common in Rust, a minor release (`0.X.0`) takes the place of a
 major release, and a patch release takes the place of the others.

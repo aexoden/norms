@@ -33,6 +33,7 @@ _message_after_copy: |
   Protection and Repository Settings sections:
   https://github.com/aexoden/norms/blob/main/STANDARDS.md#branch-protection
   https://github.com/aexoden/norms/blob/main/STANDARDS.md#repository-settings
+  Then `norms github .` checks them, through the GitHub CLI.
 
 ---
 !include versions.yaml

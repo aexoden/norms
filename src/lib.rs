@@ -9,6 +9,7 @@ mod config;
 mod context;
 mod detection;
 mod git;
+mod github;
 mod licenses;
 mod models;
 mod pnpm_workspace;

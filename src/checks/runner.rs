@@ -3,6 +3,7 @@
 
 //! The check runner, which runs the checks that apply to a project.
 
+use super::github::is_github_check;
 use super::{common, python, rust, typescript};
 use crate::context::{ComponentContext, ProjectContext};
 use crate::models::Language;
@@ -12,7 +13,8 @@ use crate::report::Report;
 ///
 /// Common checks always run. Language-specific checks run for each detected language, in a stable order: first the
 /// checks of each component of that language, then the checks of the language's place in the repository's own files,
-/// such as its prek hooks. The project's waivers apply last, once every check has been recorded.
+/// such as its prek hooks. The project's waivers apply last, once every check has been recorded, but for those of the
+/// checks `norms github` runs.
 pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     // Common checks (apply to all projects)
     common::check_norms_config(ctx, report);
@@ -67,7 +69,7 @@ pub(crate) fn run_all_checks(ctx: &ProjectContext, report: &mut Report) {
     }
 
     if let Some(config) = ctx.norms().as_ref_ok() {
-        report.apply_waivers(&config.waivers);
+        report.apply_waivers(config.waivers.iter().filter(|w| !is_github_check(&w.check)));
     }
 }
 
@@ -270,6 +272,17 @@ mod tests {
                 "{id}"
             );
         }
+    }
+
+    #[test]
+    fn waivers_of_github_checks_are_left_to_norms_github() {
+        let results = TempProject::new(Some(
+            "[[waivers]]\ncheck = \"github-wiki\"\nreason = \"The project uses its wiki.\"\n",
+        ))
+        .verify();
+
+        assert!(find(&results, "norms-toml-waiver-needed").is_empty());
+        assert!(results.iter().all(|r| !r.id.starts_with("github-")));
     }
 
     #[test]

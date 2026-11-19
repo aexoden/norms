@@ -13,9 +13,11 @@ use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
 use crate::checks;
+use crate::checks::github::github_report;
 use crate::commit_msg::{self, MAX_LINE_LENGTH};
-use crate::context::ProjectContext;
+use crate::context::{ConfigStatus, ProjectContext};
 use crate::git;
+use crate::github::{self, Gh, Settings};
 use crate::models::Language;
 use crate::report::{CheckResult, Report};
 
@@ -36,6 +38,26 @@ enum Commands {
     Verify {
         /// Path to the project to verify.
         path: PathBuf,
+
+        /// Output results as JSON.
+        #[arg(long = "json")]
+        output_json: bool,
+
+        /// Exit with failure if any check warns, not only if one fails.
+        #[arg(long)]
+        deny_warnings: bool,
+    },
+
+    /// Check the GitHub repository's rulesets and settings, read through the GitHub CLI (gh).
+    ///
+    /// Exits 0 if they pass, 1 if a check fails (or warns, with --deny-warnings), and 2 if they couldn't be checked.
+    Github {
+        /// Path to the project, whose repository gh finds from its git remotes, and whose norms.toml waivers apply.
+        path: PathBuf,
+
+        /// The repository to check, instead of the project's.
+        #[arg(long, value_name = "OWNER/NAME")]
+        repo: Option<String>,
 
         /// Output results as JSON.
         #[arg(long = "json")]
@@ -76,6 +98,15 @@ struct JsonOutput<'a> {
     results: &'a [CheckResult],
 }
 
+/// JSON output structure of `norms github`.
+#[derive(Serialize)]
+struct GithubJsonOutput<'a> {
+    path: String,
+    repository: &'a str,
+    summary: JsonSummary,
+    results: &'a [CheckResult],
+}
+
 #[derive(Serialize)]
 struct JsonComponent {
     language: Language,
@@ -90,14 +121,40 @@ struct JsonSummary {
     skipped: usize,
 }
 
+impl JsonSummary {
+    fn of(report: &Report) -> Self {
+        Self {
+            passed: report.passed(),
+            failed: report.failed(),
+            warnings: report.warnings(),
+            skipped: report.skipped(),
+        }
+    }
+}
+
+/// The report's project path, made absolute if it can be.
+fn json_path(report: &Report) -> String {
+    report
+        .project_path
+        .canonicalize()
+        .unwrap_or_else(|_| report.project_path.clone())
+        .display()
+        .to_string()
+}
+
 fn json_output(report: &Report) -> anyhow::Result<String> {
+    if let Some(repository) = &report.repository {
+        let output = GithubJsonOutput {
+            path: json_path(report),
+            repository,
+            summary: JsonSummary::of(report),
+            results: &report.results,
+        };
+        return serde_json::to_string_pretty(&output).context("Failed to serialize JSON output");
+    }
+
     let output = JsonOutput {
-        path: report
-            .project_path
-            .canonicalize()
-            .unwrap_or_else(|_| report.project_path.clone())
-            .display()
-            .to_string(),
+        path: json_path(report),
         languages: report.languages(),
         components: report
             .components
@@ -107,12 +164,7 @@ fn json_output(report: &Report) -> anyhow::Result<String> {
                 path: component.display_path(),
             })
             .collect(),
-        summary: JsonSummary {
-            passed: report.passed(),
-            failed: report.failed(),
-            warnings: report.warnings(),
-            skipped: report.skipped(),
-        },
+        summary: JsonSummary::of(report),
         results: &report.results,
     };
     serde_json::to_string_pretty(&output).context("Failed to serialize JSON output")
@@ -136,13 +188,18 @@ fn verify(path: PathBuf, output_json: bool, deny_warnings: bool) -> anyhow::Resu
 
     checks::run_all_checks(&ctx, &mut report);
 
+    finish(&report, output_json, deny_warnings)
+}
+
+/// Print the report, as JSON with `output_json`, and give the exit code it calls for.
+fn finish(report: &Report, output_json: bool, deny_warnings: bool) -> anyhow::Result<ExitCode> {
     if output_json {
-        println!("{}", json_output(&report)?);
+        println!("{}", json_output(report)?);
     } else {
         report.print();
     }
 
-    if !report_fails(&report, deny_warnings) {
+    if !report_fails(report, deny_warnings) {
         return Ok(ExitCode::SUCCESS);
     }
     if report.failed() == 0 {
@@ -155,6 +212,39 @@ fn verify(path: PathBuf, output_json: bool, deny_warnings: bool) -> anyhow::Resu
         eprintln!("Error: {warnings} {noun}, treated as {failure} by --deny-warnings.");
     }
     Ok(ExitCode::FAILURE)
+}
+
+/// The exit code of `norms github` when it couldn't check the settings: when the path or `norms.toml` is invalid, or gh
+/// couldn't find or read the repository.
+const GITHUB_ERROR: u8 = 2;
+
+fn check_github(
+    path: PathBuf,
+    repo: Option<String>,
+    output_json: bool,
+    deny_warnings: bool,
+) -> anyhow::Result<ExitCode> {
+    if !path.is_dir() {
+        anyhow::bail!("'{}' is not a valid directory.", path.display());
+    }
+
+    let ctx = ProjectContext::new(path.clone());
+    let waivers = match ctx.norms() {
+        ConfigStatus::NotFound => &[][..],
+        ConfigStatus::ParseError { error } => {
+            anyhow::bail!("norms.toml is invalid, as `norms verify` reports: {error}")
+        }
+        ConfigStatus::Ok(config) => &config.waivers,
+    };
+
+    let name = match repo {
+        Some(repo) => repo,
+        None => github::resolve_repository(&path)?,
+    };
+    let settings = Settings::fetch(&Gh, &name)?;
+
+    let report = github_report(path, name, &settings, waivers);
+    finish(&report, output_json, deny_warnings)
 }
 
 /// Describes a commit message's type if it isn't in lowercase, as `<file>:<line>: <problem>`. See
@@ -236,6 +326,17 @@ pub fn run() -> ExitCode {
             output_json,
             deny_warnings,
         } => verify(path, output_json, deny_warnings),
+        Commands::Github {
+            path,
+            repo,
+            output_json,
+            deny_warnings,
+        } => {
+            return check_github(path, repo, output_json, deny_warnings).unwrap_or_else(|e| {
+                eprintln!("Error: {e:#}");
+                ExitCode::from(GITHUB_ERROR)
+            });
+        }
         Commands::CommitMsg { file, long_lines } => commit_msg(&file, long_lines),
     };
     result.unwrap_or_else(|e| {
@@ -335,6 +436,32 @@ mod tests {
     }
 
     #[test]
+    fn github_json_output_names_the_repository_instead_of_components() {
+        let mut report = Report::for_repository(PathBuf::new(), "owner/name".to_owned());
+        report.must("github-issues", "GitHub: issues are on", true);
+        report.skip("github-wiki", "GitHub: the wiki is off", "Unreadable");
+
+        let json: serde_json::Value = serde_json::from_str(&json_output(&report).unwrap()).unwrap();
+        let keys: BTreeSet<_> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            keys,
+            BTreeSet::from(["path", "repository", "results", "summary"])
+        );
+        assert_eq!(json.get("repository").unwrap(), "owner/name");
+        assert_eq!(
+            json.get("summary").unwrap(),
+            &serde_json::json!({"passed": 1, "failed": 0, "warnings": 0, "skipped": 1})
+        );
+        assert_eq!(json.pointer("/results/1/status").unwrap(), "skip");
+        assert_eq!(json.pointer("/results/1/message").unwrap(), "Unreadable");
+    }
+
+    #[test]
     fn report_fails_on_warnings_only_when_denied() {
         let mut report = Report::new(PathBuf::new(), Vec::new());
         report.should("readme-exists", "README.md", true);
@@ -375,7 +502,7 @@ mod tests {
         .command
         {
             Commands::CommitMsg { long_lines, .. } => Ok::<_, clap::Error>(long_lines),
-            Commands::Verify { .. } => unreachable!(),
+            Commands::Verify { .. } | Commands::Github { .. } => unreachable!(),
         };
         assert!(matches!(
             long_lines(&["--long-lines", "warn"]),
