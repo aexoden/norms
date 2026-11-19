@@ -1387,7 +1387,6 @@ redundant_pub_crate = "allow"
 redundant_test_prefix = "warn"
 redundant_type_annotations = "warn"
 renamed_function_params = "warn"
-rest_pat_in_fully_bound_structs = "warn"
 return_and_then = "warn"
 same_name_method = "warn"
 self_named_module_files = "warn"
@@ -1401,6 +1400,7 @@ tests_outside_test_module = "warn"
 todo = "warn"
 try_err = "warn"
 unimplemented = "warn"
+unnecessary_rest_pattern = "warn"
 unneeded_field_pattern = "warn"
 unseparated_literal_suffix = "warn"
 unused_result_ok = "warn"
@@ -1444,6 +1444,11 @@ so it is allowed. Fields of `pub(crate)` types stay `pub`, since
 submodules, so that each definition lives in a file named after its module, and
 `inline_modules` gives every module apart from tests a file of its own.
 
+`unnecessary_rest_pattern` rejects a `..` that matches no fields, which does
+nothing today but would let a field added later go unhandled without a compile
+error. It covers struct variants of enums as well as structs, so it takes the
+place of `rest_pat_in_fully_bound_structs`.
+
 Some restriction lints are left out deliberately because they work against
 idiomatic Rust or do not suit applications:
 
@@ -1458,6 +1463,11 @@ idiomatic Rust or do not suit applications:
 - `get_unwrap`: `unwrap_used` already covers it, and its suggestion trips
   `indexing_slicing`.
 - `module_name_repetitions`: too noisy for its benefit.
+- `inline_trait_bounds`: it moves every bound, even `T: Clone`, to a `where`
+  clause, a matter of style that goes against common usage.
+- `rest_pattern_accessible_field`: it rejects every `..` that skips a field,
+  including in a match on an enum variant whose fields don't matter there and
+  on other crates' types, whose new fields would then break the build.
 
 `clippy.toml` allows `unwrap`, `expect` and `panic` in tests, and limits
 absolute paths to three segments:
