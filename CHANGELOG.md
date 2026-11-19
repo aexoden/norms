@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Breaking:** `norms commit-msg` fails on a breaking change footer written
+  `BREAKING CHANGE:`, with a space, as the Conventional Commits specification
+  allows: git doesn't read it as a trailer, and then reads none of the footers
+  beside it, such as `Co-Authored-By`. Write `BREAKING-CHANGE:`.
 - Warn when the repository has a `.github/dependabot.yml` or
   `.github/dependabot.yaml` (`dependabot-absent`), which has Dependabot open
   version update pull requests beside Renovate's. Remove it. `yaml-extension`

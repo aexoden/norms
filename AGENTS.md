@@ -7,11 +7,11 @@ norms is three things in one repository:
 - The `norms` Rust CLI. `norms verify <path> [--json] [--deny-warnings]` checks
   a project against the standards, `norms github <path>` checks its GitHub
   repository's rulesets and settings through `gh api`, and
-  `norms commit-msg <file>` checks the case of a commit message's type and its
-  line lengths. Other projects run `verify` and `commit-msg` as the
-  `norms-verify` and `norms-commit-msg` hooks from `.pre-commit-hooks.yaml`;
-  norms runs both on itself as local hooks, which `tests/hooks.rs` keeps in step
-  with the shipped ones.
+  `norms commit-msg <file>` checks the case of a commit message's type, its
+  line lengths and its breaking change footer. Other projects run `verify` and
+  `commit-msg` as the `norms-verify` and `norms-commit-msg` hooks from
+  `.pre-commit-hooks.yaml`; norms runs both on itself as local hooks, which
+  `tests/hooks.rs` keeps in step with the shipped ones.
 - A Copier template (`copier.yaml`, `template/`) that renders new projects
   following the standards.
 

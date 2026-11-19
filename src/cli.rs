@@ -266,6 +266,22 @@ fn miscased_type_problem(
     })
 }
 
+/// Describes a breaking change footer written with a space, as `<file>:<line>: <problem>`. See
+/// [`commit_msg::spaced_breaking_footer`] for `comment` and `edited`.
+fn breaking_footer_problem(
+    file: &Path,
+    message: &str,
+    comment: &str,
+    edited: bool,
+) -> Option<String> {
+    commit_msg::spaced_breaking_footer(message, comment, edited).map(|number| {
+        format!(
+            "{}:{number}: write the footer BREAKING-CHANGE:, with a hyphen, which git reads as a trailer",
+            file.display()
+        )
+    })
+}
+
 /// Describes each line of a commit message that is too long, as `<file>:<line>: <problem>`. See
 /// [`commit_msg::long_lines`] for `comment` and `edited`.
 fn long_line_problems(file: &Path, message: &str, comment: &str, edited: bool) -> Vec<String> {
@@ -292,24 +308,33 @@ fn commit_msg(file: &Path, long_lines: LongLines) -> anyhow::Result<ExitCode> {
     let edited = env::var_os("GIT_EDITOR").is_none_or(|editor| editor != ":");
     let comment = git::comment_string();
     let miscased = miscased_type_problem(file, &message, &comment, edited);
+    let breaking = breaking_footer_problem(file, &message, &comment, edited);
     let long = long_line_problems(file, &message, &comment, edited);
 
-    for problem in miscased.iter().chain(&long) {
+    for problem in miscased.iter().chain(&breaking).chain(&long) {
         eprintln!("{problem}");
     }
-    if miscased.is_none() && long.is_empty() {
+    if miscased.is_none() && breaking.is_none() && long.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
-    eprintln!(
-        "Write the type in lowercase, keep the subject within {MAX_LINE_LENGTH} characters (aiming for 50) and wrap \
-         the body at {MAX_LINE_LENGTH}; body lines with URLs are exempt."
-    );
+    if miscased.is_some() || !long.is_empty() {
+        eprintln!(
+            "Write the type in lowercase, keep the subject within {MAX_LINE_LENGTH} characters (aiming for 50) and \
+             wrap the body at {MAX_LINE_LENGTH}; body lines with URLs are exempt."
+        );
+    }
+    if breaking.is_some() {
+        eprintln!(
+            "git doesn't read BREAKING CHANGE:, with a space, as a trailer, and then reads none of the footers beside \
+             it."
+        );
+    }
     if !fail_long && !long.is_empty() {
         eprintln!(
             "The long lines are only a warning, with --long-lines warn (or NORMS_COMMIT_MSG_LENGTH=warn)."
         );
     }
-    if miscased.is_some() || fail_long && !long.is_empty() {
+    if miscased.is_some() || breaking.is_some() || fail_long && !long.is_empty() {
         Ok(ExitCode::FAILURE)
     } else {
         Ok(ExitCode::SUCCESS)

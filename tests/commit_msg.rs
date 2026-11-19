@@ -89,6 +89,24 @@ mod tests {
     }
 
     #[test]
+    fn exits_with_failure_for_a_breaking_change_footer_with_a_space() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("COMMIT_EDITMSG");
+        fs::write(
+            &file,
+            "feat!: drop it\n\nBREAKING CHANGE: it's gone\nRefs: #1\n",
+        )
+        .unwrap();
+        let failed = commit_msg_with(&file, &[("NORMS_COMMIT_MSG_LENGTH", "warn")]);
+        assert_eq!(failed.status.code(), Some(1));
+        let stderr = String::from_utf8(failed.stderr).unwrap();
+        assert!(
+            stderr.contains(":3: write the footer BREAKING-CHANGE:"),
+            "{stderr}"
+        );
+    }
+
+    #[test]
     fn only_warns_about_long_lines_when_asked() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("COMMIT_EDITMSG");

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
-//! Checks a commit message's line lengths and the case of its type, for the
-//! `norms-commit-msg` hook.
+//! Checks a commit message's line lengths, the case of its type and the
+//! spelling of its breaking change footer, for the `norms-commit-msg` hook.
 
 use std::sync::LazyLock;
 
@@ -141,6 +141,30 @@ pub(crate) fn miscased_type(message: &str, comment: &str, edited: bool) -> Optio
     })
 }
 
+/// Returns the number of the first line, from 1, of the message's footers,
+/// its last paragraph after the subject, that starts a breaking change footer
+/// as `BREAKING CHANGE:`, with a space, reading the message as [`long_lines`]
+/// does. The Conventional Commits specification allows it, but git doesn't
+/// read it as a trailer, and then reads none of the paragraph's footers, such
+/// as `Co-Authored-By`, so the standards write `BREAKING-CHANGE:`.
+pub(crate) fn spaced_breaking_footer(message: &str, comment: &str, edited: bool) -> Option<usize> {
+    let body = message_lines(message, comment, edited)
+        .skip_while(|(_, line)| line.trim_start().is_empty())
+        .skip_while(|(_, line)| !line.trim_start().is_empty());
+    let mut footers: Vec<(usize, &str)> = Vec::new();
+    for (index, line) in body {
+        if line.trim_start().is_empty() {
+            footers.clear();
+        } else {
+            footers.push((index, line));
+        }
+    }
+    footers
+        .into_iter()
+        .find(|(_, line)| line.starts_with("BREAKING CHANGE:"))
+        .map(|(index, _)| index + 1)
+}
+
 /// The lines of a message, numbered from 0, that git would keep: up to the
 /// scissors line, and without comment lines if the message was `edited`.
 fn message_lines<'a>(
@@ -190,6 +214,27 @@ mod tests {
             subject: false,
             length,
         }
+    }
+
+    #[test]
+    fn finds_a_breaking_change_footer_with_a_space() {
+        let footer = |message: &str| spaced_breaking_footer(message, DEFAULT_COMMENT, true);
+        assert_eq!(
+            footer(
+                "feat!: drop it\n\nWhy.\n\nBREAKING CHANGE: it's gone\nCo-Authored-By: A <a@b>\n"
+            ),
+            Some(5)
+        );
+        assert_eq!(
+            footer("feat!: drop it\n\nBREAKING-CHANGE: it's gone\n"),
+            None
+        );
+        // The subject isn't a footer, nor is a body paragraph before the footers.
+        assert_eq!(footer("BREAKING CHANGE: odd\n"), None);
+        assert_eq!(
+            footer("feat!: drop it\n\nBREAKING CHANGE: quoted\n\nRefs: #1\n"),
+            None
+        );
     }
 
     #[test]

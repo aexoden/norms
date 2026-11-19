@@ -72,9 +72,11 @@ installed and logged in, and most settings are readable only with admin access.
 since CI's token can't read the settings.
 
 `norms commit-msg <file>` checks a commit message: the type must be lowercase,
-and the subject and body lines at most 72 characters (body lines holding a URL
-are exempt). It exits with 1 if the message breaks either rule. With
-`--long-lines warn` (or `NORMS_COMMIT_MSG_LENGTH=warn`), long lines only warn.
+the subject and body lines at most 72 characters (body lines holding a URL are
+exempt), and a breaking change footer `BREAKING-CHANGE:`, which git reads as a
+trailer, not `BREAKING CHANGE:`. It exits with 1 if the message breaks any of
+these rules. With `--long-lines warn` (or `NORMS_COMMIT_MSG_LENGTH=warn`), long
+lines only warn.
 
 ### Results
 

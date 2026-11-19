@@ -579,8 +579,9 @@ Every project runs these hooks:
   ```
 
 - [norms](https://github.com/aexoden/norms): `norms-commit-msg`, which checks
-  what `conventional-pre-commit` doesn't (a lowercase type, and lines within 72
-  characters), and `norms-verify` with `--deny-warnings`:
+  what `conventional-pre-commit` doesn't (a lowercase type, lines within 72
+  characters, and a `BREAKING-CHANGE` footer with a hyphen), and `norms-verify`
+  with `--deny-warnings`:
 
   ```toml
   [[repos]]
