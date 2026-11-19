@@ -551,8 +551,9 @@ whoever merges checks it.
 
 ### Branch Protection
 
-A repository ruleset named `Default` protects the default branch. It is active,
-has no bypass actors, and enables these rules:
+A repository ruleset named `Default` protects the default branch. It targets
+the default branch (`~DEFAULT_BRANCH` in the API), is active, has no bypass
+actors, and enables these rules:
 
 | Rule                          | Settings                                              |
 |-------------------------------|-------------------------------------------------------|
@@ -582,8 +583,22 @@ neither route.
 Commits pushed directly must be signed locally. Commits that GitHub creates,
 such as squash merges and Renovate's commits, are signed by GitHub.
 
-The `dev` branch is not protected. It is a working branch, and rewriting it
-before `main` catches up is harmless.
+A second ruleset named `Development` protects `dev`, in a project that keeps
+one. It targets the branch `dev` (`refs/heads/dev` in the API), is active, has
+no bypass actors, and enables these rules:
+
+| Rule                   | Settings |
+|------------------------|----------|
+| Restrict deletions     |          |
+| Require linear history |          |
+| Require signed commits |          |
+
+Requiring linear history and signed commits, as `Default` does, means a push to
+`dev` that `main` would later refuse, such as an unsigned commit or a merge, is
+refused at once, and restricting deletions keeps `dev` from being deleted by
+accident. Force pushes remain allowed: `dev` is a working branch, and rewriting
+it before `main` catches up is harmless. It requires no status checks, since a
+commit is pushed to `dev` to be tested.
 
 Rulesets on private repositories require GitHub Pro. A private repository
 without it follows the same workflow by convention, without enforcement.

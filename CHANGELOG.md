@@ -136,6 +136,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `STANDARDS.md` allows an optional `TODO.md` and `ROADMAP.md` for open work.
 - `STANDARDS.md` keeps `.gitignore` to what the project generates, leaving
   editor and OS files to each developer's global ignore file.
+- `STANDARDS.md` protects a `dev` branch with a ruleset of its own,
+  `Development`, which restricts deletions and requires linear history and
+  signed commits, but allows force pushes. Add it to a repository that keeps
+  `dev`.
 - The template's Rust packages enable Clippy's `unnecessary_rest_pattern` in
   place of `rest_pat_in_fully_bound_structs`, which it covers along with
   struct variants of enums.
