@@ -1225,22 +1225,30 @@ before they reach a project. It is enforced at two levels:
    - uv: `exclude-newer = "3 days"` under `[tool.uv]` in `pyproject.toml`.
    - pnpm: `minimumReleaseAge: 4320` (in minutes) in `pnpm-workspace.yaml`.
    - Cargo: `global-min-publish-age = "3 days"` under `[registry]` in
-     `.cargo/config.toml`. This is stable as of Rust 1.100; earlier toolchains
-     silently ignore it, so it takes effect when the pinned toolchain reaches
-     1.100.
+     `.cargo/config.toml`. Cargo enforces it as of Rust 1.100; earlier
+     toolchains silently ignore it.
 
 #### Urgent Updates
 
 Security fixes may bypass the release age requirement. Renovate's vulnerability
-alert PRs are exempt from `minimumReleaseAge` in the shared preset. To update a
+alert PRs are exempt from `minimumReleaseAge` in the shared preset, so Renovate
+raises them at once, but the package manager still applies its own release age
+when it updates the lock file. A PR for a fix younger than that shows an
+artifact error until its branch updates the package early as below. To update a
 single package early through the package manager, add a temporary per-package
 exemption, with a comment naming the advisory:
 
 - uv: `exclude-newer-package = { package-name = false }` under `[tool.uv]`.
 - pnpm: `minimumReleaseAgeExclude: [package-name]` in `pnpm-workspace.yaml`.
-- Cargo: there is no per-package setting. Run
+- Cargo: there is no per-package setting. Raise the package's requirement in
+  `Cargo.toml` if it pins one, as Renovate's PR does, then run
   `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update -p package-name`,
-  and the lock file keeps the newer version.
+  and the lock file keeps the newer version. Any dependency the update adds
+  comes in at its newest version too, without the release age, so review the
+  lock file's changes. Until the release passes the release age, `cargo update`
+  without the override, of the whole lock file or of that package, fails on a
+  raised pin and downgrades any other package again. Renovate's lock file
+  maintenance runs it too, so keep its PR from merging until then.
 
 Remove a configured exemption once the release has passed the normal release
 age.

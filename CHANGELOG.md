@@ -96,6 +96,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `STANDARDS.md`'s Urgent Updates section says that a package manager still
+  applies its release age to Renovate's vulnerability alert PRs, which show an
+  artifact error until their branch updates the package early. For Cargo, it
+  says to raise an exact pin before running the override, that the override
+  takes the update's new dependencies unaged, and that until the release passes
+  the release age, `cargo update` without it, Renovate's lock file maintenance
+  included, fails on the pin or downgrades the package again.
 - **Breaking:** Run the Git hooks with [prek](https://prek.j178.dev/) rather
   than pre-commit, configured in `prek.toml` rather than
   `.pre-commit-config.yaml`, which norms no longer reads. Language hooks have
