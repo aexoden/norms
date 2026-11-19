@@ -143,6 +143,7 @@ warn  package-json-dependencies-exact  [web] package.json: dependencies pinned e
       Not pinned with x.y.z: dependencies.react ("^19.2.0"), devDependencies.vite ("~8.3")
 warn  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
       Sets Corepack's packageManager ("pnpm@10.0.0"); pin pnpm only in devEngines.packageManager
+pass  package-json-no-eslint-plugin-prettier  [web] package.json: no eslint-plugin-prettier
 warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines

@@ -69,6 +69,7 @@ pass  package-json-esm  [web] package.json: uses ESM (type: module)
 pass  package-json-private  [web] package.json: private (application)
 pass  package-json-dependencies-exact  [web] package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [web] package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [web] package.json: no eslint-plugin-prettier
 warn  package-json-dev-engines-runtime  [web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [web] package.json: pins pnpm in devEngines

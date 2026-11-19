@@ -75,7 +75,8 @@ re-renders them, as `AGENTS.md` describes.
   packages by a single-level glob, a recursive one, a negated one and one
   leading outside its directory. The packages it finds are one that conforms,
   one that breaks the package standards (an unknown license, no `type` or
-  `private`, a range among its dependencies and a Corepack `packageManager`),
+  `private`, a range among its dependencies, a Corepack `packageManager` and a
+  development dependency on `eslint-plugin-prettier`),
   a malformed one, one the recursive glob matches, and one inside it, in a
   `tests` directory, which pnpm doesn't skip. Of the `package.json` files it
   doesn't find, one is excluded by the negated pattern and one is in a
@@ -168,7 +169,7 @@ re-renders them, as `AGENTS.md` describes.
     `recommendedTypeChecked` and an `Only` variant of `stylisticTypeChecked`
     rather than the standard's configs, comments out `strictTypeChecked`, sets
     `project` rather than `projectService`, and takes Prettier's config from
-    `eslint-plugin-prettier`.
+    `eslint-plugin-prettier`, which its `package.json` depends on.
 - `layout` breaks the layout standards: a TypeScript component has npm's and
   yarn's lock files beside `pnpm-lock.yaml`, an `eslint.config.js` beside
   `eslint.config.ts`, a `prettier` key in `package.json` beside `.prettierrc`,

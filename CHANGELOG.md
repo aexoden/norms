@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a `package.json` depends on `eslint-plugin-prettier`
+  (`package-json-no-eslint-plugin-prettier`), which runs Prettier again inside
+  ESLint. Remove it and its import from `eslint.config.ts`.
 - Warn when a CI job that installs Rust with
   `actions-rust-lang/setup-rust-toolchain` adds a `Swatinem/rust-cache` step
   (`rust-ci-separate-cache`), which setup-rust-toolchain already runs. Remove

@@ -177,6 +177,19 @@ impl PackageJson {
         }
     }
 
+    /// The fields among `dependencies`, `devDependencies` and `optionalDependencies` that list the package `name`.
+    pub(crate) fn fields_listing(&self, name: &str) -> Vec<&'static str> {
+        [
+            ("dependencies", &self.dependencies),
+            ("devDependencies", &self.dev_dependencies),
+            ("optionalDependencies", &self.optional_dependencies),
+        ]
+        .into_iter()
+        .filter(|(_, dependencies)| dependencies.as_ref().is_some_and(|d| d.contains_key(name)))
+        .map(|(field, _)| field)
+        .collect()
+    }
+
     /// The dependencies of the `devEngines` entry `field`, which npm allows to
     /// be one object or an array of alternatives.
     pub(crate) fn dev_engine(&self, field: &str) -> Result<Vec<DevEngine>, String> {
@@ -332,6 +345,27 @@ mod tests {
         ] {
             assert!(check_specifier_exact(specifier).is_err(), "{specifier}");
         }
+    }
+
+    #[test]
+    fn finds_the_fields_listing_a_package() {
+        let config = parse(
+            r#"{
+                "dependencies": { "react": "19.2.0" },
+                "devDependencies": { "eslint-plugin-prettier": "5.5.4", "react": "19.2.0" },
+                "peerDependencies": { "eslint-plugin-prettier": "^5" }
+            }"#,
+        );
+        assert_eq!(
+            config.fields_listing("eslint-plugin-prettier"),
+            ["devDependencies"]
+        );
+        assert_eq!(
+            config.fields_listing("react"),
+            ["dependencies", "devDependencies"]
+        );
+        assert_eq!(config.fields_listing("prettier"), [] as [&str; 0]);
+        assert_eq!(parse("{}").fields_listing("react"), [] as [&str; 0]);
     }
 
     #[test]

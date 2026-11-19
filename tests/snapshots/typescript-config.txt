@@ -35,6 +35,8 @@ warn  package-json-private  [.] package.json: private (application)
       private is "true", not true
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
+warn  package-json-no-eslint-plugin-prettier  [.] package.json: no eslint-plugin-prettier
+      eslint-plugin-prettier is in devDependencies: it runs Prettier through ESLint, which the prettier hook already runs; remove it and its import from eslint.config.ts
 warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines

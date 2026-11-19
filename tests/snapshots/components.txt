@@ -124,6 +124,7 @@ warn  package-json-private  [apps/admin] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [apps/admin] package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [apps/admin] package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [apps/admin] package.json: no eslint-plugin-prettier
 warn  package-json-dev-engines-runtime  [apps/admin] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/admin] package.json: pins pnpm in devEngines
@@ -177,6 +178,7 @@ warn  package-json-private  [apps/web] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [apps/web] package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [apps/web] package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [apps/web] package.json: no eslint-plugin-prettier
 warn  package-json-dev-engines-runtime  [apps/web] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [apps/web] package.json: pins pnpm in devEngines

@@ -34,6 +34,7 @@ pass  package-json-esm  [.] package.json: uses ESM (type: module)
 pass  package-json-private  [.] package.json: private (application)
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [.] package.json: no eslint-plugin-prettier
 pass  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
 pass  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines
 pass  package-json-version  [.] package.json: version of the latest release
@@ -60,12 +61,14 @@ pass  package-json-esm  [.] apps/web/package.json: uses ESM (type: module)
 pass  package-json-private  [.] apps/web/package.json: private (application)
 pass  package-json-dependencies-exact  [.] apps/web/package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [.] apps/web/package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [.] apps/web/package.json: no eslint-plugin-prettier
 pass  package-json-exists  [.] apps/web/tests/e2e/package.json: exists
 pass  package-json-valid  [.] apps/web/tests/e2e/package.json: valid
 pass  package-json-esm  [.] apps/web/tests/e2e/package.json: uses ESM (type: module)
 pass  package-json-private  [.] apps/web/tests/e2e/package.json: private (application)
 pass  package-json-dependencies-exact  [.] apps/web/tests/e2e/package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [.] apps/web/tests/e2e/package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [.] apps/web/tests/e2e/package.json: no eslint-plugin-prettier
 pass  package-json-exists  [.] packages/broken/package.json: exists
 fail  package-json-valid  [.] packages/broken/package.json: valid
       Invalid JSON: EOF parsing object at line 1 column 1
@@ -81,12 +84,15 @@ warn  package-json-dependencies-exact  [.] packages/old/package.json: dependenci
       Not pinned with x.y.z: dependencies.lodash ("^4.17.21")
 warn  package-json-no-corepack-package-manager  [.] packages/old/package.json: no Corepack packageManager field
       Sets Corepack's packageManager ("pnpm@11.1.0"); pin pnpm only in devEngines.packageManager
+warn  package-json-no-eslint-plugin-prettier  [.] packages/old/package.json: no eslint-plugin-prettier
+      eslint-plugin-prettier is in devDependencies: it runs Prettier through ESLint, which the prettier hook already runs; remove it and its import from eslint.config.ts
 pass  package-json-exists  [.] packages/ui/package.json: exists
 pass  package-json-valid  [.] packages/ui/package.json: valid
 pass  package-json-esm  [.] packages/ui/package.json: uses ESM (type: module)
 pass  package-json-private  [.] packages/ui/package.json: private (application)
 pass  package-json-dependencies-exact  [.] packages/ui/package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [.] packages/ui/package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [.] packages/ui/package.json: no eslint-plugin-prettier
 fail  tsconfig-exists  [.] tsconfig.json: exists
       File not found
 fail  eslint-config-exists  [.] eslint.config.ts: exists

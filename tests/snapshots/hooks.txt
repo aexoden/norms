@@ -150,6 +150,7 @@ warn  package-json-private  [.] package.json: private (application)
       Missing "private": true
 pass  package-json-dependencies-exact  [.] package.json: dependencies pinned exactly (application)
 pass  package-json-no-corepack-package-manager  [.] package.json: no Corepack packageManager field
+pass  package-json-no-eslint-plugin-prettier  [.] package.json: no eslint-plugin-prettier
 warn  package-json-dev-engines-runtime  [.] package.json: pins Node.js in devEngines
       Missing devEngines.runtime
 warn  package-json-dev-engines-package-manager  [.] package.json: pins pnpm in devEngines

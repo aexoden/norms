@@ -108,7 +108,26 @@ fn check_package(ctx: &ComponentContext, label: &str, config: &PackageJson, repo
         format!("{label}: no Corepack packageManager field"),
         config.check_no_package_manager(),
     );
+
+    // Prettier runs as a hook of its own, and eslint-config-prettier keeps ESLint out of its way.
+    let fields = config.fields_listing(ESLINT_PLUGIN_PRETTIER);
+    report.should(
+        "package-json-no-eslint-plugin-prettier",
+        format!("{label}: no {ESLINT_PLUGIN_PRETTIER}"),
+        if fields.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "{ESLINT_PLUGIN_PRETTIER} is in {}: it runs Prettier through ESLint, which the prettier hook already \
+                 runs; remove it and its import from eslint.config.ts",
+                fields.join(" and ")
+            ))
+        },
+    );
 }
+
+/// The plugin that runs Prettier as a lint rule, which the standards leave to Prettier's own hook.
+const ESLINT_PLUGIN_PRETTIER: &str = "eslint-plugin-prettier";
 
 /// The label of a pnpm workspace package's manifest, by its path from the component.
 fn package_manifest(path: &Path) -> String {
