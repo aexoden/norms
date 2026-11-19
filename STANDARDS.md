@@ -1340,7 +1340,7 @@ need, so `rustup` installs everything on first use:
 
 ```toml
 [toolchain]
-channel = "1.99.1"
+channel = "1.100.0"
 components = ["clippy", "llvm-tools", "rustfmt"]
 ```
 
