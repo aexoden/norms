@@ -59,6 +59,13 @@ jobs:
         with:
           tool: prek@${{ env.PREK_VERSION }}
 
+      # prek builds norms and installs the commit-msg hooks again only when prek or prek.toml changes.
+      - name: Cache prek's hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: prek-${{ runner.os }}-${{ env.PREK_VERSION }}-${{ hashFiles('prek.toml') }}
+          path: ~/.cache/prek
+
       # prek builds norms at the revision prek.toml pins.
       - name: Verify the project with norms
         run: prek run norms-verify --all-files

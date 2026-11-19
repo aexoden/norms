@@ -122,6 +122,13 @@ jobs:{{ job('markdownlint', 'Lint Markdown with markdownlint', '', 'ubuntu-slim'
 {{ job('norms-verify', 'Verify the project and the commit message', '', timeout=30, history=true) }}
 {{- install_prek() }}
 
+      # prek builds norms and installs the commit-msg hooks again only when prek or prek.toml changes.
+      - name: Cache prek's hook environments
+        uses: actions/cache@{{ action_cache }}
+        with:
+          key: prek-{% raw %}${{ runner.os }}-${{ env.PREK_VERSION }}-${{ hashFiles('prek.toml') }}{% endraw %}
+          path: ~/.cache/prek
+
       # prek builds norms at the revision prek.toml pins.
       - name: Verify the project with norms
         run: prek run norms-verify --all-files

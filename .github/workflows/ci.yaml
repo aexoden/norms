@@ -88,6 +88,15 @@ jobs:
         with:
           tool: prek@${{ steps.versions.outputs.prek }}
 
+      # Cached as in the template's norms-verify job, which keeps actions/cache pinned here as the
+      # template pins it. The hooks with an environment have jobs of their own, so this caches
+      # little more than the conventional-pre-commit hook's.
+      - name: Cache prek's hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: prek-${{ runner.os }}-${{ steps.versions.outputs.prek }}-${{ hashFiles('prek.toml') }}
+          path: ~/.cache/prek
+
       # The other hooks have jobs of their own.
       - name: Run the hooks that have no job of their own
         env:

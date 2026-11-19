@@ -767,7 +767,16 @@ A hook's job has the hook's ID, or for the `markdownlint-cli2` and
 The `commit-msg` hooks don't run in it, but in the `norms-verify` hook's job.
 
 The `norms-verify` hook's job runs it as `prek run norms-verify --all-files`,
-so that prek builds the norms that the hook's `rev` pins.
+so that prek builds the norms that the hook's `rev` pins. That compiles norms
+and its dependencies from source, so the job first restores prek's hook
+environments, `~/.cache/prek`, with `actions/cache`, keyed on the runner's OS,
+the prek version and `prek.toml`'s hash
+(`prek-${{ runner.os }}-${{ env.PREK_VERSION }}-${{ hashFiles('prek.toml') }}`),
+and prek builds norms again only when prek or its configuration changes. A
+cache that matches its key exactly is never saved again, so the key names the
+prek version, which a newer prek's environments may depend on. It has no
+`restore-keys` fallback, which would carry the environments of every earlier
+configuration forward.
 Its checkout fetches the whole history (`fetch-depth: 0`), since without
 `CHANGELOG.md`, `norms verify` looks for release tags (see
 [Changelog](#changelog)), and takes the latest as the version the manifests

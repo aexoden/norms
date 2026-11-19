@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The template's `norms-verify` job caches prek's hook environments with
+  `actions/cache`, keyed on the prek version and `prek.toml`, so that it
+  builds norms only when either changes rather than on every run.
 - The template's `uv-lock` job and `uv audit` job set `enable-cache: false`,
   and norms warns on a job that runs only `uv lock` or `uv audit` with
   setup-uv's cache on (`python-ci-uv-cache`). setup-uv shares one cache among
