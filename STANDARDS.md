@@ -461,9 +461,11 @@ The recognized types, always written in lowercase, are:
 - `revert` - reverts an earlier commit
 - `chore` - anything not otherwise mentioned
 
-Strictly speaking, dependency updates could fall under many of these,
-intentionally or not. Renovate uses `fix(deps)` for runtime dependencies and
-`chore(deps)` for everything else. It may be desirable to revisit that default.
+Dependency updates take Renovate's default types: `fix(deps)` for a package's
+runtime dependencies, and `chore(deps)` for everything else, such as development
+dependencies, tools, actions, container images and lock file maintenance. A
+dependency updated by hand takes the type Renovate would give it. Changelogs are
+written by hand, so the type doesn't decide whether an update gets an entry.
 
 Scopes are inherently project-specific. A good practice for mature projects
 would be to identify allowed scopes in developer documentation.
