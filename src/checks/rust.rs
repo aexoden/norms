@@ -1003,7 +1003,7 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.should(
         "rust-prek-local-hooks",
-        "Rust prek: language hooks are local, system and take no file names",
+        "Rust prek: language hooks are local, system, take no file names and run their tools directly",
         config.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }

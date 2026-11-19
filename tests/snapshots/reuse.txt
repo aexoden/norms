@@ -138,7 +138,7 @@ fail  python-prek-basedpyright  Python prek: basedpyright hook
       No basedpyright hook
 fail  python-prek-pytest  Python prek: pytest hook (with coverage)
       No pytest hook
-pass  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
+pass  python-prek-local-hooks  Python prek: language hooks are local, system, take no file names and run their tools directly
 fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
@@ -186,7 +186,7 @@ fail  rust-prek-cargo-test  Rust prek: cargo-test hook (with coverage)
       No cargo-test hook
 fail  rust-prek-cargo-deny  Rust prek: cargo-deny hook
       No cargo-deny hook
-pass  rust-prek-local-hooks  Rust prek: language hooks are local, system and take no file names
+pass  rust-prek-local-hooks  Rust prek: language hooks are local, system, take no file names and run their tools directly
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt
@@ -242,7 +242,7 @@ fail  typescript-prek-vite-build  TypeScript prek: vite-build hook
       No vite-build hook
 fail  typescript-prek-vitest  TypeScript prek: vitest hook (with coverage)
       No vitest hook
-pass  typescript-prek-local-hooks  TypeScript prek: language hooks are local, system and take no file names
+pass  typescript-prek-local-hooks  TypeScript prek: language hooks are local, system, take no file names and run their tools directly
 fail  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 fail  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
       No step runs eslint

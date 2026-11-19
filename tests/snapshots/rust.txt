@@ -120,7 +120,7 @@ pass  rust-prek-rustfmt  Rust prek: rustfmt hook (--check)
 pass  rust-prek-clippy  Rust prek: clippy hook (denies warnings)
 pass  rust-prek-cargo-test  Rust prek: cargo-test hook (with coverage)
 pass  rust-prek-cargo-deny  Rust prek: cargo-deny hook
-pass  rust-prek-local-hooks  Rust prek: language hooks are local, system and take no file names
+pass  rust-prek-local-hooks  Rust prek: language hooks are local, system, take no file names and run their tools directly
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check (denies warnings)

@@ -129,8 +129,8 @@ fail  python-prek-basedpyright  Python prek: basedpyright hook
       No basedpyright hook
 warn  python-prek-pytest  Python prek: pytest hook (with coverage)
       The pytest hook doesn't pass --cov
-warn  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
-      mypy has language unsupported, not system; ruff-check isn't a local hook
+warn  python-prek-local-hooks  Python prek: language hooks are local, system, take no file names and run their tools directly
+      mypy has language unsupported, not system; mypy runs through devbox, not its tool directly; ruff-check isn't a local hook
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 warn  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
       Jobs that uv run without uv sync --locked first: pytest, ruff-check
@@ -192,7 +192,7 @@ fail  typescript-prek-vite-build  TypeScript prek: vite-build hook
       No vite-build hook
 warn  typescript-prek-vitest  TypeScript prek: vitest hook (with coverage)
       The vitest hook doesn't pass --coverage
-warn  typescript-prek-local-hooks  TypeScript prek: language hooks are local, system and take no file names
+warn  typescript-prek-local-hooks  TypeScript prek: language hooks are local, system, take no file names and run their tools directly
       tsc doesn't set pass_filenames = false
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 warn  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)

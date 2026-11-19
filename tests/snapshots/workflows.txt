@@ -151,7 +151,7 @@ fail  python-prek-basedpyright  Python prek: basedpyright hook
       No basedpyright hook
 fail  python-prek-pytest  Python prek: pytest hook (with coverage)
       No pytest hook
-pass  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
+pass  python-prek-local-hooks  Python prek: language hooks are local, system, take no file names and run their tools directly
 fail  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 fail  python-ci-ruff-format  Python CI: format check
@@ -203,7 +203,7 @@ fail  rust-prek-cargo-test  Rust prek: cargo-test hook (with coverage)
       No cargo-test hook
 fail  rust-prek-cargo-deny  Rust prek: cargo-deny hook
       No cargo-deny hook
-pass  rust-prek-local-hooks  Rust prek: language hooks are local, system and take no file names
+pass  rust-prek-local-hooks  Rust prek: language hooks are local, system, take no file names and run their tools directly
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt

@@ -10,7 +10,7 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::config::FormatterRun;
+use crate::config::{FormatterRun, program_name};
 use crate::report::Issue;
 
 /// The hook types prek can install, from its `HookType`.
@@ -115,6 +115,21 @@ impl PrekHook {
             .filter_map(|command| f(&command.iter().map(String::as_str).collect::<Vec<_>>()))
             .collect()
     }
+}
+
+/// The program a hook's entry runs its tool through, if it runs it through one the standard rules out: Devbox (`devbox
+/// run`), or a shell, as in `bash -c "cd web && pnpm exec eslint ."`, where `pnpm --dir web` or `uv --directory api`
+/// would run the tool itself. prek runs a `system` hook's entry without a shell, so a `cd` needs one.
+///
+/// A leading `env`, with any `NAME=value` words after it, is skipped, as in `/usr/bin/env bash -c "..."`.
+fn entry_wrapper(hook: &PrekHook) -> Option<String> {
+    let commands = hook.commands("");
+    let mut words = commands.first()?.iter().map(String::as_str);
+    let mut program = program_name(words.next()?);
+    if program == "env" {
+        program = program_name(words.find(|word| !word.contains('='))?);
+    }
+    matches!(program, "devbox" | "bash" | "sh" | "dash" | "zsh").then(|| program.to_owned())
 }
 
 impl PrekConfig {
@@ -277,7 +292,8 @@ impl PrekConfig {
 
     /// Whether every hook with one of the IDs `ids`, the language hooks of a language, is set up as the standard's
     /// Language Hooks section says: a `local` hook with `language = "system"` and `pass_filenames = false`, so that it
-    /// runs the project's own tools on the whole project. A remote hook's language and file names are its repository's
+    /// runs the project's own tools on the whole project, and whose entry runs its tool directly rather than through
+    /// Devbox or a shell (see [`entry_wrapper`]). A remote hook's language and file names are its repository's
     /// to choose, so only its being remote is reported. Hooks that are missing are left to the checks of each hook.
     pub(crate) fn check_language_hooks(&self, ids: &[&str]) -> Result<(), String> {
         let mut issues: Vec<String> = Vec::new();
@@ -301,6 +317,11 @@ impl PrekConfig {
                 }
                 if hook.pass_filenames != Some(Value::Bool(false)) {
                     issues.push(format!("{name} doesn't set pass_filenames = false"));
+                }
+                if let Some(wrapper) = entry_wrapper(hook) {
+                    issues.push(format!(
+                        "{name} runs through {wrapper}, not its tool directly"
+                    ));
                 }
             }
         }
@@ -665,13 +686,19 @@ mod tests {
     }
 
     #[test]
-    fn language_hooks_are_local_system_and_take_no_file_names() {
+    fn language_hooks_are_local_system_take_no_file_names_and_run_their_tools_directly() {
         for repos in [
             "[]",
             r#"[{repo = "local", hooks = [{id = "lint", language = "system", pass_filenames = false}]}]"#,
             // Hooks with other IDs aren't language hooks.
             r#"[{repo = "local", hooks = [{id = "other", language = "python"}]}, {repo = "https://example.com/a", hooks = [{id = "b"}]}]"#,
             r#"[{repo = "local", hooks = [{id = "lint", alias = "lint-a", language = "system", pass_filenames = false}, {id = "lint", alias = "lint-b", language = "system", pass_filenames = false}]}]"#,
+            r#"[{repo = "local", hooks = [{id = "lint", entry = "pnpm --dir web exec eslint . --max-warnings 0", language = "system", pass_filenames = false}]}]"#,
+            // Only the program the entry starts with runs the tool: an argument naming a shell is no wrapper.
+            r#"[{repo = "local", hooks = [{id = "lint", entry = "cargo run -- sh", language = "system", pass_filenames = false}]}]"#,
+            // An entry prek can't split runs nothing, which the checks of each hook report.
+            r#"[{repo = "local", hooks = [{id = "lint", entry = "bash -c 'cd web", language = "system", pass_filenames = false}]}]"#,
+            r#"[{repo = "local", hooks = [{id = "lint", entry = "env CI=1 cargo test", language = "system", pass_filenames = false}]}]"#,
         ] {
             assert_eq!(language_hooks(repos), Ok(()), "{repos}");
         }
@@ -705,6 +732,26 @@ mod tests {
             (
                 r#"[{repo = "local", hooks = [{id = "lint", language = "system", pass_filenames = 1}]}]"#,
                 "lint doesn't set pass_filenames = false",
+            ),
+            (
+                r#"[{repo = "local", hooks = [{id = "lint", entry = "devbox run -- cargo clippy", language = "system", pass_filenames = false}]}]"#,
+                "lint runs through devbox, not its tool directly",
+            ),
+            (
+                r#"[{repo = "local", hooks = [{id = "lint", entry = "bash -c 'cd web && pnpm exec eslint .'", language = "system", pass_filenames = false}]}]"#,
+                "lint runs through bash, not its tool directly",
+            ),
+            (
+                r#"[{repo = "local", hooks = [{id = "lint", entry = "/bin/sh -c 'cd api && uv run ruff check'", language = "system", pass_filenames = false}]}]"#,
+                "lint runs through sh, not its tool directly",
+            ),
+            (
+                r#"[{repo = "local", hooks = [{id = "lint", entry = "/usr/bin/env FORCE_COLOR=1 zsh -c 'cd web && pnpm exec eslint .'", language = "system", pass_filenames = false}]}]"#,
+                "lint runs through zsh, not its tool directly",
+            ),
+            (
+                r#"[{repo = "local", hooks = [{id = "lint", entry = "dash -c 'cd api && uv run ruff check'", language = "system", pass_filenames = false}]}]"#,
+                "lint runs through dash, not its tool directly",
             ),
             (
                 r#"[{repo = "local", hooks = [{id = "lint", language = "python"}, {id = "test", alias = "test-a", language = "system", pass_filenames = false}, {id = "test", alias = "test-b", language = "system"}]}, {repo = "https://example.com/a", hooks = [{id = "test"}, {id = "test"}]}]"#,

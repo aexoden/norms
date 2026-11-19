@@ -131,7 +131,7 @@ pass  python-prek-ruff-format  Python prek: ruff-format hook (--check)
 pass  python-prek-mypy  Python prek: mypy hook
 pass  python-prek-basedpyright  Python prek: basedpyright hook
 pass  python-prek-pytest  Python prek: pytest hook (with coverage)
-pass  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
+pass  python-prek-local-hooks  Python prek: language hooks are local, system, take no file names and run their tools directly
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 pass  python-ci-ruff-format  Python CI: format check
@@ -182,7 +182,7 @@ pass  rust-prek-rustfmt  Rust prek: rustfmt hook (--check)
 pass  rust-prek-clippy  Rust prek: clippy hook (denies warnings)
 pass  rust-prek-cargo-test  Rust prek: cargo-test hook (with coverage)
 pass  rust-prek-cargo-deny  Rust prek: cargo-deny hook
-pass  rust-prek-local-hooks  Rust prek: language hooks are local, system and take no file names
+pass  rust-prek-local-hooks  Rust prek: language hooks are local, system, take no file names and run their tools directly
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check (denies warnings)

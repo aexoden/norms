@@ -148,7 +148,8 @@ re-renders them, as `AGENTS.md` describes.
     hook and `format` script, while its `ruff-format` hook checks with
     `--diff`;
   - its `ruff-check` hook is remote, its `mypy` hook has `language =
-    "unsupported"` and its `tsc` hook doesn't set `pass_filenames = false`;
+    "unsupported"` and runs through `devbox run`, and its `tsc` hook doesn't
+    set `pass_filenames = false`;
   - its `prek` job's `PREK_SKIP` lists some of the hooks with jobs of their
     own, but not `pytest`, `eslint`, `mypy` or `ruff-check`.
 - `typescript-config` breaks the TypeScript configuration standards:

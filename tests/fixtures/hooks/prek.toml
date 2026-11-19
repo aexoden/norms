@@ -59,7 +59,7 @@ language = "system"
 [[repos.hooks]]
 id = "mypy"
 name = "mypy"
-entry = "uv run mypy ."
+entry = "devbox run -- uv run mypy ."
 language = "unsupported"
 pass_filenames = false
 

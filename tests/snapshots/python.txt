@@ -130,7 +130,7 @@ pass  python-prek-ruff-format  Python prek: ruff-format hook (--check)
 pass  python-prek-mypy  Python prek: mypy hook
 pass  python-prek-basedpyright  Python prek: basedpyright hook
 pass  python-prek-pytest  Python prek: pytest hook (with coverage)
-pass  python-prek-local-hooks  Python prek: language hooks are local, system and take no file names
+pass  python-prek-local-hooks  Python prek: language hooks are local, system, take no file names and run their tools directly
 pass  python-ci-uv-lock  Python CI: uv.lock up to date
 pass  python-ci-uv-sync-locked  Python CI: uv sync --locked before uv run
 pass  python-ci-ruff-format  Python CI: format check

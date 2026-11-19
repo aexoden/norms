@@ -1136,14 +1136,17 @@ Language hooks are `local` hooks with `language = "system"` and
 `pass_filenames = false`. (prek also accepts `unsupported`, pre-commit's name
 for `system`, but its schema doesn't.) They invoke the project's own
 tools directly (for example, `cargo clippy` or `uv run ruff check`), never
-through Devbox. Running the project's tools, they use the versions its lock
-files and toolchain pins select, as CI does. A remote hook is pinned by its own
-`rev` instead, and one in a language prek manages, such as Python or
-Node.js, installs its own copy of the tool, without the project's dependencies
-or plugins. Each language hook checks all of its component's files, not only
-the staged ones, since a change to one file can break another, and checks
-without modifying files, so the hooks and CI produce the same results. The
-language sections below list the required hooks. Hook IDs are unique, across
+through Devbox or a shell. prek runs a `system` hook's entry without a shell,
+so a component in a subdirectory is reached with the tool's own option
+(`--manifest-path`, `uv --directory`, `pnpm --dir`) rather than
+`bash -c "cd <path> && ..."`. Running the project's tools, they use the
+versions its lock files and toolchain pins select, as CI does. A remote hook is
+pinned by its own `rev` instead, and one in a language prek manages, such as
+Python or Node.js, installs its own copy of the tool, without the project's
+dependencies or plugins. Each language hook checks all of its component's files,
+not only the staged ones, since a change to one file can break another, and
+checks without modifying files, so the hooks and CI produce the same results.
+The language sections below list the required hooks. Hook IDs are unique, across
 languages too (for example, `pytest`, `cargo-test` and `vitest` rather than
 `test`), so that `PREK_SKIP` can target one. `PREK_SKIP` and `prek run` also
 match a hook's `alias`, so a hook that runs twice under one ID, such as a

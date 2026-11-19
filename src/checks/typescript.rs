@@ -982,7 +982,7 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     );
     report.should(
         "typescript-prek-local-hooks",
-        "TypeScript prek: language hooks are local, system and take no file names",
+        "TypeScript prek: language hooks are local, system, take no file names and run their tools directly",
         prek.check_language_hooks(&LANGUAGE_HOOKS),
     );
 }

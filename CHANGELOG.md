@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a language hook runs its tool through Devbox (`devbox run`) or a
+  shell (`bash -c "cd web && ..."`) (`rust-prek-local-hooks`,
+  `python-prek-local-hooks`, `typescript-prek-local-hooks`). Run the tool
+  directly, reaching a component in a subdirectory with `--manifest-path`,
+  `uv --directory` or `pnpm --dir`, as the template does.
 - Warn when `deny.toml` ignores an advisory that never expires
   (`deny-toml-ignore-expiry`): give it an `expiry`, a date or a duration from
   the advisory's publication such as `"P90D"`, or set a default with

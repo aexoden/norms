@@ -120,7 +120,7 @@ pass  rust-prek-rustfmt  Rust prek: rustfmt hook (--check)
 pass  rust-prek-clippy  Rust prek: clippy hook (denies warnings)
 pass  rust-prek-cargo-test  Rust prek: cargo-test hook (with coverage)
 pass  rust-prek-cargo-deny  Rust prek: cargo-deny hook
-pass  rust-prek-local-hooks  Rust prek: language hooks are local, system and take no file names
+pass  rust-prek-local-hooks  Rust prek: language hooks are local, system, take no file names and run their tools directly
 pass  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 pass  rust-ci-rustfmt  Rust CI: format check
 pass  rust-ci-clippy  Rust CI: clippy check (denies warnings)
@@ -205,7 +205,7 @@ pass  typescript-prek-prettier  TypeScript prek: prettier hook (--check)
 pass  typescript-prek-tsc  TypeScript prek: tsc hook (tsc -b)
 pass  typescript-prek-vite-build  TypeScript prek: vite-build hook
 pass  typescript-prek-vitest  TypeScript prek: vitest hook (with coverage)
-pass  typescript-prek-local-hooks  TypeScript prek: language hooks are local, system and take no file names
+pass  typescript-prek-local-hooks  TypeScript prek: language hooks are local, system, take no file names and run their tools directly
 pass  typescript-ci-pnpm-peer-dependencies  TypeScript CI: peer dependencies
 pass  typescript-ci-lint  TypeScript CI: lint check (--max-warnings 0)
 pass  typescript-ci-format  TypeScript CI: format check
