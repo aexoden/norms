@@ -129,6 +129,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The template's `.editorconfig` indents JSONC files by two spaces, as JSON
+  files are, and its `.markdownlint-cli2.jsonc` is indented by two spaces
+  rather than four. `editorconfig-indent-size-data` warns unless `*.jsonc` gets
+  `indent_size = 2`: add `jsonc` to the `[*.{yml,yaml,json,toml}]` section,
+  and reindent `.markdownlint-cli2.jsonc` by two spaces.
 - `deny-toml-exists` warns on a `.config/deny.toml`, which cargo-deny reads
   since 0.21.0, as it does on `.deny.toml` and `.cargo/deny.toml`: rename it
   `deny.toml`. Before, norms looked past it to a `deny.toml` further up.

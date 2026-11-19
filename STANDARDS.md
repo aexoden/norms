@@ -189,7 +189,7 @@ indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{yml,yaml,json,toml}]
+[*.{yml,yaml,json,jsonc,toml}]
 indent_size = 2
 ```
 
@@ -204,8 +204,9 @@ indent_size = 2
 Additional project-specific options can be included if required.
 
 `norms verify` reads the file as editors do, and checks the properties it gives
-every file, YAML, JSON and TOML files, and, with TypeScript, `.prettierrc`,
-whichever sections set them, so other sections may change them for other files.
+every file, YAML, JSON, JSONC and TOML files, and, with TypeScript,
+`.prettierrc`, whichever sections set them, so other sections may change them
+for other files.
 
 ## YAML Files
 
@@ -344,26 +345,26 @@ allows repeated headings under different parents:
 
 ```jsonc
 {
-    "config": {
-        "default": true,
+  "config": {
+    "default": true,
 
-        // MD004 - Unordered list style
-        "MD004": {
-            "style": "dash"
-        },
+    // MD004 - Unordered list style
+    "MD004": {
+      "style": "dash"
+    },
 
-        // MD013 - Line length
-        "MD013": {
-            "line_length": 80,
-            "tables": false,
-            "code_blocks": false
-        },
+    // MD013 - Line length
+    "MD013": {
+      "line_length": 80,
+      "tables": false,
+      "code_blocks": false
+    },
 
-        // MD024 - No duplicate headings
-        "MD024": {
-            "siblings_only": true
-        }
+    // MD024 - No duplicate headings
+    "MD024": {
+      "siblings_only": true
     }
+  }
 }
 ```
 

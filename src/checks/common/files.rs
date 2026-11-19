@@ -422,8 +422,14 @@ const EDITORCONFIG_SETTINGS: [(&str, &str, &str); 6] = [
     ),
 ];
 
-/// Files the standard indents by two spaces, as a file of each such extension: YAML, JSON and TOML.
-const TWO_SPACE_FILES: [&str; 4] = ["file.yml", "file.yaml", "file.json", "file.toml"];
+/// Files the standard indents by two spaces, as a file of each such extension: YAML, JSON, JSONC and TOML.
+const TWO_SPACE_FILES: [&str; 5] = [
+    "file.yml",
+    "file.yaml",
+    "file.json",
+    "file.jsonc",
+    "file.toml",
+];
 
 /// The file without an extension that stands for every file, which the `[*]` section covers.
 const ANY_FILE: &str = "file";
@@ -465,7 +471,7 @@ pub(crate) fn check_editorconfig(ctx: &ProjectContext, report: &mut Report) {
     }
     report.should(
         "editorconfig-indent-size-data",
-        ".editorconfig: indent_size=2 for YAML, JSON and TOML",
+        ".editorconfig: indent_size=2 for YAML, JSON, JSONC and TOML",
         editorconfig_values_are(config, &two_space, "indent_size", "2"),
     );
 }
@@ -911,7 +917,7 @@ mod tests {
     #[test]
     fn editorconfig_values_are_resolved_through_sections() {
         let standard = EditorConfig::parse(
-            "root = true\n\n[*]\nindent_size = 4\nend_of_line = lf\n\n[*.{yml,yaml,json,toml}]\nindent_size = 2\n",
+            "root = true\n\n[*]\nindent_size = 4\nend_of_line = lf\n\n[*.{yml,yaml,json,jsonc,toml}]\nindent_size = 2\n",
         )
         .unwrap();
         assert_eq!(
@@ -972,8 +978,16 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         let standard = "root = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\nindent_style = space\nindent_size = 4\n\
-                        insert_final_newline = true\ntrim_trailing_whitespace = true\n\n[*.{yml,yaml,json,toml}]\nindent_size = 2\n";
+                        insert_final_newline = true\ntrim_trailing_whitespace = true\n\n[*.{yml,yaml,json,jsonc,toml}]\nindent_size = 2\n";
         assert_eq!(results(standard, &[]), []);
+        // JSONC files, such as .markdownlint-cli2.jsonc, are indented as JSON files are.
+        assert_eq!(
+            results(&standard.replace("json,jsonc", "json"), &[]),
+            [(
+                "editorconfig-indent-size-data".to_owned(),
+                "indent_size is 4 for *.jsonc, not 2".to_owned()
+            )]
+        );
         // root = true counts only in the preamble, before any section.
         assert_eq!(
             results(
