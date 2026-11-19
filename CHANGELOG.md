@@ -140,6 +140,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Development`, which restricts deletions and requires linear history and
   signed commits, but allows force pushes. Add it to a repository that keeps
   `dev`.
+- `STANDARDS.md` lists the GitHub settings each repository sets besides its
+  rulesets: the Renovate app; Wikis and Projects off unless used; only squash
+  merging, always suggesting branch updates and deleting head branches after
+  merge, without auto-merge; read-only workflow permissions, without Actions
+  approving pull requests, and actions pinned to commit SHAs; and private
+  vulnerability reporting, Dependabot alerts without its security updates, and
+  secret scanning with push protection. Set them in the repository's settings.
 - The template's Rust packages enable Clippy's `unnecessary_rest_pattern` in
   place of `rest_pat_in_fully_bound_structs`, which it covers along with
   struct variants of enums.

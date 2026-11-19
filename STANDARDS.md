@@ -34,6 +34,10 @@ Existing projects stay current with `uvx copier update --trust`, which merges
 the changes between the template version recorded in `.copier-answers.yml` and
 the latest one. Template versions are norms release tags (`vX.Y.Z`).
 
+The template renders only the files in the repository. Configure the GitHub
+repository itself as [Branch Protection](#branch-protection) and
+[Repository Settings](#repository-settings) describe.
+
 ## norms Configuration
 
 A project that departs from a standard records the exception in `norms.toml`, at
@@ -602,6 +606,76 @@ commit is pushed to `dev` to be tested.
 
 Rulesets on private repositories require GitHub Pro. A private repository
 without it follows the same workflow by convention, without enforcement.
+
+### Repository Settings
+
+Besides the rulesets, each GitHub repository sets the following, which the
+template can't, since they live in GitHub rather than in the repository. Each is
+named as in the repository's **Settings**, with the field of the repository's
+or its Actions permissions' REST API endpoint in parentheses where it has one.
+Anything not listed keeps GitHub's default.
+
+The [Renovate GitHub App](https://github.com/apps/renovate) is installed on
+the repository, so that the `renovate.json` the template renders takes effect
+(see [Automated Updates](#automated-updates)).
+
+**General**, under **Features**:
+
+- Issues stay on.
+- Wikis (`has_wiki`) and Projects (`has_projects`) are turned off unless the
+  project uses them, so they don't invite content nobody maintains.
+
+**General**, under **Pull Requests**:
+
+- Only squash merging is allowed (`allow_squash_merge: true`,
+  `allow_merge_commit: false`, `allow_rebase_merge: false`), with GitHub's
+  default commit message, as [Branches](#branches) describes.
+- **Always suggest updating pull request branches** is on
+  (`allow_update_branch: true`). A pull request into `main` is offered the
+  update anyway, since the `Default` ruleset requires it to be up to date, but
+  one into another branch, such as a pull request stacked on a feature branch,
+  is offered it only with this setting. The update adds a merge commit to the
+  head branch, which the squash merge drops.
+- **Allow auto-merge** is off (`allow_auto_merge: false`). Renovate merges its
+  own pull requests, since the shared preset disables platform automerge, and
+  nothing else needs it. The preset disabled it when nothing required CI to
+  pass, so GitHub would merge a pull request whose CI had failed. The `Default`
+  ruleset's required check now prevents that, but platform automerge still
+  waits only for required checks, not for statuses such as
+  `renovate/artifacts` that Renovate waits for itself (see
+  [Branch Protection](#branch-protection)).
+- **Automatically delete head branches** is on
+  (`delete_branch_on_merge: true`). GitHub never sees a squash-merged branch as
+  merged, so without this it lingers. `dev` is never a pull request's head
+  branch, since `main` is fast-forwarded to it, and the `Development` ruleset
+  keeps it from being deleted regardless.
+
+**Actions**, under **General**:
+
+- **Workflow permissions** is **Read repository contents and packages
+  permissions** (`default_workflow_permissions: read`), and **Allow GitHub
+  Actions to create and approve pull requests** is off
+  (`can_approve_pull_request_reviews: false`). Every workflow sets its own
+  permissions (see [Hardening](#hardening)), so these only limit one that
+  doesn't.
+- **Require actions to be pinned to a full-length commit SHA** is on
+  (`sha_pinning_required: true`), so that GitHub itself refuses an action that
+  isn't pinned as [Hardening](#hardening) requires.
+
+**Advanced Security**:
+
+- **Private vulnerability reporting** is on, so that vulnerabilities can be
+  reported without a public issue. GitHub offers it only for public
+  repositories.
+- **Dependabot alerts** are on. Renovate reads them to open its vulnerability
+  alert pull requests (see [Urgent Updates](#urgent-updates)).
+- **Dependabot security updates** are off, since Renovate opens those pull
+  requests instead, and Dependabot version updates are not configured.
+- **Secret Protection** (secret scanning) and its **Push protection** are on,
+  so that a pushed credential is blocked or at least reported. They are free
+  for public repositories. A private repository has them only with GitHub
+  Secret Protection, which GitHub sells to organizations, so a personal
+  private repository goes without.
 
 ## Continuous Integration
 
