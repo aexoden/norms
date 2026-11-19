@@ -7,22 +7,22 @@
 
     // MD004 - Unordered list style
     "MD004": {
-      "style": "dash"
+      "style": "dash",
     },
 
     // MD013 - Line length
     "MD013": {
       "line_length": 80,
       "tables": false,
-      "code_blocks": false
+      "code_blocks": false,
     },
 
     // MD024 - No duplicate headings
     "MD024": {
-      "siblings_only": true
-    }
+      "siblings_only": true,
+    },
   },
 
   // The test fixtures are projects for norms to check, kept exactly as written.
-  "ignores": ["tests/fixtures/**"]
+  "ignores": ["tests/fixtures/**"],
 }

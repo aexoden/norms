@@ -134,6 +134,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rather than four. `editorconfig-indent-size-data` warns unless `*.jsonc` gets
   `indent_size = 2`: add `jsonc` to the `[*.{yml,yaml,json,toml}]` section,
   and reindent `.markdownlint-cli2.jsonc` by two spaces.
+- In a project with TypeScript at the root, the template's Prettier formats
+  `.markdownlint-cli2.jsonc` too, rather than `.prettierignore` leaving it out,
+  and the template writes the file as Prettier does, with trailing commas. To
+  follow, remove the file from `.prettierignore` and run
+  `pnpm exec prettier --write .markdownlint-cli2.jsonc`.
 - `deny-toml-exists` warns on a `.config/deny.toml`, which cargo-deny reads
   since 0.21.0, as it does on `.deny.toml` and `.cargo/deny.toml`: rename it
   `deny.toml`. Before, norms looked past it to a `deny.toml` further up.
