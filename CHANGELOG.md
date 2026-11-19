@@ -217,6 +217,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   struct variants of enums.
 - `STANDARDS.md` asks for an operating system matrix in CI only across the
   platforms a project supports.
+- The template's `.gitignore` also ignores rustc's internal compiler error
+  reports (`rustc-ice-*.txt`), pytest-cov's HTML report (`htmlcov/`), and
+  Vite's local environment files (`.env.local`, `.env.*.local`), which hold
+  secrets. `STANDARDS.md` counts such local files with what a project
+  generates. Add the entries for the project's languages.
 
 ### Fixed
 

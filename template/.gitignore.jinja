@@ -11,15 +11,19 @@ __pycache__/
 .ruff_cache/
 .venv/
 dist/
+htmlcov/
 {%- endif %}
 {%- if 'rust' in languages %}
 
 # Rust
+rustc-ice-*.txt
 target/
 {%- endif %}
 {%- if 'typescript' in languages %}
 
 # TypeScript
+.env.local
+.env.*.local
 coverage/
 {%- if 'python' not in languages %}
 dist/

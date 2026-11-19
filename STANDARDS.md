@@ -434,14 +434,15 @@ Use `git` as the version control system. Both `.gitattributes` and `.gitignore`
 should be present and configured as appropriate for the project.
 
 `.gitignore` lists what the project itself generates, such as build output,
-caches, virtual environments and installed dependencies, in a section for each
-language, as the template's does. Files that a developer's editor or operating
-system leaves behind, such as `.idea/`, `.vscode/` or `.DS_Store`, belong in
-each developer's global ignore file (Git's `core.excludesFile`, by default
-`~/.config/git/ignore`), not in every project's. The `Global` templates of
-[github/gitignore](https://github.com/github/gitignore/tree/main/Global), which
-[Do Not Commit](https://donotcommit.com/) can combine into one file, are a good
-start for that global file.
+caches, coverage reports, virtual environments and installed dependencies, in a
+section for each language, as the template's does. It also lists the local files
+that the project's tools read but expect never to be committed, such as Vite's
+`.env.local`. Files that a developer's editor or operating system leaves behind,
+such as `.idea/`, `.vscode/` or `.DS_Store`, belong in each developer's global
+ignore file (Git's `core.excludesFile`, by default `~/.config/git/ignore`), not
+in every project's. A good start for that global file is the `Global` templates
+of [github/gitignore](https://github.com/github/gitignore/tree/main/Global),
+which [Do Not Commit](https://donotcommit.com/) can combine into one file.
 
 `.gitattributes` normalizes line endings, marks binary formats, and enables
 git's built-in diff drivers for each language in the project:

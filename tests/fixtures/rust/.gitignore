@@ -2,4 +2,5 @@
 # SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 # Rust
+rustc-ice-*.txt
 target/
