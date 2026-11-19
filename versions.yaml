@@ -45,7 +45,7 @@ cargo_llvm_cov_version:
 
 # renovate: datasource=pypi depName=prek
 prek_version:
-  default: "0.5.10"
+  default: "0.5.11"
   when: false
 
 # Hooks
