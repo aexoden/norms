@@ -23,6 +23,18 @@ Run `uvx copier update --trust` in a project to bring it up to date with the
 template of the latest norms release. Every version the template uses is kept in
 `versions.yaml`.
 
+## Platform Support
+
+norms is built and tested only on Linux, which includes WSL on Windows. That
+covers the `norms` command line, its hooks, and the development tooling of the
+projects the template renders. It may work on macOS or natively on Windows, but
+nothing checks that it does, and on Windows some of what it reports names paths
+with backslashes.
+
+If you'd like to use norms on macOS or Windows,
+[open an issue](https://github.com/aexoden/norms/issues), and it will get the
+support and CI testing it needs.
+
 ## Versioning
 
 norms follows [Semantic Versioning](https://semver.org/), applied to a linter
