@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a `SECURITY.md` to the template, which asks for vulnerabilities to be
   reported through the repository's private vulnerability reporting and says
   that only the latest release (or, without releases, `main`) gets fixes.
-- Warn when a project has no `SECURITY.md` at its root
+- **Breaking:** Fail when a project has no `SECURITY.md` at its root
   (`security-md-exists`). Add the one the template renders.
 - Add the `norms-commit-msg` and `norms-verify` hooks to the template, with a
   `norms-verify` CI job that runs the pinned hooks: `norms-verify`, and the
