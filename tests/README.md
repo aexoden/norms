@@ -104,8 +104,9 @@ re-renders them, as `AGENTS.md` describes.
     advisories check;
   - a `release.yaml` job that only checks formatting but leaves
     setup-rust-toolchain's cache on, beside jobs that build or turn it off,
-    and a job pinning a tool in a `_VERSION` variable without a `# renovate:`
-    comment, beside the inline prek versions of `ci.yaml`.
+    one of which adds a `Swatinem/rust-cache` step of its own, and a job
+    pinning a tool in a `_VERSION` variable without a `# renovate:` comment,
+    beside the inline prek versions of `ci.yaml`.
 - `prek` has only a `prek.toml`, which breaks the Git hook standards: its
   `default_install_hook_types` lacks `pre-commit`, it runs only some of the
   common hooks, from pre-commit-hooks rather than prek's builtin repo, its

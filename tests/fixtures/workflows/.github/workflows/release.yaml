@@ -16,6 +16,12 @@ jobs:
     env:
       CROSS_VERSION: "0.2.5"
     steps:
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+
+      - name: Cache the build
+        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.8.1
+
       - name: Build
         run: cargo install cross --locked --version "$CROSS_VERSION"
 

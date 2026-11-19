@@ -213,6 +213,8 @@ fail  rust-ci-test  Rust CI: tests (with coverage)
       No step runs cargo test or cargo llvm-cov
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
       No step uses EmbarkStudios/cargo-deny-action
+warn  rust-ci-separate-cache  Rust CI: no separate Swatinem/rust-cache step
+      These jobs add a Swatinem/rust-cache step, which setup-rust-toolchain already runs: release.yaml: build
 warn  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
       These jobs build nothing, but setup-rust-toolchain caches their build: release.yaml: rustfmt
 fail  rust-audit-cargo-deny  Rust audit: cargo deny advisories

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a CI job that installs Rust with
+  `actions-rust-lang/setup-rust-toolchain` adds a `Swatinem/rust-cache` step
+  (`rust-ci-separate-cache`), which setup-rust-toolchain already runs. Remove
+  the step.
 - Warn when a language hook runs its tool through Devbox (`devbox run`) or a
   shell (`bash -c "cd web && ..."`) (`rust-prek-local-hooks`,
   `python-prek-local-hooks`, `typescript-prek-local-hooks`). Run the tool

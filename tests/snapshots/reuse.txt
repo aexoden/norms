@@ -196,6 +196,7 @@ fail  rust-ci-test  Rust CI: tests (with coverage)
       No step runs cargo test or cargo llvm-cov
 fail  rust-ci-cargo-deny  Rust CI: cargo deny
       No step uses EmbarkStudios/cargo-deny-action
+pass  rust-ci-separate-cache  Rust CI: no separate Swatinem/rust-cache step
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
 pass  package-json-exists  [web] package.json: exists
 pass  package-json-valid  [web] package.json: valid

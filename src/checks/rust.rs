@@ -1410,11 +1410,29 @@ fn jobs_caching_nothing(workflow: &Workflow) -> Vec<&str> {
         .collect()
 }
 
+/// The jobs of `workflow`, by ID, that add a `Swatinem/rust-cache` step of their own beside setup-rust-toolchain,
+/// which already runs it. A job installing Rust another way needs its own cache step.
+fn jobs_adding_rust_cache(workflow: &Workflow) -> Vec<&str> {
+    workflow
+        .jobs
+        .iter()
+        .filter(|(_, job)| {
+            job.steps_using("Swatinem/rust-cache").next().is_some()
+                && job
+                    .steps_using("actions-rust-lang/setup-rust-toolchain")
+                    .next()
+                    .is_some()
+        })
+        .map(|(id, _)| id.as_str())
+        .collect()
+}
+
 /// Check that the jobs of every workflow that build no Rust code, such as formatting, turn off setup-rust-toolchain's
-/// cache with `cache: false`.
+/// cache with `cache: false`, and that no job adds a cache step of its own beside it.
 pub(crate) fn check_toolchain_cache(ctx: &ProjectContext, report: &mut Report) {
     let mut parsed = false;
     let mut caching = Vec::new();
+    let mut separate = Vec::new();
     for (name, status) in ctx.workflows() {
         if let ConfigStatus::Ok(workflow) = status {
             parsed = true;
@@ -1423,11 +1441,29 @@ pub(crate) fn check_toolchain_cache(ctx: &ProjectContext, report: &mut Report) {
                     .into_iter()
                     .map(|job| format!("{name}: {job}")),
             );
+            separate.extend(
+                jobs_adding_rust_cache(workflow)
+                    .into_iter()
+                    .map(|job| format!("{name}: {job}")),
+            );
         }
     }
     if !parsed {
         return;
     }
+
+    report.should(
+        "rust-ci-separate-cache",
+        "Rust CI: no separate Swatinem/rust-cache step",
+        if separate.is_empty() {
+            Outcome::Pass
+        } else {
+            Outcome::issue(format!(
+                "These jobs add a Swatinem/rust-cache step, which setup-rust-toolchain already runs: {}",
+                separate.join(", ")
+            ))
+        },
+    );
 
     report.should(
         "rust-ci-toolchain-cache",
@@ -2071,6 +2107,37 @@ jobs:
         )
         .unwrap();
         assert_eq!(jobs_caching_nothing(&workflow), ["deny", "lock", "rustfmt"]);
+    }
+
+    #[test]
+    fn no_job_adds_its_own_rust_cache() {
+        let workflow = Workflow::parse(
+            "\
+jobs:
+  test:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test
+      - run: cargo test
+  clippy:
+    steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+      - run: cargo clippy
+  owner-case:
+    steps:
+      - uses: Actions-Rust-Lang/setup-rust-toolchain@v2
+      - uses: swatinem/rust-cache@v2
+  other-toolchain:
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+"
+            .to_owned(),
+        )
+        .unwrap();
+        assert_eq!(jobs_adding_rust_cache(&workflow), ["owner-case", "test"]);
     }
 
     #[test]

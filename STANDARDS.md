@@ -1799,8 +1799,9 @@ apart from `--manifest-path`.
 
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
 reads `rust-toolchain.toml` and caches builds with its built-in
-`Swatinem/rust-cache`, so jobs don't add a separate cache step. Jobs that build
-nothing, such as formatting, set `cache: false`. CI checks formatting with
+`Swatinem/rust-cache`, so jobs don't add a separate cache step, and
+`norms verify` warns on one that does. Jobs that build nothing, such as
+formatting, set `cache: false`. CI checks formatting with
 `actions-rust-lang/rustfmt` and runs cargo-deny with
 `EmbarkStudios/cargo-deny-action`, passing the arguments in the table above as
 `arguments: --workspace --all-features` and `command: check -D warnings bans

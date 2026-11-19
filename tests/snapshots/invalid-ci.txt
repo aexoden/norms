@@ -80,4 +80,5 @@ fail  deny-toml-exists  [.] deny.toml: exists
       File not found
 fail  cargo-config-exists  .cargo/config.toml: exists
       File not found
+pass  rust-ci-separate-cache  Rust CI: no separate Swatinem/rust-cache step
 pass  rust-ci-toolchain-cache  Rust CI: jobs that build nothing set cache: false
