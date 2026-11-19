@@ -126,6 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or `pnpm dlx x@1.2.3`, or an environment variable ending in `_VERSION`
   without a `# renovate:` comment above it. Pin each in such a variable under
   such a comment.
+- `README.md` documents how to run norms: its hooks and commands, what its
+  results and exit codes mean, `norms.toml`, and how it finds components.
 
 ### Changed
 

@@ -16,7 +16,9 @@ norms is three things in one repository:
   following the standards.
 
 When changing a standard, update `STANDARDS.md`, the template and, where
-relevant, the checks in `src/checks/` together.
+relevant, the checks in `src/checks/` together. `README.md` documents using the
+CLI (its commands, results, exit codes, `norms.toml` and component detection),
+so update it with any change to those.
 
 ## Commands
 
