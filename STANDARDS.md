@@ -1729,6 +1729,11 @@ silently ignore it and pass every warning.
   libraries set, limits it to the replacements its MSRV has. A crate the
   project keeps anyway goes in the table's `ignore`.
 - Every entry in `[advisories] ignore` has a `reason`.
+- Every advisory in `[advisories] ignore` expires: it has an `expiry`, or
+  `[advisories] ignore-expiry` sets a default, so that an ignore is reviewed
+  rather than kept by habit. An expiry is a date or a duration such as `P90D`,
+  which counts from the advisory's publication, so an advisory already older
+  than that needs a date. Crates ignored for being yanked have no expiry.
 
 cargo-deny uses the nearest `deny.toml` in the directory of the manifest it
 checks or a parent, so a Rust component in a subdirectory shares the root's file

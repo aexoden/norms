@@ -547,7 +547,8 @@ fn check_clippy_toml_settings(label: &str, config: &ClippyToml, report: &mut Rep
 //
 
 /// Check the cargo-deny configuration that applies to the component: that it is named `deny.toml`, allows multiple
-/// versions of a crate, checks for crates that `std` replaces, and gives a reason for every ignored advisory.
+/// versions of a crate, checks for crates that `std` replaces, and gives a reason and an expiry for every ignored
+/// advisory.
 pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
     let (label, status) = ctx.deny_toml();
     if is_other_deny_toml(Path::new(label)) {
@@ -578,6 +579,11 @@ pub(crate) fn check_cargo_deny(ctx: &ComponentContext, report: &mut Report) {
         "deny-toml-ignore-reasons",
         format!("{label}: every ignored advisory has a reason"),
         config.check_ignore_reasons(),
+    );
+    report.should(
+        "deny-toml-ignore-expiry",
+        format!("{label}: every ignored advisory expires"),
+        config.check_ignore_expiry(),
     );
 }
 
@@ -1861,7 +1867,7 @@ jobs:
     }
 
     #[test]
-    fn deny_toml_allows_multiple_versions_bans_std_replacements_and_explains_ignores() {
+    fn deny_toml_allows_multiple_versions_bans_std_replacements_and_explains_and_expires_ignores() {
         let results = |deny: &str| {
             let dir = tempfile::tempdir().unwrap();
             fs::write(dir.path().join("deny.toml"), deny).unwrap();
@@ -1884,8 +1890,9 @@ jobs:
             "deny-toml-multiple-versions",
             "deny-toml-std-replacements",
             "deny-toml-ignore-reasons",
+            "deny-toml-ignore-expiry",
         ];
-        let with = |statuses: [Status; 5]| {
+        let with = |statuses: [Status; 6]| {
             ids.iter()
                 .map(|id| (*id).to_owned())
                 .zip(statuses)
@@ -1894,7 +1901,7 @@ jobs:
 
         assert_eq!(
             results("[bans]\nmultiple-versions = \"allow\"\nstd-replacements = {}\n"),
-            with([Status::Pass; 5])
+            with([Status::Pass; 6])
         );
         assert_eq!(
             results(
@@ -1906,6 +1913,7 @@ jobs:
                 Status::Pass,
                 Status::Pass,
                 Status::Pass,
+                Status::Warn,
                 Status::Warn
             ])
         );
@@ -1916,6 +1924,7 @@ jobs:
                 Status::Pass,
                 Status::Warn,
                 Status::Warn,
+                Status::Pass,
                 Status::Pass
             ])
         );

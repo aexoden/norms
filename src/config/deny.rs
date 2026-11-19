@@ -33,10 +33,21 @@ pub(crate) struct DenyToml {
 
 /// The `[advisories]` table.
 #[derive(Debug, Deserialize, Default)]
-#[serde(default)]
+#[serde(default, rename_all = "kebab-case")]
 pub(crate) struct DenyAdvisories {
-    /// The advisories to ignore: each an advisory ID or crate, or a table naming one with a `reason`.
+    /// The advisories to ignore: each an advisory ID or crate, or a table naming one with a `reason` and, for an
+    /// advisory, an `expiry`.
     pub ignore: Option<toml::Value>,
+    /// The default `expiry` of an ignored advisory that doesn't set its own.
+    pub ignore_expiry: Option<toml::Value>,
+}
+
+/// Whether `entry` of `[advisories] ignore` is a bare advisory ID rather than a crate. cargo-deny tells them apart by
+/// an uppercase prefix before the first `-`, which a crate name can't have.
+fn is_advisory_id(entry: &str) -> bool {
+    entry
+        .split_once('-')
+        .is_some_and(|(prefix, _)| prefix.chars().all(|c| c.is_ascii_uppercase()))
 }
 
 /// The `[bans]` table.
@@ -128,6 +139,44 @@ impl DenyToml {
             Ok(())
         } else {
             Err(format!("No reason given: {}", unexplained.join(", ")))
+        }
+    }
+
+    /// Check that every advisory in `[advisories] ignore` lapses: that it sets an `expiry`, or `[advisories]
+    /// ignore-expiry` gives a default. An ignored crate, which cargo-deny ignores for being yanked, has no expiry. The
+    /// error names each advisory that never lapses.
+    pub(crate) fn check_ignore_expiry(&self) -> Result<(), String> {
+        let Some(advisories) = self.advisories.as_ref() else {
+            return Ok(());
+        };
+        // A malformed `ignore` is the reason check's to report.
+        let (None, Some(toml::Value::Array(entries))) =
+            (&advisories.ignore_expiry, &advisories.ignore)
+        else {
+            return Ok(());
+        };
+
+        let lasting: Vec<&str> = entries
+            .iter()
+            .filter_map(|entry| {
+                if let Some(id) = entry.as_str() {
+                    return is_advisory_id(id).then_some(id);
+                }
+                let table = entry.as_table()?;
+                if table.contains_key("expiry") {
+                    return None;
+                }
+                table.get("id").and_then(toml::Value::as_str)
+            })
+            .collect();
+
+        if lasting.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "No expiry, and no ignore-expiry default: {}",
+                lasting.join(", ")
+            ))
         }
     }
 }
@@ -234,6 +283,45 @@ mod tests {
         assert_eq!(
             deny("[advisories]\nignore = \"RUSTSEC-2024-0002\"\n").check_ignore_reasons(),
             Err("ignore is \"RUSTSEC-2024-0002\", not an array".to_owned())
+        );
+    }
+
+    #[test]
+    fn ignored_advisories_lapse() {
+        assert_eq!(deny("").check_ignore_expiry(), Ok(()));
+        assert_eq!(
+            deny("[advisories]\nignore = []\n").check_ignore_expiry(),
+            Ok(())
+        );
+        let ignore = r#"
+            [advisories]
+            ignore = [
+                "RUSTSEC-2024-0001",
+                "yanked@0.1.1",
+                "proc-macro2@1.0.0",
+                { id = "RUSTSEC-2024-0002", reason = "Not reachable." },
+                { id = "RUSTSEC-2024-0003", reason = "Waiting on a fix.", expiry = "P30D" },
+                { crate = "atty@0.2.14", reason = "Only in a dev tool." },
+            ]
+            "#;
+        assert_eq!(
+            deny(ignore).check_ignore_expiry(),
+            Err(
+                "No expiry, and no ignore-expiry default: RUSTSEC-2024-0001, RUSTSEC-2024-0002"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            deny(&ignore.replace(
+                "[advisories]",
+                "[advisories]\nignore-expiry = \"2026-12-31\""
+            ))
+            .check_ignore_expiry(),
+            Ok(())
+        );
+        assert_eq!(
+            deny("[advisories]\nignore = \"RUSTSEC-2024-0002\"\n").check_ignore_expiry(),
+            Ok(())
         );
     }
 }

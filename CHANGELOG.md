@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when `deny.toml` ignores an advisory that never expires
+  (`deny-toml-ignore-expiry`): give it an `expiry`, a date or a duration from
+  the advisory's publication such as `"P90D"`, or set a default with
+  `[advisories] ignore-expiry`. Both need cargo-deny 0.21.0 or later.
 - The template's `norms-verify` job caches prek's hook environments with
   `actions/cache`, keyed on the prek version and `prek.toml`, so that it
   builds norms only when either changes rather than on every run.
