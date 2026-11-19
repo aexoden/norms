@@ -103,6 +103,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   takes the update's new dependencies unaged, and that until the release passes
   the release age, `cargo update` without it, Renovate's lock file maintenance
   included, fails on the pin or downgrades the package again.
+- Deny Clippy's warnings with `cargo clippy --config 'build.warnings="deny"'`
+  rather than `-- -D warnings`, which leaves Cargo's own lints, new in Rust
+  1.100, such as `unused_dependencies`, as warnings that pass. `norms verify`
+  warns on a `clippy` hook or CI job that still uses `-D warnings`, or denies
+  warnings through `RUSTFLAGS` or `CARGO_BUILD_WARNINGS`. Change the command as
+  the template does, on Rust 1.97 or later, since earlier toolchains ignore
+  `build.warnings`.
 - **Breaking:** Run the Git hooks with [prek](https://prek.j178.dev/) rather
   than pre-commit, configured in `prek.toml` rather than
   `.pre-commit-config.yaml`, which norms no longer reads. Language hooks have

@@ -159,7 +159,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
 
       - name: Lint Rust code with Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'
 
   fixtures:
     name: Check the fixtures against fresh renders

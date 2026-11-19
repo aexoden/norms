@@ -291,7 +291,7 @@ jobs:
           cache-workspaces: rust -> target
 
       - name: Lint Rust code with Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'
 
   msrv:
     name: Check the minimum supported Rust version

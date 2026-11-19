@@ -25,7 +25,7 @@ hooks and CI:
 
 ```sh
 cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'
 # cargo-llvm-cov and cargo-deny are installed separately
 cargo llvm-cov --workspace --all-features --show-missing-lines
 cargo test <name>                         # a single test, by name substring
@@ -38,11 +38,11 @@ cargo run -- github .                     # check norms' GitHub settings (gh)
 prek run --all-files                      # every hook, incl. reuse, markdownlint, tombi, zizmor
 ```
 
-Clippy runs `pedantic`, `nursery` and `cargo` with `-D warnings`, plus the
-restriction lints listed in `Cargo.toml` (see the Lints section of
-`STANDARDS.md`). Among them, `unwrap`/`expect`/`panic` and indexing are flagged
-outside tests, so return errors or handle `None` instead, and crate-internal
-items are `pub(crate)`.
+Clippy runs `pedantic`, `nursery` and `cargo`, plus the restriction lints
+listed in `Cargo.toml` (see the Lints section of `STANDARDS.md`), and
+`build.warnings="deny"` turns every warning into an error. Among the lints,
+`unwrap`/`expect`/`panic` and indexing are flagged outside tests, so return
+errors or handle `None` instead, and crate-internal items are `pub(crate)`.
 
 To render the template locally, much as the CI `template` job does:
 

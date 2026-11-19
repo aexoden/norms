@@ -228,7 +228,7 @@ jobs:
 {{- setup_rust() }}
 
       - name: Lint Rust code with Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'
 {%- if project_type == 'library' %}
 {{ job('msrv', 'Check the minimum supported Rust version', rust_dir, timeout=30) }}
 

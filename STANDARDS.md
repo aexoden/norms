@@ -1681,7 +1681,11 @@ and so does a workspace member. Whichever file a package uses must meet these
 rules. The file is named `clippy.toml`, not `.clippy.toml`, which Clippy also
 reads.
 
-The hooks and CI pass `-D warnings`, so any warning fails the check.
+The hooks and CI pass `--config 'build.warnings="deny"'`, so any warning fails
+the check: rustc's, Clippy's and those of Cargo's own lints, such as
+`unused_dependencies`. Clippy's `-D warnings` would leave Cargo's lints as
+warnings. Cargo respects `build.warnings` as of Rust 1.97; earlier toolchains
+silently ignore it and pass every warning.
 
 #### Dependency Policy
 
@@ -1728,14 +1732,14 @@ library target, binaries or not, also runs them on their own, with `cargo test
 
 The Git hooks and CI both run:
 
-| Hook ID         | Command                                                                         |
-|-----------------|---------------------------------------------------------------------------------|
-| `cargo-lock`    | `cargo update --workspace --locked`                                             |
-| `rustfmt`       | `cargo fmt --all --check`                                                       |
-| `clippy`        | `cargo clippy --workspace --all-targets --all-features -- -D warnings`          |
-| `cargo-test`    | `cargo llvm-cov --workspace --all-features --show-missing-lines`                |
-| `cargo-doctest` | `cargo test --workspace --all-features --doc` (library targets only)            |
-| `cargo-deny`    | `cargo deny --workspace --all-features check -D warnings bans licenses sources` |
+| Hook ID         | Command                                                                                  |
+|-----------------|------------------------------------------------------------------------------------------|
+| `cargo-lock`    | `cargo update --workspace --locked`                                                      |
+| `rustfmt`       | `cargo fmt --all --check`                                                                |
+| `clippy`        | `cargo clippy --workspace --all-targets --all-features --config 'build.warnings="deny"'` |
+| `cargo-test`    | `cargo llvm-cov --workspace --all-features --show-missing-lines`                         |
+| `cargo-doctest` | `cargo test --workspace --all-features --doc` (library targets only)                     |
+| `cargo-deny`    | `cargo deny --workspace --all-features check -D warnings bans licenses sources`          |
 
 `cargo-lock` fails, naming the entries that would change, if `Cargo.lock` is
 out of date with `Cargo.toml`. Updating only the workspace's own packages,
@@ -1749,10 +1753,12 @@ coverage, as `cargo test` doesn't, and, for a component with a library target,
 when no hook, or no CI step, runs its doctests, as `cargo test` does unless it
 selects other targets.
 
-`norms verify` fails a `clippy` hook or CI job that runs Clippy without
-`-D warnings`, since every lint is set to `warn`, so Clippy would pass whatever
-it finds, and warns on one without `--workspace`, `--all-targets` or
-`--all-features`, or that denies warnings through `RUSTFLAGS` instead. It also
+`norms verify` fails a `clippy` hook or CI job that runs Clippy without denying
+warnings, since every lint is set to `warn`, so Clippy would pass whatever it
+finds. It warns on one that denies them with `-- -D warnings`, which leaves
+Cargo's own lints as warnings, or through `RUSTFLAGS` or `CARGO_BUILD_WARNINGS`
+instead of `--config 'build.warnings="deny"'`, and on one without
+`--workspace`, `--all-targets` or `--all-features`. It also
 warns on a `cargo-deny` hook that passes other arguments than the table's,
 apart from `--manifest-path`.
 

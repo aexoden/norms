@@ -177,7 +177,7 @@ fail  rust-prek-cargo-lock  Rust prek: cargo-lock hook
       No cargo-lock hook
 fail  rust-prek-rustfmt  Rust prek: rustfmt hook (--check)
       No rustfmt hook
-fail  rust-prek-clippy  Rust prek: clippy hook (-D warnings)
+fail  rust-prek-clippy  Rust prek: clippy hook (denies warnings)
       No clippy hook
 fail  rust-prek-cargo-test  Rust prek: cargo-test hook (with coverage)
       No cargo-test hook
@@ -187,7 +187,7 @@ pass  rust-prek-local-hooks  Rust prek: language hooks are local, system and tak
 fail  rust-ci-cargo-lock  Rust CI: Cargo.lock up to date
 fail  rust-ci-rustfmt  Rust CI: format check
       No step uses actions-rust-lang/rustfmt
-fail  rust-ci-clippy  Rust CI: clippy check (-D warnings)
+fail  rust-ci-clippy  Rust CI: clippy check (denies warnings)
       No step runs cargo clippy
 fail  rust-ci-test  Rust CI: tests (with coverage)
       No step runs cargo test or cargo llvm-cov

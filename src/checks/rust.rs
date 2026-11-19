@@ -962,7 +962,7 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
 
     report.check(
         "rust-prek-clippy",
-        "Rust prek: clippy hook (-D warnings)",
+        "Rust prek: clippy hook (denies warnings)",
         clippy_hooks(config),
     );
 
@@ -1005,7 +1005,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     );
     report.check(
         "rust-ci-clippy",
-        "Rust CI: clippy check (-D warnings)",
+        "Rust CI: clippy check (denies warnings)",
         clippy_in_ci(workflow),
     );
     report.check(
@@ -1135,8 +1135,22 @@ fn runs_cargo_deny(words: &[&str]) -> bool {
 /// and feature.
 const CLIPPY_OPTIONS: [&str; 3] = ["--workspace", "--all-targets", "--all-features"];
 
-/// Whether `args`, the arguments `cargo clippy` passes on to Clippy after `--`, deny warnings: `-D warnings`, as the
-/// standard gives it, or another spelling of it.
+/// The Cargo configuration, as `cargo clippy --config` takes it, that turns every lint warning into an error: rustc's,
+/// Clippy's and Cargo's own, such as `unused_dependencies`.
+const DENY_WARNINGS_CONFIG: &str = "build.warnings=\"deny\"";
+
+/// Whether `options`, the arguments `cargo clippy` takes before `--`, set [`DENY_WARNINGS_CONFIG`] with `--config`.
+fn configures_deny_warnings(options: &[&str]) -> bool {
+    options
+        .iter()
+        .any(|option| option.strip_prefix("--config=") == Some(DENY_WARNINGS_CONFIG))
+        || options
+            .windows(2)
+            .any(|pair| matches!(pair, ["--config", config] if *config == DENY_WARNINGS_CONFIG))
+}
+
+/// Whether `args`, the arguments `cargo clippy` passes on to Clippy after `--`, deny warnings with `-D warnings` or
+/// another spelling of it, which denies rustc's and Clippy's lints but not Cargo's own.
 fn denies_warnings(args: &[&str]) -> bool {
     args.iter()
         .any(|arg| matches!(*arg, "-Dwarnings" | "--deny=warnings"))
@@ -1145,9 +1159,10 @@ fn denies_warnings(args: &[&str]) -> bool {
             .any(|pair| matches!(pair, ["-D" | "--deny", "warnings"]))
 }
 
-/// Whether a command's words run Clippy through `cargo clippy`, and if so, its issue: a failure if it doesn't deny
-/// warnings, since the lints table sets every lint to `warn`, so Clippy then passes whatever it finds, and a warning
-/// if it lacks one of [`CLIPPY_OPTIONS`], so that it lints less than the whole workspace.
+/// Whether a command's words run Clippy through `cargo clippy`, and if so, its issues: a failure if it denies no
+/// warnings, since the lints table sets every lint to `warn`, so Clippy then passes whatever it finds, a warning if it
+/// denies them with `-D warnings` rather than [`DENY_WARNINGS_CONFIG`], which leaves Cargo's own lints as warnings,
+/// and a warning if it lacks one of [`CLIPPY_OPTIONS`], so that it lints less than the whole workspace.
 fn clippy_run(words: &[&str]) -> Option<Result<(), Issue>> {
     let (subcommand, args) = cargo_subcommand(words)?;
     if subcommand != "clippy" {
@@ -1162,23 +1177,30 @@ fn clippy_run(words: &[&str]) -> Option<Result<(), Issue>> {
                     args.get(split + 1..).unwrap_or_default(),
                 )
             });
-    if !denies_warnings(clippy_args) {
-        return Some(Err(Issue::fail(
-            "cargo clippy runs without -D warnings, so it passes on every lint, which the lints table sets to warn",
+    let mut issues = Vec::new();
+    if !configures_deny_warnings(options) {
+        if !denies_warnings(clippy_args) {
+            return Some(Err(Issue::fail(format!(
+                "cargo clippy runs without --config '{DENY_WARNINGS_CONFIG}', so it passes on every lint, which the \
+                 lints table sets to warn"
+            ))));
+        }
+        issues.push(Issue::warn(format!(
+            "cargo clippy denies warnings with -D warnings rather than --config '{DENY_WARNINGS_CONFIG}', so Cargo's \
+             own lints, such as unused_dependencies, pass"
         )));
     }
     let missing: Vec<&str> = CLIPPY_OPTIONS
         .into_iter()
         .filter(|option| !options.contains(option))
         .collect();
-    Some(if missing.is_empty() {
-        Ok(())
-    } else {
-        Err(Issue::warn(format!(
+    if !missing.is_empty() {
+        issues.push(Issue::warn(format!(
             "cargo clippy runs without {}",
             missing.join(", ")
-        )))
-    })
+        )));
+    }
+    Some(Issue::combine(issues))
 }
 
 /// Check that each `clippy` hook runs `cargo clippy` as [`clippy_run`] requires. A hook that runs it nowhere norms can
@@ -1203,32 +1225,51 @@ fn clippy_hooks(config: &PrekConfig) -> Result<(), Issue> {
     Issue::combine(issues.filter_map(Result::err))
 }
 
-/// Check that some step runs `cargo clippy` as [`clippy_run`] requires. Warnings denied through `RUSTFLAGS` rather than
-/// `-D warnings`, in any step's environment, still fail Clippy, but differ from the standard, so they warn instead.
+/// Check that some step runs `cargo clippy` as [`clippy_run`] requires. Warnings denied through the environment of any
+/// step instead, with `RUSTFLAGS` or `CARGO_BUILD_WARNINGS`, still fail Clippy, but differ from the standard, so they
+/// warn instead.
 fn clippy_in_ci(workflow: &Workflow) -> Result<(), Issue> {
     let runs = workflow.filter_map_commands(clippy_run);
     if runs.is_empty() {
         Err(Issue::fail("No step runs cargo clippy"))
     } else if runs.iter().any(Result::is_ok) {
         Ok(())
-    } else if rustflags_deny_warnings(workflow) {
-        Err(Issue::warn(
-            "cargo clippy denies warnings through RUSTFLAGS rather than -D warnings",
-        ))
+    } else if let Some(variable) = env_denying_warnings(workflow) {
+        let cargo_lints = if variable == "RUSTFLAGS" {
+            ", so Cargo's own lints, such as unused_dependencies, pass"
+        } else {
+            ""
+        };
+        Err(Issue::warn(format!(
+            "cargo clippy denies warnings through {variable} rather than --config '{DENY_WARNINGS_CONFIG}'{cargo_lints}"
+        )))
     } else {
         Issue::alternatives(runs.into_iter().filter_map(Result::err))
     }
 }
 
-/// Whether the environment of some step of `workflow` sets `RUSTFLAGS` to deny warnings.
-fn rustflags_deny_warnings(workflow: &Workflow) -> bool {
-    workflow.jobs.values().any(|job| {
-        job.steps.iter().any(|step| {
-            workflow
-                .env(job, step, "RUSTFLAGS")
-                .is_some_and(|flags| denies_warnings(&flags.split_whitespace().collect::<Vec<_>>()))
+/// The variable through which the environment of some step of `workflow` denies warnings, if one does:
+/// `CARGO_BUILD_WARNINGS` set to `deny`, or `RUSTFLAGS` passing `-D warnings`.
+fn env_denying_warnings(workflow: &Workflow) -> Option<&'static str> {
+    let any_step = |denies: &dyn Fn(&str) -> bool, variable: &str| {
+        workflow.jobs.values().any(|job| {
+            job.steps.iter().any(|step| {
+                workflow
+                    .env(job, step, variable)
+                    .is_some_and(|value| denies(&value))
+            })
         })
-    })
+    };
+    if any_step(&|value| value == "deny", "CARGO_BUILD_WARNINGS") {
+        Some("CARGO_BUILD_WARNINGS")
+    } else if any_step(
+        &|flags| denies_warnings(&flags.split_whitespace().collect::<Vec<_>>()),
+        "RUSTFLAGS",
+    ) {
+        Some("RUSTFLAGS")
+    } else {
+        None
+    }
 }
 
 /// The arguments a command's words pass to cargo-deny, if they run it, as [`runs_cargo_deny`] tells, joined with single
@@ -2472,19 +2513,40 @@ jobs:
             clippy_run(&words)
         };
         for line in [
-            "cargo clippy --workspace --all-targets --all-features -- -D warnings",
-            "cargo +1.99.1 clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features -- -Dwarnings",
-            "cargo clippy --all-features --all-targets --workspace -- --deny warnings",
-            "cargo clippy --workspace --all-targets --all-features -- --deny=warnings -W clippy::pedantic",
+            r#"cargo clippy --workspace --all-targets --all-features --config build.warnings="deny""#,
+            r#"cargo +1.99.1 clippy --manifest-path rust/Cargo.toml --config=build.warnings="deny" --workspace --all-targets --all-features"#,
+            r#"cargo clippy --all-features --all-targets --workspace --config build.warnings="deny" -- -D warnings"#,
+            r#"cargo clippy --workspace --all-targets --all-features --config build.warnings="deny" -- -W clippy::pedantic"#,
         ] {
             assert_eq!(run(line), Some(Ok(())), "{line}");
         }
-        // Without -D warnings Clippy passes on every lint the lints table sets to warn, whatever else it passes.
+        // -D warnings, in any spelling, denies rustc's and Clippy's lints, but not Cargo's own.
+        let rather = |more: &str| {
+            Some(Err(Issue::warn(format!(
+                "cargo clippy denies warnings with -D warnings rather than --config 'build.warnings=\"deny\"', so \
+                 Cargo's own lints, such as unused_dependencies, pass{more}"
+            ))))
+        };
+        for line in [
+            "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+            "cargo clippy --workspace --all-targets --all-features -- -Dwarnings",
+            "cargo clippy --all-features --all-targets --workspace -- --deny warnings",
+            "cargo clippy --workspace --all-targets --all-features -- --deny=warnings -W clippy::pedantic",
+        ] {
+            assert_eq!(run(line), rather(""), "{line}");
+        }
+        assert_eq!(
+            run("cargo clippy --workspace -- -D warnings"),
+            rather("; cargo clippy runs without --all-targets, --all-features")
+        );
+        // Without either Clippy passes on every lint the lints table sets to warn, whatever else it passes.
         for line in [
             "cargo clippy --workspace --all-targets --all-features",
             "cargo clippy --workspace --all-targets --all-features -D warnings",
             "cargo clippy --workspace --all-targets --all-features -- -W warnings",
             "cargo clippy --workspace --all-targets --all-features -- -D clippy::all",
+            r#"cargo clippy --workspace --all-targets --all-features --config build.warnings="warn""#,
+            r#"cargo clippy --workspace --all-targets --all-features -- --config build.warnings="deny""#,
         ] {
             assert_eq!(
                 run(line).map(|result| result.map_err(|issue| issue.severity)),
@@ -2493,7 +2555,7 @@ jobs:
             );
         }
         assert_eq!(
-            run("cargo clippy --workspace -- -D warnings"),
+            run(r#"cargo clippy --workspace --config build.warnings="deny""#),
             Some(Err(Issue::warn(
                 "cargo clippy runs without --all-targets, --all-features"
             )))
@@ -2513,7 +2575,7 @@ jobs:
             let hooks: Vec<_> = entries.iter().map(|entry| ("clippy", *entry)).collect();
             clippy_hooks(&PrekConfig::with_local_hooks(&hooks))
         };
-        let standard = "cargo clippy --workspace --all-targets --all-features -- -D warnings";
+        let standard = "cargo clippy --workspace --all-targets --all-features --config 'build.warnings=\"deny\"'";
         assert_eq!(hooks(&[standard]), Ok(()));
         // Every copy of the hook must deny warnings.
         assert_eq!(
@@ -2561,16 +2623,33 @@ jobs:
         );
         // A run that only lacks some options warns.
         assert_eq!(
-            ci(&["cargo clippy --workspace -- -D warnings"]).map_err(|issue| issue.severity),
+            ci(&["cargo clippy --workspace --config 'build.warnings=\"deny\"'"])
+                .map_err(|issue| issue.severity),
             Err(Severity::Warn)
         );
-        // Warnings denied through RUSTFLAGS still fail Clippy, but aren't the standard's form.
-        let yaml = "jobs:\n  clippy:\n    env:\n      RUSTFLAGS: -Dwarnings\n    steps:\n      - run: cargo clippy --workspace --all-targets --all-features\n";
+        // Warnings denied through the environment still fail Clippy, but aren't the standard's form.
+        let env = |env: &str| {
+            let yaml = format!(
+                "jobs:\n  clippy:\n    env:\n      {env}\n    steps:\n      - run: cargo clippy --workspace --all-targets --all-features\n"
+            );
+            clippy_in_ci(&serde_saphyr::from_str(&yaml).expect("workflow parses"))
+        };
         assert_eq!(
-            clippy_in_ci(&serde_saphyr::from_str(yaml).expect("workflow parses")),
+            env("RUSTFLAGS: -Dwarnings"),
             Err(Issue::warn(
-                "cargo clippy denies warnings through RUSTFLAGS rather than -D warnings"
+                "cargo clippy denies warnings through RUSTFLAGS rather than --config 'build.warnings=\"deny\"', so \
+                 Cargo's own lints, such as unused_dependencies, pass"
             ))
+        );
+        assert_eq!(
+            env("CARGO_BUILD_WARNINGS: deny"),
+            Err(Issue::warn(
+                "cargo clippy denies warnings through CARGO_BUILD_WARNINGS rather than --config 'build.warnings=\"deny\"'"
+            ))
+        );
+        assert_eq!(
+            env("CARGO_BUILD_WARNINGS: warn").map_err(|issue| issue.severity),
+            Err(Severity::Fail)
         );
     }
 
