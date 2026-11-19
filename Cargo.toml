@@ -44,6 +44,9 @@ toml = "=1.2.1"
 [dev-dependencies]
 tempfile = "=3.27.0"
 
+[lints.cargo]
+pedantic = { level = "warn", priority = -1 }
+
 [lints.clippy]
 absolute_paths = "warn"
 allow_attributes = "warn"

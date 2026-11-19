@@ -304,7 +304,7 @@ pub(crate) fn check_rust_version(ctx: &ComponentContext, report: &mut Report) {
 // Clippy and compiler lints
 //
 
-/// Check the Clippy and compiler lints of the component's package and of each member of its workspace. A virtual
+/// Check the Cargo, Clippy and compiler lints of the component's package and of each member of its workspace. A virtual
 /// manifest has no package of its own to lint.
 pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.cargo().as_ref_ok() else {
@@ -424,6 +424,9 @@ const RUSTC_LINTS: [(&str, LintLevel); 5] = [
     ("unused_qualifications", LintLevel::Warn),
 ];
 
+/// Cargo's own lints and lint groups the standard sets in `[lints.cargo]`, with the least level each needs.
+const CARGO_LINTS: [(&str, LintLevel); 1] = [("pedantic", LintLevel::Warn)];
+
 /// Whether `lints` sets the lint `name` to `level` or a stricter one.
 fn lint_at_least(
     lints: &HashMap<String, toml::Value>,
@@ -445,7 +448,7 @@ fn lint_at_least(
     }
 }
 
-/// Check the Clippy and compiler lints of the package whose manifest, labeled `label`, is `manifest`, with any it
+/// Check the Cargo, Clippy and compiler lints of the package whose manifest, labeled `label`, is `manifest`, with any it
 /// inherits resolved from `workspace`.
 fn check_package_lints(
     label: &str,
@@ -478,18 +481,33 @@ fn check_package_lints(
     report.should(
         "rustc-lints",
         format!("{label}: compiler lints configured ([lints.rust])"),
-        manifest.lints("rust", workspace).and_then(|lints| {
-            let issues: Vec<String> = RUSTC_LINTS
-                .into_iter()
-                .filter_map(|(lint, level)| lint_at_least(lints, lint, level).err())
-                .collect();
-            if issues.is_empty() {
-                Ok(())
-            } else {
-                Err(issues.join("; "))
-            }
-        }),
+        lints_at_least(manifest, workspace, "rust", &RUSTC_LINTS),
     );
+    report.should(
+        "cargo-lints",
+        format!("{label}: Cargo lints configured ([lints.cargo])"),
+        lints_at_least(manifest, workspace, "cargo", &CARGO_LINTS),
+    );
+}
+
+/// Check that the lints of `tool` that apply to `manifest`, resolved against `workspace`, set each of `required` to its
+/// level or a stricter one, naming every one that falls short.
+fn lints_at_least(
+    manifest: &CargoToml,
+    workspace: Option<&CargoWorkspace>,
+    tool: &str,
+    required: &[(&str, LintLevel)],
+) -> Result<(), String> {
+    let lints = manifest.lints(tool, workspace)?;
+    let issues: Vec<String> = required
+        .iter()
+        .filter_map(|&(lint, level)| lint_at_least(lints, lint, level).err())
+        .collect();
+    if issues.is_empty() {
+        Ok(())
+    } else {
+        Err(issues.join("; "))
+    }
 }
 
 /// Check the Clippy configurations that apply to the component: the one its package uses, and any that members of its
@@ -2706,7 +2724,7 @@ jobs:
 
         // A package's lints are reported together, every compiler lint's issue in one result.
         let manifest: CargoToml = toml::from_str(
-            "[package]\nname = \"x\"\n\n[lints.clippy]\npedantic = \"warn\"\nnursery = \"allow\"\ncargo = \"deny\"\n\n[lints.rust]\nfuture_incompatible = \"warn\"\nlet_underscore = \"warn\"\nunsafe_code = \"deny\"\nunused_qualifications = \"warn\"\n",
+            "[package]\nname = \"x\"\n\n[lints.cargo]\npedantic = \"allow\"\n\n[lints.clippy]\npedantic = \"warn\"\nnursery = \"allow\"\ncargo = \"deny\"\n\n[lints.rust]\nfuture_incompatible = \"warn\"\nlet_underscore = \"warn\"\nunsafe_code = \"deny\"\nunused_qualifications = \"warn\"\n",
         )
         .unwrap();
         let mut report = Report::new(PathBuf::new(), Vec::new());
@@ -2737,6 +2755,11 @@ jobs:
                     Status::Warn,
                     "unreachable_pub isn't set; unsafe_code is deny, not forbid"
                 ),
+                (
+                    "cargo-lints",
+                    Status::Warn,
+                    "pedantic is allow, not warn or stricter"
+                ),
             ]
         );
         assert_eq!(
@@ -2753,6 +2776,18 @@ jobs:
                 .join("\n"),
         )
         .unwrap();
+        // Cargo lints inherited from the workspace count as the package's own.
+        let member: CargoToml =
+            toml::from_str("[package]\nname = \"x\"\n\n[lints]\nworkspace = true\n").unwrap();
+        let root: CargoToml = toml::from_str(
+            "[workspace]\n\n[workspace.lints.cargo]\npedantic = { level = \"warn\", priority = -1 }\n",
+        )
+        .unwrap();
+        assert_eq!(
+            lints_at_least(&member, root.workspace.as_ref(), "cargo", &CARGO_LINTS),
+            Ok(())
+        );
+
         let template_lints = template.lints.unwrap();
         let clippy = template_lints.clippy.unwrap();
         for (_, group) in CLIPPY_GROUPS {
@@ -2765,6 +2800,10 @@ jobs:
         let rust = template_lints.rust.unwrap();
         for (lint, level) in RUSTC_LINTS {
             assert_eq!(lint_at_least(&rust, lint, level), Ok(()), "{lint}");
+        }
+        let cargo = template_lints.cargo.unwrap();
+        for (lint, level) in CARGO_LINTS {
+            assert_eq!(lint_at_least(&cargo, lint, level), Ok(()), "{lint}");
         }
     }
 

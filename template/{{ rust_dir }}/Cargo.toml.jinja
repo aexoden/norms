@@ -19,6 +19,9 @@ categories = {{ rust_categories | tojson }}
 
 [dependencies]
 
+[lints.cargo]
+pedantic = { level = "warn", priority = -1 }
+
 [lints.clippy]
 absolute_paths = "warn"
 allow_attributes = "warn"

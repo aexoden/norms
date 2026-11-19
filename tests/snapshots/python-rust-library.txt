@@ -159,6 +159,7 @@ pass  clippy-nursery  [rust] Cargo.toml: Clippy nursery enabled
 pass  clippy-cargo  [rust] Cargo.toml: Clippy cargo enabled
 pass  clippy-restriction-lints  [rust] Cargo.toml: Clippy restriction lints set
 pass  rustc-lints  [rust] Cargo.toml: compiler lints configured ([lints.rust])
+pass  cargo-lints  [rust] Cargo.toml: Cargo lints configured ([lints.cargo])
 pass  clippy-toml-exists  [rust] clippy.toml: exists
 pass  clippy-toml-valid  [rust] clippy.toml: valid
 pass  clippy-toml-allow-in-tests  [rust] clippy.toml: unwrap, expect and panic allowed in tests

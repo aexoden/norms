@@ -213,6 +213,7 @@ pub(crate) struct PackageMetadata<'a> {
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub(crate) struct CargoLints {
+    pub cargo: Option<HashMap<String, toml::Value>>,
     pub clippy: Option<HashMap<String, toml::Value>>,
     pub rust: Option<HashMap<String, toml::Value>>,
     /// Whether the package inherits the workspace's `[workspace.lints]` (`[lints] workspace = true`).
@@ -220,9 +221,10 @@ pub(crate) struct CargoLints {
 }
 
 impl CargoLints {
-    /// The lints of `tool`: `clippy`, or `rust` for the compiler's own.
+    /// The lints of `tool`: `cargo` for Cargo's own, `clippy`, or `rust` for the compiler's.
     fn tool(&self, tool: &str) -> Option<&HashMap<String, toml::Value>> {
         match tool {
+            "cargo" => self.cargo.as_ref(),
             "clippy" => self.clippy.as_ref(),
             "rust" => self.rust.as_ref(),
             _ => None,
@@ -365,8 +367,8 @@ impl CargoToml {
         self.lints("clippy", workspace)
     }
 
-    /// The lints of `tool` (`clippy`, or `rust` for the compiler's own) that apply, resolved against `workspace`, the
-    /// `[workspace]` table of the workspace's root manifest.
+    /// The lints of `tool` (`cargo` for Cargo's own, `clippy`, or `rust` for the compiler's) that apply, resolved
+    /// against `workspace`, the `[workspace]` table of the workspace's root manifest.
     ///
     /// A package's lints are its own `[lints.<tool>]`, or the workspace's `[workspace.lints.<tool>]` if it inherits
     /// them with `[lints] workspace = true`; Cargo doesn't apply the workspace's lints otherwise, even to the package in

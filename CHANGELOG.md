@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Set Cargo's own `pedantic` lint group, new in Rust 1.100, to `warn` in the
+  template's `[lints.cargo]`, and warn when a package doesn't
+  (`cargo-lints`). Add the table as the template does, or inherit it from
+  `[workspace.lints.cargo]`.
 - Add `norms github <path>`, which checks the GitHub repository's rulesets
   and settings against `STANDARDS.md`'s Branch Protection and Repository
   Settings sections, reading them through the GitHub CLI (`gh`). Its checks'

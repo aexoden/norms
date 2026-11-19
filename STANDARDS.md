@@ -1527,10 +1527,14 @@ so on.
 
 #### Lints
 
-The baseline enables the `pedantic`, `nursery` and `cargo` Clippy groups, plus
-a selection of restriction lints:
+The baseline enables Cargo's own `pedantic` lint group, the `pedantic`,
+`nursery` and `cargo` Clippy groups, and a selection of Clippy restriction
+lints:
 
 ```toml
+[lints.cargo]
+pedantic = { level = "warn", priority = -1 }
+
 [lints.clippy]
 absolute_paths = "warn"
 allow_attributes = "warn"
@@ -1615,17 +1619,22 @@ unused_qualifications = "warn"
 Groups are set to priority -1 so that individual lints, which default to 0, can
 override them.
 
-`norms verify` warns when a package doesn't set the `pedantic`, `nursery` and
-`cargo` groups to `warn` or stricter, or any of the `[lints.rust]` entries
-above to its level or stricter. It also warns when a package leaves out any of
-the restriction lints. Setting one to `allow` counts as a deliberate choice, so
-a package that needs to, such as an application calling `std::process::exit`,
-allows that lint alone, with a comment saying why.
+Cargo before Rust 1.100 doesn't know `[lints.cargo]` and warns about an unused
+manifest key, as it does in a library's `msrv` job on an older toolchain. That
+job doesn't deny warnings, so the warning is harmless.
 
-In a workspace, the lints may be set once in `[workspace.lints.clippy]` and
-`[workspace.lints.rust]`. Cargo applies them only to packages that inherit them
-with `[lints] workspace = true`, which inherits both tables, including the
-package in the root manifest, if there is one.
+`norms verify` warns when a package doesn't set Cargo's `pedantic` group or
+Clippy's `pedantic`, `nursery` and `cargo` groups to `warn` or stricter, or any
+of the `[lints.rust]` entries above to its level or stricter. It also warns
+when a package leaves out any of the restriction lints. Setting one to `allow`
+counts as a deliberate choice, so a package that needs to, such as an
+application calling `std::process::exit`, allows that lint alone, with a comment
+saying why.
+
+In a workspace, the lints may be set once in `[workspace.lints.cargo]`,
+`[workspace.lints.clippy]` and `[workspace.lints.rust]`. Cargo applies them only
+to packages that inherit them with `[lints] workspace = true`, which inherits
+all three tables, including the package in the root manifest, if there is one.
 
 `multiple_crate_versions` is allowed because transitive dependencies routinely
 pull in several versions of the same crate, which a project cannot fix.
