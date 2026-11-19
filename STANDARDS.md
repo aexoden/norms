@@ -11,8 +11,8 @@ standards, there were several guiding principles:
 3. Any developer should be able to build and run the project identically.
 
 When a project has good reason to depart from a standard, it records the
-exception, with its rationale, in its
-[norms configuration](#norms-configuration). `norms verify` then reports the
+exception, with its rationale, in its [norms
+configuration](#norms-configuration). `norms verify` then reports the
 corresponding check as skipped, with the rationale, instead of failing it.
 
 ## Project Template
@@ -27,16 +27,16 @@ uvx copier copy --trust gh:aexoden/norms <path>
 
 The template asks for the primary language, which lives at the repository root,
 any secondary languages and their subdirectories, and whether the project is an
-application or a library. Copying needs `--trust` because the template runs
-each language's tool to generate any missing lock files.
+application or a library. Copying needs `--trust` because the template runs each
+language's tool to generate any missing lock files.
 
 Existing projects stay current with `uvx copier update --trust`, which merges
 the changes between the template version recorded in `.copier-answers.yml` and
 the latest one. Template versions are norms release tags (`vX.Y.Z`).
 
 The template renders only the files in the repository. Configure the GitHub
-repository itself as [Branch Protection](#branch-protection) and
-[Repository Settings](#repository-settings) describe.
+repository itself as [Branch Protection](#branch-protection) and [Repository
+Settings](#repository-settings) describe.
 
 ## norms Configuration
 
@@ -57,11 +57,11 @@ reason = "The repository holds no binary files."
   root or in any subdirectory. It checks each component's own files in its
   directory, and the repository-wide files, such as the workflows, once. A
   marker inside a component of the same language, such as a Cargo workspace
-  member, belongs to that component; components of different languages may
-  nest. The search skips hidden directories, whatever the project's
-  `.gitignore` files exclude, `node_modules`, `target` and `.venv`, and doesn't
-  follow symlinked directories or symlinked markers that lead outside the
-  project. A directory it can't read is reported as a warning.
+  member, belongs to that component; components of different languages may nest.
+  The search skips hidden directories, whatever the project's `.gitignore` files
+  exclude, `node_modules`, `target` and `.venv`, and doesn't follow symlinked
+  directories or symlinked markers that lead outside the project. A directory it
+  can't read is reported as a warning.
 - Some standards differ between applications and libraries. norms treats a Rust
   component as an application if it builds a binary (`src/main.rs` or
   `src/bin/`, unless `autobins = false`, or a `[[bin]]` target), even alongside
@@ -76,22 +76,22 @@ reason = "The repository holds no binary files."
   that the root package or a member depends on by path, less those `exclude`
   lists. A member without a valid `Cargo.toml` fails; one outside the
   workspace's directory, or a pattern norms can't expand, is reported as a
-  warning. Each member's package metadata and Clippy lints are checked like
-  any package's, with what it inherits from the workspace resolved. A virtual
-  manifest, which has no `[package]`, isn't checked for them itself, so one
-  with no members is reported as a warning.
-- norms finds a pnpm workspace's packages as pnpm does: the `package.json`
-  files in the directories that `pnpm-workspace.yaml`'s `packages` patterns
-  match, less those a `!` pattern matches and those in `node_modules` or
+  warning. Each member's package metadata and Clippy lints are checked like any
+  package's, with what it inherits from the workspace resolved. A virtual
+  manifest, which has no `[package]`, isn't checked for them itself, so one with
+  no members is reported as a warning.
+- norms finds a pnpm workspace's packages as pnpm does: the `package.json` files
+  in the directories that `pnpm-workspace.yaml`'s `packages` patterns match,
+  less those a `!` pattern matches and those in `node_modules` or
   `bower_components`. Without `packages`, the workspace is the root package
-  alone. Unlike pnpm, it doesn't look in hidden directories or through
-  symlinked ones, or read `package.yaml` and `package.json5` manifests, and,
-  like pnpm, it searches the directories `[components] exclude` lists. A
-  manifest it can't parse fails, and a pattern leading outside the workspace's
-  directory is reported as a warning. Each package's `package.json` is checked
-  like the component's own, its version included (see [TypeScript Package
-  Configuration](#package-configuration)), but for the `devEngines` pins and
-  the scripts, which belong in the root's alone.
+  alone. Unlike pnpm, it doesn't look in hidden directories or through symlinked
+  ones, or read `package.yaml` and `package.json5` manifests, and, like pnpm, it
+  searches the directories `[components] exclude` lists. A manifest it can't
+  parse fails, and a pattern leading outside the workspace's directory is
+  reported as a warning. Each package's `package.json` is checked like the
+  component's own, its version included (see [TypeScript Package
+  Configuration](#package-configuration)), but for the `devEngines` pins and the
+  scripts, which belong in the root's alone.
 - `[components] exclude` lists directories, relative to the root, that hold
   marker files but no components, such as test fixtures. norms doesn't search
   them for components or for `.yml` files (see [YAML Files](#yaml-files)). An
@@ -100,18 +100,18 @@ reason = "The repository holds no binary files."
 - Each `[[waivers]]` entry names a check by its ID and gives the reason for the
   exception. A waived check is reported as skipped, with the reason, instead of
   failing or warning; a check that inspects several files or components is
-  waived for all of them. A waiver whose check passes or doesn't run is
-  reported as a warning, so waivers don't outlive their need. The checks of
-  `norms.toml` itself can't be waived; a waiver naming one fails.
+  waived for all of them. A waiver whose check passes or doesn't run is reported
+  as a warning, so waivers don't outlive their need. The checks of `norms.toml`
+  itself can't be waived; a waiver naming one fails.
 - Every waiver needs a reason, and a check may be waived only once.
 - Check IDs are stable, kebab-case names of the subject and then the property
   checked, such as `cargo-toml-license`. `norms verify` prints each one before
   the check's description, which may change between versions while the ID
   doesn't.
 - Unknown keys are errors.
-- The waivers of checks whose IDs start with `github-` apply to
-  `norms github` (see [Checking the Settings](#checking-the-settings)), and
-  `norms verify` ignores them, as `norms github` ignores the others.
+- The waivers of checks whose IDs start with `github-` apply to `norms github`
+  (see [Checking the Settings](#checking-the-settings)), and `norms verify`
+  ignores them, as `norms github` ignores the others.
 
 `norms verify <path>` reports each check as passed, failed, warned or skipped,
 and exits with failure if any check failed. With `--deny-warnings`, it also
@@ -133,8 +133,8 @@ norms can't be sure: the gate job's failing step, and the
 `python-version` inputs of the jobs testing a library's oldest supported Rust
 and Python. norms can't tell one written another way from one that doesn't work,
 so written another way, it fails as if absent. `norms github` fails on any
-repository setting that differs, as
-[Checking the Settings](#checking-the-settings) describes.
+repository setting that differs, as [Checking the
+Settings](#checking-the-settings) describes.
 
 ## Development Environment
 
@@ -170,8 +170,8 @@ When Devbox is used:
   `DEVBOX_COREPACK_ENABLED`.
 - Service setup steps (initializing and creating databases, for example) are
   provided as Devbox scripts and documented in the README.
-- Git hooks and CI steps invoke tools directly. Only steps that need a
-  running service may depend on Devbox.
+- Git hooks and CI steps invoke tools directly. Only steps that need a running
+  service may depend on Devbox.
 
 ## Editor Configuration
 
@@ -205,8 +205,7 @@ Additional project-specific options can be included if required.
 
 `norms verify` reads the file as editors do, and checks the properties it gives
 every file, YAML, JSON and TOML files, and, with TypeScript, `.prettierrc`,
-whichever sections set them, so other sections may change them for other
-files.
+whichever sections set them, so other sections may change them for other files.
 
 ## YAML Files
 
@@ -233,13 +232,12 @@ project.
 
 ### Security Policy
 
-Projects should have a `SECURITY.md` at the repository root, which the
-template renders, saying how to report a vulnerability and which versions get
-fixes:
+Projects should have a `SECURITY.md` at the repository root, which the template
+renders, saying how to report a vulnerability and which versions get fixes:
 
-- Vulnerabilities are reported through the repository's
-  [private vulnerability reporting](#repository-settings), linked to its form,
-  rather than in a public issue.
+- Vulnerabilities are reported through the repository's [private vulnerability
+  reporting](#repository-settings), linked to its form, rather than in a public
+  issue.
 - Only the latest release receives security fixes, or, in a project without
   versioned releases, the latest commit on `main`.
 - Fixes are made on a best-effort basis, with no promised response time.
@@ -274,14 +272,14 @@ make one difference are one entry.
 
 An entry for a breaking change starts with `**Breaking:**`, under the type of
 change it is, and says briefly how to upgrade. The README should say what the
-version numbers cover, such as a command line, a library's API or a file
-format, so that readers know what a breaking change breaks.
+version numbers cover, such as a command line, a library's API or a file format,
+so that readers know what a breaking change breaks.
 
 `norms verify` expects a changelog in a project that has a Rust or Python
 library component, since libraries are published, or a release tag (`vX.Y.Z`,
-which it reads with `git` when the project is at the top of its repository),
-and doesn't require one elsewhere. A library that is never published doesn't
-count: a Rust one whose packages all set `publish = false` (or inherit it from
+which it reads with `git` when the project is at the top of its repository), and
+doesn't require one elsewhere. A library that is never published doesn't count:
+a Rust one whose packages all set `publish = false` (or inherit it from
 `[workspace.package]`), or a Python one with the `Private :: Do Not Upload`
 classifier. A shallow clone, such as CI's default checkout, has no tags, so
 there only the libraries count.
@@ -294,10 +292,10 @@ release. Each language's manifest records it in its own way:
 - Python's comes from the release tags, through hatch-vcs (see [Python
   Versioning](#versioning-1)).
 - Rust's `version` in each `Cargo.toml`, and TypeScript's `version` in each
-  `package.json`, name the latest release in `CHANGELOG.md`, or, in
-  a project without one, the latest release tag. The commit that makes a
-  release changes them along with the changelog. Before the first release they
-  are `0.0.0`, set explicitly although Cargo takes a missing `version` as that.
+  `package.json`, name the latest release in `CHANGELOG.md`, or, in a project
+  without one, the latest release tag. The commit that makes a release changes
+  them along with the changelog. Before the first release they are `0.0.0`, set
+  explicitly although Cargo takes a missing `version` as that.
 
 `norms verify` checks the Rust and TypeScript versions, members of a Cargo
 workspace and packages of a pnpm workspace included.
@@ -308,12 +306,12 @@ names its commit: on a release tag, the release's version (`0.2.0`); past one,
 working tree has changes); in a clone without tags, such as a shallow one, the
 manifest's version and the commit (`0.2.0+gf8a4d2b`); and without git, the
 manifest's version alone. Python's hatch-vcs writes its own form of these
-(`0.2.1.dev5+gf8a4d2b`). A Rust application gets it from a `build.rs`, which
-the template gives it, that sets `BUILD_VERSION` for `env!("BUILD_VERSION")`.
-Cargo reruns it only when the commit, the tags, the index, `Cargo.toml` or
-`src/` change, so its `-dirty` misses changes to other files. A TypeScript
-component gets it from `vite.config.ts`, which sets `__APP_VERSION__` through
-`define`, declared in `src/vite-env.d.ts`.
+(`0.2.1.dev5+gf8a4d2b`). A Rust application gets it from a `build.rs`, which the
+template gives it, that sets `BUILD_VERSION` for `env!("BUILD_VERSION")`. Cargo
+reruns it only when the commit, the tags, the index, `Cargo.toml` or `src/`
+change, so its `-dirty` misses changes to other files. A TypeScript component
+gets it from `vite.config.ts`, which sets `__APP_VERSION__` through `define`,
+declared in `src/vite-env.d.ts`.
 
 ### Agent Guidance
 
@@ -340,9 +338,9 @@ Markdown rules every Markdown file follows.
 
 Markdown files are checked by
 [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2), in both
-the Git hooks and CI. The standard `.markdownlint-cli2.jsonc` enables
-every default rule, requires dashes for unordered lists, wraps prose at 80
-columns and allows repeated headings under different parents:
+the Git hooks and CI. The standard `.markdownlint-cli2.jsonc` enables every
+default rule, requires dashes for unordered lists, wraps prose at 80 columns and
+allows repeated headings under different parents:
 
 ```jsonc
 {
@@ -425,8 +423,8 @@ Files that cannot carry a comment header, such as JSON files, lock files, images
 and generated caches, are annotated in a `REUSE.toml` at the repository root
 instead.
 
-`reuse lint` checks all of this, in both the Git hooks and CI, where it
-runs through `fsfe/reuse-action`.
+`reuse lint` checks all of this, in both the Git hooks and CI, where it runs
+through `fsfe/reuse-action`.
 
 ## Version Control
 
@@ -482,10 +480,9 @@ Include only the language blocks that apply. Python projects also mark
 
 Commit messages follow [Conventional
 Commits](https://www.conventionalcommits.org/), checked by the
-`conventional-pre-commit` and `norms-commit-msg` hooks (see
-[Git Hooks](#git-hooks)), which CI also runs on the commit it tests (see
-[Checks](#checks)). The
-[Conventional Commit Types
+`conventional-pre-commit` and `norms-commit-msg` hooks (see [Git
+Hooks](#git-hooks)), which CI also runs on the commit it tests (see
+[Checks](#checks)). The [Conventional Commit Types
 Cheatsheet](https://www.bavaga.com/blog/2025/01/27/my-ultimate-conventional-commit-types-cheatsheet/)
 is a useful reference for choosing types.
 
@@ -572,17 +569,17 @@ squash merging, and keep GitHub's default commit message ("Default message", or
 `squash_merge_commit_title: COMMIT_OR_PR_TITLE` and
 `squash_merge_commit_message: COMMIT_MESSAGES` in the API): a pull request with
 a single commit is merged with that commit's message, which CI has checked, and
-one with several commits takes its title as the subject. Either way, GitHub
-adds the pull request's number to the subject, as in `(#123)`. Every pull request
+one with several commits takes its title as the subject. Either way, GitHub adds
+the pull request's number to the subject, as in `(#123)`. Every pull request
 title, whoever opens it, must follow the subject rules above, including the `!`
 when the pull request makes a breaking change. Nothing checks the title, so
 whoever merges checks it.
 
 ### Branch Protection
 
-A repository ruleset named `Default` protects the default branch. It targets
-the default branch (`~DEFAULT_BRANCH` in the API), is active, has no bypass
-actors, and enables these rules:
+A repository ruleset named `Default` protects the default branch. It targets the
+default branch (`~DEFAULT_BRANCH` in the API), is active, has no bypass actors,
+and enables these rules:
 
 | Rule                          | Settings                                              |
 |-------------------------------|-------------------------------------------------------|
@@ -598,10 +595,9 @@ anywhere else cannot satisfy it. Requiring branches to be up to date means the
 tree CI tested is the tree that is merged. Checks that do not report on every
 commit are never required, since a required check that never reports blocks the
 merge. This excludes `audit.yaml`, which runs on a schedule, and Renovate's
-commit statuses
-such as `renovate/artifacts`, which appear only on some Renovate branches.
-Renovate waits for those itself, because the shared preset disables platform
-automerge.
+commit statuses such as `renovate/artifacts`, which appear only on some Renovate
+branches. Renovate waits for those itself, because the shared preset disables
+platform automerge.
 
 The ruleset does not require a pull request, so that `main` can be
 fast-forwarded to `dev`. The required status check still applies to a direct
@@ -636,13 +632,13 @@ without it follows the same workflow by convention, without enforcement.
 
 Besides the rulesets, each GitHub repository sets the following, which the
 template can't, since they live in GitHub rather than in the repository. Each is
-named as in the repository's **Settings**, with the field of the repository's
-or its Actions permissions' REST API endpoint in parentheses where it has one.
+named as in the repository's **Settings**, with the field of the repository's or
+its Actions permissions' REST API endpoint in parentheses where it has one.
 Anything not listed keeps GitHub's default.
 
-The [Renovate GitHub App](https://github.com/apps/renovate) is installed on
-the repository, so that the `renovate.json` the template renders takes effect
-(see [Automated Updates](#automated-updates)).
+The [Renovate GitHub App](https://github.com/apps/renovate) is installed on the
+repository, so that the `renovate.json` the template renders takes effect (see
+[Automated Updates](#automated-updates)).
 
 **General**, under **Features**:
 
@@ -655,25 +651,24 @@ the repository, so that the `renovate.json` the template renders takes effect
 - Only squash merging is allowed (`allow_squash_merge: true`,
   `allow_merge_commit: false`, `allow_rebase_merge: false`), with GitHub's
   default commit message, as [Branches](#branches) describes.
-- **Always suggest updating pull request branches** is on
-  (`allow_update_branch: true`). A pull request into `main` is offered the
-  update anyway, since the `Default` ruleset requires it to be up to date, but
-  one into another branch, such as a pull request stacked on a feature branch,
-  is offered it only with this setting. The update adds a merge commit to the
-  head branch, which the squash merge drops.
+- **Always suggest updating pull request branches** is on (`allow_update_branch:
+  true`). A pull request into `main` is offered the update anyway, since the
+  `Default` ruleset requires it to be up to date, but one into another branch,
+  such as a pull request stacked on a feature branch, is offered it only with
+  this setting. The update adds a merge commit to the head branch, which the
+  squash merge drops.
 - **Allow auto-merge** is off (`allow_auto_merge: false`). Renovate merges its
   own pull requests, since the shared preset disables platform automerge, and
   nothing else needs it. The preset disabled it when nothing required CI to
   pass, so GitHub would merge a pull request whose CI had failed. The `Default`
-  ruleset's required check now prevents that, but platform automerge still
-  waits only for required checks, not for statuses such as
-  `renovate/artifacts` that Renovate waits for itself (see
-  [Branch Protection](#branch-protection)).
-- **Automatically delete head branches** is on
-  (`delete_branch_on_merge: true`). GitHub never sees a squash-merged branch as
-  merged, so without this it lingers. `dev` is never a pull request's head
-  branch, since `main` is fast-forwarded to it, and the `Development` ruleset
-  keeps it from being deleted regardless.
+  ruleset's required check now prevents that, but platform automerge still waits
+  only for required checks, not for statuses such as `renovate/artifacts` that
+  Renovate waits for itself (see [Branch Protection](#branch-protection)).
+- **Automatically delete head branches** is on (`delete_branch_on_merge: true`).
+  GitHub never sees a squash-merged branch as merged, so without this it
+  lingers. `dev` is never a pull request's head branch, since `main` is
+  fast-forwarded to it, and the `Development` ruleset keeps it from being
+  deleted regardless.
 
 **Actions**, under **General**:
 
@@ -697,24 +692,23 @@ the repository, so that the `renovate.json` the template renders takes effect
   alert pull requests (see [Urgent Updates](#urgent-updates)).
 - **Dependabot security updates** are off, since Renovate opens those pull
   requests instead, and Dependabot version updates are not configured.
-- **Secret Protection** (secret scanning) and its **Push protection** are on,
-  so that a pushed credential is blocked or at least reported. They are free
-  for public repositories. A private repository has them only with GitHub
-  Secret Protection, which GitHub sells to organizations, so a personal
-  private repository goes without.
+- **Secret Protection** (secret scanning) and its **Push protection** are on, so
+  that a pushed credential is blocked or at least reported. They are free for
+  public repositories. A private repository has them only with GitHub Secret
+  Protection, which GitHub sells to organizations, so a personal private
+  repository goes without.
 
 ### Checking the Settings
 
 `norms github <path>` checks the rulesets and the settings above that the API
-reports, reading them through the [GitHub CLI](https://cli.github.com/), so
-`gh` must be installed and logged in (`gh auth login`). It finds the repository
-from the remotes of the checkout at `<path>`, as `gh` does, or checks the one
-`--repo OWNER/NAME` names, and takes `--json` and `--deny-warnings` as
-`norms verify` does. It exits with failure as `norms verify` does, and with
-status 2 if it couldn't check the settings at all: if the path or `norms.toml`
-is invalid, or `gh` couldn't find or read the repository. Nothing runs it
-automatically: neither a hook nor CI, whose token can't read most of these
-settings.
+reports, reading them through the [GitHub CLI](https://cli.github.com/), so `gh`
+must be installed and logged in (`gh auth login`). It finds the repository from
+the remotes of the checkout at `<path>`, as `gh` does, or checks the one `--repo
+OWNER/NAME` names, and takes `--json` and `--deny-warnings` as `norms verify`
+does. It exits with failure as `norms verify` does, and with status 2 if it
+couldn't check the settings at all: if the path or `norms.toml` is invalid, or
+`gh` couldn't find or read the repository. Nothing runs it automatically:
+neither a hook nor CI, whose token can't read most of these settings.
 
 - Each setting is itself the safeguard, so one that differs from those above
   fails, even where it is only weaker, except that the wiki and projects being
@@ -722,14 +716,14 @@ settings.
 - The rulesets are the repository's own, not those it inherits from an
   organization. The `Development` ruleset is checked only if the repository has
   a `dev` branch.
-- A setting the token can't read, which is most of them without admin access
-  to the repository, is skipped with the reason. So are the rulesets of a
-  private repository without GitHub Pro, and private vulnerability reporting
-  and secret scanning on a private repository, which GitHub doesn't offer it.
-  A ruleset's bypass actors, which GitHub shows only to those who can edit it,
-  warn when they can't be read, since the rest of the ruleset can.
-- Whether the Renovate app is installed isn't checked, since the API reports
-  it only to an app.
+- A setting the token can't read, which is most of them without admin access to
+  the repository, is skipped with the reason. So are the rulesets of a private
+  repository without GitHub Pro, and private vulnerability reporting and secret
+  scanning on a private repository, which GitHub doesn't offer it. A ruleset's
+  bypass actors, which GitHub shows only to those who can edit it, warn when
+  they can't be read, since the rest of the ruleset can.
+- Whether the Renovate app is installed isn't checked, since the API reports it
+  only to an app.
 
 Its check IDs start with `github-`, and its waivers are kept in `norms.toml`
 with the others (see [norms Configuration](#norms-configuration)).
@@ -746,10 +740,10 @@ following workflows:
 
 ### Checks
 
-`ci.yaml` runs formatting checks, linting, type checking, tests (with
-coverage) and dependency policy checks, such as `cargo deny --workspace
---all-features check -D warnings bans licenses sources` and lock file
-freshness. CI should fail in every case where the Git hooks would.
+`ci.yaml` runs formatting checks, linting, type checking, tests (with coverage)
+and dependency policy checks, such as `cargo deny --workspace --all-features
+check -D warnings bans licenses sources` and lock file freshness. CI should fail
+in every case where the Git hooks would.
 
 Where this standard names an action for a check, such as
 `zizmorcore/zizmor-action` or `EmbarkStudios/cargo-deny-action`, CI uses that
@@ -759,48 +753,47 @@ runs the tool instead, without checking its arguments.
 Most hooks have a job of their own. A `prek` job runs the rest, such as the
 [common hooks](#common-hooks) built into prek, with `prek run --all-files
 --show-diff-on-failure` at a pinned prek version, installed with
-`taiki-e/install-action` (`tool: prek@${{ env.PREK_VERSION }}`). Its
-`PREK_SKIP` lists every hook that has its own job, so a hook added later runs in
-this job until it gets one. (prek also reads pre-commit's `SKIP`, but only when
-`PREK_SKIP` isn't set.)
-A hook's job has the hook's ID, or for the `markdownlint-cli2` and
-`tombi-format` hooks, is the `markdownlint` or `tombi` job.
-The `commit-msg` hooks don't run in it, but in the `norms-verify` hook's job.
+`taiki-e/install-action` (`tool: prek@${{ env.PREK_VERSION }}`). Its `PREK_SKIP`
+lists every hook that has its own job, so a hook added later runs in this job
+until it gets one. (prek also reads pre-commit's `SKIP`, but only when
+`PREK_SKIP` isn't set.) A hook's job has the hook's ID, or for the
+`markdownlint-cli2` and `tombi-format` hooks, is the `markdownlint` or `tombi`
+job. The `commit-msg` hooks don't run in it, but in the `norms-verify` hook's
+job.
 
-The `norms-verify` hook's job runs it as `prek run norms-verify --all-files`,
-so that prek builds the norms that the hook's `rev` pins. That compiles norms
-and its dependencies from source, so the job first restores prek's hook
+The `norms-verify` hook's job runs it as `prek run norms-verify --all-files`, so
+that prek builds the norms that the hook's `rev` pins. That compiles norms and
+its dependencies from source, so the job first restores prek's hook
 environments, `~/.cache/prek`, with `actions/cache`, keyed on the runner's OS,
-the prek version and `prek.toml`'s hash
-(`prek-${{ runner.os }}-${{ env.PREK_VERSION }}-${{ hashFiles('prek.toml') }}`),
-and prek builds norms again only when prek or its configuration changes. A
-cache that matches its key exactly is never saved again, so the key names the
-prek version, which a newer prek's environments may depend on. It has no
-`restore-keys` fallback, which would carry the environments of every earlier
-configuration forward.
-Its checkout fetches the whole history (`fetch-depth: 0`), since without
+the prek version and `prek.toml`'s hash (`prek-${{ runner.os }}-${{
+env.PREK_VERSION }}-${{ hashFiles('prek.toml') }}`), and prek builds norms again
+only when prek or its configuration changes. A cache that matches its key
+exactly is never saved again, so the key names the prek version, which a newer
+prek's environments may depend on. It has no `restore-keys` fallback, which
+would carry the environments of every earlier configuration forward. Its
+checkout fetches the whole history (`fetch-depth: 0`), since without
 `CHANGELOG.md`, `norms verify` looks for release tags (see
 [Changelog](#changelog)), and takes the latest as the version the manifests
-carry (see [Versioning](#versioning)). `norms verify` fails a `ci.yaml` in
-which no job runs it, as the hook or itself, and warns when that job's checkout
-lacks `fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook
-runs only in the `prek` job.
+carry (see [Versioning](#versioning)). `norms verify` fails a `ci.yaml` in which
+no job runs it, as the hook or itself, and warns when that job's checkout lacks
+`fetch-depth: 0`, when it runs without `--deny-warnings`, or when the hook runs
+only in the `prek` job.
 
 The same job then runs the `commit-msg` hooks with the norms prek has built, as
 `prek run --stage commit-msg --commit-msg-filename <file>`, on the message of
 the commit CI tests: the commit pushed, or a pull request's head commit
-(`github.event.pull_request.head.sha`), which the whole history includes. So
-a commit made without the hooks installed fails CI when it is the last one
-pushed, and `main` can't be fast-forwarded to it; the commits before it in the
-same push aren't checked. A merge commit, such as GitHub's **Update branch**
-button makes on a pull request, isn't checked either, since linear history
-keeps it off `main`. The step first rejects a subject starting with `fixup!`,
-`squash!`, `amend!` or `Merge`, which the hooks let through in local commits.
-It sets `NORMS_COMMIT_MSG_LENGTH=warn`, so that lines over 72 characters only
-warn, since the commit has already been made and a bot's subject may run long,
-and `GIT_EDITOR=:`, which tells norms, as git does, that the message wasn't
-edited, so it checks lines starting with git's comment character as recorded.
-`norms verify` fails a `ci.yaml` in which no step runs the `commit-msg` hooks.
+(`github.event.pull_request.head.sha`), which the whole history includes. So a
+commit made without the hooks installed fails CI when it is the last one pushed,
+and `main` can't be fast-forwarded to it; the commits before it in the same push
+aren't checked. A merge commit, such as GitHub's **Update branch** button makes
+on a pull request, isn't checked either, since linear history keeps it off
+`main`. The step first rejects a subject starting with `fixup!`, `squash!`,
+`amend!` or `Merge`, which the hooks let through in local commits. It sets
+`NORMS_COMMIT_MSG_LENGTH=warn`, so that lines over 72 characters only warn,
+since the commit has already been made and a bot's subject may run long, and
+`GIT_EDITOR=:`, which tells norms, as git does, that the message wasn't edited,
+so it checks lines starting with git's comment character as recorded. `norms
+verify` fails a `ci.yaml` in which no step runs the `commit-msg` hooks.
 
 Libraries also check the oldest versions they support, which the hooks don't,
 since that needs a second toolchain: Rust libraries in an `msrv` job and Python
@@ -824,8 +817,8 @@ and warns when no `cron` entry runs every day, or when it can't be dispatched.
 `zizmorcore/zizmor-action` with `advanced-security: false` and `annotations:
 true`. In that mode the action fails the job on any finding and annotates the
 offending lines, so a finding shows up on the CI run like any other failure. CI
-also runs zizmor's online audits, which the hook skips when no GitHub
-token is available.
+also runs zizmor's online audits, which the hook skips when no GitHub token is
+available.
 
 Both run zizmor's pedantic persona, the action with `persona: pedantic` and the
 hook with `--pedantic`, so they report the same findings.
@@ -836,8 +829,8 @@ the ruleset to block the merge. Findings on commits pushed straight to `dev`
 then appear only in the code scanning alert list for that branch, and every
 finding must be fixed before merge regardless of severity, so the alert triage
 it offers adds little. It is also specific to GitHub, and it is the only reason
-zizmor would need more than `contents: read`: its upload needs
-`security-events: write`, and in a private repository `actions: read`.
+zizmor would need more than `contents: read`: its upload needs `security-events:
+write`, and in a private repository `actions: read`.
 
 Repositories still using a separate `zizmor.yaml` with code scanning switch to
 the `ci.yaml` job, then remove the workflow and the ruleset's **Require code
@@ -851,21 +844,19 @@ Install toolchains with each language's standard setup action (for example,
 versions pinned in the repository. An `astral-sh/setup-uv` step in a job that
 runs `uv` itself, such as `uv sync` or `uv audit`, sets `version` to an exact uv
 version: without it, the action installs the newest uv that `required-version`
-allows. A job that only runs tools through `uvx` doesn't install the project,
-so its uv needn't be pinned. Use Devbox
-only in jobs that need a local service.
+allows. A job that only runs tools through `uvx` doesn't install the project, so
+its uv needn't be pinned. Use Devbox only in jobs that need a local service.
 
 Split checks into parallel jobs where feasible. Use an operating system matrix
 when differences between the platforms the project supports could plausibly
 cause problems, such as file system behavior or external tools.
 
 Jobs that install nothing and run only one JavaScript action or shell step,
-namely the gate job, markdownlint and zizmor, run on `ubuntu-slim`, which
-starts faster, as does the Tombi job, whose setup action only downloads a
-prebuilt binary. It runs jobs in a container without Docker, so Docker-based
-actions such as `fsfe/reuse-action` and `EmbarkStudios/cargo-deny-action` can't
-run there. The other jobs, which install a toolchain or tools, stay on
-`ubuntu-latest`.
+namely the gate job, markdownlint and zizmor, run on `ubuntu-slim`, which starts
+faster, as does the Tombi job, whose setup action only downloads a prebuilt
+binary. It runs jobs in a container without Docker, so Docker-based actions such
+as `fsfe/reuse-action` and `EmbarkStudios/cargo-deny-action` can't run there.
+The other jobs, which install a toolchain or tools, stay on `ubuntu-latest`.
 
 Each workflow sets a `concurrency` group that cancels superseded runs of the
 same ref, with `cancel-in-progress: true` rather than an expression that cancels
@@ -877,10 +868,10 @@ tests, such as Clippy, mypy, ESLint and the test suites, and 10 for the rest. A
 project whose jobs legitimately take longer raises the value for those jobs.
 Jobs on `ubuntu-slim` can't exceed its own 15-minute limit.
 
-`ci.yaml` runs on pushes to `main` and `dev`, naming both in
-`push: branches: [dev, main]` rather than matching them with patterns, whether
-or not the project keeps a `dev` branch (see [Branches](#branches)). A `push`
-without a branch filter, which runs on every branch, also does.
+`ci.yaml` runs on pushes to `main` and `dev`, naming both in `push: branches:
+[dev, main]` rather than matching them with patterns, whether or not the project
+keeps a `dev` branch (see [Branches](#branches)). A `push` without a branch
+filter, which runs on every branch, also does.
 
 `ci.yaml` never filters `pull_request` by `paths` or `branches` (or their
 `-ignore` forms), nor limits its `types` to fewer than the default `opened`,
@@ -889,11 +880,11 @@ that does not run leaves the pull request blocked.
 
 ### Gate Job
 
-`ci.yaml` has a gate job, `ci-success`, that succeeds only if every other job
-in the workflow succeeded. Branch protection requires this single check rather
-than each job, so jobs can be added, renamed, split or given new matrix entries
-without changing repository settings. The order of jobs doesn't affect when
-they run, but the gate is listed last, after the jobs it waits for:
+`ci.yaml` has a gate job, `ci-success`, that succeeds only if every other job in
+the workflow succeeded. Branch protection requires this single check rather than
+each job, so jobs can be added, renamed, split or given new matrix entries
+without changing repository settings. The order of jobs doesn't affect when they
+run, but the gate is listed last, after the jobs it waits for:
 
 ```yaml
 ci-success:
@@ -919,12 +910,11 @@ ci-success:
 - The name itself isn't important, but that's the field that appears in the
   GitHub UI for the check, not the job ID.
 
-`norms verify` checks that `ci-success` exists, runs `if: always()`, needs
-every other job, and fails on each result other than success: some step that
-exits with an error, without `continue-on-error`, has a condition holding for
-it, such as `contains(needs.*.result, 'skipped')`, alone or joined to others by
-`||`. It also checks that no job sets `continue-on-error` to `true` or an
-expression.
+`norms verify` checks that `ci-success` exists, runs `if: always()`, needs every
+other job, and fails on each result other than success: some step that exits
+with an error, without `continue-on-error`, has a condition holding for it, such
+as `contains(needs.*.result, 'skipped')`, alone or joined to others by `||`. It
+also checks that no job sets `continue-on-error` to `true` or an expression.
 
 ### Hardening
 
@@ -951,8 +941,8 @@ pedantic`, and that the action sets `advanced-security: false`.
 Git hooks are provided by [prek](https://prek.j178.dev/), configured in
 `prek.toml` at the repository root. The configuration sets
 `default_install_hook_types` so that a plain `prek install` also installs the
-commit message hook, and `default_stages` so that the other hooks run only
-once per commit:
+commit message hook, and `default_stages` so that the other hooks run only once
+per commit:
 
 ```toml
 default_install_hook_types = ["pre-commit", "commit-msg"]
@@ -960,14 +950,14 @@ default_stages = ["pre-commit"]
 ```
 
 Without `default_stages`, a hook that doesn't list its own stages runs in every
-installed stage, so the language hooks would run again on the commit message.
-A project with hooks of another type, such as `pre-push`, adds that type to
-`default_install_hook_types`; `default_stages` stays `["pre-commit"]`, and
-those hooks list their own stages.
+installed stage, so the language hooks would run again on the commit message. A
+project with hooks of another type, such as `pre-push`, adds that type to
+`default_install_hook_types`; `default_stages` stays `["pre-commit"]`, and those
+hooks list their own stages.
 
-prek runs hooks one at a time, in the order the configuration lists them,
-except those that share a `priority`, which run together, lower priorities
-first. The `[priorities]` table names two:
+prek runs hooks one at a time, in the order the configuration lists them, except
+those that share a `priority`, which run together, lower priorities first. The
+`[priorities]` table names two:
 
 ```toml
 [priorities]
@@ -987,9 +977,9 @@ Cargo creates while it runs, such as `.mypy_cache`, would count as files without
 licensing information. A hook that modifies tracked files never shares a
 priority, since prek's results are undefined when two hooks of one priority
 change the same file; build output the hooks write, such as `dist/` or coverage
-data, is ignored. On a project in all three languages, the priorities
-make `prek run --all-files` about three times faster. A hook without a priority
-only runs more slowly, so `norms verify` doesn't check them.
+data, is ignored. On a project in all three languages, the priorities make `prek
+run --all-files` about three times faster. A hook without a priority only runs
+more slowly, so `norms verify` doesn't check them.
 
 Priority aliases need prek 0.4.11, which the configuration's
 `minimum_prek_version` names, so that an older prek reports that it is too old
@@ -1005,10 +995,10 @@ configuration starts using a feature of a newer one. It doesn't follow the
 make every developer upgrade prek. prek enforces it, so `norms verify` doesn't
 check it.
 
-Each repository is a `[[repos]]` table and each of its hooks a
-`[[repos.hooks]]` table, rather than inline tables, which Tombi would join
-into one long line. A remote repository's `rev` is pinned to a release tag and
-follows its `repo` on the next line:
+Each repository is a `[[repos]]` table and each of its hooks a `[[repos.hooks]]`
+table, rather than inline tables, which Tombi would join into one long line. A
+remote repository's `rev` is pinned to a release tag and follows its `repo` on
+the next line:
 
 ```toml
 [[repos]]
@@ -1022,41 +1012,41 @@ id = "reuse"
 Renovate updates the revisions. Its pre-commit manager reads only
 `.pre-commit-config.yaml`, so until it has one for `prek.toml`, the shared
 [renovate-config](https://github.com/aexoden/renovate-config) preset finds them
-with a regular expression that expects that layout. `norms verify` warns about
-a remote repository whose `rev` it wouldn't find, such as one on another host
-or written before its `repo`.
+with a regular expression that expects that layout. `norms verify` warns about a
+remote repository whose `rev` it wouldn't find, such as one on another host or
+written before its `repo`.
 
 prek runs the configuration of every project it finds below the root, so a
-directory holding configurations that aren't the repository's own, such as
-test fixtures, is listed in `.prekignore`.
+directory holding configurations that aren't the repository's own, such as test
+fixtures, is listed in `.prekignore`.
 
 ### Common Hooks
 
 Every project uses these hooks:
 
-- [prek's builtin hooks](https://prek.j178.dev/built-in-hooks/), from
-  `repo = "builtin"`, which prek runs without cloning a repository or
-  installing anything: `check-added-large-files`, `check-case-conflict`,
+- [prek's builtin hooks](https://prek.j178.dev/built-in-hooks/), from `repo =
+  "builtin"`, which prek runs without cloning a repository or installing
+  anything: `check-added-large-files`, `check-case-conflict`,
   `check-illegal-windows-names`, `check-merge-conflict`, `check-symlinks`,
   `check-toml`, `check-vcs-permalinks`, `check-yaml`, `detect-private-key`,
   `end-of-file-fixer` and `trailing-whitespace`. They reimplement the hooks of
-  [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks), which
-  prek runs the same way from that repository too, though only after cloning it
-  and installing Python. `check-yaml` accepts tags it doesn't know, such as
-  Copier's `!include`, but a file holding several YAML documents, such as
+  [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks), which prek
+  runs the same way from that repository too, though only after cloning it and
+  installing Python. `check-yaml` accepts tags it doesn't know, such as Copier's
+  `!include`, but a file holding several YAML documents, such as
   `pnpm-lock.yaml`, needs its `--allow-multiple-documents`.
-  `check-merge-conflict` looks for conflict markers only while a merge or
-  rebase is in progress, which is when they can be committed by mistake, so in
-  CI it always passes. `norms verify` fails a project without one of these
-  hooks, and warns when one comes from another repository.
+  `check-merge-conflict` looks for conflict markers only while a merge or rebase
+  is in progress, which is when they can be committed by mistake, so in CI it
+  always passes. `norms verify` fails a project without one of these hooks, and
+  warns when one comes from another repository.
 - [reuse](https://github.com/fsfe/reuse-tool): `reuse` (see
   [Licensing](#licensing)).
 - [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2):
   `markdownlint-cli2` (see [Markdown](#markdown)).
-- [Tombi](https://github.com/tombi-toml/tombi-pre-commit): `tombi-format`,
-  which checks the formatting of every TOML file apart from the generated lock
-  files. In `Cargo.toml` and `pyproject.toml`, that includes the order of keys
-  their schemas define one for, such as those of `[package]`, as well as of
+- [Tombi](https://github.com/tombi-toml/tombi-pre-commit): `tombi-format`, which
+  checks the formatting of every TOML file apart from the generated lock files.
+  In `Cargo.toml` and `pyproject.toml`, that includes the order of keys their
+  schemas define one for, such as those of `[package]`, as well as of
   dependencies (see [Dependency Order](#dependency-order)):
 
   ```toml
@@ -1096,16 +1086,16 @@ Every project uses these hooks:
   `squash!` and `amend!` prefixes that `git rebase --autosquash` removes. Its
   type isn't checked when it has one of those prefixes, since the rebase drops
   it, or when it is a merge subject git writes, starting with `Merge`, which may
-  also be of any length. CI runs it on the message of the commit it tests,
-  where lines over 72 characters only warn (see [Checks](#checks)).
+  also be of any length. CI runs it on the message of the commit it tests, where
+  lines over 72 characters only warn (see [Checks](#checks)).
 
   `norms-verify`, in the `pre-commit` stage, runs `norms verify` on the whole
-  project, whichever files a commit changes. Like the other hooks that check
-  the whole project, it also sees untracked files that `.gitignore` doesn't
-  exclude. It fails if a check fails, and with `--deny-warnings` if one warns,
-  too, which these standards require. prek builds norms at the pinned revision
-  with `cargo install --locked`, so with the dependencies norms' `Cargo.lock`
-  pins, installing Rust first in a project without it:
+  project, whichever files a commit changes. Like the other hooks that check the
+  whole project, it also sees untracked files that `.gitignore` doesn't exclude.
+  It fails if a check fails, and with `--deny-warnings` if one warns, too, which
+  these standards require. prek builds norms at the pinned revision with `cargo
+  install --locked`, so with the dependencies norms' `Cargo.lock` pins,
+  installing Rust first in a project without it:
 
   ```toml
   [[repos]]
@@ -1133,26 +1123,25 @@ release may change.
 
 ### Language Hooks
 
-Language hooks are `local` hooks with `language = "system"` and
-`pass_filenames = false`. (prek also accepts `unsupported`, pre-commit's name
-for `system`, but its schema doesn't.) They invoke the project's own
-tools directly (for example, `cargo clippy` or `uv run ruff check`), never
-through Devbox or a shell. prek runs a `system` hook's entry without a shell,
-so a component in a subdirectory is reached with the tool's own option
-(`--manifest-path`, `uv --directory`, `pnpm --dir`) rather than
-`bash -c "cd <path> && ..."`. Running the project's tools, they use the
-versions its lock files and toolchain pins select, as CI does. A remote hook is
-pinned by its own `rev` instead, and one in a language prek manages, such as
-Python or Node.js, installs its own copy of the tool, without the project's
-dependencies or plugins. Each language hook checks all of its component's files,
-not only the staged ones, since a change to one file can break another, and
-checks without modifying files, so the hooks and CI produce the same results.
-The language sections below list the required hooks. Hook IDs are unique, across
-languages too (for example, `pytest`, `cargo-test` and `vitest` rather than
-`test`), so that `PREK_SKIP` can target one. `PREK_SKIP` and `prek run` also
-match a hook's `alias`, so a hook that runs twice under one ID, such as a
-language hook run for two components, gives each copy an alias of its own
-(`eslint-admin`, `eslint-web`).
+Language hooks are `local` hooks with `language = "system"` and `pass_filenames
+= false`. (prek also accepts `unsupported`, pre-commit's name for `system`, but
+its schema doesn't.) They invoke the project's own tools directly (for example,
+`cargo clippy` or `uv run ruff check`), never through Devbox or a shell. prek
+runs a `system` hook's entry without a shell, so a component in a subdirectory
+is reached with the tool's own option (`--manifest-path`, `uv --directory`,
+`pnpm --dir`) rather than `bash -c "cd <path> && ..."`. Running the project's
+tools, they use the versions its lock files and toolchain pins select, as CI
+does. A remote hook is pinned by its own `rev` instead, and one in a language
+prek manages, such as Python or Node.js, installs its own copy of the tool,
+without the project's dependencies or plugins. Each language hook checks all of
+its component's files, not only the staged ones, since a change to one file can
+break another, and checks without modifying files, so the hooks and CI produce
+the same results. The language sections below list the required hooks. Hook IDs
+are unique, across languages too (for example, `pytest`, `cargo-test` and
+`vitest` rather than `test`), so that `PREK_SKIP` can target one. `PREK_SKIP`
+and `prek run` also match a hook's `alias`, so a hook that runs twice under one
+ID, such as a language hook run for two components, gives each copy an alias of
+its own (`eslint-admin`, `eslint-web`).
 
 ## Dependency Management
 
@@ -1173,11 +1162,11 @@ and release age policies, so `renovate.json` normally contains nothing else:
 Project-specific rules may be added when a project needs them.
 
 A workflow that installs or runs a tool at a version no Renovate manager reads,
-such as cargo-llvm-cov or prek through `taiki-e/install-action`'s `tool`
-input, pins it in an environment variable whose name ends in
-`_VERSION`, in the workflow's `env` (or a job's, if only that job uses it),
-under a `# renovate:` comment naming its datasource and package. The shared
-preset's `customManagers:githubActionsVersions` updates it from there:
+such as cargo-llvm-cov or prek through `taiki-e/install-action`'s `tool` input,
+pins it in an environment variable whose name ends in `_VERSION`, in the
+workflow's `env` (or a job's, if only that job uses it), under a `# renovate:`
+comment naming its datasource and package. The shared preset's
+`customManagers:githubActionsVersions` updates it from there:
 
 ```yaml
 env:
@@ -1187,12 +1176,12 @@ env:
   PREK_VERSION: "0.5.10"
 ```
 
-Steps refer to one as `${{ env.PREK_VERSION }}` in an input, such as
-`tool: prek@${{ env.PREK_VERSION }}`, or as `"$PREK_VERSION"` in a script.
-`norms verify` warns about a version written inline in that `tool` input, in a
-`uvx` or `uv tool` command or `uv run`'s `--with`, in `cargo install` or
-`cargo binstall`, or in `npx`, `npm exec` or `pnpm dlx`, and about a
-`_VERSION` variable whose value is written out without the comment.
+Steps refer to one as `${{ env.PREK_VERSION }}` in an input, such as `tool:
+prek@${{ env.PREK_VERSION }}`, or as `"$PREK_VERSION"` in a script. `norms
+verify` warns about a version written inline in that `tool` input, in a `uvx` or
+`uv tool` command or `uv run`'s `--with`, in `cargo install` or `cargo
+binstall`, or in `npx`, `npm exec` or `pnpm dlx`, and about a `_VERSION`
+variable whose value is written out without the comment.
 
 ### Version Pinning
 
@@ -1215,15 +1204,15 @@ committed for reproducible development and CI.
 
 ### Dependency Order
 
-Dependencies are listed in alphabetical order within each table, list or
-object, such as `[dependencies]` in `Cargo.toml`, `[project] dependencies` and
-each dependency group in `pyproject.toml`, and `devDependencies` in
-`package.json`. Formatters keep the order, so it needs no manual care:
+Dependencies are listed in alphabetical order within each table, list or object,
+such as `[dependencies]` in `Cargo.toml`, `[project] dependencies` and each
+dependency group in `pyproject.toml`, and `devDependencies` in `package.json`.
+Formatters keep the order, so it needs no manual care:
 
-- `Cargo.toml` and `pyproject.toml`: [Tombi](https://tombi-toml.github.io/tombi/)
-  sorts them using the schemas it ships with. The `tombi-format` hook checks
-  the order, and formatting the file with Tombi (or its editor extension) fixes
-  it.
+- `Cargo.toml` and `pyproject.toml`:
+  [Tombi](https://tombi-toml.github.io/tombi/) sorts them using the schemas it
+  ships with. The `tombi-format` hook checks the order, and formatting the file
+  with Tombi (or its editor extension) fixes it.
 - `package.json`: Prettier sorts them through prettier-plugin-packagejson (see
   [Formatting and Linting](#formatting-and-linting-1) under TypeScript), as pnpm
   also does whenever it writes the file.
@@ -1312,13 +1301,13 @@ settings it replaces.
 - `.python-version`, beside `pyproject.toml`, names the exact Python version
   (`x.y.z`) used for development and CI.
 - Applications set `requires-python` to that same exact version (for example,
-  `==3.15.0`). Libraries set the range of versions they support, which
-  includes that version.
+  `==3.15.0`). Libraries set the range of versions they support, which includes
+  that version.
 - The `Programming Language :: Python :: 3.x` classifiers match
   `requires-python`: they list each minor version it allows, from its lower
   bound up to the version in `.python-version`.
-- `[tool.uv] required-version` sets the minimum uv version the project needs,
-  as a single `>=` (for example, `>=0.9.5`), so that newer releases of uv keep
+- `[tool.uv] required-version` sets the minimum uv version the project needs, as
+  a single `>=` (for example, `>=0.9.5`), so that newer releases of uv keep
   working. The CI setup step pins the exact uv version, which `required-version`
   allows.
 - A library's CI also runs its tests on the oldest Python it supports, in a
@@ -1356,8 +1345,8 @@ source = "vcs"
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 ```
 
-A Python component in a subdirectory of the repository also sets `raw-options
-= { search_parent_directories = true }` in `[tool.hatch.version]`, so that
+A Python component in a subdirectory of the repository also sets `raw-options =
+{ search_parent_directories = true }` in `[tool.hatch.version]`, so that
 hatch-vcs finds the repository above it. A project with `[tool.uv] package =
 false` isn't built, so it has no version and needs none of this.
 
@@ -1447,27 +1436,27 @@ enable_error_code = [
 ]
 ```
 
-`explicit-override` requires `@override` on every method that overrides one in
-a base class, imported from `typing`, or from `typing_extensions` in a library
-that supports Python before 3.12. The other optional checks are left off.
-Ruff's `blanket-type-ignore` already reports what `ignore-without-code` does,
+`explicit-override` requires `@override` on every method that overrides one in a
+base class, imported from `typing`, or from `typing_extensions` in a library
+that supports Python before 3.12. The other optional checks are left off. Ruff's
+`blanket-type-ignore` already reports what `ignore-without-code` does,
 basedpyright's `reportExplicitAny` already rejects what `disallow_any_explicit`
 does, and `disallow_any_unimported` matters only to a project that ignores
 missing imports, which fail by default.
 
 Run basedpyright, a fork of Pyright whose PyPI package bundles Node.js, in its
-`recommended` mode, which turns on nearly all of its rules and fails on
-warnings as well as errors:
+`recommended` mode, which turns on nearly all of its rules and fails on warnings
+as well as errors:
 
 ```toml
 [tool.basedpyright]
 typeCheckingMode = "recommended"
 ```
 
-`Any` is avoided unless the code can't be written without it. A rule that
-proves a poor fit for a project may be turned off in `[tool.basedpyright]`,
-with a comment saying why. `norms verify` checks the mode, and leaves the rules
-a project sets on top of it alone.
+`Any` is avoided unless the code can't be written without it. A rule that proves
+a poor fit for a project may be turned off in `[tool.basedpyright]`, with a
+comment saying why. `norms verify` checks the mode, and leaves the rules a
+project sets on top of it alone.
 
 #### Testing
 
@@ -1508,9 +1497,8 @@ checks. Jobs that install nothing, namely `uv-lock` and the `uv audit` job of
 job nor the workflow, so every job on the same Python version shares one cache,
 and the first job to finish saves it: one that installs nothing, and so usually
 finishes first, would save it without the packages the others install, and they
-would then restore it as an exact match and never save their own. `norms
-verify` warns on a job that runs only `uv lock` or `uv audit` with the cache
-on.
+would then restore it as an exact match and never save their own. `norms verify`
+warns on a job that runs only `uv lock` or `uv audit` with the cache on.
 
 ### Rust
 
@@ -1655,11 +1643,10 @@ job doesn't deny warnings, so the warning is harmless.
 
 `norms verify` warns when a package doesn't set Cargo's `pedantic` group or
 Clippy's `pedantic`, `nursery` and `cargo` groups to `warn` or stricter, or any
-of the `[lints.rust]` entries above to its level or stricter. It also warns
-when a package leaves out any of the restriction lints. Setting one to `allow`
-counts as a deliberate choice, so a package that needs to, such as an
-application calling `std::process::exit`, allows that lint alone, with a comment
-saying why.
+of the `[lints.rust]` entries above to its level or stricter. It also warns when
+a package leaves out any of the restriction lints. Setting one to `allow` counts
+as a deliberate choice, so a package that needs to, such as an application
+calling `std::process::exit`, allows that lint alone, with a comment saying why.
 
 In a workspace, the lints may be set once in `[workspace.lints.cargo]`,
 `[workspace.lints.clippy]` and `[workspace.lints.rust]`. Cargo applies them only
@@ -1701,8 +1688,8 @@ idiomatic Rust or do not suit applications:
 - `inline_trait_bounds`: it moves every bound, even `T: Clone`, to a `where`
   clause, a matter of style that goes against common usage.
 - `rest_pattern_accessible_field`: it rejects every `..` that skips a field,
-  including in a match on an enum variant whose fields don't matter there and
-  on other crates' types, whose new fields would then break the build.
+  including in a match on an enum variant whose fields don't matter there and on
+  other crates' types, whose new fields would then break the build.
 
 `clippy.toml` allows `unwrap`, `expect` and `panic` in tests, and limits
 absolute paths to three segments:
@@ -1738,8 +1725,8 @@ silently ignore it and pass every warning.
 - `[bans] std-replacements = {}`, which fails on a crate the workspace depends
   on directly that `std` or `core` now replaces, such as `once_cell`. Without
   the table, cargo-deny skips this check. A package's `rust-version`, which
-  libraries set, limits it to the replacements its MSRV has. A crate the
-  project keeps anyway goes in the table's `ignore`.
+  libraries set, limits it to the replacements its MSRV has. A crate the project
+  keeps anyway goes in the table's `ignore`.
 - Every entry in `[advisories] ignore` has a `reason`.
 - Every advisory in `[advisories] ignore` expires: it has an `expiry`, or
   `[advisories] ignore-expiry` sets a default, so that an ignore is reviewed
@@ -1785,12 +1772,11 @@ The Git hooks and CI both run:
 | `cargo-doctest` | `cargo test --workspace --all-features --doc` (library targets only)                     |
 | `cargo-deny`    | `cargo deny --workspace --all-features check -D warnings bans licenses sources`          |
 
-`cargo-lock` fails, naming the entries that would change, if `Cargo.lock` is
-out of date with `Cargo.toml`. Updating only the workspace's own packages,
-`cargo update --workspace` changes nothing in a current lock file, and
-`--locked` turns any change it would make into an error, so the lock file is
-left untouched. The other Cargo commands would quietly update a stale lock file
-instead.
+`cargo-lock` fails, naming the entries that would change, if `Cargo.lock` is out
+of date with `Cargo.toml`. Updating only the workspace's own packages, `cargo
+update --workspace` changes nothing in a current lock file, and `--locked` turns
+any change it would make into an error, so the lock file is left untouched. The
+other Cargo commands would quietly update a stale lock file instead.
 
 `norms verify` warns on a `cargo-test` hook or CI tests that don't measure
 coverage, as `cargo test` doesn't, and, for a component with a library target,
@@ -1801,22 +1787,20 @@ selects other targets.
 warnings, since every lint is set to `warn`, so Clippy would pass whatever it
 finds. It warns on one that denies them with `-- -D warnings`, which leaves
 Cargo's own lints as warnings, or through `RUSTFLAGS` or `CARGO_BUILD_WARNINGS`
-instead of `--config 'build.warnings="deny"'`, and on one without
-`--workspace`, `--all-targets` or `--all-features`. It also
-warns on a `cargo-deny` hook that passes other arguments than the table's,
-apart from `--manifest-path`.
+instead of `--config 'build.warnings="deny"'`, and on one without `--workspace`,
+`--all-targets` or `--all-features`. It also warns on a `cargo-deny` hook that
+passes other arguments than the table's, apart from `--manifest-path`.
 
 CI installs the toolchain with `actions-rust-lang/setup-rust-toolchain`, which
 reads `rust-toolchain.toml` and caches builds with its built-in
-`Swatinem/rust-cache`, so jobs don't add a separate cache step, and
-`norms verify` warns on one that does. Jobs that build nothing, such as
-formatting, set `cache: false`. CI checks formatting with
-`actions-rust-lang/rustfmt` and runs cargo-deny with
-`EmbarkStudios/cargo-deny-action`, passing the arguments in the table above as
-`arguments: --workspace --all-features` and `command: check -D warnings bans
-licenses sources`. The advisory check runs in `audit.yaml` (see
-[Continuous Integration](#continuous-integration)), through the same action
-with `arguments: --workspace --all-features` and `command: check -D warnings
+`Swatinem/rust-cache`, so jobs don't add a separate cache step, and `norms
+verify` warns on one that does. Jobs that build nothing, such as formatting, set
+`cache: false`. CI checks formatting with `actions-rust-lang/rustfmt` and runs
+cargo-deny with `EmbarkStudios/cargo-deny-action`, passing the arguments in the
+table above as `arguments: --workspace --all-features` and `command: check -D
+warnings bans licenses sources`. The advisory check runs in `audit.yaml` (see
+[Continuous Integration](#continuous-integration)), through the same action with
+`arguments: --workspace --all-features` and `command: check -D warnings
 advisories`.
 
 ### TypeScript
@@ -1824,8 +1808,8 @@ advisories`.
 #### Location
 
 A TypeScript project lives at the repository root when it is the primary
-language. Otherwise it lives in a named subdirectory, such as `frontend/`.
-Paths below are relative to that directory.
+language. Otherwise it lives in a named subdirectory, such as `frontend/`. Paths
+below are relative to that directory.
 
 #### Package Configuration
 
@@ -1876,9 +1860,9 @@ permissions:
 trustPolicy: no-downgrade
 ```
 
-A new project starts with `permissions: {}`, so that `pnpm approve` and
-`pnpm approve-builds` record their decisions there. pnpm fails the install when
-a dependency's build scripts haven't been approved or denied, so neither
+A new project starts with `permissions: {}`, so that `pnpm approve` and `pnpm
+approve-builds` record their decisions there. pnpm fails the install when a
+dependency's build scripts haven't been approved or denied, so neither
 `dangerouslyAllowAllBuilds: true` nor `strictDepBuilds: false` is set.
 `allowBuilds`, which pnpm still reads for the dependencies `permissions` doesn't
 list, isn't used, so that every decision is in one place. Nor are the settings
@@ -1918,29 +1902,29 @@ same way, and any of it could run without a build step.
 The module settings follow what loads each config's files. Vite bundles the
 application, so `tsconfig.app.json` sets `"module": "esnext"` and
 `"moduleResolution": "bundler"`. Node can load the tooling files itself,
-stripping their types, so `tsconfig.node.json` sets `"module": "nodenext"`, which
-holds their imports to Node's rules, and leaves `moduleResolution` unset to
-follow it. Node finds a relative import by the name of the TypeScript file, as
-in `import { x } from "./helper.ts"`, which TypeScript accepts only with
+stripping their types, so `tsconfig.node.json` sets `"module": "nodenext"`,
+which holds their imports to Node's rules, and leaves `moduleResolution` unset
+to follow it. Node finds a relative import by the name of the TypeScript file,
+as in `import { x } from "./helper.ts"`, which TypeScript accepts only with
 `"allowImportingTsExtensions": true`, so the tooling's config sets that too.
 
 `target` and `lib` name the newest ECMAScript version that the code's runtime
 fully supports. Vite lowers newer syntax to its build target, but adds no
 polyfills, so `lib` decides which APIs type-check. For the application, that is
-the newest version every browser of Vite's default build target supports:
-ES2022 for Vite 8, since its Firefox 114 lacks ES2023's copying array methods,
-such as `toSorted`. For the tooling files, it is the newest version TypeScript
-knows that the pinned Node.js supports: ES2025 for Node.js 26. `norms verify`
-can't tell the runtime, so it only warns when either names a version older than
+the newest version every browser of Vite's default build target supports: ES2022
+for Vite 8, since its Firefox 114 lacks ES2023's copying array methods, such as
+`toSorted`. For the tooling files, it is the newest version TypeScript knows
+that the pinned Node.js supports: ES2025 for Node.js 26. `norms verify` can't
+tell the runtime, so it only warns when either names a version older than
 ES2022.
 
 #### Formatting and Linting
 
-Use [Prettier](https://prettier.io/) for formatting, configured in `.prettierrc`,
-along with a `.prettierignore`. Prettier reads the ignore files of only the
-directory it runs in, so a component in a subdirectory, which the root
-`.gitignore` doesn't reach, lists its build output (`dist/`) and any coverage
-report written to files (`coverage/`) in its `.prettierignore`. The
+Use [Prettier](https://prettier.io/) for formatting, configured in
+`.prettierrc`, along with a `.prettierignore`. Prettier reads the ignore files
+of only the directory it runs in, so a component in a subdirectory, which the
+root `.gitignore` doesn't reach, lists its build output (`dist/`) and any
+coverage report written to files (`coverage/`) in its `.prettierignore`. The
 `.prettierrc` is:
 
 ```json
@@ -1967,10 +1951,10 @@ The configuration includes the `strictTypeChecked` and `stylisticTypeChecked`
 configs from [typescript-eslint](https://typescript-eslint.io/), with
 `projectService` enabled for type-aware rules, and `eslint-config-prettier` to
 disable rules that conflict with Prettier. No package depends on
-`eslint-plugin-prettier`, which would run Prettier again as an ESLint rule:
-the `prettier` hook and the `format` script run it. ESLint loads
-`eslint.config.ts` through [jiti](https://github.com/unjs/jiti), a development
-dependency. ESLint uses Node's own type stripping only behind its experimental
+`eslint-plugin-prettier`, which would run Prettier again as an ESLint rule: the
+`prettier` hook and the `format` script run it. ESLint loads `eslint.config.ts`
+through [jiti](https://github.com/unjs/jiti), a development dependency. ESLint
+uses Node's own type stripping only behind its experimental
 `unstable_native_nodejs_ts_config` flag, which every place ESLint runs, editors
 included, would have to pass. ESLint looks for `eslint.config.js`, `.mjs` and
 `.cjs` before `eslint.config.ts`, so there is no other `eslint.config.*` file.
