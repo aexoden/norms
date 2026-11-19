@@ -38,6 +38,7 @@ pass  prek-config-valid  prek.toml: valid
 pass  prek-install-hook-types  prek: default_install_hook_types includes pre-commit and commit-msg
 pass  prek-default-stages  prek: default_stages is [pre-commit]
 pass  prek-rev-follows-repo  prek: each remote repo's rev follows it, where Renovate finds it
+pass  prek-priorities  prek: hooks run in their priority groups
 pass  prek-hook-ids-unique  prek: each hook has a unique ID or alias
 pass  prek-builtin-hooks  prek: the common hooks from prek's builtin repo
 pass  prek-reuse  prek: reuse hook

@@ -118,7 +118,7 @@ re-renders them, as `AGENTS.md` describes.
   than the standard's, its `norms-commit-msg` hook runs in the `pre-commit`
   stage and its `norms-verify` hook without `--deny-warnings`, and among remote
   and local hooks whose IDs or aliases collide, some have aliases of their own
-  and some can't be selected alone.
+  and some can't be selected alone. None of its hooks has a priority.
 - `markdown` breaks the Markdown standards: its `.markdownlint-cli2.jsonc`
   names rules by alias and tag, turns some off and lets others only warn, and
   sets other options than the standard's; its markdownlint-cli2 hook has

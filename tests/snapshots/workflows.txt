@@ -29,6 +29,8 @@ fail  prek-install-hook-types  prek: default_install_hook_types includes pre-com
 warn  prek-default-stages  prek: default_stages is [pre-commit]
       No default_stages, so hooks without stages of their own run in every installed stage
 pass  prek-rev-follows-repo  prek: each remote repo's rev follows it, where Renovate finds it
+warn  prek-priorities  prek: hooks run in their priority groups
+      zizmor has no priority, not "check"
 pass  prek-hook-ids-unique  prek: each hook has a unique ID or alias
 fail  prek-builtin-hooks  prek: the common hooks from prek's builtin repo
       Missing: check-added-large-files, check-case-conflict, check-illegal-windows-names, check-merge-conflict, check-symlinks, check-toml, check-vcs-permalinks, check-yaml, detect-private-key, end-of-file-fixer, trailing-whitespace

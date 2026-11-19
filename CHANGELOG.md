@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a hook that runs before each commit isn't in its priority group
+  (`prek-priorities`): the lock file hooks in `priority = "lock"`, the builtin
+  hooks and `reuse` in none, and the rest in `priority = "check"`. Otherwise a
+  hook runs alongside hooks it shouldn't, such as `reuse` while others create
+  caches, and fails only now and then. Set the priorities the template does.
 - **Breaking:** `norms commit-msg` fails on a breaking change footer written
   `BREAKING CHANGE:`, with a space, as the Conventional Commits specification
   allows: git doesn't read it as a trailer, and then reads none of the footers

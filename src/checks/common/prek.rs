@@ -71,6 +71,66 @@ fn common_hooks_in(config: &PrekConfig) -> Result<(), Issue> {
     Issue::combine(issues)
 }
 
+/// The hooks that check a lock file, which run in the `lock` priority, before the hooks that read what they install.
+const LOCK_HOOKS: [&str; 3] = ["cargo-lock", "uv-lock", "pnpm-lock"];
+
+/// Check that each hook that runs before each commit has the priority the standard gives it: `lock` for the lock file
+/// hooks, none for the builtin hooks and `reuse`, which run first and on their own, and `check` for the rest, which run
+/// together. A hook outside its group runs alongside hooks it shouldn't, such as `reuse` while other hooks create
+/// caches, or the `eslint` hook while `pnpm install` rewrites `node_modules`, which fail only now and then.
+fn check_priorities(config: &PrekConfig) -> Result<(), String> {
+    let wrong: Vec<String> = config
+        .repos
+        .iter()
+        .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+        // The norms and conventional-pre-commit repositories' manifests put their commit message hooks in the
+        // commit-msg stage, which the configuration needn't repeat.
+        .filter(|(repo, hook)| {
+            config.runs_at_commit(hook)
+                && !(hook.id == "norms-commit-msg"
+                    && runs_on_commit_messages(repo, hook, NORMS_REPO))
+                && !(hook.id == "conventional-pre-commit"
+                    && runs_on_commit_messages(repo, hook, CONVENTIONAL_PRE_COMMIT_REPO))
+        })
+        .filter_map(|(repo, hook)| {
+            // The common hooks belong in the builtin repository, which `prek-builtin-hooks` asks for, and any of
+            // reuse's hooks must run alone, so neither takes a priority wherever it comes from.
+            let expected = if repo.repo == BUILTIN_REPO
+                || COMMON_HOOKS.contains(&hook.id.as_str())
+                || hook.id.starts_with("reuse")
+            {
+                None
+            } else if LOCK_HOOKS.contains(&hook.id.as_str()) {
+                Some("lock")
+            } else {
+                Some("check")
+            };
+            let actual = hook.priority.as_ref();
+            if actual.and_then(|value| value.as_str()) == expected
+                && (actual.is_some() || expected.is_none())
+            {
+                return None;
+            }
+            let name = hook.alias().unwrap_or(&hook.id);
+            Some(match (expected, actual) {
+                (None, Some(actual)) => {
+                    format!("{name} has priority {actual}, but should have none")
+                }
+                (Some(expected), Some(actual)) => {
+                    format!("{name} has priority {actual}, not \"{expected}\"")
+                }
+                (Some(expected), None) => format!("{name} has no priority, not \"{expected}\""),
+                (None, None) => return None,
+            })
+        })
+        .collect();
+    if wrong.is_empty() {
+        Ok(())
+    } else {
+        Err(wrong.join("; "))
+    }
+}
+
 /// Whether a zizmor hook runs the pedantic persona, passing `--pedantic` in its entry or the args prek appends to it.
 /// A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
 fn zizmor_hook_pedantic(hook: &PrekHook) -> bool {
@@ -102,6 +162,11 @@ pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
         "prek-rev-follows-repo",
         "prek: each remote repo's rev follows it, where Renovate finds it",
         config.check_renovate_revs(),
+    );
+    report.should(
+        "prek-priorities",
+        "prek: hooks run in their priority groups",
+        check_priorities(config),
     );
     report.should(
         "prek-hook-ids-unique",
@@ -401,6 +466,64 @@ mod tests {
 
     /// The recognized commit types, as a TOML list.
     const TYPES: &str = r#"["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci", "revert", "chore"]"#;
+
+    #[test]
+    fn hooks_run_in_their_priority_groups() {
+        let priorities =
+            |toml: &str| check_priorities(&PrekConfig::parse(toml.to_owned()).unwrap());
+        let standard = r#"
+[[repos]]
+repo = "builtin"
+hooks = [{ id = "check-toml" }]
+
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+hooks = [{ id = "reuse" }]
+
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "cargo-lock", entry = "cargo update --workspace --locked", priority = "lock" },
+  { id = "clippy", entry = "cargo clippy", priority = "check" },
+  { id = "norms-commit-msg", entry = "norms commit-msg", stages = ["commit-msg"] },
+]
+
+[[repos]]
+repo = "https://github.com/compilerla/conventional-pre-commit"
+hooks = [{ id = "conventional-pre-commit", args = ["feat", "fix"] }]
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+hooks = [{ id = "check-toml" }]
+
+[[repos]]
+repo = "https://github.com/aexoden/norms"
+hooks = [{ id = "norms-commit-msg" }, { id = "norms-verify", priority = "check" }]
+"#;
+        assert_eq!(priorities(standard), Ok(()));
+        let wrong = r#"
+[[repos]]
+repo = "builtin"
+hooks = [{ id = "check-toml", priority = "check" }]
+
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+hooks = [{ id = "reuse", priority = "check" }]
+
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "uv-lock", entry = "uv lock --check", priority = "check" },
+  { id = "mypy", alias = "mypy-api", entry = "uv run mypy ." },
+]
+"#;
+        assert_eq!(
+            priorities(wrong),
+            Err("check-toml has priority \"check\", but should have none; reuse has priority \"check\", but should \
+                 have none; uv-lock has priority \"check\", not \"lock\"; mypy-api has no priority, not \"check\""
+                .to_owned())
+        );
+    }
 
     #[test]
     fn tombi_format_checks_only_with_the_check_flag() {

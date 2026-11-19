@@ -78,6 +78,8 @@ pub(crate) struct PrekHook {
     pub args: Vec<String>,
     /// The language prek runs the hook with, if the configuration sets it, as a local hook must.
     pub language: Option<String>,
+    /// The priority group the hook runs in, a name from `[priorities]` or a number, kept as TOML wrote it.
+    pub priority: Option<Value>,
     /// Whether prek appends the staged files' names to the hook's command, if the configuration says: `false` for
     /// none, `true` for all of them, or a number for at most that many per run. Kept as TOML wrote it.
     pub pass_filenames: Option<Value>,
@@ -371,7 +373,7 @@ impl PrekConfig {
     }
 
     /// Whether `hook` runs before each commit, in the `pre-commit` stage. See [`runs_in`](Self::runs_in).
-    fn runs_at_commit(&self, hook: &PrekHook) -> bool {
+    pub(crate) fn runs_at_commit(&self, hook: &PrekHook) -> bool {
         self.runs_in(hook, "pre-commit")
     }
 
