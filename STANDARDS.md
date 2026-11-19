@@ -296,6 +296,18 @@ to Claude, and have it import `AGENTS.md` rather than repeat it, with
 files of their own, not one a symlink to the other, so that `CLAUDE.md` has room
 for those instructions.
 
+### Planning
+
+Open work may be kept in the issue tracker or in the repository, in one or both
+of two optional files at the root:
+
+- `TODO.md`, a list of issues and other things to work on, in no particular
+  order.
+- `ROADMAP.md`, a plan of the milestones ahead, in the order they are expected.
+
+Neither is required, and `norms verify` checks nothing about them beyond the
+Markdown rules every Markdown file follows.
+
 ### Markdown
 
 Markdown files are checked by
