@@ -215,6 +215,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The template's Rust packages enable Clippy's `unnecessary_rest_pattern` in
   place of `rest_pat_in_fully_bound_structs`, which it covers along with
   struct variants of enums.
+- `STANDARDS.md` asks for an operating system matrix in CI only across the
+  platforms a project supports.
 
 ### Fixed
 

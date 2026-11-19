@@ -855,8 +855,8 @@ so its uv needn't be pinned. Use Devbox
 only in jobs that need a local service.
 
 Split checks into parallel jobs where feasible. Use an operating system matrix
-when platform differences could plausibly cause problems, such as file system
-behavior or external tools.
+when differences between the platforms the project supports could plausibly
+cause problems, such as file system behavior or external tools.
 
 Jobs that install nothing and run only one JavaScript action or shell step,
 namely the gate job, markdownlint and zizmor, run on `ubuntu-slim`, which
