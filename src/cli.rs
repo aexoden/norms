@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use std::{env, fs};
 
 use anyhow::Context as _;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
 use crate::checks;
@@ -50,7 +50,20 @@ enum Commands {
     CommitMsg {
         /// Path to the file holding the commit message.
         file: PathBuf,
+
+        /// Whether lines over 72 characters fail or only warn, as in CI, which checks a commit already made.
+        #[arg(long, value_enum, env = "NORMS_COMMIT_MSG_LENGTH", default_value_t = LongLines::Fail)]
+        long_lines: LongLines,
     },
+}
+
+/// What `norms commit-msg` does about lines that are too long.
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum LongLines {
+    /// Fail, as a type not in lowercase does.
+    Fail,
+    /// Report them, but pass.
+    Warn,
 }
 
 /// JSON output structure.
@@ -144,11 +157,15 @@ fn verify(path: PathBuf, output_json: bool, deny_warnings: bool) -> anyhow::Resu
     Ok(ExitCode::FAILURE)
 }
 
-/// Describes a commit message's type if it isn't in lowercase, and each of its
-/// lines that is too long, as `<file>:<line>: <problem>`. See
-/// [`commit_msg::long_lines`] for `comment` and `edited`.
-fn commit_msg_problems(file: &Path, message: &str, comment: &str, edited: bool) -> Vec<String> {
-    let miscased = commit_msg::miscased_type(message, comment, edited).map(|found| {
+/// Describes a commit message's type if it isn't in lowercase, as `<file>:<line>: <problem>`. See
+/// [`commit_msg::miscased_type`] for `comment` and `edited`.
+fn miscased_type_problem(
+    file: &Path,
+    message: &str,
+    comment: &str,
+    edited: bool,
+) -> Option<String> {
+    commit_msg::miscased_type(message, comment, edited).map(|found| {
         format!(
             "{}:{}: type {} is not in lowercase; write {}",
             file.display(),
@@ -156,8 +173,13 @@ fn commit_msg_problems(file: &Path, message: &str, comment: &str, edited: bool) 
             found.found,
             found.found.to_lowercase()
         )
-    });
-    let long = commit_msg::long_lines(message, comment, edited)
+    })
+}
+
+/// Describes each line of a commit message that is too long, as `<file>:<line>: <problem>`. See
+/// [`commit_msg::long_lines`] for `comment` and `edited`.
+fn long_line_problems(file: &Path, message: &str, comment: &str, edited: bool) -> Vec<String> {
+    commit_msg::long_lines(message, comment, edited)
         .into_iter()
         .map(|line| {
             let what = if line.subject { "subject" } else { "body line" };
@@ -167,32 +189,41 @@ fn commit_msg_problems(file: &Path, message: &str, comment: &str, edited: bool) 
                 line.number,
                 line.length
             )
-        });
-    miscased.into_iter().chain(long).collect()
+        })
+        .collect()
 }
 
-fn commit_msg(file: &Path) -> anyhow::Result<ExitCode> {
+fn commit_msg(file: &Path, long_lines: LongLines) -> anyhow::Result<ExitCode> {
+    let fail_long = long_lines == LongLines::Fail;
     let message = fs::read(file).with_context(|| format!("Failed to read {}", file.display()))?;
+    let message = String::from_utf8_lossy(&message);
     // git runs a commit-msg hook with `GIT_EDITOR=:` when it opens no editor, as for `git commit -m`, and then keeps
     // comment lines.
     let edited = env::var_os("GIT_EDITOR").is_none_or(|editor| editor != ":");
-    let problems = commit_msg_problems(
-        file,
-        &String::from_utf8_lossy(&message),
-        &git::comment_string(),
-        edited,
-    );
-    if problems.is_empty() {
-        return Ok(ExitCode::SUCCESS);
-    }
-    for problem in problems {
+    let comment = git::comment_string();
+    let miscased = miscased_type_problem(file, &message, &comment, edited);
+    let long = long_line_problems(file, &message, &comment, edited);
+
+    for problem in miscased.iter().chain(&long) {
         eprintln!("{problem}");
+    }
+    if miscased.is_none() && long.is_empty() {
+        return Ok(ExitCode::SUCCESS);
     }
     eprintln!(
         "Write the type in lowercase, keep the subject within {MAX_LINE_LENGTH} characters (aiming for 50) and wrap \
          the body at {MAX_LINE_LENGTH}; body lines with URLs are exempt."
     );
-    Ok(ExitCode::FAILURE)
+    if !fail_long && !long.is_empty() {
+        eprintln!(
+            "The long lines are only a warning, with --long-lines warn (or NORMS_COMMIT_MSG_LENGTH=warn)."
+        );
+    }
+    if miscased.is_some() || fail_long && !long.is_empty() {
+        Ok(ExitCode::FAILURE)
+    } else {
+        Ok(ExitCode::SUCCESS)
+    }
 }
 
 /// Entry point for the CLI.
@@ -205,7 +236,7 @@ pub fn run() -> ExitCode {
             output_json,
             deny_warnings,
         } => verify(path, output_json, deny_warnings),
-        Commands::CommitMsg { file } => commit_msg(&file),
+        Commands::CommitMsg { file, long_lines } => commit_msg(&file, long_lines),
     };
     result.unwrap_or_else(|e| {
         eprintln!("Error: {e:#}");
@@ -321,9 +352,14 @@ mod tests {
 
     #[test]
     fn commit_msg_problems_name_the_file_and_line() {
-        let message = format!("feat: {}\n\n{}\n", "a".repeat(70), "b".repeat(73));
+        let message = format!("Feat: {}\n\n{}\n", "a".repeat(70), "b".repeat(73));
+        let file = Path::new(".git/COMMIT_EDITMSG");
         assert_eq!(
-            commit_msg_problems(Path::new(".git/COMMIT_EDITMSG"), &message, "#", true),
+            miscased_type_problem(file, &message, "#", true).as_deref(),
+            Some(".git/COMMIT_EDITMSG:1: type Feat is not in lowercase; write feat")
+        );
+        assert_eq!(
+            long_line_problems(file, &message, "#", true),
             [
                 ".git/COMMIT_EDITMSG:1: subject is 76 characters long, over 72",
                 ".git/COMMIT_EDITMSG:3: body line is 73 characters long, over 72",
@@ -332,15 +368,24 @@ mod tests {
     }
 
     #[test]
-    fn commit_msg_problems_put_a_miscased_type_first() {
-        let message = format!("Feat: {}\n", "a".repeat(70));
-        assert_eq!(
-            commit_msg_problems(Path::new("MSG"), &message, "#", true),
-            [
-                "MSG:1: type Feat is not in lowercase; write feat",
-                "MSG:1: subject is 76 characters long, over 72",
-            ]
-        );
+    fn long_lines_take_fail_or_warn() {
+        let long_lines = |args: &[&str]| match Cli::try_parse_from(
+            [["norms", "commit-msg", "MSG"].as_slice(), args].concat(),
+        )?
+        .command
+        {
+            Commands::CommitMsg { long_lines, .. } => Ok::<_, clap::Error>(long_lines),
+            Commands::Verify { .. } => unreachable!(),
+        };
+        assert!(matches!(
+            long_lines(&["--long-lines", "warn"]),
+            Ok(LongLines::Warn)
+        ));
+        assert!(matches!(
+            long_lines(&["--long-lines", "fail"]),
+            Ok(LongLines::Fail)
+        ));
+        assert!(long_lines(&["--long-lines", "off"]).is_err());
     }
 
     #[test]

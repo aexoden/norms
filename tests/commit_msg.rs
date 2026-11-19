@@ -30,6 +30,7 @@ mod tests {
             command.env_remove(var);
         }
         command
+            .env_remove("NORMS_COMMIT_MSG_LENGTH")
             .arg("commit-msg")
             .arg(file)
             .current_dir(file.parent().unwrap())
@@ -88,6 +89,46 @@ mod tests {
     }
 
     #[test]
+    fn only_warns_about_long_lines_when_asked() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("COMMIT_EDITMSG");
+        let warn = [("NORMS_COMMIT_MSG_LENGTH", "warn")];
+
+        fs::write(&file, format!("feat: {}\n", "a".repeat(67))).unwrap();
+        let warned = commit_msg_with(&file, &warn);
+        assert!(warned.status.success());
+        assert_eq!(long_lines(&warned), [1]);
+        let stderr = String::from_utf8_lossy(&warned.stderr);
+        assert!(
+            stderr.contains("The long lines are only a warning"),
+            "{stderr}"
+        );
+        assert_eq!(
+            commit_msg_with(&file, &[("NORMS_COMMIT_MSG_LENGTH", "fail")])
+                .status
+                .code(),
+            Some(1)
+        );
+        let invalid = commit_msg_with(&file, &[("NORMS_COMMIT_MSG_LENGTH", "off")]);
+        assert!(!invalid.status.success());
+        let error = String::from_utf8(invalid.stderr).unwrap();
+        assert!(error.contains("invalid value 'off'"), "{error}");
+
+        // A type not in lowercase still fails, and the long subject is still reported, as a warning.
+        fs::write(&file, format!("Feat: {}\n", "a".repeat(67))).unwrap();
+        let failed = commit_msg_with(&file, &warn);
+        assert_eq!(failed.status.code(), Some(1));
+        let problems = String::from_utf8(failed.stderr).unwrap();
+        for expected in [
+            ":1: type Feat is not in lowercase; write feat",
+            ":1: subject is 73 characters long, over 72",
+            "The long lines are only a warning",
+        ] {
+            assert!(problems.contains(expected), "{expected}: {problems}");
+        }
+    }
+
+    #[test]
     fn keeps_comment_lines_when_git_opens_no_editor() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("COMMIT_EDITMSG");
@@ -142,6 +183,7 @@ mod tests {
         for var in GIT_VARS {
             command.env_remove(var);
         }
+        command.env_remove("NORMS_COMMIT_MSG_LENGTH");
         if let Some(editor) = editor {
             command.env("GIT_EDITOR", editor);
         }

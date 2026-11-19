@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `norms verify` with the whole history, and a `pr-title.yaml` workflow running
   the commit message hooks on pull request titles. Add them as the template
   does.
+- Add `--long-lines warn` to `norms commit-msg`, also set by
+  `NORMS_COMMIT_MSG_LENGTH=warn`, which reports lines over 72 characters
+  without failing, for checking a commit that has already been made. A type
+  not in lowercase still fails.
 - Add a `build.rs` to the template's Rust applications that sets
   `BUILD_VERSION` to the version `git describe` gives, such as
   `0.2.0-5-gf8a4d2b` between releases, which `--version` reports.
