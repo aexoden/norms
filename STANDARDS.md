@@ -538,14 +538,16 @@ Other branch names should follow the pattern `<type>/<short-description>`. Use
 the same types as listed above. Branches created by AI agents or bots may use
 whatever names those tools choose.
 
-Pull requests are squash-merged, so the pull request title becomes the commit
-subject. The repository's merge settings allow only squash merging, with the
-default commit message set to "Pull request title and commit details"
-(`squash_merge_commit_title: PR_TITLE` and
-`squash_merge_commit_message: COMMIT_MESSAGES` in the API). Every pull request
+Pull requests are squash-merged. The repository's merge settings allow only
+squash merging, and keep GitHub's default commit message ("Default message", or
+`squash_merge_commit_title: COMMIT_OR_PR_TITLE` and
+`squash_merge_commit_message: COMMIT_MESSAGES` in the API): a pull request with
+a single commit is merged with that commit's message, which CI has checked, and
+one with several commits takes its title as the subject. Either way, GitHub
+adds the pull request's number to the subject, as in `(#123)`. Every pull request
 title, whoever opens it, must follow the subject rules above, including the `!`
-when the pull request makes a breaking change. CI checks the pull request's
-head commit rather than its title, so whoever merges checks the title.
+when the pull request makes a breaking change. Nothing checks the title, so
+whoever merges checks it.
 
 ### Branch Protection
 

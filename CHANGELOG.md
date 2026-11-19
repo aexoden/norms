@@ -127,6 +127,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   types in lowercase, and gives footers git's trailer format.
 - `norms commit-msg` rejects a commit type that isn't in lowercase, such as
   `Feat:`, which `conventional-pre-commit` lets through.
+- `STANDARDS.md` keeps GitHub's default squash merge message rather than
+  "Pull request title and commit details", so that a pull request with a single
+  commit is merged with the commit message CI checks. Set it back to "Default
+  message" in the repository's settings.
 - `STANDARDS.md` settles the commit types of dependency updates on Renovate's
   defaults: `fix(deps)` for runtime dependencies, `chore(deps)` for the rest.
 - `STANDARDS.md` allows an optional `TODO.md` and `ROADMAP.md` for open work.
