@@ -76,4 +76,5 @@ pub(crate) struct TsCompilerOptions {
     pub verbatim_module_syntax: Option<bool>,
     pub erasable_syntax_only: Option<bool>,
     pub allow_importing_ts_extensions: Option<bool>,
+    pub no_emit: Option<bool>,
 }

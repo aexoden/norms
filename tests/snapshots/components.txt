@@ -165,6 +165,8 @@ warn  tsconfig-module-detection  [apps/admin] tsconfig.json: moduleDetection is 
       Missing moduleDetection
 warn  tsconfig-erasable-syntax-only  [apps/admin] tsconfig.json: erasableSyntaxOnly enabled
       Missing erasableSyntaxOnly
+warn  tsconfig-no-emit  [apps/admin] tsconfig.json: noEmit enabled
+      Missing noEmit
 fail  eslint-config-exists  [apps/admin] eslint.config.ts: exists
       File not found
 fail  prettier-config-exists  [apps/admin] .prettierrc: exists
@@ -220,6 +222,8 @@ warn  tsconfig-module-detection  [apps/web] tsconfig.app.json: moduleDetection i
       Missing moduleDetection
 warn  tsconfig-erasable-syntax-only  [apps/web] tsconfig.app.json: erasableSyntaxOnly enabled
       Missing erasableSyntaxOnly
+warn  tsconfig-no-emit  [apps/web] tsconfig.app.json: noEmit enabled
+      Missing noEmit
 fail  eslint-config-exists  [apps/web] eslint.config.ts: exists
       File not found
 fail  prettier-config-exists  [apps/web] .prettierrc: exists

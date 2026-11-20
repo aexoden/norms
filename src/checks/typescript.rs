@@ -474,6 +474,9 @@ fn check_compiler_options(label: &str, opts: &TsCompilerOptions, report: &mut Re
         opts.erasable_syntax_only,
         report,
     );
+
+    // noEmit, which leaves the output to Vite, so that the build script's `tsc -b` writes nothing beside the sources
+    check_enabled("tsconfig-no-emit", label, "noEmit", opts.no_emit, report);
 }
 
 /// Check that the boolean compiler option `option`, whose value in the config labeled `label` is `value`, is enabled.

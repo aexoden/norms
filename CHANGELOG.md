@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a tsconfig doesn't set `"noEmit": true` (`tsconfig-no-emit`), as
+  the standards require: without it, the `build` script's `tsc -b` writes
+  JavaScript beside the sources. Set it in `tsconfig.app.json` and
+  `tsconfig.node.json`, as the template does.
 - Warn when `[tool.basedpyright]` turns a rule off (`false`, `"none"`,
   `"information"` or `"hint"`) without a comment on its line saying why
   (`basedpyright-rule-reasons`), as the standards require. Add one, as in

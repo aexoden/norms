@@ -79,6 +79,7 @@ warn  tsconfig-module-detection  [.] tsconfig.app.json: moduleDetection is force
       moduleDetection is "auto", not "force"
 warn  tsconfig-erasable-syntax-only  [.] tsconfig.app.json: erasableSyntaxOnly enabled
       Missing erasableSyntaxOnly
+pass  tsconfig-no-emit  [.] tsconfig.app.json: noEmit enabled
 pass  tsconfig-reference-exists  [.] tsconfig.node.json: exists
 pass  tsconfig-reference-valid  [.] tsconfig.node.json: valid
 warn  tsconfig-strict  [.] tsconfig.node.json: strict mode enabled
@@ -102,6 +103,8 @@ pass  tsconfig-no-unused-parameters  [.] tsconfig.node.json: noUnusedParameters 
 pass  tsconfig-module-detection  [.] tsconfig.node.json: moduleDetection is force
 warn  tsconfig-erasable-syntax-only  [.] tsconfig.node.json: erasableSyntaxOnly enabled
       Missing erasableSyntaxOnly
+warn  tsconfig-no-emit  [.] tsconfig.node.json: noEmit enabled
+      noEmit is false
 pass  eslint-config-exists  [.] eslint.config.ts: exists
 pass  eslint-config-valid  [.] eslint.config.ts: valid
 warn  eslint-strict-type-checked  [.] ESLint: includes typescript-eslint's strictTypeChecked
