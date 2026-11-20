@@ -66,6 +66,15 @@ impl LicenseFiles {
             .collect()
     }
 
+    /// Check a manifest's license, `value`, as [`check_expression`](Self::check_expression) does, if it is a string,
+    /// as an SPDX expression must be. Any other value warns.
+    pub(crate) fn check_license(&self, value: Option<&str>) -> Result<(), Issue> {
+        value.map_or_else(
+            || Err(Issue::warn("Not an SPDX expression string")),
+            |expression| self.check_expression(expression),
+        )
+    }
+
     /// Check that `expression`, a manifest's license, is a valid SPDX expression and that `LICENSES/` holds a text
     /// for each license and exception it names. A missing text, a required file, fails; an expression that isn't valid
     /// SPDX, which is metadata that differs from the standard, warns.
@@ -297,6 +306,11 @@ mod tests {
         ] {
             assert_eq!(files.check_expression(expression), Ok(()), "{expression}");
         }
+        assert_eq!(files.check_license(Some("MIT")), Ok(()));
+        assert_eq!(
+            files.check_license(None),
+            Err(Issue::warn("Not an SPDX expression string"))
+        );
 
         assert_eq!(
             files.check_expression("MIT OR BSD-3-Clause OR ISC"),

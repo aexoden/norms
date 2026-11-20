@@ -42,10 +42,7 @@ pub(crate) fn check_pyproject(ctx: &ComponentContext, report: &mut Report) {
         report.check(
             "pyproject-license-texts",
             "pyproject.toml: license has its texts in LICENSES/",
-            license.as_str().map_or_else(
-                || Err(Issue::warn("Not an SPDX expression string")),
-                |expression| ctx.license_files().check_expression(expression),
-            ),
+            ctx.license_files().check_license(license.as_str()),
         );
     }
 }

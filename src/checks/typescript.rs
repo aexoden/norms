@@ -75,10 +75,7 @@ fn check_package(ctx: &ComponentContext, label: &str, config: &PackageJson, repo
         report.check(
             "package-json-license-texts",
             format!("{label}: license has its texts in LICENSES/"),
-            license.as_str().map_or_else(
-                || Err(Issue::warn("Not an SPDX expression string")),
-                |expression| ctx.license_files().check_expression(expression),
-            ),
+            ctx.license_files().check_license(license.as_str()),
         );
     }
 
