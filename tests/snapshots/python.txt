@@ -143,5 +143,5 @@ pass  python-ci-ruff-check  Python CI: lint check (without --fix)
 pass  python-ci-mypy  Python CI: type check
 pass  python-ci-basedpyright  Python CI: basedpyright type check
 pass  python-ci-pytest  Python CI: tests (with coverage)
-pass  python-audit-uv  Python audit: uv audit
+pass  python-audit-uv  Python audit: uv audit --locked
 pass  python-ci-uv-cache  Python CI: jobs that install nothing set enable-cache: false

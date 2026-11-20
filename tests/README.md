@@ -101,8 +101,8 @@ re-renders them, as `AGENTS.md` describes.
     that, like another job, sets `continue-on-error`;
   - a `norms-verify` job running the hook from a shallow checkout, and no
     step running the `commit-msg` hooks;
-  - an unscheduled `audit.yaml` that runs `uv audit` but not cargo-deny's
-    advisories check;
+  - an unscheduled `audit.yaml` that runs `uv audit` without `--locked`, but
+    not cargo-deny's advisories check;
   - a `release.yaml` job that only checks formatting but leaves
     setup-rust-toolchain's cache on, beside jobs that build or turn it off,
     one of which adds a `Swatinem/rust-cache` step of its own, and a job

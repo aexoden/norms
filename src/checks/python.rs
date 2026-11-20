@@ -1071,17 +1071,31 @@ fn min_python_tested(config: &PyprojectToml, workflow: &Workflow) -> Result<(), 
     }
 }
 
-/// Check that `audit.yaml` runs `uv audit`.
+/// Check that `audit.yaml` runs `uv audit --locked`.
 pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
     let ConfigStatus::Ok(workflow) = ctx.audit_workflow() else {
         return;
     };
 
-    report.must(
+    report.check(
         "python-audit-uv",
-        "Python audit: uv audit",
-        workflow.runs_command("uv audit"),
+        "Python audit: uv audit --locked",
+        uv_audit(workflow),
     );
+}
+
+/// Check that `workflow` runs `uv audit`, with `--locked`, so that a stale lock file fails rather than being relocked,
+/// leaving the audit to cover versions that aren't committed.
+fn uv_audit(workflow: &Workflow) -> Result<(), Issue> {
+    if workflow.runs_command("uv audit --locked") {
+        Ok(())
+    } else if workflow.runs_command("uv audit") {
+        Err(Issue::warn(
+            "uv audit runs without --locked, so a stale uv.lock is relocked rather than failing",
+        ))
+    } else {
+        Err(Issue::fail("No step runs uv audit"))
+    }
 }
 
 /// The actions that install nothing with uv, so that a job using no others caches nothing of its own.
@@ -1361,6 +1375,27 @@ jobs:
         )
         .unwrap();
         assert_eq!(jobs_running_unlocked(&workflow), ["frozen", "late-sync"]);
+    }
+
+    #[test]
+    fn audits_run_uv_audit_with_locked() {
+        let workflow = |run: &str| -> Workflow {
+            serde_saphyr::from_str(&format!(
+                "jobs:\n  audit:\n    steps:\n      - run: {run}\n"
+            ))
+            .unwrap()
+        };
+        assert_eq!(uv_audit(&workflow("uv audit --locked")), Ok(()));
+        assert_eq!(
+            uv_audit(&workflow("uv audit")),
+            Err(Issue::warn(
+                "uv audit runs without --locked, so a stale uv.lock is relocked rather than failing"
+            ))
+        );
+        assert_eq!(
+            uv_audit(&workflow("uv lock --check")),
+            Err(Issue::fail("No step runs uv audit"))
+        );
     }
 
     #[test]

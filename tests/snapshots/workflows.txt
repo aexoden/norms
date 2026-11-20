@@ -168,7 +168,8 @@ fail  python-ci-mypy  Python CI: type check
 fail  python-ci-basedpyright  Python CI: basedpyright type check
 fail  python-ci-pytest  Python CI: tests (with coverage)
       No step runs pytest
-pass  python-audit-uv  Python audit: uv audit
+warn  python-audit-uv  Python audit: uv audit --locked
+      uv audit runs without --locked, so a stale uv.lock is relocked rather than failing
 pass  python-ci-uv-cache  Python CI: jobs that install nothing set enable-cache: false
 pass  cargo-toml-exists  [.] Cargo.toml: exists
 pass  cargo-toml-valid  [.] Cargo.toml: valid

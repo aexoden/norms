@@ -21,4 +21,4 @@ jobs:
           command: check bans licenses sources
 
       - name: Run uv advisory check
-        run: uv audit --locked
+        run: uv audit

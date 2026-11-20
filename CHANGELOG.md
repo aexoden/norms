@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when `audit.yaml` runs `uv audit` without `--locked`
+  (`python-audit-uv`), which relocks a stale `uv.lock` rather than failing, and
+  audits versions that aren't committed. Run `uv audit --locked`, as the
+  template does.
 - Warn when a tsconfig doesn't set `"noEmit": true` (`tsconfig-no-emit`), as
   the standards require: without it, the `build` script's `tsc -b` writes
   JavaScript beside the sources. Set it in `tsconfig.app.json` and
