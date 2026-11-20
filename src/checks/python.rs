@@ -7,7 +7,7 @@ use pep508_rs::pep440_rs::Version;
 
 use crate::checks::common::{SETUP_UV, is_exact_uv_version};
 use crate::config::{
-    BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekHook,
+    BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekConfig, PrekHook,
     PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
     check_release_age_value, commands, is_program, program_args, sets_attribute,
     unexplained_basedpyright_rules, unexplained_ruff_ignores,
@@ -847,13 +847,7 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     report.check(
         "python-prek-pytest",
         "Python prek: pytest hook (with coverage)",
-        config.commit_hooks("pytest").and_then(|hooks| {
-            if hooks.into_iter().any(pytest_hook_covers) {
-                Ok(())
-            } else {
-                Err(Issue::warn("The pytest hook doesn't pass --cov"))
-            }
-        }),
+        pytest_hooks(config),
     );
     report.should(
         "python-prek-local-hooks",
@@ -1058,6 +1052,20 @@ fn runs_pytest(line: &str) -> bool {
         .any(|words| pytest_coverage(&words).is_some())
 }
 
+/// Check that each pytest hook measures coverage, as [`pytest_hook_covers`] tells, since each may test another
+/// component.
+fn pytest_hooks(config: &PrekConfig) -> Result<(), Issue> {
+    if config
+        .commit_hooks("pytest")?
+        .into_iter()
+        .all(pytest_hook_covers)
+    {
+        Ok(())
+    } else {
+        Err(Issue::warn("The pytest hook doesn't pass --cov"))
+    }
+}
+
 /// Whether a pytest hook measures coverage, from its entry and the args prek appends to it.
 fn pytest_hook_covers(hook: &PrekHook) -> bool {
     hook.filter_map_commands("pytest", pytest_coverage)
@@ -1257,7 +1265,7 @@ mod tests {
     #[test]
     fn ruff_check_hooks_warn_on_fix() {
         let hook = |toml: &str| {
-            let config = crate::config::PrekConfig::parse(toml.to_owned()).unwrap();
+            let config = PrekConfig::parse(toml.to_owned()).unwrap();
             config
                 .commit_hooks("ruff-check")
                 .unwrap()
@@ -1751,6 +1759,27 @@ jobs:
             ..PrekHook::default()
         };
         assert!(pytest_hook_covers(&remote));
+        // Each copy of the hook, as for another component, must measure coverage.
+        let hooks = |entries: &[&str]| {
+            pytest_hooks(&PrekConfig::with_repo(
+                "local",
+                entries.iter().map(|entry| hook(entry, &[])).collect(),
+            ))
+        };
+        assert_eq!(
+            hooks(&[
+                "uv --directory api run pytest --cov",
+                "uv --directory cli run pytest --cov"
+            ]),
+            Ok(())
+        );
+        assert_eq!(
+            hooks(&[
+                "uv --directory api run pytest --cov",
+                "uv --directory cli run pytest"
+            ]),
+            Err(Issue::warn("The pytest hook doesn't pass --cov"))
+        );
 
         let workflow = |run: &str| -> Workflow {
             serde_saphyr::from_str(&format!("jobs:\n  test:\n    steps:\n      - run: {run}\n"))

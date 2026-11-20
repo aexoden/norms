@@ -833,16 +833,14 @@ fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
     }
 }
 
-/// Check that the `cargo-test` hook runs the tests with coverage, through cargo-llvm-cov. A hook that runs them without,
-/// or doesn't run them where norms can see, warns.
+/// Check that each `cargo-test` hook runs the tests with coverage, through cargo-llvm-cov, since each may test another
+/// component. A hook that runs them without, or doesn't run them where norms can see, warns.
 fn cargo_test_hooks(config: &PrekConfig) -> Result<(), Issue> {
-    let runs: Vec<TestRun> = config
-        .commit_hooks("cargo-test")?
-        .into_iter()
-        .flat_map(|hook| hook.filter_map_commands("", cargo_test_run))
-        .filter(|run| run.units)
-        .collect();
-    if runs.iter().any(|run| run.coverage) {
+    if config.commit_hooks("cargo-test")?.into_iter().all(|hook| {
+        hook.filter_map_commands("", cargo_test_run)
+            .iter()
+            .any(|run| run.units && run.coverage)
+    }) {
         Ok(())
     } else {
         Err(Issue::warn(
@@ -2574,10 +2572,17 @@ jobs:
         assert_eq!(hooks(&["cargo llvm-cov --no-report"]), uncovered);
         assert_eq!(hooks(&["cargo check"]), uncovered);
         assert_eq!(hooks(&["cargo +nightly llvm-cov --doc"]), uncovered);
-        // Any copy of the hook that measures coverage is enough.
+        // Each copy of the hook, as for another component, must measure coverage.
+        assert_eq!(
+            hooks(&[
+                "cargo llvm-cov --workspace",
+                "cargo llvm-cov --manifest-path rust/Cargo.toml"
+            ]),
+            Ok(())
+        );
         assert_eq!(
             hooks(&["cargo test --workspace", "cargo llvm-cov --workspace"]),
-            Ok(())
+            uncovered
         );
         // A hook without an entry runs its repository's, which norms can't see.
         assert_eq!(

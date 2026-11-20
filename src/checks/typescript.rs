@@ -944,13 +944,7 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
     report.check(
         "typescript-prek-eslint",
         "TypeScript prek: eslint hook (--max-warnings 0)",
-        prek.commit_hooks("eslint").and_then(|hooks| {
-            if hooks.into_iter().any(eslint_hook_strict) {
-                Ok(())
-            } else {
-                Err(Issue::warn("The eslint hook doesn't pass --max-warnings 0"))
-            }
-        }),
+        eslint_hooks(prek),
     );
     report.check(
         "typescript-prek-prettier",
@@ -1105,6 +1099,20 @@ fn format_script_checks(script: &str) -> Result<(), Issue> {
     )
 }
 
+/// Check that each `eslint` hook passes `--max-warnings 0`, as [`eslint_hook_strict`] tells, since each may lint another
+/// component.
+fn eslint_hooks(prek: &PrekConfig) -> Result<(), Issue> {
+    if prek
+        .commit_hooks("eslint")?
+        .into_iter()
+        .all(eslint_hook_strict)
+    {
+        Ok(())
+    } else {
+        Err(Issue::warn("The eslint hook doesn't pass --max-warnings 0"))
+    }
+}
+
 /// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args prek appends to it. A hook without
 /// an entry, as a remote hook may leave it to the hook's repository, is taken to run `eslint`.
 fn eslint_hook_strict(hook: &PrekHook) -> bool {
@@ -1135,25 +1143,31 @@ fn vitest_coverage(words: &[&str]) -> Option<bool> {
     program_args(words, "vitest").map(|args| args.contains(&"--coverage"))
 }
 
-/// Check that some `vitest` hook runs `vitest` with `--coverage`, in its entry or the args prek appends to it. A
-/// hook without an entry of its own, as a remote hook may leave it to the hook's repository, warns, since norms can't
-/// see its arguments.
+/// Check that each `vitest` hook runs `vitest` with `--coverage`, in its entry or the args prek appends to it, since
+/// each may test another component. A hook without an entry of its own, as a remote hook may leave it to the hook's
+/// repository, warns, since norms can't see its arguments.
 fn vitest_hooks(config: &PrekConfig) -> Result<(), Issue> {
-    let hooks = config.commit_hooks("vitest")?;
-    if hooks.iter().any(|hook| {
-        hook.entry.is_some()
-            && hook
+    let mut issues: Vec<Issue> = config
+        .commit_hooks("vitest")?
+        .into_iter()
+        .filter_map(|hook| {
+            if hook.entry.is_none() {
+                Some(Issue::warn(
+                    "The vitest hook sets no entry, so norms can't see whether it reports coverage",
+                ))
+            } else if hook
                 .filter_map_commands("vitest", vitest_coverage)
                 .contains(&true)
-    }) {
-        Ok(())
-    } else if hooks.iter().any(|hook| hook.entry.is_none()) {
-        Err(Issue::warn(
-            "The vitest hook sets no entry, so norms can't see whether it reports coverage",
-        ))
-    } else {
-        Err(Issue::warn("The vitest hook doesn't pass --coverage"))
-    }
+            {
+                None
+            } else {
+                Some(Issue::warn("The vitest hook doesn't pass --coverage"))
+            }
+        })
+        .collect();
+    issues.sort_by(|a, b| a.message.cmp(&b.message));
+    issues.dedup();
+    Issue::combine(issues)
 }
 
 /// Check that some step runs `vitest` with `--coverage`. A step running the `test` script doesn't count, since the flag
@@ -1544,6 +1558,27 @@ mod tests {
             Some("pnpm exec eslint '--max-warnings 0'"),
             &[]
         )));
+        // Each copy of the hook, as for another component, must pass it.
+        let hooks = |entries: &[&str]| {
+            eslint_hooks(&PrekConfig::with_repo(
+                "local",
+                entries.iter().map(|entry| hook(Some(entry), &[])).collect(),
+            ))
+        };
+        assert_eq!(
+            hooks(&[
+                "pnpm --dir web exec eslint . --max-warnings 0",
+                "pnpm --dir admin exec eslint . --max-warnings 0"
+            ]),
+            Ok(())
+        );
+        assert_eq!(
+            hooks(&[
+                "pnpm --dir web exec eslint . --max-warnings 0",
+                "pnpm --dir admin exec eslint ."
+            ]),
+            Err(Issue::warn("The eslint hook doesn't pass --max-warnings 0"))
+        );
 
         let workflow = |run: &str| -> Workflow {
             serde_saphyr::from_str(&format!("jobs:\n  lint:\n    steps:\n      - run: {run}\n"))
@@ -1839,6 +1874,18 @@ mod tests {
         assert_eq!(vitest("pnpm exec vitest run", &["--coverage"]), Ok(()));
         assert_eq!(
             vitest("pnpm exec vitest run", &[]),
+            Err(Issue::warn("The vitest hook doesn't pass --coverage"))
+        );
+        // Each copy of the hook, as for another component, must report coverage.
+        assert_eq!(
+            vitest_hooks(&PrekConfig::with_repo(
+                "local",
+                vec![
+                    PrekHook::new("vitest", Some("pnpm exec vitest run")),
+                    PrekHook::new("vitest", Some("pnpm --dir web exec vitest run --coverage")),
+                    PrekHook::new("vitest", Some("pnpm --dir admin exec vitest run")),
+                ]
+            )),
             Err(Issue::warn("The vitest hook doesn't pass --coverage"))
         );
         assert_eq!(
