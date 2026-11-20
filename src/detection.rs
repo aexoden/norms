@@ -21,7 +21,7 @@ const MARKERS: &[(Language, &str)] = &[
 
 /// Directories of build output and installed dependencies, which are never searched even if `.gitignore` doesn't
 /// exclude them.
-const SKIPPED_DIRS: &[&str] = &[".venv", "node_modules", "target"];
+pub(crate) const SKIPPED_DIRS: &[&str] = &[".venv", "node_modules", "target"];
 
 /// The configuration files of markdownlint-cli2, and of markdownlint, which it reads in any directory of the files it
 /// lints.

@@ -12,6 +12,7 @@ use serde_json::Value;
 
 use crate::config::{PackageJson, PnpmWorkspace};
 use crate::context::{ConfigStatus, parse_json5_file};
+use crate::detection::SKIPPED_DIRS;
 
 /// The directories pnpm leaves out of a workspace whatever its patterns say, wherever they are
 /// (`@pnpm/workspace.find-packages`).
@@ -41,7 +42,8 @@ impl PnpmWorkspacePackages {
 /// package alone. The root package itself isn't listed.
 ///
 /// Unlike pnpm, this doesn't search hidden directories, which pnpm's patterns match when they name them, nor follow
-/// symlinked directories, so the search stays inside the project, and it doesn't read the `package.yaml` and
+/// symlinked directories, so the search stays inside the project, nor the build output and installed dependencies that
+/// component detection skips, such as a Rust `target` directory, and it doesn't read the `package.yaml` and
 /// `package.json5` manifests pnpm also reads. A pattern leading outside the workspace's directory is reported as an
 /// error, and its packages aren't read.
 pub(crate) fn find_packages(root: &Path, workspace: &PnpmWorkspace) -> PnpmWorkspacePackages {
@@ -98,7 +100,10 @@ pub(crate) fn find_packages(root: &Path, workspace: &PnpmWorkspace) -> PnpmWorks
                 .is_some_and(|file_type| file_type.is_dir());
             !(is_dir
                 && entry.depth() > 0
-                && IGNORED_DIRS.iter().any(|&dir| entry.file_name() == dir))
+                && IGNORED_DIRS
+                    .iter()
+                    .chain(SKIPPED_DIRS)
+                    .any(|&dir| entry.file_name() == dir))
         })
         .build();
     for entry in walker {
@@ -236,6 +241,7 @@ mod tests {
                 "apps/web/tests/e2e",
                 "apps/web/bower_components/dep",
                 "apps/web/node_modules/dep",
+                "apps/web/target/package",
                 "apps/.hidden",
                 "tools/unlisted",
             ],
