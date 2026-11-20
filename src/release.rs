@@ -4,6 +4,7 @@
 //! The project's latest release, whose version every manifest that carries one names.
 
 use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -19,6 +20,8 @@ pub(crate) enum Release {
     },
     /// The latest release heading of `CHANGELOG.md` names something other than a version, such as `[v1.0.0]`.
     Invalid(String),
+    /// `CHANGELOG.md` exists but can't be read, for the reason given, such as invalid UTF-8.
+    Unreadable(String),
 }
 
 /// Where a [`Release`]'s version comes from.
@@ -43,15 +46,14 @@ impl Release {
     /// `CHANGELOG.md`, or, without one, its highest release tag. A project with neither has released nothing, which
     /// version 0.0.0 stands for.
     pub(crate) fn find(path: &Path, tags: &[String]) -> Self {
-        let (heading, source) = fs::read_to_string(path.join("CHANGELOG.md")).map_or_else(
-            |_| {
-                (
-                    highest_tag(tags).map(|version| version.to_string()),
-                    Source::Tag,
-                )
-            },
-            |changelog| (latest_in_changelog(&changelog), Source::Changelog),
-        );
+        let (heading, source) = match fs::read_to_string(path.join("CHANGELOG.md")) {
+            Ok(changelog) => (latest_in_changelog(&changelog), Source::Changelog),
+            Err(error) if error.kind() == ErrorKind::NotFound => (
+                highest_tag(tags).map(|version| version.to_string()),
+                Source::Tag,
+            ),
+            Err(error) => return Self::Unreadable(error.to_string()),
+        };
         let Some(heading) = heading else {
             return Self::Version {
                 version: Version::new(0, 0, 0),
@@ -75,6 +77,11 @@ impl Release {
                 return Err(format!(
                     "CHANGELOG.md's latest release, [{heading}], isn't a semantic version, such as 1.0.0, to compare \
                      the version with"
+                ));
+            }
+            Self::Unreadable(error) => {
+                return Err(format!(
+                    "CHANGELOG.md, which names the latest release to compare the version with, can't be read: {error}"
                 ));
             }
         };
@@ -169,6 +176,22 @@ mod tests {
                 "CHANGELOG.md's latest release, [v1.0.0], isn't a semantic version, such as 1.0.0, to compare the \
                  version with"
                     .to_owned()
+            )
+        );
+    }
+
+    #[test]
+    fn an_unreadable_changelog_isnt_replaced_by_the_tags() {
+        let dir = TempDir::new().unwrap();
+        fs::write(dir.path().join("CHANGELOG.md"), b"## [0.2.0] - caf\xe9\n").unwrap();
+        let unreadable = Release::find(dir.path(), &["v0.1.0".to_owned()]);
+        assert!(
+            matches!(unreadable, Release::Unreadable(_)),
+            "{unreadable:?}"
+        );
+        assert!(
+            unreadable.check(Some("0.1.0")).is_err_and(
+                |error| error.starts_with("CHANGELOG.md, which names the latest release")
             )
         );
     }
