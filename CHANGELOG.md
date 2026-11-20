@@ -316,6 +316,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Read a `devbox.json` whose `shell.init_hook` is a single string, as Devbox
+  allows, rather than failing every Devbox check on it as malformed.
 - Don't report that a Python component without a `[project]` table, which
   `pyproject-project` already fails, lacks a job testing its oldest Python
   (`python-ci-min-python`): it isn't a library.

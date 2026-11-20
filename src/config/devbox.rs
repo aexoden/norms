@@ -21,17 +21,6 @@ pub(crate) struct DevboxConfig {
     /// Environment variables set in the Devbox shell. Their values are kept as JSON, so one that isn't a string
     /// doesn't make the whole file invalid.
     pub env: Option<serde_json::Map<String, serde_json::Value>>,
-
-    /// Shell configuration.
-    pub shell: Option<DevboxShell>,
-}
-
-/// The `shell` section of `devbox.json`.
-#[derive(Debug, Deserialize, Default)]
-#[serde(default)]
-pub(crate) struct DevboxShell {
-    pub init_hook: Option<Vec<String>>,
-    pub scripts: Option<serde_json::Value>,
 }
 
 /// Deserialize `packages` from either a list of strings or a dictionary.
@@ -53,5 +42,19 @@ where
     match Packages::deserialize(deserializer)? {
         Packages::List(list) => Ok(list),
         Packages::Map(map) => Ok(map.keys().cloned().collect()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_any_shell_section() {
+        let config: DevboxConfig = serde_json::from_str(
+            r#"{"packages": {"uv": "latest"}, "shell": {"init_hook": "echo hi", "scripts": {"a": "b"}}}"#,
+        )
+        .unwrap();
+        assert_eq!(config.packages, ["uv"]);
     }
 }
