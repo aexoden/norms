@@ -20,8 +20,8 @@ pub(crate) struct CargoToml {
     pub workspace: Option<CargoWorkspace>,
     /// The `[lib]` target, read leniently, so that one of the wrong type fails only its check.
     pub lib: Option<toml::Value>,
-    /// Explicit `[[bin]]` targets.
-    pub bin: Vec<CargoBinTarget>,
+    /// Explicit `[[bin]]` targets, whose contents no check reads.
+    pub bin: Vec<toml::Value>,
     #[serde(flatten)]
     pub dependencies: CargoDependencyTables,
     /// Platform-specific dependencies, keyed by the target's `cfg` expression or triple.
@@ -248,17 +248,9 @@ pub(crate) struct CargoWorkspace {
     pub dependencies: BTreeMap<String, CargoDependency>,
 }
 
-/// A `[[bin]]` target entry.
-#[derive(Debug, Deserialize, Default)]
-#[serde(default)]
-pub(crate) struct CargoBinTarget {
-    pub name: Option<String>,
-}
-
 impl CargoToml {
-    /// Whether the project defines any binary targets (explicit `[[bin]]` or inferred from `src/main.rs`).
-    ///
-    /// Note: the caller must separately check for `src/main.rs` on the filesystem.
+    /// Whether the package defines explicit `[[bin]]` targets. Those Cargo infers from `src/main.rs` and `src/bin/`
+    /// aren't counted.
     pub(crate) const fn has_explicit_bin_targets(&self) -> bool {
         !self.bin.is_empty()
     }

@@ -16,9 +16,6 @@ use serde::Deserialize;
 pub(crate) struct TsConfig {
     pub compiler_options: Option<TsCompilerOptions>,
 
-    /// Files to extend from.
-    pub extends: Option<serde_json::Value>,
-
     /// Project references for solution-style tsconfig.
     ///
     /// When present, the root tsconfig delegates compilation to referenced sub-projects (e.g. `tsconfig.app.json`,
@@ -65,14 +62,6 @@ pub(crate) struct TsCompilerOptions {
     pub target: Option<String>,
     pub lib: Option<Vec<String>>,
     pub module_resolution: Option<String>,
-    pub out_dir: Option<String>,
-    pub root_dir: Option<String>,
-    pub declaration: Option<bool>,
-    pub source_map: Option<bool>,
-    pub es_module_interop: Option<bool>,
-    pub skip_lib_check: Option<bool>,
-    pub force_consistent_casing_in_file_names: Option<bool>,
-    pub resolve_json_module: Option<bool>,
     pub verbatim_module_syntax: Option<bool>,
     pub erasable_syntax_only: Option<bool>,
     pub allow_importing_ts_extensions: Option<bool>,
