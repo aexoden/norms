@@ -335,7 +335,7 @@ fn check_security(settings: &Settings, report: &mut Report) {
     let scanning = match scanning {
         None => Verdict::skip(NEEDS_ADMIN),
         Some((true, true)) => Outcome::Pass.into(),
-        Some(_) if private => Verdict::skip(
+        Some((false, _)) if private => Verdict::skip(
             "A private repository has secret scanning only with GitHub Secret Protection",
         ),
         Some((false, _)) => Outcome::issue("Secret scanning is off").into(),
@@ -926,6 +926,24 @@ mod tests {
         ] {
             assert_eq!(status(&results, id), (Status::Fail, message), "{id}");
         }
+    }
+
+    #[test]
+    fn a_private_repository_with_secret_protection_needs_push_protection() {
+        let responses = changed("", |repo| {
+            repo["private"] = json!(true);
+            repo["security_and_analysis"] = json!({
+                "dependabot_security_updates": {"status": "disabled"},
+                "secret_scanning": {"status": "enabled"},
+                "secret_scanning_push_protection": {"status": "disabled"},
+            });
+        });
+        let results = run(responses);
+
+        assert_eq!(
+            status(&results, "github-secret-scanning"),
+            (Status::Fail, "Push protection is off")
+        );
     }
 
     #[test]
