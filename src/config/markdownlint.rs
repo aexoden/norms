@@ -10,6 +10,8 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
+use super::javascript::{number, truthy};
+
 /// A markdownlint rule: its names (the rule name, then its aliases) and its tags.
 struct Rule {
     names: &'static [&'static str],
@@ -173,26 +175,6 @@ struct RuleSetting<'a> {
 impl RuleSetting<'_> {
     fn option(&self, name: &str) -> Option<&Value> {
         self.options?.get(name)
-    }
-}
-
-/// Whether JavaScript treats a value as true.
-fn truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(value) => *value,
-        Value::Number(number) => number.as_f64().is_some_and(|number| number != 0.0),
-        Value::String(string) => !string.is_empty(),
-        Value::Array(_) | Value::Object(_) => true,
-    }
-}
-
-/// A value as JavaScript's `Number()` converts it, for the values a number option plausibly holds.
-fn number(value: &Value) -> Option<f64> {
-    match value {
-        Value::Number(number) => number.as_f64(),
-        Value::String(string) => string.trim().parse().ok(),
-        Value::Null | Value::Bool(_) | Value::Array(_) | Value::Object(_) => None,
     }
 }
 

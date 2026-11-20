@@ -11,6 +11,8 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use super::javascript::truthy;
+
 use crate::release::Release;
 
 /// Top-level `package.json` structure.
@@ -262,13 +264,7 @@ impl PackageJson {
 
     /// Whether Prettier takes its configuration from the `prettier` key, as it does when the key's value is truthy.
     pub(crate) fn configures_prettier(&self) -> bool {
-        self.prettier.as_ref().is_some_and(|value| match value {
-            Value::Null => false,
-            Value::Bool(value) => *value,
-            Value::Number(number) => number.as_f64().is_some_and(|number| number != 0.0),
-            Value::String(value) => !value.is_empty(),
-            Value::Array(_) | Value::Object(_) => true,
-        })
+        self.prettier.as_ref().is_some_and(truthy)
     }
 
     /// The script with the given name, if it exists.

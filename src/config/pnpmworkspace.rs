@@ -9,6 +9,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use super::javascript::number;
 use super::release_age::check_release_age_minutes;
 
 /// Top-level `pnpm-workspace.yaml` structure.
@@ -55,12 +56,8 @@ impl PnpmWorkspace {
             .minimum_release_age
             .as_ref()
             .ok_or("Missing minimumReleaseAge")?;
-        let minutes = match value {
-            Value::Number(number) => number.as_f64(),
-            Value::String(text) => text.trim().parse().ok(),
-            Value::Null | Value::Bool(_) | Value::Array(_) | Value::Object(_) => None,
-        }
-        .ok_or_else(|| format!("minimumReleaseAge {value} isn't a number"))?;
+        let minutes =
+            number(value).ok_or_else(|| format!("minimumReleaseAge {value} isn't a number"))?;
 
         check_release_age_minutes(minutes)
     }

@@ -8,6 +8,7 @@ mod deny;
 mod devbox;
 mod editorconfig;
 mod gitattributes;
+mod javascript;
 mod markdownlint;
 mod norms;
 mod packagejson;
