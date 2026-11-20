@@ -8,6 +8,7 @@ use std::path::Path;
 
 use semver::Comparator;
 
+use crate::checks::common::jobs_in_workflows;
 use crate::config::{
     CLIPPY_TOML, CargoConfig, CargoToml, CargoWorkspace, ClippyToml, Command, DENY_TOML,
     FormatterRun, HIDDEN_CLIPPY_TOML, LintLevel, PrekConfig, Workflow, WorkflowJob, WorkflowStep,
@@ -1454,27 +1455,12 @@ fn jobs_adding_rust_cache(workflow: &Workflow) -> Vec<&str> {
 /// Check that the jobs of every workflow that build no Rust code, such as formatting, turn off setup-rust-toolchain's
 /// cache with `cache: false`, and that no job adds a cache step of its own beside it.
 pub(crate) fn check_toolchain_cache(ctx: &ProjectContext, report: &mut Report) {
-    let mut parsed = false;
-    let mut caching = Vec::new();
-    let mut separate = Vec::new();
-    for (name, status) in ctx.workflows() {
-        if let ConfigStatus::Ok(workflow) = status {
-            parsed = true;
-            caching.extend(
-                jobs_caching_nothing(workflow)
-                    .into_iter()
-                    .map(|job| format!("{name}: {job}")),
-            );
-            separate.extend(
-                jobs_adding_rust_cache(workflow)
-                    .into_iter()
-                    .map(|job| format!("{name}: {job}")),
-            );
-        }
-    }
-    if !parsed {
+    let (Some(caching), Some(separate)) = (
+        jobs_in_workflows(ctx, jobs_caching_nothing),
+        jobs_in_workflows(ctx, jobs_adding_rust_cache),
+    ) else {
         return;
-    }
+    };
 
     report.should(
         "rust-ci-separate-cache",

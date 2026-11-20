@@ -1149,6 +1149,27 @@ fn tombi_format_checks(words: &[&str]) -> bool {
     tombi_format_run(words) == Some(FormatterRun::Checks)
 }
 
+/// The jobs `jobs` finds in each workflow that parsed, labeled with the workflow's name (`ci.yaml: test`), or `None`
+/// if none parsed.
+pub(crate) fn jobs_in_workflows<'a>(
+    ctx: &'a ProjectContext,
+    mut jobs: impl FnMut(&'a Workflow) -> Vec<&'a str>,
+) -> Option<Vec<String>> {
+    let mut parsed = false;
+    let mut found = Vec::new();
+    for (name, status) in ctx.workflows() {
+        if let ConfigStatus::Ok(workflow) = status {
+            parsed = true;
+            found.extend(
+                jobs(workflow)
+                    .into_iter()
+                    .map(|job| format!("{name}: {job}")),
+            );
+        }
+    }
+    parsed.then_some(found)
+}
+
 pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
     let workflows_dir = ctx.path().join(".github/workflows");
     report.must(

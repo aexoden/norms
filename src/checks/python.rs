@@ -5,7 +5,7 @@
 
 use pep508_rs::pep440_rs::Version;
 
-use crate::checks::common::SETUP_UV;
+use crate::checks::common::{SETUP_UV, jobs_in_workflows};
 use crate::config::{
     BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekConfig, PrekHook,
     PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
@@ -1147,21 +1147,9 @@ fn jobs_caching_nothing(workflow: &Workflow) -> Vec<&str> {
 /// workflow share one cache, and one of these jobs, which finish first, would save it without the packages the other
 /// jobs install. Those jobs then restore it as an exact match and never save their own.
 pub(crate) fn check_uv_cache(ctx: &ProjectContext, report: &mut Report) {
-    let mut parsed = false;
-    let mut caching = Vec::new();
-    for (name, status) in ctx.workflows() {
-        if let ConfigStatus::Ok(workflow) = status {
-            parsed = true;
-            caching.extend(
-                jobs_caching_nothing(workflow)
-                    .into_iter()
-                    .map(|job| format!("{name}: {job}")),
-            );
-        }
-    }
-    if !parsed {
+    let Some(caching) = jobs_in_workflows(ctx, jobs_caching_nothing) else {
         return;
-    }
+    };
 
     report.should(
         "python-ci-uv-cache",
