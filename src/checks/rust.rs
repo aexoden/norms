@@ -83,6 +83,27 @@ fn member_manifest(path: &Path) -> String {
     format!("{}/Cargo.toml", slashed(path))
 }
 
+/// The manifests of the component's workspace members that parsed, with their labels.
+fn member_manifests(ctx: &ComponentContext) -> impl Iterator<Item = (String, &CargoToml)> {
+    ctx.cargo_members()
+        .parsed()
+        .map(|(path, member)| (member_manifest(path), member))
+}
+
+/// The manifests of the component's packages, with their labels: its own `Cargo.toml`, unless it is a virtual manifest
+/// without a `[package]`, and its workspace members'.
+fn package_manifests<'a>(
+    ctx: &'a ComponentContext,
+    config: &'a CargoToml,
+) -> impl Iterator<Item = (String, &'a CargoToml)> {
+    config
+        .package
+        .is_some()
+        .then(|| ("Cargo.toml".to_owned(), config))
+        .into_iter()
+        .chain(member_manifests(ctx))
+}
+
 //
 // Project configuration
 //
@@ -198,15 +219,7 @@ pub(crate) fn check_cargo_version(
     let workspace = config.workspace.as_ref();
     let release = project.release();
 
-    let members = ctx
-        .cargo_members()
-        .parsed()
-        .map(|(path, member)| (member_manifest(path), member));
-    let root = config
-        .package
-        .is_some()
-        .then(|| ("Cargo.toml".to_owned(), config));
-    for (label, manifest) in root.into_iter().chain(members) {
+    for (label, manifest) in package_manifests(ctx, config) {
         report.must(
             "cargo-toml-version",
             format!("{label}: version of the latest release"),
@@ -229,11 +242,10 @@ pub(crate) fn check_cargo_dependencies(ctx: &ComponentContext, report: &mut Repo
         return;
     }
 
-    let members = ctx
-        .cargo_members()
-        .parsed()
-        .map(|(path, member)| (member_manifest(path), member));
-    for (label, manifest) in std::iter::once(("Cargo.toml".to_owned(), config)).chain(members) {
+    // A virtual manifest's [workspace.dependencies] are pinned too.
+    for (label, manifest) in
+        std::iter::once(("Cargo.toml".to_owned(), config)).chain(member_manifests(ctx))
+    {
         report.should(
             "cargo-toml-dependencies-exact",
             format!("{label}: dependencies pinned exactly (application)"),
@@ -282,15 +294,7 @@ pub(crate) fn check_rust_version(ctx: &ComponentContext, report: &mut Report) {
     }
 
     let workspace = config.workspace.as_ref();
-    let root = config
-        .package
-        .is_some()
-        .then(|| ("Cargo.toml".to_owned(), config));
-    let members = ctx
-        .cargo_members()
-        .parsed()
-        .map(|(path, member)| (member_manifest(path), member));
-    for (label, manifest) in root.into_iter().chain(members) {
+    for (label, manifest) in package_manifests(ctx, config) {
         report.should(
             "cargo-toml-rust-version",
             format!("{label}: MSRV set (rust-version, library)"),
@@ -311,11 +315,8 @@ pub(crate) fn check_clippy_lints(ctx: &ComponentContext, report: &mut Report) {
     };
     let workspace = config.workspace.as_ref();
 
-    if config.package.is_some() {
-        check_package_lints("Cargo.toml", config, workspace, report);
-    }
-    for (path, member) in ctx.cargo_members().parsed() {
-        check_package_lints(&member_manifest(path), member, workspace, report);
+    for (label, manifest) in package_manifests(ctx, config) {
+        check_package_lints(&label, manifest, workspace, report);
     }
 }
 
@@ -710,9 +711,8 @@ fn msrvs_tested(msrvs: &BTreeSet<&str>, workflow: &Workflow) -> Result<(), Issue
 /// values resolved.
 fn declared_msrvs<'a>(ctx: &'a ComponentContext, config: &'a CargoToml) -> BTreeSet<&'a str> {
     let workspace = config.workspace.as_ref();
-    std::iter::once(config)
-        .chain(ctx.cargo_members().parsed().map(|(_, member)| member))
-        .filter_map(|manifest| manifest.metadata(workspace).rust_version)
+    package_manifests(ctx, config)
+        .filter_map(|(_, manifest)| manifest.metadata(workspace).rust_version)
         .collect()
 }
 
