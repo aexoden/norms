@@ -819,7 +819,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "python-ci-uv-lock",
         "Python CI: uv.lock up to date",
-        workflow.run_lines().any(|line| checks_uv_lock(&line)),
+        workflow.runs(uv_lock_checks),
     );
     let unlocked = jobs_running_unlocked(workflow);
     report.should(
@@ -942,16 +942,8 @@ fn ruff_check_run(words: &[&str]) -> Option<RuffCheckRun> {
     })
 }
 
-/// Whether a script line checks that `uv.lock` is up to date: `uv lock` with `--check`, or `--locked`, its older
+/// Whether a command's words check that `uv.lock` is up to date: `uv lock` with `--check`, or `--locked`, its older
 /// spelling, which fail instead of changing the lock file.
-fn checks_uv_lock(line: &str) -> bool {
-    commands(line)
-        .iter()
-        .map(Command::words)
-        .any(|words| uv_lock_checks(&words))
-}
-
-/// Whether a command's words check that `uv.lock` is up to date, as [`checks_uv_lock`] tells.
 fn uv_lock_checks(words: &[&str]) -> bool {
     matches!(uv_subcommand(words), Some(("lock", args))
         if args.iter().any(|arg| matches!(*arg, "--check" | "--locked")))
@@ -1339,6 +1331,11 @@ mod tests {
         assert_eq!(subcommand("uvx prek run"), None);
         assert_eq!(subcommand("uv --directory"), None);
 
+        let checks_uv_lock = |line: &str| {
+            commands(line)
+                .iter()
+                .any(|command| uv_lock_checks(&command.words()))
+        };
         for line in [
             "uv lock --check",
             "uv --directory api lock --locked",

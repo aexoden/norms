@@ -872,14 +872,8 @@ fn tests_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         .into_iter()
         .filter(|run| run.units)
         .collect();
-    let reported_later = || {
-        !workflow
-            .filter_map_commands(|words| defers_coverage_report(words).then_some(()))
-            .is_empty()
-            && !workflow
-                .filter_map_commands(|words| reports_coverage(words).then_some(()))
-                .is_empty()
-    };
+    let reported_later =
+        || workflow.runs(defers_coverage_report) && workflow.runs(reports_coverage);
     if runs.iter().any(|run| run.coverage) || reported_later() {
         Ok(())
     } else if runs.is_empty() {
@@ -941,11 +935,7 @@ fn doctest_hooks(config: &PrekConfig) -> Result<(), String> {
 
 /// Whether some step runs the doctests, as [`cargo_test_run`] tells.
 fn doctests_in_ci(workflow: &Workflow) -> Result<(), String> {
-    if workflow
-        .filter_map_commands(cargo_test_run)
-        .iter()
-        .any(|run| run.doctests)
-    {
+    if workflow.runs(|words| cargo_test_run(words).is_some_and(|run| run.doctests)) {
         Ok(())
     } else {
         Err("No step runs the doctests, as cargo test --doc does".to_owned())
@@ -1057,7 +1047,7 @@ pub(crate) fn check_ci(ctx: &ProjectContext, report: &mut Report) {
     report.must(
         "rust-ci-cargo-lock",
         "Rust CI: Cargo.lock up to date",
-        workflow.run_lines().any(|line| checks_cargo_lock(&line)),
+        workflow.runs(cargo_update_checks),
     );
     report.check(
         "rust-ci-rustfmt",
@@ -1537,17 +1527,9 @@ fn cargo_subcommand<'a>(words: &[&'a str]) -> Option<(&'a str, Vec<&'a str>)> {
     }))
 }
 
-/// Whether a script line checks that `Cargo.lock` is up to date: `cargo update` with `--locked` (or `--frozen`, which
-/// implies it), which fails instead of changing the lock file, and `--workspace` (or `-w`), which limits it to the
-/// workspace's own packages so that a current lock file needs no change.
-fn checks_cargo_lock(line: &str) -> bool {
-    commands(line)
-        .iter()
-        .map(Command::words)
-        .any(|words| cargo_update_checks(&words))
-}
-
-/// Whether a command's words check that `Cargo.lock` is up to date, as [`checks_cargo_lock`] tells.
+/// Whether a command's words check that `Cargo.lock` is up to date: `cargo update` with `--locked` (or `--frozen`,
+/// which implies it), which fails instead of changing the lock file, and `--workspace` (or `-w`), which limits it to
+/// the workspace's own packages so that a current lock file needs no change.
 fn cargo_update_checks(words: &[&str]) -> bool {
     cargo_subcommand(words).is_some_and(|(subcommand, args)| {
         subcommand == "update"
@@ -2074,6 +2056,11 @@ jobs:
 
     #[test]
     fn cargo_lock_needs_locked_workspace_update() {
+        let checks_cargo_lock = |line: &str| {
+            commands(line)
+                .iter()
+                .any(|command| cargo_update_checks(&command.words()))
+        };
         for line in [
             "cargo update --workspace --locked",
             "cargo +1.99.1 update -w --locked --manifest-path backend/Cargo.toml",
