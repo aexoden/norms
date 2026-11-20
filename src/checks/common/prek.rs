@@ -106,22 +106,20 @@ fn check_priorities(config: &PrekConfig) -> Result<(), String> {
                 Some("check")
             };
             let actual = hook.priority.as_ref();
-            if actual.and_then(|value| value.as_str()) == expected
-                && (actual.is_some() || expected.is_none())
-            {
-                return None;
-            }
             let name = hook.alias().unwrap_or(&hook.id);
-            Some(match (expected, actual) {
-                (None, Some(actual)) => {
-                    format!("{name} has priority {actual}, but should have none")
-                }
+            match (expected, actual) {
+                (None, None) => None,
+                (Some(expected), Some(actual)) if actual.as_str() == Some(expected) => None,
+                (None, Some(actual)) => Some(format!(
+                    "{name} has priority {actual}, but should have none"
+                )),
                 (Some(expected), Some(actual)) => {
-                    format!("{name} has priority {actual}, not \"{expected}\"")
+                    Some(format!("{name} has priority {actual}, not \"{expected}\""))
                 }
-                (Some(expected), None) => format!("{name} has no priority, not \"{expected}\""),
-                (None, None) => return None,
-            })
+                (Some(expected), None) => {
+                    Some(format!("{name} has no priority, not \"{expected}\""))
+                }
+            }
         })
         .collect();
     if wrong.is_empty() {
@@ -508,19 +506,21 @@ hooks = [{ id = "check-toml", priority = "check" }]
 
 [[repos]]
 repo = "https://github.com/fsfe/reuse-tool"
-hooks = [{ id = "reuse", priority = "check" }]
+hooks = [{ id = "reuse", priority = "check" }, { id = "reuse-lint-file", priority = 0 }]
 
 [[repos]]
 repo = "local"
 hooks = [
   { id = "uv-lock", entry = "uv lock --check", priority = "check" },
+  { id = "clippy", entry = "cargo clippy", priority = 1 },
   { id = "mypy", alias = "mypy-api", entry = "uv run mypy ." },
 ]
 "#;
         assert_eq!(
             priorities(wrong),
             Err("check-toml has priority \"check\", but should have none; reuse has priority \"check\", but should \
-                 have none; uv-lock has priority \"check\", not \"lock\"; mypy-api has no priority, not \"check\""
+                 have none; reuse-lint-file has priority 0, but should have none; uv-lock has priority \"check\", not \"lock\"; \
+                 clippy has priority 1, not \"check\"; mypy-api has no priority, not \"check\""
                 .to_owned())
         );
     }
