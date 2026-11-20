@@ -11,6 +11,8 @@
 
 use std::path::PathBuf;
 
+use serde::Deserialize as _;
+
 use crate::config::{GATE_NAME, Waiver};
 use crate::github::{FeatureStatus, Fetched, Ruleset, Settings, StatusCheckParameters};
 use crate::report::{Issue, Outcome, Report};
@@ -481,27 +483,37 @@ fn ruleset_outcome(expected: &ExpectedRuleset, ruleset: Option<&Ruleset>) -> Res
         issues.push(format!("It also enables {}", extra.join(", ")));
     }
 
+    let mut unchecked = Vec::new();
     if let Some(rule) = ruleset
         .rules
         .iter()
         .find(|r| r.kind == "required_status_checks")
     {
-        issues.extend(status_check_issues(rule.parameters.as_ref()));
+        match status_check_issues(rule.parameters.as_ref()) {
+            Ok(found) => issues.extend(found),
+            Err(error) => unchecked.push(Issue::warn(format!(
+                "Its required_status_checks parameters couldn't be read, so they weren't checked: {error}"
+            ))),
+        }
     }
 
-    let unseen = unseen_bypass_actors.then(|| {
-        Issue::warn(
+    if unseen_bypass_actors {
+        unchecked.push(Issue::warn(
             "Its bypass actors are shown only to those who can edit it, so they weren't checked",
-        )
-    });
-    Issue::combine(issues.into_iter().map(Issue::fail).chain(unseen))
+        ));
+    }
+    Issue::combine(issues.into_iter().map(Issue::fail).chain(unchecked))
 }
 
 /// What is wrong with a `required_status_checks` rule's parameters: it must require `CI success` from GitHub Actions
-/// alone, with branches up to date.
-fn status_check_issues(parameters: Option<&serde_json::Value>) -> Vec<String> {
-    let parameters: StatusCheckParameters = parameters
-        .and_then(|p| serde_json::from_value(p.clone()).ok())
+/// alone, with branches up to date. Parameters of another shape than GitHub documents give the error that reading them
+/// met.
+fn status_check_issues(
+    parameters: Option<&serde_json::Value>,
+) -> Result<Vec<String>, serde_json::Error> {
+    let parameters = parameters
+        .map(StatusCheckParameters::deserialize)
+        .transpose()?
         .unwrap_or_default();
     let mut issues = Vec::new();
 
@@ -528,7 +540,7 @@ fn status_check_issues(parameters: Option<&serde_json::Value>) -> Vec<String> {
         issues.push("It doesn't require branches to be up to date".to_owned());
     }
 
-    issues
+    Ok(issues)
 }
 
 /// `text` with its first letter in uppercase.
@@ -1113,6 +1125,27 @@ mod tests {
                  excluding refs/heads/x, not ~DEFAULT_BRANCH alone; It has bypass actors; It doesn't enable \
                  required_signatures; It also enables pull_request; It requires [CI success from any source, lint \
                  from app 9], not CI success from GitHub Actions alone; It doesn't require branches to be up to date"
+            )
+        );
+    }
+
+    #[test]
+    fn status_check_parameters_of_another_shape_warn() {
+        let results = run(changed("/rulesets/1", |ruleset| {
+            let rules = ruleset["rules"].as_array_mut().unwrap();
+            let checks = &mut rules
+                .iter_mut()
+                .find(|rule| rule["type"] == "required_status_checks")
+                .unwrap()["parameters"];
+            checks["required_status_checks"] =
+                json!([{"context": "CI success", "integration_id": "15368"}]);
+        }));
+        assert_eq!(
+            status(&results, "github-ruleset-default"),
+            (
+                Status::Warn,
+                "Its required_status_checks parameters couldn't be read, so they weren't checked: invalid type: \
+                 string \"15368\", expected u64"
             )
         );
     }
