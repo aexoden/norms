@@ -310,20 +310,67 @@ pub(crate) fn check_src_layout(ctx: &ComponentContext, report: &mut Report) {
     }
     report.should("python-src-layout", "Python: src/ directory", Outcome::Pass);
 
-    let has_packages = src_path
+    report.should(
+        "python-src-packages",
+        "Python: src/ contains packages",
+        if src_packages(ctx).next().is_some() {
+            Outcome::Pass
+        } else {
+            Outcome::issue("src/ holds no package, a directory with an __init__.py")
+        },
+    );
+}
+
+/// The packages in the component's `src/`: its directories with an `__init__.py`.
+fn src_packages(ctx: &ComponentContext) -> impl Iterator<Item = std::path::PathBuf> {
+    ctx.path()
+        .join("src")
         .read_dir()
         .into_iter()
         .flatten()
         .filter_map(Result::ok)
-        .any(|entry| entry.path().is_dir() && entry.path().join("__init__.py").exists());
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir() && path.join("__init__.py").exists())
+}
 
+/// Check that a library ships type annotations for type checkers to read: each of its packages has a `py.typed`
+/// marker, and, if it is published, it lists the `Typing :: Typed` classifier, which only the Python Package Index
+/// reads.
+pub(crate) fn check_typed(ctx: &ComponentContext, report: &mut Report) {
+    let Some(config) = ctx.pyproject().as_ref_ok() else {
+        return;
+    };
+    if config.is_application() {
+        return;
+    }
+
+    if config.is_publishable() {
+        report.should(
+            "pyproject-typed-classifier",
+            "pyproject.toml: lists Typing :: Typed (library)",
+            config.check_typed_classifier(),
+        );
+    }
+
+    let packages: Vec<_> = src_packages(ctx).collect();
+    if packages.is_empty() {
+        // python-src-layout or python-src-packages reports it.
+        return;
+    }
+    let mut untyped: Vec<_> = packages
+        .iter()
+        .filter(|package| !package.join("py.typed").exists())
+        .filter_map(|package| package.file_name())
+        .map(|name| format!("src/{}", name.to_string_lossy()))
+        .collect();
+    untyped.sort();
     report.should(
-        "python-src-packages",
-        "Python: src/ contains packages",
-        if has_packages {
+        "python-py-typed",
+        "Python: packages ship py.typed (library)",
+        if untyped.is_empty() {
             Outcome::Pass
         } else {
-            Outcome::issue("src/ holds no package, a directory with an __init__.py")
+            Outcome::issue(format!("No py.typed in {}", untyped.join(", ")))
         },
     );
 }

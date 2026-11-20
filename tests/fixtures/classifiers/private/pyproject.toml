@@ -1,0 +1,7 @@
+[project]
+name = "private"
+requires-python = ">=3.15"
+classifiers = [
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3.15",
+]

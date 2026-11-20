@@ -36,6 +36,9 @@ pub(crate) struct PyprojectToml {
 /// it.
 const PRIVATE_CLASSIFIER: &str = "Private :: Do Not Upload";
 
+/// The classifier of a package that ships type annotations, with a `py.typed` marker.
+const TYPED_CLASSIFIER: &str = "Typing :: Typed";
+
 /// The `[project]` table.
 ///
 /// The fields that only the dependency checks read are kept unparsed, so that a malformed one fails only those checks.
@@ -379,16 +382,32 @@ impl PyprojectToml {
     /// Whether the project is published: it isn't marked `Private :: Do Not Upload`, the classifier that the Python
     /// Package Index rejects on upload.
     pub(crate) fn is_publishable(&self) -> bool {
-        !self
-            .project
+        !self.has_classifier(PRIVATE_CLASSIFIER)
+    }
+
+    /// Whether `project.classifiers` lists `classifier`.
+    fn has_classifier(&self, classifier: &str) -> bool {
+        self.project
             .as_ref()
             .and_then(|project| project.classifiers.as_ref())
             .and_then(toml::Value::as_array)
             .is_some_and(|classifiers| {
                 classifiers
                     .iter()
-                    .any(|classifier| classifier.as_str() == Some(PRIVATE_CLASSIFIER))
+                    .any(|listed| listed.as_str() == Some(classifier))
             })
+    }
+
+    /// Check that the project lists the `Typing :: Typed` classifier, which tells the Python Package Index's users
+    /// that it ships type annotations.
+    pub(crate) fn check_typed_classifier(&self) -> Result<(), String> {
+        if self.has_classifier(TYPED_CLASSIFIER) {
+            Ok(())
+        } else {
+            Err(format!(
+                "project.classifiers doesn't list {TYPED_CLASSIFIER:?}"
+            ))
+        }
     }
 
     /// Whether the project is an application rather than a library: whether it installs a command, through a
@@ -1457,6 +1476,20 @@ cache-keys = [{ git = { commit = true } }]
                 .unwrap_err()
                 .starts_with("Invalid [tool.uv] required-version: ")
         );
+    }
+
+    #[test]
+    fn typed_libraries_list_the_typed_classifier() {
+        assert_eq!(
+            parse("[project]\nclassifiers = ['Typing :: Typed']\n").check_typed_classifier(),
+            Ok(())
+        );
+        let missing = Err("project.classifiers doesn't list \"Typing :: Typed\"".to_owned());
+        assert_eq!(
+            parse("[project]\nclassifiers = ['Typing :: Stubs Only']\n").check_typed_classifier(),
+            missing
+        );
+        assert_eq!(parse("[project]\n").check_typed_classifier(), missing);
     }
 
     #[test]

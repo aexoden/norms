@@ -60,7 +60,11 @@ re-renders them, as `AGENTS.md` describes.
   `requires-python`: an application and a library with gaps in its range, each
   with its own `.python-version`, one capped by `requires-python` without a
   pin, one open-ended whose only pin is in its parent directory, which uv
-  ignores, and one capped whose `.python-version` isn't a plain version.
+  ignores, and one capped whose `.python-version` isn't a plain version. The
+  library with gaps lacks the `Typing :: Typed` classifier, and of its two
+  packages only one ships `py.typed`. A private library, marked
+  `Private :: Do Not Upload`, ships no `py.typed` and lacks the classifier,
+  which only a published library needs.
 - `python-pin` breaks the Python pinning standards: one component's
   `.python-version` pins only a minor version, two applications'
   `requires-python` name another version or a range, and a library's range

@@ -102,6 +102,8 @@ fail  python-git-archival  [.] Python: .git_archival.txt (node and describe-name
       Not found: .git_archival.txt
 warn  python-src-layout  [.] Python: src/ directory
       No src/ directory
+warn  pyproject-typed-classifier  [.] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [.] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [.] uv: settings in [tool.uv], without a uv.toml

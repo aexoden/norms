@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Warn when a package in a Python library's `src/` has no `py.typed` marker
+  (`python-py-typed`), without which type checkers ignore the library's
+  annotations, or when a published library doesn't list the `Typing :: Typed`
+  classifier (`pyproject-typed-classifier`), as the standards require. Add
+  them, as the template does.
 - Warn when `audit.yaml` runs `uv audit` without `--locked`
   (`python-audit-uv`), which relocks a stale `uv.lock` rather than failing, and
   audits versions that aren't committed. Run `uv audit --locked`, as the

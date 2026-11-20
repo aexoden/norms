@@ -95,6 +95,7 @@ fn check_component(
             python::check_versioning(ctx, report);
             python::check_git_archival(project, ctx, report);
             python::check_src_layout(ctx, report);
+            python::check_typed(ctx, report);
             python::check_uv_lock(ctx, report);
             python::check_dependencies_exact(ctx, report);
             python::check_uv_config(ctx, report);

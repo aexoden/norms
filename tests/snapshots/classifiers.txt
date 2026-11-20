@@ -1,6 +1,6 @@
 exit: 1
 languages: python
-components: python (app), python (bad-pin), python (capped), python (lib), python (parent-pin/open)
+components: python (app), python (bad-pin), python (capped), python (lib), python (parent-pin/open), python (private)
 
 fail  readme-exists  README.md
       Not found: README.md
@@ -88,6 +88,8 @@ fail  python-git-archival  [bad-pin] Python: .git_archival.txt (node and describ
       Not found: .git_archival.txt
 warn  python-src-layout  [bad-pin] Python: src/ directory
       No src/ directory
+warn  pyproject-typed-classifier  [bad-pin] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [bad-pin] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [bad-pin] uv: settings in [tool.uv], without a uv.toml
@@ -126,6 +128,8 @@ fail  python-git-archival  [capped] Python: .git_archival.txt (node and describe
       Not found: .git_archival.txt
 warn  python-src-layout  [capped] Python: src/ directory
       No src/ directory
+warn  pyproject-typed-classifier  [capped] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [capped] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [capped] uv: settings in [tool.uv], without a uv.toml
@@ -164,8 +168,12 @@ warn  uv-cache-keys  [lib] uv: reinstalls the project when pyproject.toml, HEAD 
       [tool.uv] sets no cache-keys
 fail  python-git-archival  [lib] Python: .git_archival.txt (node and describe-name)
       Not found: .git_archival.txt
-warn  python-src-layout  [lib] Python: src/ directory
-      No src/ directory
+pass  python-src-layout  [lib] Python: src/ directory
+pass  python-src-packages  [lib] Python: src/ contains packages
+warn  pyproject-typed-classifier  [lib] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
+warn  python-py-typed  [lib] Python: packages ship py.typed (library)
+      No py.typed in src/lib_untyped
 fail  uv-lock-exists  [lib] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [lib] uv: settings in [tool.uv], without a uv.toml
@@ -205,6 +213,8 @@ fail  python-git-archival  [parent-pin/open] Python: .git_archival.txt (node and
       Not found: .git_archival.txt
 warn  python-src-layout  [parent-pin/open] Python: src/ directory
       No src/ directory
+warn  pyproject-typed-classifier  [parent-pin/open] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [parent-pin/open] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [parent-pin/open] uv: settings in [tool.uv], without a uv.toml
@@ -224,4 +234,45 @@ warn  basedpyright-mode  [parent-pin/open] basedpyright: recommended mode ([tool
       Missing [tool.basedpyright] in pyproject.toml
 pass  basedpyright-rule-reasons  [parent-pin/open] basedpyright: rules turned off explained
 warn  pytest-strict  [parent-pin/open] pytest: strict mode ([tool.pytest] strict = true)
+      Missing [tool.pytest] in pyproject.toml
+pass  pyproject-exists  [private] pyproject.toml: exists
+pass  pyproject-valid  [private] pyproject.toml: valid
+pass  pyproject-project  [private] pyproject.toml: has [project] section
+pass  python-version-exists  [private] Python: .python-version
+pass  python-version-exact  [private] Python: .python-version pins an exact version
+pass  pyproject-requires-python-pin  [private] pyproject.toml: requires-python agrees with .python-version
+pass  pyproject-python-classifiers  [private] pyproject.toml: Python classifiers match requires-python
+warn  pyproject-version-dynamic  [private] pyproject.toml: version is dynamic
+      project.dynamic doesn't list version
+warn  pyproject-build-system  [private] pyproject.toml: builds with hatchling and hatch-vcs
+      No [build-system] table
+warn  pyproject-hatch-version  [private] pyproject.toml: version from git tags (hatch-vcs)
+      No [tool.hatch.version] table
+warn  uv-cache-keys  [private] uv: reinstalls the project when pyproject.toml, HEAD or tags change (cache-keys)
+      [tool.uv] sets no cache-keys
+fail  python-git-archival  [private] Python: .git_archival.txt (node and describe-name)
+      Not found: .git_archival.txt
+pass  python-src-layout  [private] Python: src/ directory
+pass  python-src-packages  [private] Python: src/ contains packages
+warn  python-py-typed  [private] Python: packages ship py.typed (library)
+      No py.typed in src/private_lib
+fail  uv-lock-exists  [private] Python: uv.lock
+      Not found: uv.lock
+pass  uv-config  [private] uv: settings in [tool.uv], without a uv.toml
+warn  uv-exclude-newer  [private] uv: release age of 3 days (exclude-newer)
+      Missing [tool.uv] exclude-newer
+warn  uv-required-version  [private] uv: required-version sets the oldest uv needed (>=)
+      [tool.uv] sets no required-version
+warn  python-dependency-groups  [private] Python: has dependency-groups
+      Missing [dependency-groups]
+fail  ruff-configured  [private] Ruff: configured
+      No [tool] section in pyproject.toml
+fail  ruff-lint-configured  [private] Ruff lint: configured
+      Missing [tool.ruff.lint] in pyproject.toml
+fail  mypy-configured  [private] mypy: configured
+      Missing [tool.mypy] in pyproject.toml
+warn  basedpyright-mode  [private] basedpyright: recommended mode ([tool.basedpyright])
+      Missing [tool.basedpyright] in pyproject.toml
+pass  basedpyright-rule-reasons  [private] basedpyright: rules turned off explained
+warn  pytest-strict  [private] pytest: strict mode ([tool.pytest] strict = true)
       Missing [tool.pytest] in pyproject.toml

@@ -50,6 +50,8 @@ fail  python-git-archival  [py] Python: .git_archival.txt (node and describe-nam
 pass  python-src-layout  [py] Python: src/ directory
 warn  python-src-packages  [py] Python: src/ contains packages
       src/ holds no package, a directory with an __init__.py
+warn  pyproject-typed-classifier  [py] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [py] Python: uv.lock
       Not found: uv.lock
 warn  uv-config  [py] uv: settings in [tool.uv], without a uv.toml

@@ -79,6 +79,8 @@ pass  python-git-archival  [api] Python: .git_archival.txt (node and describe-na
 pass  gitattributes-git-archival  [api] .gitattributes: .git_archival.txt marked export-subst
 warn  python-src-layout  [api] Python: src/ directory
       No src/ directory
+warn  pyproject-typed-classifier  [api] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [api] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [api] uv: settings in [tool.uv], without a uv.toml
@@ -152,6 +154,8 @@ warn  gitattributes-git-archival  [tool] .gitattributes: .git_archival.txt marke
       No line marks tool/.git_archival.txt export-subst
 warn  python-src-layout  [tool] Python: src/ directory
       No src/ directory
+warn  pyproject-typed-classifier  [tool] pyproject.toml: lists Typing :: Typed (library)
+      project.classifiers doesn't list "Typing :: Typed"
 fail  uv-lock-exists  [tool] Python: uv.lock
       Not found: uv.lock
 pass  uv-config  [tool] uv: settings in [tool.uv], without a uv.toml

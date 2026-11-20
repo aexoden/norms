@@ -103,6 +103,8 @@ pass  python-git-archival  [.] Python: .git_archival.txt (node and describe-name
 pass  gitattributes-git-archival  [.] .gitattributes: .git_archival.txt marked export-subst
 pass  python-src-layout  [.] Python: src/ directory
 pass  python-src-packages  [.] Python: src/ contains packages
+pass  pyproject-typed-classifier  [.] pyproject.toml: lists Typing :: Typed (library)
+pass  python-py-typed  [.] Python: packages ship py.typed (library)
 pass  uv-lock-exists  [.] Python: uv.lock
 pass  uv-config  [.] uv: settings in [tool.uv], without a uv.toml
 pass  uv-exclude-newer  [.] uv: release age of 3 days (exclude-newer)
