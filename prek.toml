@@ -84,7 +84,7 @@ priority = "check"
 # TOML
 [[repos]]
 repo = "https://github.com/tombi-toml/tombi-pre-commit"
-rev = "v1.11.2"
+rev = "v1.11.3"
 
 [[repos.hooks]]
 id = "tombi-format"
