@@ -424,8 +424,9 @@ fn conventional_hook_in(config: &PrekConfig) -> Result<(), Issue> {
 }
 
 /// How a command's words run `tombi format`, if they do, after `tombi` anywhere among them, as in
-/// `uvx tombi format`: the tombi-format hook's own entry runs it, and it checks only with `--check`.
-fn tombi_format_run(words: &[&str]) -> Option<FormatterRun> {
+/// `uvx tombi format`: the tombi-format hook's own entry runs it, and it checks only with `--check`, failing on
+/// unformatted files instead of rewriting them.
+pub(super) fn tombi_format_run(words: &[&str]) -> Option<FormatterRun> {
     words
         .iter()
         .enumerate()

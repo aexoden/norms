@@ -11,9 +11,10 @@ use std::sync::LazyLock;
 use regex::Regex;
 use serde_json::Value;
 
+use super::prek::tombi_format_run;
 use crate::config::{
-    Command, GATE_JOB, GATE_NAME, PrekConfig, Workflow, WorkflowJob, WorkflowStep, commands,
-    is_program, program_args, program_name,
+    Command, FormatterRun, GATE_JOB, GATE_NAME, PrekConfig, Workflow, WorkflowJob, WorkflowStep,
+    commands, is_program, program_args, program_name,
 };
 use crate::context::{AUDIT_WORKFLOW, CI_WORKFLOW, ConfigStatus, ProjectContext};
 use crate::report::{Issue, Outcome, Report, file_exists};
@@ -1143,13 +1144,9 @@ fn tool_versions(workflow: &Workflow) -> Result<(), String> {
     }
 }
 
-/// Whether a command's words run `tombi format` with `--check`, which fails on unformatted files instead of rewriting
-/// them.
+/// Whether a command's words run `tombi format` with `--check`, as [`tombi_format_run`] tells.
 fn tombi_format_checks(words: &[&str]) -> bool {
-    words.iter().enumerate().any(|(index, word)| {
-        is_program(word, "tombi")
-            && matches!(words.get(index + 1..), Some(["format", args @ ..]) if args.contains(&"--check"))
-    })
+    tombi_format_run(words) == Some(FormatterRun::Checks)
 }
 
 pub(crate) fn check_github_actions(ctx: &ProjectContext, report: &mut Report) {
