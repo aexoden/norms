@@ -291,60 +291,19 @@ fn check_tsconfig_solution_style(ctx: &ComponentContext, report: &mut Report) {
     );
 
     // Validate each referenced config exists and is valid, then check its compilerOptions.
-    let mut any_valid = false;
     for (name, status) in referenced {
-        match status {
-            ConfigStatus::NotFound => {
-                report.must(
-                    "tsconfig-reference-exists",
-                    format!("{name}: exists"),
-                    Outcome::issue("Referenced config not found"),
-                );
-            }
-            ConfigStatus::ParseError { error } => {
-                report.must(
-                    "tsconfig-reference-exists",
-                    format!("{name}: exists"),
-                    Outcome::Pass,
-                );
-                report.must(
-                    "tsconfig-reference-valid",
-                    format!("{name}: valid"),
-                    Outcome::issue(error.clone()),
-                );
-            }
-            ConfigStatus::Ok(ref_config) => {
-                report.must(
-                    "tsconfig-reference-exists",
-                    format!("{name}: exists"),
-                    Outcome::Pass,
-                );
-                report.must(
-                    "tsconfig-reference-valid",
-                    format!("{name}: valid"),
-                    Outcome::Pass,
-                );
-
-                if let Some(opts) = &ref_config.compiler_options {
-                    check_compiler_options(name, opts, report);
-                    any_valid = true;
-                } else {
-                    report.must(
-                        "tsconfig-reference-compiler-options",
-                        format!("{name}: has compilerOptions"),
-                        Outcome::issue("Missing compilerOptions section"),
-                    );
-                }
-            }
+        let Some(ref_config) = report.require_parsed("tsconfig-reference", name, status) else {
+            continue;
+        };
+        if let Some(opts) = &ref_config.compiler_options {
+            check_compiler_options(name, opts, report);
+        } else {
+            report.must(
+                "tsconfig-reference-compiler-options",
+                format!("{name}: has compilerOptions"),
+                Outcome::issue("Missing compilerOptions section"),
+            );
         }
-    }
-
-    if !any_valid {
-        report.must(
-            "tsconfig-reference-any-compiler-options",
-            "tsconfig: at least one reference has compilerOptions",
-            Outcome::issue("No referenced config has a compilerOptions section"),
-        );
     }
 }
 
@@ -2004,6 +1963,46 @@ mod tests {
         assert_eq!(
             ci(&["pnpm typecheck"], true),
             Err(Issue::fail("No step runs tsc"))
+        );
+    }
+
+    #[test]
+    fn each_broken_reference_fails_once() {
+        let dir = tempfile::tempdir().unwrap();
+        for (file, content) in [
+            (
+                "tsconfig.json",
+                r#"{"files": [], "references": [{"path": "./tsconfig.app.json"}, {"path": "./tsconfig.node.json"}, {"path": "./tsconfig.extra.json"}]}"#,
+            ),
+            ("tsconfig.app.json", "{"),
+            ("tsconfig.node.json", "{}"),
+        ] {
+            std::fs::write(dir.path().join(file), content).unwrap();
+        }
+        let component = Component {
+            language: Language::TypeScript,
+            path: std::path::PathBuf::new(),
+        };
+        let project = ProjectContext::new(dir.path().to_path_buf());
+        let ctx = ComponentContext::new(&project, &component);
+        let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+        check_tsconfig(&ctx, &mut report);
+        let failures: Vec<_> = report
+            .results
+            .iter()
+            .filter(|result| result.status == Status::Fail)
+            .map(|result| (result.id.as_str(), result.name.as_str()))
+            .collect();
+        assert_eq!(
+            failures,
+            [
+                ("tsconfig-reference-valid", "tsconfig.app.json: valid"),
+                (
+                    "tsconfig-reference-compiler-options",
+                    "tsconfig.node.json: has compilerOptions"
+                ),
+                ("tsconfig-reference-exists", "tsconfig.extra.json: exists"),
+            ]
         );
     }
 

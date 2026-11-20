@@ -297,6 +297,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   secrets. `STANDARDS.md` counts such local files with what a project
   generates. Add the entries for the project's languages.
 
+### Removed
+
+- `tsconfig-reference-any-compiler-options`, which failed a second time when
+  a referenced tsconfig was missing, malformed or without `compilerOptions`,
+  each of which `tsconfig-reference-exists`, `tsconfig-reference-valid` or
+  `tsconfig-reference-compiler-options` already fails. Remove any waiver of
+  it.
+
 ### Fixed
 
 - Don't report that a Python component without a `[project]` table, which
