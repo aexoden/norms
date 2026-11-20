@@ -6,7 +6,7 @@
 //! Only the subset of fields inspected by checks is modeled. All structs use `#[serde(default)]` so that missing keys
 //! deserialize to `None` / empty rather than causing a parse error.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -48,16 +48,16 @@ pub(crate) struct PackageJson {
     pub package_manager: Option<Value>,
 
     /// npm scripts.
-    pub scripts: Option<HashMap<String, String>>,
+    pub scripts: Option<BTreeMap<String, String>>,
 
     /// Production dependencies.
-    pub dependencies: Option<HashMap<String, String>>,
+    pub dependencies: Option<BTreeMap<String, String>>,
 
     // Development dependencies.
-    pub dev_dependencies: Option<HashMap<String, String>>,
+    pub dev_dependencies: Option<BTreeMap<String, String>>,
 
     /// Dependencies whose installation may fail without failing the install.
-    pub optional_dependencies: Option<HashMap<String, String>>,
+    pub optional_dependencies: Option<BTreeMap<String, String>>,
 
     /// Prettier's configuration, which Prettier reads in place of any configuration file beside it.
     pub prettier: Option<Value>,
@@ -157,20 +157,16 @@ impl PackageJson {
     ///
     /// The error lists each dependency that isn't, by its field and name, with its specifier.
     pub(crate) fn check_dependencies_exact(&self) -> Result<(), String> {
-        let mut unpinned = Vec::new();
-        for (field, dependencies) in [
-            ("dependencies", &self.dependencies),
-            ("devDependencies", &self.dev_dependencies),
-            ("optionalDependencies", &self.optional_dependencies),
-        ] {
-            let mut names: Vec<_> = dependencies.iter().flatten().collect();
-            names.sort();
-            unpinned.extend(names.into_iter().filter_map(|(name, specifier)| {
-                check_specifier_exact(specifier)
-                    .err()
-                    .map(|specifier| format!("{field}.{name} ({specifier})"))
-            }));
-        }
+        let unpinned: Vec<_> = self
+            .dependency_tables()
+            .flat_map(|(field, dependencies)| {
+                dependencies.iter().filter_map(move |(name, specifier)| {
+                    check_specifier_exact(specifier)
+                        .err()
+                        .map(|specifier| format!("{field}.{name} ({specifier})"))
+                })
+            })
+            .collect();
 
         if unpinned.is_empty() {
             Ok(())
@@ -181,15 +177,21 @@ impl PackageJson {
 
     /// The fields among `dependencies`, `devDependencies` and `optionalDependencies` that list the package `name`.
     pub(crate) fn fields_listing(&self, name: &str) -> Vec<&'static str> {
+        self.dependency_tables()
+            .filter(|(_, dependencies)| dependencies.contains_key(name))
+            .map(|(field, _)| field)
+            .collect()
+    }
+
+    /// The tables among `dependencies`, `devDependencies` and `optionalDependencies` that the manifest has, by field.
+    fn dependency_tables(&self) -> impl Iterator<Item = (&'static str, &BTreeMap<String, String>)> {
         [
             ("dependencies", &self.dependencies),
             ("devDependencies", &self.dev_dependencies),
             ("optionalDependencies", &self.optional_dependencies),
         ]
         .into_iter()
-        .filter(|(_, dependencies)| dependencies.as_ref().is_some_and(|d| d.contains_key(name)))
-        .map(|(field, _)| field)
-        .collect()
+        .filter_map(|(field, dependencies)| Some((field, dependencies.as_ref()?)))
     }
 
     /// The dependencies of the `devEngines` entry `field`, which npm allows to

@@ -853,28 +853,20 @@ pub(crate) fn check_scripts(ctx: &ComponentContext, report: &mut Report) {
     report.should(
         "package-json-script-lint",
         "Scripts: has 'lint' (eslint with --max-warnings 0)",
-        config
-            .scripts
-            .as_ref()
-            .and_then(|scripts| scripts.get("lint"))
-            .map_or_else(
-                || Err("Missing 'lint' script".to_owned()),
-                |script| lint_script_strict(script),
-            ),
+        config.script("lint").map_or_else(
+            || Err("Missing 'lint' script".to_owned()),
+            lint_script_strict,
+        ),
     );
 
     // Format script
     report.check(
         "package-json-script-format",
         "Scripts: has 'format' (prettier --check)",
-        config
-            .scripts
-            .as_ref()
-            .and_then(|scripts| scripts.get("format"))
-            .map_or_else(
-                || Err(Issue::warn("Missing 'format' script")),
-                |script| format_script_checks(script),
-            ),
+        config.script("format").map_or_else(
+            || Err(Issue::warn("Missing 'format' script")),
+            format_script_checks,
+        ),
     );
 
     // Type check script
