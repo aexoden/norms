@@ -252,6 +252,8 @@ test coverage hook.
 
 `AGENTS.md` describes the repository's layout and commands in more detail.
 
+`TODO.md` lists the open work, most of it waiting on changes elsewhere.
+
 ## License
 
 Licensed under either of

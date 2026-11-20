@@ -197,6 +197,11 @@ diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
 - Dependencies in `Cargo.toml` are pinned exactly (`=x.y.z`). New dependencies
   must have licenses allowed by `deny.toml`.
 
+## Open Work
+
+`TODO.md` lists the open work. When a change finishes an entry, or changes what
+it waits on, update or remove the entry in the same commit.
+
 ## Changelog and Releases
 
 `CHANGELOG.md` is maintained by hand in Keep a Changelog format, as the
