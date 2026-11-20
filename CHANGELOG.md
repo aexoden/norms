@@ -177,6 +177,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   such a comment.
 - `README.md` documents how to run norms: its hooks and commands, what its
   results and exit codes mean, `norms.toml`, and how it finds components.
+- `README.md` describes adopting norms in an existing project: rendering the
+  template over it, committing the first reformat on its own, and running the
+  advisory audit once.
 
 ### Changed
 

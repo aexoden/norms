@@ -189,6 +189,56 @@ The template renders only the repository's files. Configure the GitHub
 repository as [GitHub Repository](STANDARDS.md#github-repository) describes,
 then check it with `norms github .`.
 
+### Adopting norms in an Existing Project
+
+Adopt the standards in a few commits, starting from a clean working tree so that
+`git diff` shows what each step changes:
+
+1. Render the template over the project, answering its questions to match it:
+
+   ```sh
+   uvx copier copy --trust gh:aexoden/norms .
+   ```
+
+   Answer `changelog` no for a project that publishes no releases, since
+   nothing flags a `CHANGELOG.md` it doesn't need. Review what Copier changed,
+   keeping the project's own changes where they still follow the standards.
+   Copier generates lock files only where there are none, so where it changed a
+   manifest, update the project's lock files (`cargo update --workspace`,
+   `uv lock` or `pnpm install`). Commit the result.
+
+2. Run the formatters once, and commit what they change on its own. The hooks
+   only check formatting, and the standards' formatters change files that passed
+   the project's old ones: Tombi and prettier-plugin-packagejson reorder
+   dependencies and `package.json` fields, and Prettier reindents JSON. Run
+   those the project has:
+
+   ```sh
+   tombi format
+   cargo fmt --all
+   uv run ruff format
+   pnpm exec prettier --write .
+   ```
+
+3. Install the hooks, run them, and fix what they report, `norms-verify` among
+   them. Waive a check the project departs from on purpose in `norms.toml`, with
+   a reason (see [Configuration](#configuration)).
+
+   ```sh
+   prek install
+   prek run --all-files
+   ```
+
+4. Configure the GitHub repository, as above, and check it with `norms github .`
+   (which needs norms installed with Cargo, and `gh`).
+
+5. Check the dependencies for security advisories once. The standards check them
+   only in `audit.yaml`, which runs on a schedule and on manual dispatch, from
+   the default branch, rather than on each commit. Run its commands locally (see
+   [Security Audit](STANDARDS.md#security-audit)), or dispatch it once merged.
+   Fix what it reports, or, for Rust, ignore each advisory with a reason and an
+   expiry, as [Dependency Policy](STANDARDS.md#dependency-policy) describes.
+
 ## Platform Support
 
 norms is built and tested only on Linux, which includes WSL on Windows. That
