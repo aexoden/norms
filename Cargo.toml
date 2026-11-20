@@ -21,7 +21,7 @@ exclude = [
 
 [dependencies]
 anyhow = { version = "=1.0.104", features = ["backtrace"] }
-clap = { version = "=4.6.7", features = ["derive", "env"] }
+clap = { version = "=4.6.8", features = ["derive", "env"] }
 colored = "=3.1.1"
 ec4rs = "=1.2.0"
 github-actions-expressions = "=1.32.0"
