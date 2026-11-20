@@ -306,7 +306,7 @@ impl PyprojectToml {
     }
 
     /// `[tool.uv] required-version`, parsed as uv parses it, or why it can't be.
-    pub(crate) fn uv_required_version(&self) -> Result<VersionSpecifiers, String> {
+    fn uv_required_version(&self) -> Result<VersionSpecifiers, String> {
         let Some(required) = self
             .tool
             .as_ref()

@@ -7,7 +7,7 @@ mod ci;
 mod files;
 mod prek;
 
-pub(crate) use ci::{SETUP_UV, check_github_actions, is_exact_uv_version};
+pub(crate) use ci::{SETUP_UV, check_github_actions};
 pub(crate) use files::{
     check_agent_guidance, check_changelog, check_components, check_dependabot, check_devbox,
     check_editorconfig, check_gitattributes, check_gitignore, check_licenses, check_markdownlint,

@@ -613,7 +613,7 @@ static EXACT_UV_VERSION: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Whether `version`, a setup-uv step's `version` input, is an exact uv version.
-pub(crate) fn is_exact_uv_version(version: &str) -> bool {
+fn is_exact_uv_version(version: &str) -> bool {
     EXACT_UV_VERSION.is_match(version)
 }
 

@@ -138,7 +138,7 @@ re-renders them, as `AGENTS.md` describes.
   exactly, that pin no version in a job running `uv`, and that pin none in a
   job only running `uvx`, which needn't; its `uv-lock` job, which installs
   nothing, leaves setup-uv's cache on. The components' `required-version` is a
-  minimum the pin satisfies, an exact version, or a minimum above the pin.
+  minimum or an exact version.
   Its `.gitattributes` sets `diff=python` on `*.py` but not on `*.pyi`.
 - `hooks` has language hooks and a `ci.yaml` that come close to the standards'
   hook and CI tables, beside stub `pyproject.toml` and `package.json` files:

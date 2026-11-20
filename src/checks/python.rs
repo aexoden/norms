@@ -5,7 +5,7 @@
 
 use pep508_rs::pep440_rs::Version;
 
-use crate::checks::common::{SETUP_UV, is_exact_uv_version};
+use crate::checks::common::SETUP_UV;
 use crate::config::{
     BasedpyrightConfig, Command, FormatterRun, GIT_ARCHIVAL, PYTHON_VERSION, PrekConfig, PrekHook,
     PyprojectToml, PytestConfig, Workflow, WorkflowJob, check_python_version_exact,
@@ -230,13 +230,9 @@ pub(crate) fn check_git_archival(
     }
 }
 
-/// Check that `[tool.uv] required-version` sets the oldest uv the component needs, and that every exact uv version a
-/// workflow's setup-uv step pins satisfies it. workflow-setup-uv-version reports the steps pinning no exact version.
-pub(crate) fn check_uv_required_version(
-    project: &ProjectContext,
-    ctx: &ComponentContext,
-    report: &mut Report,
-) {
+/// Check that `[tool.uv] required-version` sets the oldest uv the component needs. Whether CI's pinned uv satisfies it
+/// isn't checked, since uv then fails the job with an error naming both versions.
+pub(crate) fn check_uv_required_version(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
@@ -249,47 +245,6 @@ pub(crate) fn check_uv_required_version(
         "uv: required-version sets the oldest uv needed (>=)",
         config.check_uv_required_version(),
     );
-
-    let Ok(required) = config.uv_required_version() else {
-        return;
-    };
-    let mut pinned = false;
-    let mut rejected = Vec::new();
-    for (name, workflow) in project
-        .workflows()
-        .iter()
-        .filter_map(|(name, status)| Some((name, status.as_ref_ok()?)))
-    {
-        for (job, step) in workflow.job_steps_using(SETUP_UV) {
-            let Some(version) = step.input("version") else {
-                continue;
-            };
-            let Some(parsed) = is_exact_uv_version(&version)
-                .then(|| version.parse::<Version>().ok())
-                .flatten()
-            else {
-                continue;
-            };
-            pinned = true;
-            if !required.contains(&parsed) {
-                rejected.push(format!("{name}: {job} ({version})"));
-            }
-        }
-    }
-    if pinned {
-        report.must(
-            "uv-required-version-ci",
-            "uv: CI's pinned uv satisfies required-version",
-            if rejected.is_empty() {
-                Ok(())
-            } else {
-                Err(format!(
-                    "required-version ({required}) rejects the uv pinned in {}",
-                    rejected.join(", ")
-                ))
-            },
-        );
-    }
 }
 
 //

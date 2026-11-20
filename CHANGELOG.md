@@ -305,6 +305,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- `uv-required-version-ci`, which failed when CI pinned a uv that
+  `[tool.uv] required-version` rejects: uv itself fails the job then, with an
+  error naming both versions. Remove any waiver of it.
 - `tsconfig-reference-any-compiler-options`, which failed a second time when
   a referenced tsconfig was missing, malformed or without `compilerOptions`,
   each of which `tsconfig-reference-exists`, `tsconfig-reference-valid` or
