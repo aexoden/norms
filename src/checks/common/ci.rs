@@ -622,12 +622,7 @@ fn is_exact_uv_version(version: &str) -> bool {
 /// command's first word is `uv` or a path to it. A later word naming uv, as in `pip install uv` or `rm -rf ~/.cache/uv`,
 /// doesn't run it.
 fn job_runs_uv(job: &WorkflowJob) -> bool {
-    job.run_lines().any(|line| {
-        commands(&line)
-            .iter()
-            .map(Command::words)
-            .any(|words| words.first().is_some_and(|word| program_name(word) == "uv"))
-    })
+    job.runs(|words| words.first().is_some_and(|word| program_name(word) == "uv"))
 }
 
 /// Check that every setup-uv step in a job that runs uv itself pins an exact uv version with its `version` input, or

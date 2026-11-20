@@ -627,13 +627,11 @@ pub(crate) fn check_cargo_lock(ctx: &ComponentContext, report: &mut Report) {
 // MSRV in CI
 //
 
-/// Whether a script line compiles the crate: `cargo check`, `cargo build` or `cargo test`, with or without a
+/// Whether a command's words compile the crate: `cargo check`, `cargo build` or `cargo test`, with or without a
 /// `+toolchain`.
-fn compiles_crate(line: &str) -> bool {
-    commands(line).iter().map(Command::words).any(|words| {
-        cargo_subcommand(&words)
-            .is_some_and(|(subcommand, _)| matches!(subcommand, "check" | "build" | "test"))
-    })
+fn compiles_crate(words: &[&str]) -> bool {
+    cargo_subcommand(words)
+        .is_some_and(|(subcommand, _)| matches!(subcommand, "check" | "build" | "test"))
 }
 
 /// The toolchain a setup-rust-toolchain step makes the default for the job: the last of its comma-separated
@@ -1792,15 +1790,20 @@ jobs:
                 "No job installs a toolchain with setup-rust-toolchain's toolchain input and runs cargo check"
             ))
         );
+        let compiles = |line: &str| {
+            commands(line)
+                .iter()
+                .any(|command| compiles_crate(&command.words()))
+        };
         for line in [
             "cargo check",
             "cargo +1.85 test --locked",
             "cd crate && cargo build",
         ] {
-            assert!(compiles_crate(line), "{line}");
+            assert!(compiles(line), "{line}");
         }
         for line in ["cargo clippy", "cargo fmt --check", "echo cargo-check"] {
-            assert!(!compiles_crate(line), "{line}");
+            assert!(!compiles(line), "{line}");
         }
     }
 

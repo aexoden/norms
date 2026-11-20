@@ -987,12 +987,9 @@ fn pytest_coverage(words: &[&str]) -> Option<bool> {
     )
 }
 
-/// Whether a script line runs pytest.
-fn runs_pytest(line: &str) -> bool {
-    commands(line)
-        .iter()
-        .map(Command::words)
-        .any(|words| pytest_coverage(&words).is_some())
+/// Whether a command's words run pytest.
+fn runs_pytest(words: &[&str]) -> bool {
+    pytest_coverage(words).is_some()
 }
 
 /// Check that each pytest hook measures coverage, as [`pytest_hook_covers`] tells, since each may test another
@@ -1526,11 +1523,12 @@ jobs:
                 "No job sets setup-uv's python-version input and runs pytest"
             ))
         );
+        let runs = |line: &str| runs_pytest(&line.split_whitespace().collect::<Vec<_>>());
         for line in ["uv run pytest", "python -m pytest -q", ".venv/bin/pytest"] {
-            assert!(runs_pytest(line), "{line}");
+            assert!(runs(line), "{line}");
         }
         for line in ["uv run pytest-benchmark", "uv run mypy ."] {
-            assert!(!runs_pytest(line), "{line}");
+            assert!(!runs(line), "{line}");
         }
     }
 

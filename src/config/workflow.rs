@@ -237,6 +237,17 @@ impl WorkflowJob {
             .flat_map(join_continued_lines)
     }
 
+    /// Whether some command of the job's `run` scripts, split as [`commands`] splits a line, has words for which `f`
+    /// holds.
+    pub(crate) fn runs(&self, mut f: impl FnMut(&[&str]) -> bool) -> bool {
+        self.run_lines().any(|line| {
+            commands(&line)
+                .iter()
+                .map(Command::words)
+                .any(|words| f(&words))
+        })
+    }
+
     /// Every step of the job that uses the action `action` (`owner/repo`, or `owner/repo/path`), at any ref.
     pub(crate) fn steps_using<'a>(
         &'a self,
@@ -561,16 +572,16 @@ impl Workflow {
             .flat_map(move |(id, job)| job.steps_using(action).map(move |step| (id.as_str(), step)))
     }
 
-    /// Every step that uses the action `action`, in each job with a script line for which `runs` holds: for example,
+    /// Every step that uses the action `action`, in each job with a command whose words `runs` holds for: for example,
     /// the steps installing the toolchain a job runs a command with.
     pub(crate) fn steps_using_in_jobs_running<'a>(
         &'a self,
         action: &'a str,
-        runs: impl Fn(&str) -> bool + 'a,
+        runs: impl Fn(&[&str]) -> bool + 'a,
     ) -> impl Iterator<Item = &'a WorkflowStep> {
         self.jobs
             .values()
-            .filter(move |job| job.run_lines().any(|line| runs(&line)))
+            .filter(move |job| job.runs(&runs))
             .flat_map(move |job| job.steps_using(action))
     }
 
@@ -1171,8 +1182,8 @@ jobs:
         )
         .expect("workflow parses");
         let toolchains: Vec<_> = workflow
-            .steps_using_in_jobs_running("actions-rust-lang/setup-rust-toolchain", |line| {
-                line.contains("cargo check")
+            .steps_using_in_jobs_running("actions-rust-lang/setup-rust-toolchain", |words| {
+                words.starts_with(&["cargo", "check"])
             })
             .filter_map(|step| step.input("toolchain"))
             .collect();
