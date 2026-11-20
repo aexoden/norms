@@ -80,9 +80,7 @@ const LOCK_HOOKS: [&str; 3] = ["cargo-lock", "uv-lock", "pnpm-lock"];
 /// caches, or the `eslint` hook while `pnpm install` rewrites `node_modules`, which fail only now and then.
 fn check_priorities(config: &PrekConfig) -> Result<(), String> {
     let wrong: Vec<String> = config
-        .repos
-        .iter()
-        .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+        .repo_hooks()
         // The norms and conventional-pre-commit repositories' manifests put their commit message hooks in the
         // commit-msg stage, which the configuration needn't repeat.
         .filter(|(repo, hook)| {
@@ -241,9 +239,7 @@ fn runs_on_commit_messages(repo: &PrekRepo, hook: &PrekHook, hook_repo: &str) ->
 fn norms_commit_msg_hook_in(config: &PrekConfig) -> Result<(), Issue> {
     let mut found = false;
     for (repo, hook) in config
-        .repos
-        .iter()
-        .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+        .repo_hooks()
         .filter(|(_, hook)| hook.id == "norms-commit-msg")
     {
         found = true;
@@ -388,9 +384,7 @@ fn conventional_hook_in(config: &PrekConfig) -> Result<(), Issue> {
     let mut issues = Vec::new();
 
     for (repo, hook) in config
-        .repos
-        .iter()
-        .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+        .repo_hooks()
         .filter(|(_, hook)| hook.id == "conventional-pre-commit")
     {
         let mut hook_issues = Vec::new();

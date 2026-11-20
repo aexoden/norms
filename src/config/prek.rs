@@ -254,7 +254,7 @@ impl PrekConfig {
             names
         }
 
-        let hooks: Vec<_> = self.repos.iter().flat_map(|repo| &repo.hooks).collect();
+        let hooks: Vec<_> = self.hooks().collect();
         let mut counts: HashMap<&str, usize> = HashMap::new();
         for hook in &hooks {
             for name in names(hook) {
@@ -293,32 +293,29 @@ impl PrekConfig {
     /// to choose, so only its being remote is reported. Hooks that are missing are left to the checks of each hook.
     pub(crate) fn check_language_hooks(&self, ids: &[&str]) -> Result<(), String> {
         let mut issues: Vec<String> = Vec::new();
-        for repo in &self.repos {
-            for hook in repo
-                .hooks
-                .iter()
-                .filter(|hook| ids.contains(&hook.id.as_str()))
-            {
-                let name = hook.alias().unwrap_or(&hook.id);
-                if repo.repo != "local" {
-                    issues.push(format!("{name} isn't a local hook"));
-                    continue;
+        for (repo, hook) in self
+            .repo_hooks()
+            .filter(|(_, hook)| ids.contains(&hook.id.as_str()))
+        {
+            let name = hook.alias().unwrap_or(&hook.id);
+            if repo.repo != "local" {
+                issues.push(format!("{name} isn't a local hook"));
+                continue;
+            }
+            match hook.language.as_deref() {
+                Some("system") => {}
+                Some(language) => {
+                    issues.push(format!("{name} has language {language}, not system"));
                 }
-                match hook.language.as_deref() {
-                    Some("system") => {}
-                    Some(language) => {
-                        issues.push(format!("{name} has language {language}, not system"));
-                    }
-                    None => issues.push(format!("{name} has no language")),
-                }
-                if hook.pass_filenames != Some(Value::Bool(false)) {
-                    issues.push(format!("{name} doesn't set pass_filenames = false"));
-                }
-                if let Some(wrapper) = entry_wrapper(hook) {
-                    issues.push(format!(
-                        "{name} runs through {wrapper}, not its tool directly"
-                    ));
-                }
+                None => issues.push(format!("{name} has no language")),
+            }
+            if hook.pass_filenames != Some(Value::Bool(false)) {
+                issues.push(format!("{name} doesn't set pass_filenames = false"));
+            }
+            if let Some(wrapper) = entry_wrapper(hook) {
+                issues.push(format!(
+                    "{name} runs through {wrapper}, not its tool directly"
+                ));
             }
         }
         // Copies of a hook without aliases of their own have the same issues, each worth naming once.
@@ -371,24 +368,28 @@ impl PrekConfig {
         self.runs_in(hook, "pre-commit")
     }
 
-    /// Every hook that runs in `stage`, as [`runs_in`](Self::runs_in) decides.
-    pub(crate) fn hooks_in<'a>(&'a self, stage: &'a str) -> impl Iterator<Item = &'a PrekHook> {
+    /// Every hook, with the repository that holds it, in the configuration's order.
+    pub(crate) fn repo_hooks(&self) -> impl Iterator<Item = (&PrekRepo, &PrekHook)> {
         self.repos
             .iter()
-            .flat_map(|repo| &repo.hooks)
-            .filter(move |hook| self.runs_in(hook, stage))
+            .flat_map(|repo| repo.hooks.iter().map(move |hook| (repo, hook)))
+    }
+
+    /// Every hook, in the configuration's order.
+    pub(crate) fn hooks(&self) -> impl Iterator<Item = &PrekHook> {
+        self.repos.iter().flat_map(|repo| &repo.hooks)
+    }
+
+    /// Every hook that runs in `stage`, as [`runs_in`](Self::runs_in) decides.
+    pub(crate) fn hooks_in<'a>(&'a self, stage: &'a str) -> impl Iterator<Item = &'a PrekHook> {
+        self.hooks().filter(move |hook| self.runs_in(hook, stage))
     }
 
     /// The hooks with ID `id` that run before each commit, or, if there are none, why not: a failure if there is no
     /// such hook or it runs only in the `manual` stage, so never on its own, and a warning if it runs only in other
     /// stages.
     pub(crate) fn commit_hooks(&self, id: &str) -> Result<Vec<&PrekHook>, Issue> {
-        let hooks: Vec<_> = self
-            .repos
-            .iter()
-            .flat_map(|repo| &repo.hooks)
-            .filter(|hook| hook.id == id)
-            .collect();
+        let hooks: Vec<_> = self.hooks().filter(|hook| hook.id == id).collect();
         if hooks.is_empty() {
             return Err(Issue::fail(format!("No {id} hook")));
         }
@@ -1036,9 +1037,7 @@ id = "other"
 "#,
         );
         let hooks: Vec<_> = config
-            .repos
-            .iter()
-            .flat_map(|repo| &repo.hooks)
+            .hooks()
             .map(|hook| {
                 (
                     hook.id.as_str(),
