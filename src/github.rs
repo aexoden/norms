@@ -113,6 +113,16 @@ pub(crate) enum Fetched<T> {
     Unavailable(String),
 }
 
+impl<T> Fetched<T> {
+    /// The value read, converted with `f`, or the same reason it couldn't be.
+    fn map<U>(self, f: impl FnOnce(T) -> U) -> Fetched<U> {
+        match self {
+            Self::Ok(value) => Fetched::Ok(f(value)),
+            Self::Unavailable(reason) => Fetched::Unavailable(reason),
+        }
+    }
+}
+
 /// What `GET repos/OWNER/NAME` reports. The fields are optional because GitHub leaves some out for a token without
 /// admin access to the repository.
 #[derive(Debug, Default, Deserialize)]
@@ -283,13 +293,11 @@ impl Settings {
         let actions = fetch_json(api, &format!("repos/{name}/actions/permissions"))?;
         let workflow = fetch_json(api, &format!("repos/{name}/actions/permissions/workflow"))?;
 
-        let private_vulnerability_reporting = match fetch_json::<Enabled>(
+        let private_vulnerability_reporting = fetch_json::<Enabled>(
             api,
             &format!("repos/{name}/private-vulnerability-reporting"),
-        )? {
-            Fetched::Ok(enabled) => Fetched::Ok(enabled.enabled),
-            Fetched::Unavailable(reason) => Fetched::Unavailable(reason),
-        };
+        )?
+        .map(|enabled| enabled.enabled);
 
         // The endpoint answers 204 when alerts are on and 404 when they're off, but only to an admin.
         let vulnerability_alerts = if repository.is_admin() {
@@ -314,17 +322,10 @@ impl Settings {
                 for listed in summaries.iter().filter(|r| {
                     r.source_type == "Repository" && RULESET_NAMES.contains(&r.name.as_str())
                 }) {
-                    match fetch_json::<Ruleset>(
-                        api,
-                        &format!("repos/{name}/rulesets/{}", listed.id),
-                    )? {
-                        Fetched::Ok(ruleset) => {
-                            rulesets.push((listed.name.clone(), Fetched::Ok(ruleset)));
-                        }
-                        Fetched::Unavailable(reason) => {
-                            rulesets.push((listed.name.clone(), Fetched::Unavailable(reason)));
-                        }
-                    }
+                    rulesets.push((
+                        listed.name.clone(),
+                        fetch_json(api, &format!("repos/{name}/rulesets/{}", listed.id))?,
+                    ));
                 }
                 Fetched::Ok(rulesets)
             }
