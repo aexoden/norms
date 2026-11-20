@@ -340,7 +340,7 @@ pub(crate) fn check_typed(ctx: &ComponentContext, report: &mut Report) {
     let Some(config) = ctx.pyproject().as_ref_ok() else {
         return;
     };
-    if config.is_application() {
+    if !config.is_library() {
         return;
     }
 
@@ -1234,7 +1234,7 @@ pub(crate) fn check_min_python_job(
     else {
         return;
     };
-    if config.is_application() {
+    if !config.is_library() {
         return;
     }
 
@@ -1635,6 +1635,35 @@ jobs:
                 String::new(),
             ]
         );
+    }
+
+    #[test]
+    fn a_pyproject_without_a_project_gets_no_library_checks() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("pyproject.toml"), "[tool.uv]\n").unwrap();
+        std::fs::create_dir_all(dir.path().join("src/demo")).unwrap();
+        std::fs::write(dir.path().join("src/demo/__init__.py"), "").unwrap();
+        std::fs::create_dir_all(dir.path().join(".github/workflows")).unwrap();
+        std::fs::write(
+            dir.path().join(".github/workflows/ci.yaml"),
+            "on: push\njobs: {}\n",
+        )
+        .unwrap();
+        let component = Component {
+            language: Language::Python,
+            path: std::path::PathBuf::new(),
+        };
+        let project = ProjectContext::new(dir.path().to_path_buf());
+        let ctx = ComponentContext::new(&project, &component);
+        let mut report = Report::new(dir.path().to_path_buf(), Vec::new());
+        check_typed(&ctx, &mut report);
+        check_min_python_job(&project, &ctx, &mut report);
+        let ids: Vec<&str> = report
+            .results
+            .iter()
+            .map(|result| result.id.as_str())
+            .collect();
+        assert_eq!(ids, Vec::<&str>::new());
     }
 
     #[test]

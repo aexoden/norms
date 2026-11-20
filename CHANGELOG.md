@@ -299,6 +299,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Don't report that a Python component without a `[project]` table, which
+  `pyproject-project` already fails, lacks a job testing its oldest Python
+  (`python-ci-min-python`): it isn't a library.
 - Don't count `ruff check --fix` as checking: it fails `python-ci-ruff-check`
   in CI, where it fixes what it can and passes, and warns in the `ruff-check`
   hook (`python-prek-ruff-check`), where it rewrites files. Run `ruff check`
