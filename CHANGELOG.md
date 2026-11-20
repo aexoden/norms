@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-20
+
+norms 0.3.0 moves the hooks from pre-commit to prek, adds `norms github` to
+check a repository's GitHub settings, and adds many checks. Projects that
+passed 0.2.0 should expect findings from its breaking changes, each listed
+first in its section with how to upgrade, and from a few fixes, listed under
+Fixed, to checks that let through what their standard forbids. The largest
+changes are moving to prek, with the hook checks renamed (rename their
+waivers), and running norms itself: the `norms-verify` and `norms-commit-msg`
+hooks and a CI job, which the template now adds. Projects also need a
+`SECURITY.md`, a gate job named `CI success`, manifest versions matching the
+latest release and basedpyright for Python, and with `--deny-warnings`, as the
+standards' hook runs, Clippy's restriction lints for Rust. Rendering the
+template again with `copier update` brings in most of what the checks expect.
+
 ### Added
 
 - **Breaking:** Fail when `ci.yaml`'s gate job isn't named `CI success`
@@ -433,6 +448,7 @@ each says what it expects, `STANDARDS.md` explains the standard behind it, and
 
 - Add initial version of the `norms` verification tool.
 
-[Unreleased]: https://github.com/aexoden/norms/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/aexoden/norms/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/aexoden/norms/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aexoden/norms/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/aexoden/norms/releases/tag/v0.1.0

@@ -81,7 +81,7 @@ priority = "check"
 # TOML
 [[repos]]
 repo = "https://github.com/tombi-toml/tombi-pre-commit"
-rev = "v1.11.2"
+rev = "v1.11.3"
 
 [[repos.hooks]]
 id = "tombi-format"
@@ -113,7 +113,7 @@ args = ["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci
 # norms: commit messages, and the project against the standards
 [[repos]]
 repo = "https://github.com/aexoden/norms"
-rev = "v0.2.0"
+rev = "v0.3.0"
 
 [[repos.hooks]]
 id = "norms-commit-msg"
