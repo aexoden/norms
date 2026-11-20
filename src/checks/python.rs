@@ -769,9 +769,8 @@ pub(crate) fn check_prek_hooks(ctx: &ProjectContext, report: &mut Report) {
         "Python prek: ruff-check hook (without --fix)",
         config.commit_hooks("ruff-check").and_then(|hooks| {
             if hooks.iter().any(|hook| {
-                hook.filter_map_commands("ruff check", ruff_check_run)
-                    .iter()
-                    .any(|run| run.fixes)
+                hook.map_command("ruff check", ruff_check_run)
+                    .is_some_and(|run| run.fixes)
             }) {
                 Err(Issue::warn(
                     "The ruff-check hook runs ruff check with --fix, so it rewrites files rather than only failing \
@@ -1023,8 +1022,7 @@ fn pytest_hooks(config: &PrekConfig) -> Result<(), Issue> {
 
 /// Whether a pytest hook measures coverage, from its entry and the args prek appends to it.
 fn pytest_hook_covers(hook: &PrekHook) -> bool {
-    hook.filter_map_commands("pytest", pytest_coverage)
-        .contains(&true)
+    hook.map_command("pytest", pytest_coverage) == Some(true)
 }
 
 /// Check that some step runs pytest with coverage.
@@ -1226,9 +1224,8 @@ mod tests {
                 .unwrap()
                 .iter()
                 .any(|hook| {
-                    hook.filter_map_commands("ruff check", ruff_check_run)
-                        .iter()
-                        .any(|run| run.fixes)
+                    hook.map_command("ruff check", ruff_check_run)
+                        .is_some_and(|run| run.fixes)
                 })
         };
         // Ruff's own remote hook takes its command from its repository, and --fix from the args.

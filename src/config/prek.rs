@@ -93,29 +93,23 @@ impl PrekHook {
             .filter(|alias| !alias.is_empty() && *alias != self.id)
     }
 
-    /// The command the hook runs, as its words, in a list of one, or of none if the entry has unbalanced quotes.
-    /// prek splits the hook's entry, or `default_entry` if it sets none, as a remote hook may leave it to the hook's
-    /// repository, with the `shlex` crate, reading a word starting with `#` as a comment ending the entry, and appends
-    /// the args.
-    pub(crate) fn commands(&self, default_entry: &str) -> Vec<Vec<String>> {
-        let Some(mut words) = shlex::split(self.entry.as_deref().unwrap_or(default_entry)) else {
-            return Vec::new();
-        };
+    /// The command the hook runs, as its words, or none if the entry has unbalanced quotes. prek splits the hook's
+    /// entry, or `default_entry` if it sets none, as a remote hook may leave it to the hook's repository, with the
+    /// `shlex` crate, reading a word starting with `#` as a comment ending the entry, and appends the args.
+    pub(crate) fn command(&self, default_entry: &str) -> Option<Vec<String>> {
+        let mut words = shlex::split(self.entry.as_deref().unwrap_or(default_entry))?;
         words.extend(self.args.iter().cloned());
-        vec![words]
+        Some(words)
     }
 
-    /// The results of `f` for each command the hook runs, as [`commands`](Self::commands) gives them, that it gives one
-    /// for.
-    pub(crate) fn filter_map_commands<T>(
+    /// The result of `f` for the command the hook runs, as [`command`](Self::command) gives it, if it gives one.
+    pub(crate) fn map_command<T>(
         &self,
         default_entry: &str,
-        mut f: impl FnMut(&[&str]) -> Option<T>,
-    ) -> Vec<T> {
-        self.commands(default_entry)
-            .iter()
-            .filter_map(|command| f(&command.iter().map(String::as_str).collect::<Vec<_>>()))
-            .collect()
+        f: impl FnOnce(&[&str]) -> Option<T>,
+    ) -> Option<T> {
+        let command = self.command(default_entry)?;
+        f(&command.iter().map(String::as_str).collect::<Vec<_>>())
     }
 }
 
@@ -125,8 +119,8 @@ impl PrekHook {
 ///
 /// A leading `env`, with any `NAME=value` words after it, is skipped, as in `/usr/bin/env bash -c "..."`.
 fn entry_wrapper(hook: &PrekHook) -> Option<String> {
-    let commands = hook.commands("");
-    let mut words = commands.first()?.iter().map(String::as_str);
+    let command = hook.command("")?;
+    let mut words = command.iter().map(String::as_str);
     let mut program = program_name(words.next()?);
     if program == "env" {
         program = program_name(words.find(|word| !word.contains('='))?);
@@ -430,9 +424,8 @@ impl PrekConfig {
     ) -> Result<(), Issue> {
         let hooks = self.commit_hooks(id)?;
         if hooks.iter().all(|hook| {
-            !hook
-                .filter_map_commands(default_entry, |words| checks(words).then_some(()))
-                .is_empty()
+            hook.map_command(default_entry, |words| checks(words).then_some(()))
+                .is_some()
         }) {
             Ok(())
         } else {
@@ -460,7 +453,7 @@ impl PrekConfig {
         let runs: Vec<_> = self
             .commit_hooks(id)?
             .into_iter()
-            .flat_map(|hook| hook.filter_map_commands(name, &mut runs))
+            .filter_map(|hook| hook.map_command(name, &mut runs))
             .collect();
         if runs.is_empty() {
             Err(Issue::warn(format!("The {id} hook doesn't run {name}")))
@@ -660,13 +653,15 @@ mod tests {
         assert_eq!(hook.alias(), None);
     }
 
-    fn hook_commands(entry: Option<&str>, args: &[&str]) -> Vec<Vec<String>> {
+    fn hook_command(entry: Option<&str>, args: &[&str]) -> Vec<Vec<String>> {
         PrekHook {
             entry: entry.map(str::to_owned),
             args: args.iter().map(|arg| (*arg).to_owned()).collect(),
             ..PrekHook::default()
         }
-        .commands("default")
+        .command("default")
+        .into_iter()
+        .collect()
     }
 
     #[test]
@@ -702,7 +697,7 @@ mod tests {
             ),
             (Some("eslint 'unbalanced"), &[], vec![]),
         ] {
-            assert_eq!(hook_commands(entry, args), expected, "{entry:?}");
+            assert_eq!(hook_command(entry, args), expected, "{entry:?}");
         }
     }
 

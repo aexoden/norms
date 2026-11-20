@@ -132,8 +132,7 @@ fn check_priorities(config: &PrekConfig) -> Result<(), String> {
 /// Whether a zizmor hook runs the pedantic persona, passing `--pedantic` in its entry or the args prek appends to it.
 /// A hook without an entry, as a remote hook may leave it to the hook's repository, is taken to run `zizmor`.
 fn zizmor_hook_pedantic(hook: &PrekHook) -> bool {
-    hook.filter_map_commands("zizmor", zizmor_command_pedantic)
-        .contains(&true)
+    hook.map_command("zizmor", zizmor_command_pedantic) == Some(true)
 }
 
 pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
@@ -267,10 +266,9 @@ fn norms_verify_hook_in(config: &PrekConfig) -> Result<(), Issue> {
         .commit_hooks("norms-verify")?
         .into_iter()
         .any(|hook| {
-            hook.filter_map_commands("norms verify .", |words| {
+            hook.map_command("norms verify .", |words| {
                 Some(words.contains(&"--deny-warnings"))
-            })
-            .contains(&true)
+            }) == Some(true)
         })
     {
         Ok(())
@@ -404,15 +402,13 @@ fn conventional_hook_in(config: &PrekConfig) -> Result<(), Issue> {
             hook_issues.push(Issue::fail("doesn't run in the commit-msg stage"));
         }
 
-        let runs = hook.filter_map_commands("conventional-pre-commit", |words| {
+        match hook.map_command("conventional-pre-commit", |words| {
             Some(conventional_types_issues(conventional_pre_commit_args(
                 words,
             )?))
-        });
-        if runs.is_empty() {
-            hook_issues.push(Issue::fail("doesn't run conventional-pre-commit"));
-        } else if !runs.iter().any(Vec::is_empty) {
-            hook_issues.extend(runs.into_iter().flatten());
+        }) {
+            None => hook_issues.push(Issue::fail("doesn't run conventional-pre-commit")),
+            Some(type_issues) => hook_issues.extend(type_issues),
         }
 
         let Some(severity) = hook_issues.iter().map(|issue| issue.severity).max() else {

@@ -1116,8 +1116,7 @@ fn eslint_hooks(prek: &PrekConfig) -> Result<(), Issue> {
 /// Whether an `eslint` hook passes `--max-warnings 0`, in its entry or the args prek appends to it. A hook without
 /// an entry, as a remote hook may leave it to the hook's repository, is taken to run `eslint`.
 fn eslint_hook_strict(hook: &PrekHook) -> bool {
-    hook.filter_map_commands("eslint", eslint_max_warnings_zero)
-        .contains(&true)
+    hook.map_command("eslint", eslint_max_warnings_zero) == Some(true)
 }
 
 /// Check that some step runs `eslint` with `--max-warnings 0`. A step running the `lint` script doesn't count, since the
@@ -1155,10 +1154,7 @@ fn vitest_hooks(config: &PrekConfig) -> Result<(), Issue> {
                 Some(Issue::warn(
                     "The vitest hook sets no entry, so norms can't see whether it reports coverage",
                 ))
-            } else if hook
-                .filter_map_commands("vitest", vitest_coverage)
-                .contains(&true)
-            {
+            } else if hook.map_command("vitest", vitest_coverage) == Some(true) {
                 None
             } else {
                 Some(Issue::warn("The vitest hook doesn't pass --coverage"))
@@ -1250,13 +1246,10 @@ fn tsc_hooks(config: &PrekConfig, solution_style: bool) -> Result<(), Issue> {
                 "The tsc hook sets no entry, so norms can't see whether it runs in build mode",
             ));
         }
-        let runs = hook.filter_map_commands("tsc", tsc_builds);
-        if runs.is_empty() {
-            Err(Issue::warn("The tsc hook doesn't run tsc"))
-        } else if runs.contains(&false) {
-            Err(tsc_without_build(solution_style))
-        } else {
-            Ok(())
+        match hook.map_command("tsc", tsc_builds) {
+            None => Err(Issue::warn("The tsc hook doesn't run tsc")),
+            Some(false) => Err(tsc_without_build(solution_style)),
+            Some(true) => Ok(()),
         }
     });
     Issue::combine(issues.filter_map(Result::err))
@@ -1285,9 +1278,8 @@ fn pnpm_hooks_pinned(prek: &PrekConfig) -> Result<(), String> {
         .filter(|id| {
             prek.commit_hooks(id).is_ok_and(|hooks| {
                 hooks.iter().any(|hook| {
-                    !hook
-                        .filter_map_commands("", |words| runs_unpinned_pnpm(words).then_some(()))
-                        .is_empty()
+                    hook.map_command("", |words| runs_unpinned_pnpm(words).then_some(()))
+                        .is_some()
                 })
             })
         })

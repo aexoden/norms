@@ -837,9 +837,8 @@ fn cargo_test_run(words: &[&str]) -> Option<TestRun> {
 /// component. A hook that runs them without, or doesn't run them where norms can see, warns.
 fn cargo_test_hooks(config: &PrekConfig) -> Result<(), Issue> {
     if config.commit_hooks("cargo-test")?.into_iter().all(|hook| {
-        hook.filter_map_commands("", cargo_test_run)
-            .iter()
-            .any(|run| run.units && run.coverage)
+        hook.map_command("", cargo_test_run)
+            .is_some_and(|run| run.units && run.coverage)
     }) {
         Ok(())
     } else {
@@ -932,7 +931,7 @@ pub(crate) fn check_doctests(
 fn doctest_hooks(config: &PrekConfig) -> Result<(), String> {
     if config
         .hooks_in("pre-commit")
-        .flat_map(|hook| hook.filter_map_commands("", cargo_test_run))
+        .filter_map(|hook| hook.map_command("", cargo_test_run))
         .any(|run| run.doctests)
     {
         Ok(())
@@ -1282,14 +1281,8 @@ fn clippy_hooks(config: &PrekConfig) -> Result<(), Issue> {
                 "The clippy hook sets no entry, so norms can't see whether it denies warnings",
             ));
         }
-        let runs = hook.filter_map_commands("cargo clippy", clippy_run);
-        if runs.is_empty() {
-            Err(Issue::warn("The clippy hook doesn't run cargo clippy"))
-        } else if runs.iter().any(Result::is_ok) {
-            Ok(())
-        } else {
-            Issue::alternatives(runs.into_iter().filter_map(Result::err))
-        }
+        hook.map_command("cargo clippy", clippy_run)
+            .unwrap_or_else(|| Err(Issue::warn("The clippy hook doesn't run cargo clippy")))
     });
     Issue::combine(issues.filter_map(Result::err))
 }
@@ -1366,22 +1359,19 @@ fn cargo_deny_args(words: &[&str]) -> Option<String> {
 /// apart from `--manifest-path`. A hook passing others, or running it nowhere norms can see, warns.
 fn cargo_deny_hooks(config: &PrekConfig) -> Result<(), Issue> {
     let issues = config.commit_hooks("cargo-deny")?.into_iter().map(|hook| {
-        let runs = hook.filter_map_commands("cargo deny", cargo_deny_args);
-        if runs.is_empty() {
-            Err(Issue::warn("The cargo-deny hook doesn't run cargo deny"))
-        } else if runs.iter().any(|args| args == CARGO_DENY_CI_ARGS) {
-            Ok(())
-        } else {
-            Issue::alternatives(runs.into_iter().map(|args| {
+        match hook.map_command("cargo deny", cargo_deny_args) {
+            None => Err(Issue::warn("The cargo-deny hook doesn't run cargo deny")),
+            Some(args) if args == CARGO_DENY_CI_ARGS => Ok(()),
+            Some(args) => {
                 let args = if args.is_empty() {
                     "without arguments".to_owned()
                 } else {
                     args
                 };
-                Issue::warn(format!(
+                Err(Issue::warn(format!(
                     "The cargo-deny hook runs cargo deny {args} rather than {CARGO_DENY_CI_ARGS}"
-                ))
-            }))
+                )))
+            }
         }
     });
     Issue::combine(issues.filter_map(Result::err))
