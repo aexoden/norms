@@ -49,7 +49,7 @@ use crate::config::{
 };
 use crate::detection::Detection;
 use crate::licenses::LicenseFiles;
-use crate::models::{Component, Language};
+use crate::models::{Component, Language, slashed};
 use crate::pnpm_workspace::{PnpmWorkspacePackages, find_packages};
 use crate::prettier_configs::{NestedPrettierConfigs, find_nested_configs};
 use crate::release::Release;
@@ -502,8 +502,7 @@ impl ComponentContext {
             .enumerate()
             .find_map(|(depth, dir)| Some((depth, found.strip_prefix(dir).ok()?)))
             .unwrap_or((0, found));
-        let name: Vec<_> = name.iter().map(|part| part.to_string_lossy()).collect();
-        format!("{}{}", "../".repeat(depth), name.join("/"))
+        format!("{}{}", "../".repeat(depth), slashed(name))
     }
 
     /// The Clippy configuration that applies to the component's package (cached): the nearest `.clippy.toml` or

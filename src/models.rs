@@ -4,7 +4,7 @@
 //! Core data models for the norms tool.
 
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
@@ -47,13 +47,16 @@ impl Component {
         if self.path.as_os_str().is_empty() {
             return ".".into();
         }
-
-        self.path
-            .components()
-            .map(|component| component.as_os_str().to_string_lossy())
-            .collect::<Vec<_>>()
-            .join("/")
+        slashed(&self.path)
     }
+}
+
+/// `path` with its components joined by `/`, whatever the platform's separator.
+pub(crate) fn slashed(path: &Path) -> String {
+    path.iter()
+        .map(|part| part.to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 /// The severity/outcome of a check.

@@ -16,7 +16,7 @@ use crate::config::{
 };
 use crate::context::{ComponentContext, ConfigStatus, MARKDOWNLINT_CLI2_CONFIG, ProjectContext};
 use crate::models::Language;
-use crate::prettier_configs::slashed;
+use crate::models::slashed;
 use crate::report::{Issue, Outcome, Report, file_exists};
 
 //

@@ -16,7 +16,7 @@ use crate::config::{
 use crate::context::{
     ComponentContext, ConfigStatus, LEGACY_RUST_TOOLCHAIN, ProjectContext, RUST_TOOLCHAIN,
 };
-use crate::models::Language;
+use crate::models::{Language, slashed};
 use crate::report::{Issue, Outcome, Report, Severity, file_exists};
 
 /// Whether the package whose manifest, `config`, is in `dir` builds a binary, from an explicit `[[bin]]` target or,
@@ -80,8 +80,7 @@ pub(crate) fn publishes_library(ctx: &ComponentContext) -> bool {
 
 /// The label of a workspace member's manifest, by its path from the component.
 fn member_manifest(path: &Path) -> String {
-    let parts: Vec<_> = path.iter().map(|part| part.to_string_lossy()).collect();
-    format!("{}/Cargo.toml", parts.join("/"))
+    format!("{}/Cargo.toml", slashed(path))
 }
 
 //

@@ -13,7 +13,7 @@ use crate::config::{
     Workflow, check_dev_engine, commands, program_args, runs_program,
 };
 use crate::context::{ComponentContext, ConfigStatus, ProjectContext};
-use crate::models::Language;
+use crate::models::{Language, slashed};
 use crate::prettier_configs::{
     NestedPrettierConfig, NestedPrettierConfigs, PRETTIER_CONFIG, PRETTIER_CONFIGS,
 };
@@ -131,8 +131,7 @@ const ESLINT_PLUGIN_PRETTIER: &str = "eslint-plugin-prettier";
 
 /// The label of a pnpm workspace package's manifest, by its path from the component.
 fn package_manifest(path: &Path) -> String {
-    let parts: Vec<_> = path.iter().map(|part| part.to_string_lossy()).collect();
-    format!("{}/package.json", parts.join("/"))
+    format!("{}/package.json", slashed(path))
 }
 
 /// Check that the packages of the component's pnpm workspace can be found, and that each has a valid manifest that

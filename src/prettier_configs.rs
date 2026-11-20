@@ -11,6 +11,7 @@ use ignore::gitignore::{Gitignore, GitignoreBuilder};
 
 use crate::config::PackageJson;
 use crate::context::parse_json5_file;
+use crate::models::slashed;
 
 /// The Prettier configuration file the standard names.
 pub(crate) const PRETTIER_CONFIG: &str = ".prettierrc";
@@ -177,14 +178,6 @@ fn ignore_matcher(root: &Path, errors: &mut Vec<String>) -> Gitignore {
         errors.push(error.to_string());
         Gitignore::empty()
     })
-}
-
-/// `path` with its components joined by `/`.
-pub(crate) fn slashed(path: &Path) -> String {
-    path.iter()
-        .map(|part| part.to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
 }
 
 #[cfg(test)]
