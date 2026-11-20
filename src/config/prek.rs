@@ -454,19 +454,22 @@ impl PrekConfig {
         let runs: Vec<_> = self
             .commit_hooks(id)?
             .into_iter()
-            .filter_map(|hook| hook.map_command(name, &mut runs))
+            .map(|hook| hook.map_command(name, &mut runs))
             .collect();
-        if runs.is_empty() {
-            Err(Issue::warn(format!("The {id} hook doesn't run {name}")))
-        } else {
-            FormatterRun::check_each(
-                &runs,
-                name,
-                Issue::warn(format!(
-                    "{name} runs without --check, so it rewrites files rather than only failing on them"
-                )),
-            )
-        }
+        let missing = runs
+            .iter()
+            .any(Option::is_none)
+            .then(|| Issue::warn(format!("The {id} hook doesn't run {name}")));
+        let found: Vec<_> = runs.into_iter().flatten().collect();
+        let rewrites = FormatterRun::check_each(
+            &found,
+            name,
+            Issue::warn(format!(
+                "{name} runs without --check, so it rewrites files rather than only failing on them"
+            )),
+        )
+        .err();
+        Issue::combine(missing.into_iter().chain(rewrites))
     }
 }
 
@@ -819,6 +822,13 @@ mod tests {
         );
         assert_eq!(
             hook(r#"[{id = "fmt", entry = "fmt 'unbalanced"}]"#),
+            Err(Issue::warn("The fmt hook doesn't run fmt"))
+        );
+        // Each copy of the hook, as for another component, must run the formatter.
+        assert_eq!(
+            hook(
+                r#"[{id = "fmt", entry = "fmt --check ."}, {id = "fmt", entry = "'unbalanced", alias = "b"}]"#
+            ),
             Err(Issue::warn("The fmt hook doesn't run fmt"))
         );
         assert_eq!(hook("[]"), Err(Issue::fail("No fmt hook")));

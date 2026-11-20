@@ -185,7 +185,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the standards give it (`typescript-prek-eslint`, `typescript-prek-vitest`,
   `python-prek-pytest`, `rust-prek-cargo-test`), as the `tsc`, `clippy` and
   `cargo-deny` hooks already were. Add the flags to each, as the template
-  does.
+  does. Likewise, warn when any copy of a `ruff-format`, `rustfmt`,
+  `prettier` or `tombi-format` hook doesn't run its formatter where norms can
+  see it, rather than only when none does.
 - `ci-yaml-push` warns when `ci.yaml`'s `push` has no branch filter, which
   runs CI on every branch, rather than accepting it. Name the branches, as in
   `push: branches: [dev, main]`.
