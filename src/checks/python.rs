@@ -1134,9 +1134,13 @@ pub(crate) fn check_audit(ctx: &ProjectContext, report: &mut Report) {
 /// Check that `workflow` runs `uv audit`, with `--locked`, so that a stale lock file fails rather than being relocked,
 /// leaving the audit to cover versions that aren't committed.
 fn uv_audit(workflow: &Workflow) -> Result<(), Issue> {
-    if workflow.runs_command("uv audit --locked") {
+    let runs = workflow.filter_map_commands(|words| match uv_subcommand(words) {
+        Some(("audit", args)) => Some(args.contains(&"--locked")),
+        _ => None,
+    });
+    if runs.contains(&true) {
         Ok(())
-    } else if workflow.runs_command("uv audit") {
+    } else if !runs.is_empty() {
         Err(Issue::warn(
             "uv audit runs without --locked, so a stale uv.lock is relocked rather than failing",
         ))
@@ -1433,6 +1437,17 @@ jobs:
             .unwrap()
         };
         assert_eq!(uv_audit(&workflow("uv audit --locked")), Ok(()));
+        assert_eq!(uv_audit(&workflow("uv audit --no-dev --locked")), Ok(()));
+        assert_eq!(
+            uv_audit(&workflow("uv --directory api audit --locked")),
+            Ok(())
+        );
+        assert_eq!(
+            uv_audit(&workflow("uv --directory api audit")),
+            Err(Issue::warn(
+                "uv audit runs without --locked, so a stale uv.lock is relocked rather than failing"
+            ))
+        );
         assert_eq!(
             uv_audit(&workflow("uv audit")),
             Err(Issue::warn(
