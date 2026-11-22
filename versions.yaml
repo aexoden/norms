@@ -126,7 +126,7 @@ action_rustfmt:
 
 # renovate: datasource=github-tags depName=EmbarkStudios/cargo-deny-action
 action_cargo_deny:
-  default: "70f81531115945ba6eb6b941ec9d39d063438eb9 # v2.1.2"
+  default: "17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3"
   when: false
 
 # renovate: datasource=github-tags depName=taiki-e/install-action
