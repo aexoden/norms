@@ -134,7 +134,7 @@ jobs:
           prek run --stage commit-msg --commit-msg-filename "$RUNNER_TEMP/commit-msg.txt"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
       # The hooks run with the template's prek, so this checks that the oldest prek the config
       # allows still reads it, as the template job does for each render.
@@ -367,7 +367,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
       # Renovate updates the versions the template pins without re-rendering the fixtures, which
       # the snapshots don't see. This fails only when a change the checks see wasn't re-rendered.
@@ -448,7 +448,7 @@ jobs:
           tool: prek@${{ steps.versions.outputs.prek }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
       # The rendered project's package.json selects the pnpm and Node.js versions it uses.
       - name: Install pnpm
