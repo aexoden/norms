@@ -168,7 +168,7 @@ py_pytest_cov:
 
 # renovate: datasource=pypi depName=ruff
 py_ruff:
-  default: "0.17.5"
+  default: "0.17.6"
   when: false
 
 # TypeScript development dependencies
