@@ -136,7 +136,7 @@ action_install_action:
 
 # renovate: datasource=github-tags depName=astral-sh/setup-uv
 action_setup_uv:
-  default: "68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3"
+  default: "1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0"
   when: false
 
 # renovate: datasource=github-tags depName=pnpm/setup
