@@ -30,7 +30,7 @@ node_version:
 
 # renovate: datasource=npm depName=pnpm
 pnpm_version:
-  default: "12.21.0"
+  default: "12.22.0"
   when: false
 
 # cargo-llvm-cov, which the cargo-test hook and job run, installed in CI by
