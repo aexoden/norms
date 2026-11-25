@@ -411,7 +411,7 @@ jobs:
             answers: "{primary_language: typescript, secondary_languages: [python, rust]}"
     env:
       # renovate: datasource=crate depName=cargo-deny
-      CARGO_DENY_VERSION: "0.21.0"
+      CARGO_DENY_VERSION: "0.22.0"
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
