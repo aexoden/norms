@@ -48,6 +48,8 @@ fail  pnpm-lock-exists  [.] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [.] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [.] pnpm-workspace.yaml: valid
 pass  pnpm-workspace-minimum-release-age  [.] pnpm: release age of 3 days (minimumReleaseAge)
+warn  pnpm-workspace-minimum-release-age-exclude-prune  [.] pnpm: unused release age exemptions dropped (minimumReleaseAgeExcludePrune)
+      minimumReleaseAgeExcludePrune is false, not true
 warn  pnpm-workspace-permissions  [.] pnpm: records what dependencies may do (permissions)
       permissions ["esbuild"] isn't a map of package names to capabilities
 warn  pnpm-workspace-no-legacy-build-settings  [.] pnpm: no older build settings

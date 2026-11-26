@@ -823,8 +823,10 @@ Security fixes may skip the release age. Renovate raises its vulnerability alert
 pull requests at once, and for pnpm, since `minimumReleaseAge` is set, exempts
 the new version itself, adding `package-name@version` to
 `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` with a comment naming the
-update. A new dependency of the fix still needs adding there by hand. Remove
-the entries once the releases are old enough.
+update. A new dependency of the fix still needs adding there by hand. With
+`minimumReleaseAgeExcludePrune: true`, pnpm drops an entry at its next install
+or update once the lock file no longer uses that version. Until then, the entry
+exempts only a version that soon passes the release age anyway.
 
 uv and Cargo still refuse the new version, so the pull request shows an
 artifact error until the package is exempted. Exempt it temporarily, with a
@@ -1310,12 +1312,13 @@ In a pnpm workspace, each package's `package.json` follows the same rules, and
 sets no `packageManager` either, but the `devEngines` pins and the scripts
 belong to the root's alone.
 
-`pnpm-workspace.yaml` sets the release age, refuses trust downgrades, and
-records in `permissions` what each dependency may do, such as running build
-scripts:
+`pnpm-workspace.yaml` sets the release age, drops exemptions from it once they
+are no longer used, refuses trust downgrades, and records in `permissions` what
+each dependency may do, such as running build scripts:
 
 ```yaml
 minimumReleaseAge: 4320
+minimumReleaseAgeExcludePrune: true
 permissions:
   esbuild:
     build: true

@@ -161,6 +161,8 @@ pass  pnpm-workspace-exists  [web] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [web] pnpm-workspace.yaml: valid
 warn  pnpm-workspace-minimum-release-age  [web] pnpm: release age of 3 days (minimumReleaseAge)
       1440 minutes isn't 3 days (4320)
+warn  pnpm-workspace-minimum-release-age-exclude-prune  [web] pnpm: unused release age exemptions dropped (minimumReleaseAgeExcludePrune)
+      Missing minimumReleaseAgeExcludePrune, so exemptions from the release age stay once unused
 warn  pnpm-workspace-permissions  [web] pnpm: records what dependencies may do (permissions)
       Missing permissions
 pass  pnpm-workspace-no-legacy-build-settings  [web] pnpm: no older build settings

@@ -147,6 +147,7 @@ pass  pnpm-lock-exists  [frontend] pnpm: pnpm-lock.yaml exists
 pass  pnpm-workspace-exists  [frontend] pnpm-workspace.yaml: exists
 pass  pnpm-workspace-valid  [frontend] pnpm-workspace.yaml: valid
 pass  pnpm-workspace-minimum-release-age  [frontend] pnpm: release age of 3 days (minimumReleaseAge)
+pass  pnpm-workspace-minimum-release-age-exclude-prune  [frontend] pnpm: unused release age exemptions dropped (minimumReleaseAgeExcludePrune)
 pass  pnpm-workspace-permissions  [frontend] pnpm: records what dependencies may do (permissions)
 pass  pnpm-workspace-no-legacy-build-settings  [frontend] pnpm: no older build settings
 pass  pnpm-workspace-builds-restricted  [frontend] pnpm: builds limited to permissions

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Warn unless `pnpm-workspace.yaml` sets `minimumReleaseAgeExcludePrune: true`
+  (`pnpm-workspace-minimum-release-age-exclude-prune`), so that pnpm drops an
+  exemption from the release age, such as the one Renovate adds for a security
+  fix, once the lock file no longer uses that version. The template sets it.
+
 ### Fixed
 
 - `STANDARDS.md`'s Urgent Updates section says that Renovate exempts the new

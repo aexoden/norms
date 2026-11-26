@@ -2,5 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Jason Lynch <jason@aexoden.com>
 
 minimumReleaseAge: 4320
+minimumReleaseAgeExcludePrune: true
 permissions: {}
 trustPolicy: no-downgrade

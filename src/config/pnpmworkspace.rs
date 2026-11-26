@@ -24,6 +24,9 @@ pub(crate) struct PnpmWorkspace {
     /// only the check reading it.
     pub minimum_release_age: Option<Value>,
 
+    /// Whether pnpm drops the entries of `minimumReleaseAgeExclude` that the lock file no longer uses.
+    pub minimum_release_age_exclude_prune: Option<Value>,
+
     /// What each dependency may do, by package name pattern: whether it may run build scripts (`build`) and which of
     /// its agent skills pnpm links (`skills`). Kept unparsed, so that one of the wrong shape fails only its check.
     pub permissions: Option<Value>,
@@ -60,6 +63,21 @@ impl PnpmWorkspace {
             number(value).ok_or_else(|| format!("minimumReleaseAge {value} isn't a number"))?;
 
         check_release_age_minutes(minutes)
+    }
+
+    /// Check that `minimumReleaseAgeExcludePrune` is `true`, so that an exemption from the release age, such as the
+    /// one Renovate adds for a security fix, is dropped once the lock file no longer uses its version.
+    pub(crate) fn check_minimum_release_age_exclude_prune(&self) -> Result<(), String> {
+        match &self.minimum_release_age_exclude_prune {
+            Some(Value::Bool(true)) => Ok(()),
+            Some(value) => Err(format!(
+                "minimumReleaseAgeExcludePrune is {value}, not true"
+            )),
+            None => Err(
+                "Missing minimumReleaseAgeExcludePrune, so exemptions from the release age stay once unused"
+                    .to_owned(),
+            ),
+        }
     }
 
     /// Check that `permissions` records what dependencies may do: a map, possibly empty, from package name patterns
@@ -244,6 +262,32 @@ mod tests {
             parse("dangerouslyAllowAllBuilds: true\nstrictDepBuilds: false\n")
                 .check_builds_restricted(),
             Err("dangerouslyAllowAllBuilds is true; strictDepBuilds is false".to_owned())
+        );
+    }
+
+    #[test]
+    fn unused_release_age_exemptions_are_pruned() {
+        assert_eq!(
+            parse("minimumReleaseAgeExcludePrune: true\n")
+                .check_minimum_release_age_exclude_prune(),
+            Ok(())
+        );
+        assert_eq!(
+            parse("minimumReleaseAgeExcludePrune: false\n")
+                .check_minimum_release_age_exclude_prune(),
+            Err("minimumReleaseAgeExcludePrune is false, not true".to_owned())
+        );
+        assert_eq!(
+            parse("minimumReleaseAgeExcludePrune: \"true\"\n")
+                .check_minimum_release_age_exclude_prune(),
+            Err("minimumReleaseAgeExcludePrune is \"true\", not true".to_owned())
+        );
+        assert_eq!(
+            parse("minimumReleaseAge: 4320\n").check_minimum_release_age_exclude_prune(),
+            Err(
+                "Missing minimumReleaseAgeExcludePrune, so exemptions from the release age stay once unused"
+                    .to_owned()
+            )
         );
     }
 

@@ -169,7 +169,8 @@ re-renders them, as `AGENTS.md` describes.
     versions older than ES2022;
   - its `pnpm-workspace.yaml` lists `permissions` as a sequence, keeps the
     older `allowBuilds` and `onlyBuiltDependencies`, lets unreviewed
-    dependencies' build scripts through, and turns `trustPolicy` off;
+    dependencies' build scripts through, turns off
+    `minimumReleaseAgeExcludePrune`, and turns `trustPolicy` off;
   - its `eslint.config.ts` includes typescript-eslint's
     `recommendedTypeChecked` and an `Only` variant of `stylisticTypeChecked`
     rather than the standard's configs, comments out `strictTypeChecked`, sets
