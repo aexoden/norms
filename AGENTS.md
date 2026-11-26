@@ -171,9 +171,12 @@ diff. When the change is intended, rerun with `NORMS_BLESS=1`, review
   `.github/workflows/`, so every template action must also be used by norms'
   own workflows.
 - A unit test in `src/config/markdownlint.rs` fails when
-  `hook_markdownlint_cli2` changes: compare its `RULES` table with the rules of
-  the markdownlint the new release depends on, then update
-  `RULES_MARKDOWNLINT_CLI2` there. Nothing catches an update of
+  `hook_markdownlint_cli2` moves to another minor release (`v0.24` to `v0.25`):
+  compare its `RULES` table with the rules of the markdownlint the new release
+  depends on, then update `RULES_MARKDOWNLINT_CLI2` there. Patch releases pass,
+  since markdownlint changes its rules only in minor releases, which
+  markdownlint-cli2 takes in a minor release of its own; if one ever comes in a
+  patch release, compare the rules then too. Nothing catches an update of
   `action_markdownlint_cli2` alone, whose markdownlint may differ, so review
   the rules for that too.
 - Template paths use Jinja names for conditional files and per-language

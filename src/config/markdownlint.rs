@@ -19,8 +19,8 @@ struct Rule {
 }
 
 /// markdownlint's rules, as of markdownlint 0.42, in its order. A test fails when the template's `versions.yaml` pins a
-/// markdownlint-cli2 other than the release that depends on markdownlint 0.42, so that the rules are compared again on
-/// each update.
+/// markdownlint-cli2 outside the release series that depends on markdownlint 0.42, so that the rules are compared again
+/// on each minor update.
 const RULES: &[Rule] = &[
     rule(&["MD001", "heading-increment"], &["headings"]),
     rule(&["MD003", "heading-style"], &["headings"]),
@@ -403,8 +403,11 @@ mod tests {
         assert_eq!(config.check_settings(), Ok(()));
     }
 
-    /// The markdownlint-cli2 release that depends on the markdownlint whose rules [`RULES`] lists.
-    const RULES_MARKDOWNLINT_CLI2: &str = "v0.24.1";
+    /// The markdownlint-cli2 release series (`vX.Y`, without the patch number) that depends on the markdownlint whose
+    /// rules [`RULES`] lists. markdownlint adds and renames rules only in minor releases, which markdownlint-cli2
+    /// takes in a minor release of its own, so a patch release of markdownlint-cli2, and the markdownlint patch it
+    /// brings, is let through without comparing the rules.
+    const RULES_MARKDOWNLINT_CLI2: &str = "v0.24";
 
     /// The version of markdownlint-cli2 that the template's `versions.yaml` pins its hook to.
     fn pinned_markdownlint_cli2() -> String {
@@ -423,11 +426,16 @@ mod tests {
 
     #[test]
     fn rules_match_the_pinned_markdownlint_cli2() {
+        let pinned = pinned_markdownlint_cli2();
+        let (series, patch) = pinned.rsplit_once('.').unwrap_or_default();
+        assert!(
+            series.matches('.').count() == 1 && patch.parse::<u32>().is_ok(),
+            "versions.yaml's markdownlint-cli2 {pinned} isn't vX.Y.Z"
+        );
         assert_eq!(
-            pinned_markdownlint_cli2(),
-            RULES_MARKDOWNLINT_CLI2,
-            "versions.yaml pins another markdownlint-cli2: compare RULES with the rules of the markdownlint it depends on, \
-             then update RULES_MARKDOWNLINT_CLI2"
+            series, RULES_MARKDOWNLINT_CLI2,
+            "versions.yaml pins another markdownlint-cli2 series: compare RULES with the rules of the markdownlint it \
+             depends on, then update RULES_MARKDOWNLINT_CLI2"
         );
     }
 
