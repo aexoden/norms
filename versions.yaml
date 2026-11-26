@@ -57,7 +57,7 @@ hook_reuse:
 
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
 hook_markdownlint_cli2:
-  default: "v0.24.1"
+  default: "v0.24.2"
   when: false
 
 # renovate: datasource=github-tags depName=tombi-toml/tombi-pre-commit

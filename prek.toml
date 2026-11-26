@@ -75,7 +75,7 @@ id = "reuse"
 # Markdown
 [[repos]]
 repo = "https://github.com/DavidAnson/markdownlint-cli2"
-rev = "v0.24.1"
+rev = "v0.24.2"
 
 [[repos.hooks]]
 id = "markdownlint-cli2"
