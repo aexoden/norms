@@ -96,7 +96,7 @@ action_checkout:
 
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2-action
 action_markdownlint_cli2:
-  default: "696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0"
+  default: "3ce8f712b5d8f31acd8e201be6d97e3d2bb23eb7 # v25.1.0"
   when: false
 
 # renovate: datasource=github-tags depName=fsfe/reuse-action
