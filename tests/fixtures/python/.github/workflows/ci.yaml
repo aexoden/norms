@@ -185,6 +185,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          require-checksums: true
           version: "0.13.9"
 
       - name: Install dependencies
@@ -208,6 +209,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          require-checksums: true
           version: "0.13.9"
 
       - name: Install dependencies
@@ -231,6 +233,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          require-checksums: true
           version: "0.13.9"
 
       - name: Install dependencies
@@ -254,6 +257,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          require-checksums: true
           version: "0.13.9"
 
       - name: Install dependencies
@@ -277,6 +281,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          require-checksums: true
           version: "0.13.9"
 
       - name: Install dependencies
@@ -302,6 +307,7 @@ jobs:
         with:
           # The jobs share setup-uv's cache, which this one would save without the packages they install.
           enable-cache: false
+          require-checksums: true
           version: "0.13.9"
 
       - name: Check that uv.lock is up to date

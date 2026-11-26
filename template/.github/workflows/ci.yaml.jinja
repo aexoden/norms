@@ -50,6 +50,7 @@
 {%- if python %}
           python-version: "{{ python }}"
 {%- endif %}
+          require-checksums: true
           version: "{{ uv_version }}"
 {%- if python_prefix %}
           working-directory: {{ python_dir }}

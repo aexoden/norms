@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The template's `astral-sh/setup-uv` steps, which pin uv, set
+  `require-checksums: true`, as `STANDARDS.md` now requires, so that setup-uv
+  fails rather than install a uv whose checksum it doesn't know. A Renovate
+  update of uv may then fail until a setup-uv release knows its checksum.
 - `STANDARDS.md`'s Security Audit section says that `audit.yaml`'s cargo-deny,
   since 0.22, reports an unmaintained crate only when the project depends on it
   directly, and that the template's `deny.toml` leaves that default rather

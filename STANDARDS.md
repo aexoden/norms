@@ -691,6 +691,10 @@ The `norms-verify` job runs the norms that the hook's `rev` pins:
   `uv sync`, sets `version` to an exact uv version, since the action otherwise
   installs the newest uv that `required-version` allows. A job that only runs
   tools through `uvx` doesn't install the project, so its uv needn't be pinned.
+  A step that pins uv also sets `require-checksums: true`, so that setup-uv
+  fails rather than install a uv whose checksum it doesn't know. setup-uv knows
+  the checksums of the uv releases before its own, so a Renovate update of uv
+  that fails this way waits for the setup-uv release that knows it.
 - Tools that no Renovate manager tracks, such as those installed with
   `taiki-e/install-action`, are pinned as described in [Automated
   Updates](#automated-updates).
