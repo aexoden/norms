@@ -49,6 +49,7 @@ pass  prek-conventional-pre-commit  prek: conventional-pre-commit hook (commit-m
 pass  prek-norms-commit-msg  prek: norms-commit-msg hook (commit-msg stage)
 pass  prek-norms-verify  prek: norms-verify hook (--deny-warnings)
 pass  prek-zizmor  prek: zizmor hook (pedantic)
+pass  prek-zizmor-strict-collection  prek: zizmor hook (--strict-collection)
 pass  renovate-exists  renovate.json: exists
 pass  renovate-valid  renovate.json: valid
 pass  renovate-schema  renovate.json: has $schema
@@ -73,6 +74,7 @@ pass  ci-reuse  CI: REUSE compliance
 pass  ci-markdownlint  CI: Markdown linting (every file)
 pass  ci-tombi  CI: TOML formatting
 pass  ci-zizmor  CI: zizmor (pedantic)
+pass  ci-zizmor-strict-collection  CI: zizmor (strict-collection)
 pass  ci-prek  CI: remaining prek hooks (pinned, --all-files)
 pass  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
 pass  ci-commit-msg  CI: commit-msg hooks on the commit message (prek run --stage commit-msg)

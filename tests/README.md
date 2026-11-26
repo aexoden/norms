@@ -94,7 +94,8 @@ re-renders them, as `AGENTS.md` describes.
   - a Rust library target whose doctests no hook or CI step runs;
   - a zizmor hook that doesn't run its pedantic persona, and a CI step running
     zizmor itself beside a zizmor-action step that doesn't fail on findings,
-    which decides;
+    which decides, the hook and the zizmor-action step without strict
+    collection;
   - a job without `timeout-minutes`, beside a call to a reusable workflow,
     which can't set one;
   - workflows whose `concurrency` is missing or doesn't cancel;

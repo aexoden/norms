@@ -168,6 +168,7 @@ jobs:
           advanced-security: false
           annotations: true
           persona: pedantic
+          strict-collection: true
 
   eslint:
     name: Lint TypeScript code with ESLint

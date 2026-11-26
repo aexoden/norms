@@ -95,7 +95,7 @@ rev = "v1.32.0"
 
 [[repos.hooks]]
 id = "zizmor"
-args = ["--pedantic"]
+args = ["--pedantic", "--strict-collection"]
 priority = "check"
 
 # Conventional commits

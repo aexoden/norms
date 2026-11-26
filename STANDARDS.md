@@ -566,7 +566,8 @@ Every project runs these hooks:
   ```
 
 - [zizmor](https://github.com/zizmorcore/zizmor-pre-commit): `zizmor`, with
-  `--pedantic`.
+  `--pedantic` and `--strict-collection`, which fails on a workflow or action
+  zizmor can't parse rather than skipping it with a warning.
 - [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit):
   `conventional-pre-commit`, in the `commit-msg` stage, listing the commit types
   itself rather than relying on the hook's defaults:
@@ -649,7 +650,8 @@ CI runs on GitHub Actions, in two workflows:
 - **zizmor** runs through `zizmorcore/zizmor-action` with
   `persona: pedantic`, `advanced-security: false` and `annotations: true`, so
   that a finding fails the job like any other check, rather than being uploaded
-  to code scanning.
+  to code scanning, and with `strict-collection: true`, as the hook passes
+  `--strict-collection`.
 
 ### norms Job
 

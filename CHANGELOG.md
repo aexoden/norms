@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`pnpm-workspace-minimum-release-age-exclude-prune`), so that pnpm drops an
   exemption from the release age, such as the one Renovate adds for a security
   fix, once the lock file no longer uses that version. The template sets it.
+- Warn unless the zizmor hook passes `--strict-collection`
+  (`prek-zizmor-strict-collection`) and `zizmorcore/zizmor-action` sets
+  `strict-collection: true` (`ci-zizmor-strict-collection`), as the standards
+  now require, so that zizmor fails on a workflow or action it can't parse
+  rather than skipping it with a warning. The template sets both.
 
 ### Changed
 

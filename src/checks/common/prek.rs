@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use super::ci::zizmor_command_pedantic;
+use super::ci::{zizmor_command_pedantic, zizmor_command_strict_collection};
 use crate::config::{FormatterRun, PrekConfig, PrekHook, PrekRepo, is_program, program_name};
 use crate::context::ProjectContext;
 use crate::report::{Issue, Report};
@@ -133,6 +133,12 @@ fn zizmor_hook_pedantic(hook: &PrekHook) -> bool {
     hook.map_command("zizmor", zizmor_command_pedantic) == Some(true)
 }
 
+/// Whether a zizmor hook passes `--strict-collection`, in its entry or the args prek appends to it, so that zizmor fails
+/// on a workflow or action it can't parse rather than skipping it with a warning.
+fn zizmor_hook_strict_collection(hook: &PrekHook) -> bool {
+    hook.map_command("zizmor", zizmor_command_strict_collection) == Some(true)
+}
+
 pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
     let Some(config) = report.require_parsed("prek-config", "prek.toml", ctx.prek()) else {
         return;
@@ -203,6 +209,12 @@ pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
         "prek: norms-verify hook (--deny-warnings)",
         norms_verify_hook_in(config),
     );
+    check_zizmor_hooks(config, report);
+}
+
+/// Check the zizmor hooks of `config`: that one runs the pedantic persona, and, if one runs before each commit, that it
+/// passes `--strict-collection`.
+fn check_zizmor_hooks(config: &PrekConfig, report: &mut Report) {
     report.check(
         "prek-zizmor",
         "prek: zizmor hook (pedantic)",
@@ -214,6 +226,18 @@ pub(crate) fn check_prek(ctx: &ProjectContext, report: &mut Report) {
             }
         }),
     );
+    // Without a zizmor hook that runs before each commit, prek-zizmor reports its absence.
+    if let Ok(hooks) = config.commit_hooks("zizmor") {
+        report.should(
+            "prek-zizmor-strict-collection",
+            "prek: zizmor hook (--strict-collection)",
+            if hooks.into_iter().any(zizmor_hook_strict_collection) {
+                Ok(())
+            } else {
+                Err("The zizmor hook doesn't pass --strict-collection".to_owned())
+            },
+        );
+    }
 }
 
 //
@@ -440,7 +464,10 @@ pub(super) fn tombi_format_run(words: &[&str]) -> Option<FormatterRun> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
+    use crate::models::Status;
 
     fn conventional(repo: &str, hook: &str) -> Result<(), Issue> {
         conventional_hook_in(
@@ -880,5 +907,66 @@ hooks = [
         ] {
             assert!(!zizmor_hook_pedantic(&hook(None, args)), "{args:?}");
         }
+    }
+
+    #[test]
+    fn zizmor_hooks_need_the_strict_collection_flag() {
+        let hook = |entry: Option<&str>, args: &[&str]| PrekHook {
+            id: "zizmor".to_owned(),
+            entry: entry.map(str::to_owned),
+            args: args.iter().map(|arg| (*arg).to_owned()).collect(),
+            ..PrekHook::default()
+        };
+        assert!(zizmor_hook_strict_collection(&hook(
+            None,
+            &["--pedantic", "--strict-collection"]
+        )));
+        assert!(zizmor_hook_strict_collection(&hook(
+            Some("uvx zizmor --strict-collection"),
+            &["--pedantic"]
+        )));
+        assert!(!zizmor_hook_strict_collection(&hook(None, &["--pedantic"])));
+        assert!(!zizmor_hook_strict_collection(&hook(
+            Some("echo --strict-collection"),
+            &[]
+        )));
+        assert!(!zizmor_hook_strict_collection(&hook(
+            None,
+            &["--strict-collection=false"]
+        )));
+    }
+
+    #[test]
+    fn strict_collection_is_checked_only_with_a_zizmor_hook() {
+        let results = |hooks: &str| {
+            let config: PrekConfig = toml::from_str(&format!(
+                "default_install_hook_types = [\"pre-commit\", \"commit-msg\"]\n\
+                 [[repos]]\nrepo = \"https://github.com/zizmorcore/zizmor-pre-commit\"\nrev = \"v1.33.1\"\n\
+                 hooks = {hooks}\n"
+            ))
+            .unwrap_or_else(|error| panic!("{error}"));
+            let mut report = Report::new(PathBuf::new(), Vec::new());
+            check_zizmor_hooks(&config, &mut report);
+            report
+                .results
+                .iter()
+                .map(|result| (result.id.clone(), result.status))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            results(r#"[{id = "zizmor", args = ["--pedantic", "--strict-collection"]}]"#),
+            [
+                ("prek-zizmor".to_owned(), Status::Pass),
+                ("prek-zizmor-strict-collection".to_owned(), Status::Pass)
+            ]
+        );
+        assert_eq!(
+            results(r#"[{id = "zizmor", args = ["--pedantic"]}]"#),
+            [
+                ("prek-zizmor".to_owned(), Status::Pass),
+                ("prek-zizmor-strict-collection".to_owned(), Status::Warn)
+            ]
+        );
+        assert_eq!(results("[]"), [("prek-zizmor".to_owned(), Status::Fail)]);
     }
 }

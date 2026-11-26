@@ -533,10 +533,21 @@ fn runs_commit_msg_hooks(words: &[&str]) -> bool {
 // zizmor
 //
 
+/// Whether the words of a command run zizmor passing `flag`, or `None` if they don't run zizmor.
+fn zizmor_command_passes(words: &[&str], flag: &str) -> Option<bool> {
+    let start = words.iter().position(|word| is_program(word, "zizmor"))?;
+    Some(words.iter().skip(start + 1).any(|arg| *arg == flag))
+}
+
 /// Whether the words of a command run zizmor with its pedantic persona, passing `--pedantic`.
 pub(super) fn zizmor_command_pedantic(words: &[&str]) -> Option<bool> {
-    let start = words.iter().position(|word| is_program(word, "zizmor"))?;
-    Some(words.iter().skip(start + 1).any(|arg| *arg == "--pedantic"))
+    zizmor_command_passes(words, "--pedantic")
+}
+
+/// Whether the words of a command run zizmor with `--strict-collection`, which fails on a workflow or action it can't
+/// parse rather than skipping it with a warning.
+pub(super) fn zizmor_command_strict_collection(words: &[&str]) -> Option<bool> {
+    zizmor_command_passes(words, "--strict-collection")
 }
 
 /// The action that runs zizmor in CI.
@@ -578,6 +589,20 @@ fn zizmor_in_ci(workflow: &Workflow) -> Result<(), Issue> {
         // persona than pedantic, makes the check a warning whatever the others do.
         Issue::alternatives(issues)
     }
+}
+
+/// Check that a [`ZIZMOR_ACTION`] step in `workflow` sets `strict-collection: true`, so that zizmor fails on a workflow
+/// or action it can't parse rather than skipping it with a warning, or `None` if no step uses the action, which
+/// `ci-zizmor` reports.
+fn zizmor_strict_collection_in_ci(workflow: &Workflow) -> Option<Result<(), String>> {
+    let mut steps = workflow.steps_using(ZIZMOR_ACTION).peekable();
+    steps.peek()?;
+    let strict = steps.any(|step| step.input("strict-collection").as_deref() == Some("true"));
+    Some(if strict {
+        Ok(())
+    } else {
+        Err("zizmor-action doesn't set strict-collection: true".to_owned())
+    })
 }
 
 //
@@ -1263,6 +1288,13 @@ fn check_ci_workflow(ctx: &ProjectContext, workflow: &Workflow, report: &mut Rep
         workflow.runs(tombi_format_checks),
     );
     report.check("ci-zizmor", "CI: zizmor (pedantic)", zizmor_in_ci(workflow));
+    if let Some(strict) = zizmor_strict_collection_in_ci(workflow) {
+        report.should(
+            "ci-zizmor-strict-collection",
+            "CI: zizmor (strict-collection)",
+            strict,
+        );
+    }
     report.check(
         "ci-prek",
         "CI: remaining prek hooks (pinned, --all-files)",
@@ -2291,6 +2323,52 @@ jobs:
             Err(Issue::fail(
                 "zizmor-action doesn't set advanced-security: false"
             ))
+        );
+    }
+
+    #[test]
+    fn zizmor_action_should_collect_strictly() {
+        let workflow = |steps: &str| -> Workflow {
+            serde_saphyr::from_str(&format!("jobs:\n  z:\n    steps:\n{steps}"))
+                .unwrap_or_else(|error| panic!("{error}"))
+        };
+        let action = |with: &str| {
+            format!(
+                "      - uses: zizmorcore/zizmor-action@abc # v0.9.1\n        with: {{{with}}}\n"
+            )
+        };
+        assert_eq!(
+            zizmor_strict_collection_in_ci(&workflow(&action("strict-collection: true"))),
+            Some(Ok(()))
+        );
+        assert_eq!(
+            zizmor_strict_collection_in_ci(&workflow(&action("strict-collection: \"true\""))),
+            Some(Ok(()))
+        );
+        for with in ["", "persona: pedantic", "strict-collection: false"] {
+            assert_eq!(
+                zizmor_strict_collection_in_ci(&workflow(&action(with))),
+                Some(Err(
+                    "zizmor-action doesn't set strict-collection: true".to_owned()
+                )),
+                "{with}"
+            );
+        }
+        // One strict step is enough.
+        assert_eq!(
+            zizmor_strict_collection_in_ci(&workflow(&format!(
+                "{}{}",
+                action(""),
+                action("strict-collection: true")
+            ))),
+            Some(Ok(()))
+        );
+        // Without the action, ci-zizmor reports what runs zizmor instead.
+        assert_eq!(
+            zizmor_strict_collection_in_ci(&workflow(
+                "      - run: zizmor --strict-collection .\n"
+            )),
+            None
         );
     }
 

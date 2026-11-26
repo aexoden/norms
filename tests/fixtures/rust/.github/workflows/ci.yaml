@@ -170,6 +170,7 @@ jobs:
           advanced-security: false
           annotations: true
           persona: pedantic
+          strict-collection: true
 
   cargo-deny:
     name: Run cargo-deny check

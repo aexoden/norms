@@ -185,6 +185,7 @@ jobs:{{ job('markdownlint', 'Lint Markdown with markdownlint', '', 'ubuntu-slim'
           advanced-security: false
           annotations: true
           persona: pedantic
+          strict-collection: true
 {%- if 'rust' in languages %}
 {{ job('cargo-deny', 'Run cargo-deny check', '') }}
 

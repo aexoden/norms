@@ -168,6 +168,7 @@ jobs:
           advanced-security: false
           annotations: true
           persona: pedantic
+          strict-collection: true
 
   basedpyright:
     name: Type check Python code with basedpyright

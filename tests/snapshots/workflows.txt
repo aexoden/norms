@@ -48,6 +48,8 @@ fail  prek-norms-verify  prek: norms-verify hook (--deny-warnings)
       No norms-verify hook
 warn  prek-zizmor  prek: zizmor hook (pedantic)
       The zizmor hook doesn't pass --pedantic
+warn  prek-zizmor-strict-collection  prek: zizmor hook (--strict-collection)
+      The zizmor hook doesn't pass --strict-collection
 fail  renovate-exists  renovate.json: exists
       File not found
 warn  dependabot-absent  No Dependabot version updates
@@ -82,6 +84,8 @@ fail  ci-markdownlint  CI: Markdown linting (every file)
 fail  ci-tombi  CI: TOML formatting
 fail  ci-zizmor  CI: zizmor (pedantic)
       zizmor-action doesn't set advanced-security: false
+warn  ci-zizmor-strict-collection  CI: zizmor (strict-collection)
+      zizmor-action doesn't set strict-collection: true
 fail  ci-prek  CI: remaining prek hooks (pinned, --all-files)
       prek run only runs named hooks or another --stage's, not every pre-commit hook
 warn  ci-norms-verify  CI: norms verify (--deny-warnings, whole history)
