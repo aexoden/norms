@@ -820,13 +820,18 @@ community time to catch compromised or broken releases. It is enforced twice:
 ### Urgent Updates
 
 Security fixes may skip the release age. Renovate raises its vulnerability alert
-pull requests at once, but the package manager still refuses the new version,
-so the pull request shows an artifact error until the package is exempted.
-Exempt it temporarily, with a comment naming the advisory, and remove the
-exemption once the release is old enough:
+pull requests at once, and for pnpm, since `minimumReleaseAge` is set, exempts
+the new version itself, adding `package-name@version` to
+`minimumReleaseAgeExclude` in `pnpm-workspace.yaml` with a comment naming the
+update. A new dependency of the fix still needs adding there by hand. Remove
+the entries once the releases are old enough.
+
+uv and Cargo still refuse the new version, so the pull request shows an
+artifact error until the package is exempted. Exempt it temporarily, with a
+comment naming the advisory, and remove the exemption once the release is old
+enough:
 
 - uv: `exclude-newer-package = { package-name = false }` under `[tool.uv]`.
-- pnpm: `minimumReleaseAgeExclude: [package-name]` in `pnpm-workspace.yaml`.
 - Cargo: there is no per-package setting. Raise the package's requirement in
   `Cargo.toml` if it pins one, then run
   `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update -p package-name`.

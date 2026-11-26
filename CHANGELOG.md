@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `STANDARDS.md`'s Urgent Updates section says that Renovate exempts the new
+  version of a pnpm package in a vulnerability alert pull request itself,
+  adding it to `minimumReleaseAgeExclude`, rather than leaving it to be
+  exempted by hand as uv and Cargo packages are.
+
 ## [0.3.0] - 2026-11-20
 
 norms 0.3.0 moves the hooks from pre-commit to prek, adds `norms github` to
