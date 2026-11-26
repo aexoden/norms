@@ -294,9 +294,9 @@ dependencies = [
 
 [[package]]
 name = "github-actions-expressions"
-version = "1.32.0"
+version = "1.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f34a40a4d1849384a8040a917d41b0c6498d0e00d5a50e62b6c4f6c7a61cdf03"
+checksum = "477b9df66a59613cf925c556a6dc406b6a3c74f2effafa5a24c8a25ccd38ddde"
 dependencies = [
  "serde_json",
  "subfeature",
@@ -904,9 +904,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "subfeature"
-version = "1.32.0"
+version = "1.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b629cab8906895d8bd52d01b38c272f0a70ca69a8dbd0ef204742122301bc088"
+checksum = "814d68b91393720fbd278cf00d5942972ccce4a0e6b8f54824b11a3518c1f67f"
 dependencies = [
  "memchr",
  "regex",
