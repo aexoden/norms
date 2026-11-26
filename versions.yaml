@@ -79,7 +79,7 @@ hook_conventional_pre_commit:
 # rendered from it runs the norms that checked the template.
 # renovate: datasource=github-tags depName=aexoden/norms
 hook_norms:
-  default: "v0.3.0"
+  default: "v0.3.1"
   when: false
 
 # GitHub Actions

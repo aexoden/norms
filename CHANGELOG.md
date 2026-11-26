@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-25
+
+norms 0.3.1 follows the zizmor-action 0.9, setup-uv 10.4 and cargo-deny 0.22
+updates. It adds three warnings, which projects that deny
+warnings, as the standards' hook does, should expect: one for pnpm's
+`minimumReleaseAgeExcludePrune`, one for the zizmor hook's
+`--strict-collection` and one for zizmor-action's `strict-collection`. The
+template sets all three, and its setup-uv steps now require checksums.
+Rendering the template again with `copier update` brings them in.
+
 ### Added
 
 - Warn unless `pnpm-workspace.yaml` sets `minimumReleaseAgeExcludePrune: true`
@@ -478,7 +488,8 @@ each says what it expects, `STANDARDS.md` explains the standard behind it, and
 
 - Add initial version of the `norms` verification tool.
 
-[Unreleased]: https://github.com/aexoden/norms/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/aexoden/norms/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/aexoden/norms/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/aexoden/norms/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aexoden/norms/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/aexoden/norms/releases/tag/v0.1.0

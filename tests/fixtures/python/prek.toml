@@ -70,7 +70,7 @@ id = "reuse"
 # Markdown
 [[repos]]
 repo = "https://github.com/DavidAnson/markdownlint-cli2"
-rev = "v0.24.1"
+rev = "v0.24.2"
 
 [[repos.hooks]]
 id = "markdownlint-cli2"
@@ -91,7 +91,7 @@ priority = "check"
 # GitHub Actions security
 [[repos]]
 repo = "https://github.com/zizmorcore/zizmor-pre-commit"
-rev = "v1.32.0"
+rev = "v1.33.1"
 
 [[repos.hooks]]
 id = "zizmor"
@@ -111,7 +111,7 @@ args = ["feat", "fix", "perf", "refactor", "style", "test", "docs", "build", "ci
 # norms: commit messages, and the project against the standards
 [[repos]]
 repo = "https://github.com/aexoden/norms"
-rev = "v0.3.0"
+rev = "v0.3.1"
 
 [[repos.hooks]]
 id = "norms-commit-msg"
