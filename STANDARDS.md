@@ -744,6 +744,10 @@ from `ci.yaml` because new advisories appear without code changes, and
 shouldn't block unrelated pull requests:
 
 - Rust: `cargo deny --workspace --all-features check -D warnings advisories`.
+  Since cargo-deny 0.22, its `[advisories] unmaintained` defaults to
+  `workspace`, so it reports an unmaintained crate only when a workspace
+  member depends on it directly, which the project can replace, and not one
+  further down the tree. The template's `deny.toml` leaves it at that default.
 - Python: `uv audit --locked`.
 - TypeScript: `pnpm audit`.
 

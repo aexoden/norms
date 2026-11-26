@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exemption from the release age, such as the one Renovate adds for a security
   fix, once the lock file no longer uses that version. The template sets it.
 
+### Changed
+
+- `STANDARDS.md`'s Security Audit section says that `audit.yaml`'s cargo-deny,
+  since 0.22, reports an unmaintained crate only when the project depends on it
+  directly, and that the template's `deny.toml` leaves that default rather
+  than setting `[advisories] unmaintained = "all"`.
+
 ### Fixed
 
 - `STANDARDS.md`'s Urgent Updates section says that Renovate exempts the new
