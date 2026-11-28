@@ -180,7 +180,7 @@ npm_eslint_js:
 
 # renovate: datasource=npm depName=@types/node
 npm_types_node:
-  default: "26.6.7"
+  default: "26.6.10"
   when: false
 
 # renovate: datasource=npm depName=eslint
